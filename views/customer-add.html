@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Add Customer</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/style.css"
+    >
+
+</head>
+
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div id="topbar-container"></div>
+
+
+    <main
+        class="main-content"
+        style="
+            margin-left:250px;
+            padding:90px 20px 30px;
+        "
+    >
+
+        <div class="container-fluid">
+
+            <div
+                class="d-flex
+                       justify-content-between
+                       align-items-center
+                       mb-3"
+            >
+
+                <div>
+
+                    <h4 class="mb-1">
+                        <i class="fa fa-user-plus"></i>
+                        Add Customer
+                    </h4>
+
+                    <small class="text-muted">
+                        Create PPPoE customer
+                    </small>
+
+                </div>
+
+                <a
+                    href="/customers"
+                    class="btn btn-secondary"
+                >
+                    <i class="fa fa-arrow-left"></i>
+                    Back
+                </a>
+
+            </div>
+
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <form id="customerAddForm">
+
+                        <div class="row g-3">
+
+
+                            <!-- CUSTOMER ID -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Customer ID
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="customer_id"
+                                    id="customer_id"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <!-- NAME -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Customer Name
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="name"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <!-- PHONE -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Mobile
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="phone"
+                                >
+
+                            </div>
+
+
+                            <!-- MIKROTIK -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    MikroTik Server
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="mikrotik_id"
+                                    id="mikrotik_id"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select MikroTik
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- PACKAGE -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Package
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="package_id"
+                                    id="package_id"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select Package
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- MONTHLY BILL -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Monthly Bill
+                                </label>
+
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    name="monthly_fee"
+                                    id="monthly_fee"
+                                >
+
+                            </div>
+
+
+                            <!-- PPPOE -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    PPPoE Username
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="pppoe_name"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <!-- PASSWORD -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    PPPoE Password
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="password"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <!-- ADDRESS -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Address
+                                </label>
+
+                                <textarea
+                                    class="form-control"
+                                    name="address"
+                                    rows="3"
+                                ></textarea>
+
+                            </div>
+
+
+                            <!-- EMAIL -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Email
+                                </label>
+
+                                <input
+                                    type="email"
+                                    class="form-control"
+                                    name="email"
+                                >
+
+                            </div>
+
+
+                            <!-- AREA -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Area
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="area_id"
+                                    id="area_id"
+                                >
+
+                                    <option value="">
+                                        Select Area
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- SUB AREA -->
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Sub Area
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="sub_area_id"
+                                    id="sub_area_id"
+                                >
+
+                                    <option value="">
+                                        Select Sub Area
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- BILLING TYPE -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Billing Type
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="billing_type"
+                                >
+
+                                    <option value="Prepaid">
+                                        Prepaid
+                                    </option>
+
+                                    <option value="Postpaid">
+                                        Postpaid
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- STATUS -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Status
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    name="status"
+                                >
+
+                                    <option value="Active">
+                                        Active
+                                    </option>
+
+                                    <option value="Inactive">
+                                        Inactive
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- COMMENT -->
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Comment
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    name="comment"
+                                >
+
+                            </div>
+
+
+                            <!-- SUBMIT -->
+
+                            <div
+                                class="col-12
+                                       d-flex
+                                       justify-content-end
+                                       gap-2
+                                       mt-4"
+                            >
+
+                                <a
+                                    href="/customers"
+                                    class="btn btn-secondary"
+                                >
+                                    Cancel
+                                </a>
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary"
+                                    id="saveCustomerBtn"
+                                >
+
+                                    <i class="fa fa-save"></i>
+
+                                    Save Customer
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+
+    <script>
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIDEBAR / TOPBAR
+        |--------------------------------------------------------------------------
+        */
+
+        async function loadLayout() {
+
+            try {
+
+                const sidebar =
+                    await fetch(
+                        "/partials/sidebar.html"
+                    );
+
+                if (sidebar.ok) {
+
+                    document
+                        .getElementById(
+                            "sidebar-container"
+                        )
+                        .innerHTML =
+                        await sidebar.text();
+
+                }
+
+
+                const topbar =
+                    await fetch(
+                        "/partials/topbar.html"
+                    );
+
+                if (topbar.ok) {
+
+                    document
+                        .getElementById(
+                            "topbar-container"
+                        )
+                        .innerHTML =
+                        await topbar.text();
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Layout load error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOAD FORM DATA
+        |--------------------------------------------------------------------------
+        */
+
+        async function loadFormData() {
+
+            const response =
+                await fetch(
+                    "/api/customers/add/form"
+                );
+
+            const result =
+                await response.json();
+
+            if (!result.success) {
+                throw new Error(
+                    result.message ||
+                    "Failed to load form."
+                );
+            }
+
+
+            const routerSelect =
+                document.getElementById(
+                    "mikrotik_id"
+                );
+
+            const areaSelect =
+                document.getElementById(
+                    "area_id"
+                );
+
+
+            result.data.routers
+                .forEach(router => {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        router.id;
+
+                    option.textContent =
+                        router.name ||
+                        router.ip;
+
+                    routerSelect.appendChild(
+                        option
+                    );
+
+                });
+
+
+            result.data.areas
+                .forEach(area => {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+                    option.value =
+                        area.id;
+
+                    option.textContent =
+                        area.name;
+
+                    areaSelect.appendChild(
+                        option
+                    );
+
+                });
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOAD PACKAGES
+        |--------------------------------------------------------------------------
+        */
+
+        document
+            .getElementById(
+                "mikrotik_id"
+            )
+            .addEventListener(
+                "change",
+                async function () {
+
+                    const routerId =
+                        this.value;
+
+                    const packageSelect =
+                        document.getElementById(
+                            "package_id"
+                        );
+
+                    const billInput =
+                        document.getElementById(
+                            "monthly_fee"
+                        );
+
+                    packageSelect.innerHTML = `
+                        <option value="">
+                            Loading packages...
+                        </option>
+                    `;
+
+                    billInput.value = "";
+
+
+                    if (!routerId) {
+
+                        packageSelect.innerHTML = `
+                            <option value="">
+                                Select Package
+                            </option>
+                        `;
+
+                        return;
+                    }
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                `/api/customers/add/packages?router_id=${encodeURIComponent(routerId)}`
+                            );
+
+                        const result =
+                            await response.json();
+
+                        if (!result.success) {
+                            throw new Error(
+                                result.message
+                            );
+                        }
+
+
+                        packageSelect.innerHTML = `
+                            <option value="">
+                                Select Package
+                            </option>
+                        `;
+
+
+                        result.data
+                            .forEach(pkg => {
+
+                                const option =
+                                    document.createElement(
+                                        "option"
+                                    );
+
+                                option.value =
+                                    pkg.id;
+
+                                option.dataset.price =
+                                    pkg.price || 0;
+
+                                option.textContent =
+                                    pkg.package_name +
+                                    (
+                                        pkg.price !== null &&
+                                        pkg.price !== undefined
+                                            ? ` - ${pkg.price}`
+                                            : ""
+                                    );
+
+                                packageSelect
+                                    .appendChild(
+                                        option
+                                    );
+
+                            });
+
+                    } catch (error) {
+
+                        console.error(
+                            error
+                        );
+
+                        packageSelect.innerHTML = `
+                            <option value="">
+                                Failed to load packages
+                            </option>
+                        `;
+                    }
+
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PACKAGE PRICE
+        |--------------------------------------------------------------------------
+        */
+
+        document
+            .getElementById(
+                "package_id"
+            )
+            .addEventListener(
+                "change",
+                function () {
+
+                    const option =
+                        this.options[
+                            this.selectedIndex
+                        ];
+
+                    if (
+                        option &&
+                        option.dataset.price
+                    ) {
+
+                        document
+                            .getElementById(
+                                "monthly_fee"
+                            )
+                            .value =
+                            option.dataset.price;
+                    }
+
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SAVE
+        |--------------------------------------------------------------------------
+        */
+
+        document
+            .getElementById(
+                "customerAddForm"
+            )
+            .addEventListener(
+                "submit",
+                async function (event) {
+
+                    event.preventDefault();
+
+
+                    const button =
+                        document.getElementById(
+                            "saveCustomerBtn"
+                        );
+
+
+                    const formData =
+                        new FormData(this);
+
+                    const data =
+                        Object.fromEntries(
+                            formData.entries()
+                        );
+
+
+                    button.disabled = true;
+
+                    button.innerHTML = `
+                        <span
+                            class="spinner-border
+                                   spinner-border-sm"
+                        ></span>
+                        Creating...
+                    `;
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                "/api/customers/add",
+                                {
+                                    method: "POST",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+
+                                    body:
+                                        JSON.stringify(
+                                            data
+                                        )
+                                }
+                            );
+
+
+                        const result =
+                            await response.json();
+
+
+                        if (!result.success) {
+
+                            throw new Error(
+                                result.message ||
+                                "Failed to create customer."
+                            );
+
+                        }
+
+
+                        alert(
+                            "Customer created successfully.\n\n" +
+                            "Customer ID: " +
+                            result.customer_id +
+                            "\nPPPoE: " +
+                            result.pppoe_username
+                        );
+
+
+                        window.location.href =
+                            "/customers";
+
+
+                    } catch (error) {
+
+                        alert(
+                            error.message ||
+                            "Failed to create customer."
+                        );
+
+                        button.disabled = false;
+
+                        button.innerHTML = `
+                            <i class="fa fa-save"></i>
+                            Save Customer
+                        `;
+                    }
+
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | START
+        |--------------------------------------------------------------------------
+        */
+
+        Promise
+            .all([
+                loadLayout(),
+                loadFormData()
+            ])
+            .catch(error => {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    error.message ||
+                    "Failed to load form."
+                );
+
+            });
+
+    </script>
+
+</body>
+
+</html>

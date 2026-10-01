@@ -1,0 +1,596 @@
+function renderCustomerRow(customer) {
+
+    const id = Number(customer.id || 0);
+
+    const customerId =
+        customer.customer_id ||
+        id;
+
+    const name =
+        String(customer.name || "").trim();
+
+    const pppoe =
+        String(
+            customer.pppoe_username ||
+            ""
+        ).trim();
+
+    const phone =
+        String(
+            customer.phone ||
+            customer.mobile ||
+            ""
+        ).trim();
+
+    const address =
+        String(customer.address || "").trim();
+
+    const packageName =
+        customer.display_package ||
+        customer.package_name ||
+        "";
+
+    const bill =
+        Number(
+            customer.display_bill ??
+            customer.monthly_bill ??
+            0
+        );
+
+    const balance =
+        Number(
+            customer.balance ?? 0
+        );
+
+    const billingCycle =
+        customer.billing_cycle ||
+        null;
+
+    const promiseDate =
+        customer.promise_date ||
+        null;
+
+    const dayLeft =
+        customer.day_left;
+
+    const status =
+        String(
+            customer.status ||
+            "Inactive"
+        ).trim();
+
+    const paymentStatus =
+        String(
+            customer.payment_status ||
+            "unpaid"
+        )
+        .trim()
+        .toLowerCase();
+
+    const autoConnection =
+        customer.auto_connection;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ID COLOR
+    |--------------------------------------------------------------------------
+    */
+
+    const autoDisabled =
+        (
+            autoConnection !== null &&
+            autoConnection !== undefined &&
+            (
+                String(autoConnection) === "0" ||
+                String(autoConnection).toLowerCase() === "false"
+            )
+        );
+
+    const negativeDay =
+        (
+            dayLeft !== null &&
+            dayLeft !== undefined &&
+            dayLeft !== "" &&
+            Number(dayLeft) < 0
+        );
+
+    const customerIdClass =
+        (
+            negativeDay ||
+            autoDisabled
+        )
+            ? "cm-id text-danger fw-bold"
+            : "cm-id";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAYMENT STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    let paymentHtml = "";
+
+    if (paymentStatus === "paid") {
+
+        paymentHtml = `
+            <div class="text-success fw-semibold">
+                <i class="fa fa-circle-check me-1"></i>
+                Paid
+            </div>
+        `;
+
+    } else {
+
+        paymentHtml = `
+            <div class="text-danger fw-semibold">
+                <i class="fa fa-circle-xmark me-1"></i>
+                Unpaid
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BILL / BALANCE
+    |--------------------------------------------------------------------------
+    */
+
+    const billBalanceHtml = `
+        <div class="fw-semibold">
+            ৳${formatMoney(bill)}
+        </div>
+
+        <div class="${
+            balance > 0
+                ? "text-success"
+                : balance < 0
+                    ? "text-danger"
+                    : "text-muted"
+        }">
+            Balance:
+            ৳${formatMoney(balance)}
+        </div>
+
+        ${paymentHtml}
+    `;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BILLING DATE
+    |--------------------------------------------------------------------------
+    */
+
+    let billingDateHtml = "-";
+
+    if (billingCycle) {
+
+        billingDateHtml = `
+            <div class="fw-semibold">
+                ${formatDate(billingCycle)}
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROMISE DATE
+    |--------------------------------------------------------------------------
+    */
+
+    let promiseDateHtml = "";
+
+    if (promiseDate) {
+
+        promiseDateHtml = `
+            <div class="small text-muted">
+                Promise:
+                ${formatDate(promiseDate)}
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DAY LEFT
+    |--------------------------------------------------------------------------
+    */
+
+    let dayLeftText = "-";
+
+    if (
+        dayLeft !== null &&
+        dayLeft !== undefined &&
+        dayLeft !== ""
+    ) {
+
+        dayLeftText =
+            Number(dayLeft);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    const normalizedStatus =
+        status.toLowerCase();
+
+    let statusBadgeClass =
+        "bg-secondary";
+
+    if (
+        normalizedStatus === "active"
+    ) {
+
+        statusBadgeClass =
+            "bg-success";
+
+    } else if (
+        normalizedStatus === "inactive"
+    ) {
+
+        statusBadgeClass =
+            "bg-secondary";
+
+    } else if (
+        normalizedStatus === "expired"
+    ) {
+
+        statusBadgeClass =
+            "bg-danger";
+
+    } else if (
+        normalizedStatus === "suspended"
+    ) {
+
+        statusBadgeClass =
+            "bg-warning text-dark";
+
+    } else if (
+        normalizedStatus === "disabled"
+    ) {
+
+        statusBadgeClass =
+            "bg-dark";
+    }
+
+
+    const statusHtml = `
+        <span class="badge ${statusBadgeClass}">
+            ${escapeHtml(status)}
+        </span>
+    `;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTION MENU
+    |--------------------------------------------------------------------------
+    */
+
+    const actionHtml = `
+        <div class="dropdown">
+
+            <button
+                type="button"
+                class="btn btn-link text-decoration-none fw-bold"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                style="
+                    font-size:18px;
+                    padding:0;
+                    color:#2d89ef;
+                "
+            >
+                <i class="fa fa-ellipsis"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end">
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="view"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-eye me-2"></i>
+                        View
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="recharge"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-credit-card me-2"></i>
+                        Recharge
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="edit"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-pen me-2"></i>
+                        Edit
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="report"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-chart-line me-2"></i>
+                        Report
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="note"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-note-sticky me-2"></i>
+                        Note
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="message"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-comment me-2"></i>
+                        Message
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="transfer"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-right-left me-2"></i>
+                        Transfer
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="reseller"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-user-tag me-2"></i>
+                        Reseller
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="ticket"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-ticket me-2"></i>
+                        Ticket
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="reset_password"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-key me-2"></i>
+                        Reset Password
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="activity"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-clock-rotate-left me-2"></i>
+                        Activity Log
+                    </button>
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item customer-action"
+                        data-action="whatsapp"
+                        data-id="${id}"
+                    >
+                        <i class="fa-brands fa-whatsapp me-2"></i>
+                        WhatsApp
+                    </button>
+                </li>
+
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <li>
+                    <button
+                        type="button"
+                        class="dropdown-item text-danger customer-action"
+                        data-action="delete"
+                        data-id="${id}"
+                    >
+                        <i class="fa fa-trash me-2"></i>
+                        Delete
+                    </button>
+                </li>
+
+            </ul>
+
+        </div>
+    `;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ROW
+    |--------------------------------------------------------------------------
+    */
+
+    return `
+        <tr data-customer-id="${id}">
+
+            <!-- CHECKBOX -->
+
+            <td class="text-center">
+
+                <input
+                    type="checkbox"
+                    class="form-check-input customer-checkbox"
+                    value="${id}"
+                    data-id="${id}"
+                >
+
+            </td>
+
+
+            <!-- ID -->
+
+            <td>
+
+                <span class="${customerIdClass}">
+                    ${escapeHtml(customerId)}
+                </span>
+
+            </td>
+
+
+            <!-- NAME / PPPOE -->
+
+            <td>
+
+                <div class="fw-semibold">
+                    ${escapeHtml(name || "-")}
+                </div>
+
+                <div class="small text-muted">
+                    ${escapeHtml(pppoe || "-")}
+                </div>
+
+            </td>
+
+
+            <!-- MOBILE / ADDRESS -->
+
+            <td>
+
+                <div>
+                    ${
+                        phone
+                            ? escapeHtml(phone)
+                            : "-"
+                    }
+                </div>
+
+                <div
+                    class="small text-muted customer-address-text"
+                    title="${formatAddress(address)}"
+                >
+                    ${formatAddress(address)}
+                </div>
+
+            </td>
+
+
+            <!-- PACKAGE -->
+
+            <td>
+
+                <span class="cm-package">
+                    ${escapeHtml(packageName || "-")}
+                </span>
+
+            </td>
+
+
+            <!-- BILL / BALANCE / PAYMENT -->
+
+            <td>
+
+                ${billBalanceHtml}
+
+            </td>
+
+
+            <!-- BILLING DATE / PROMISE DATE -->
+
+            <td>
+
+                ${billingDateHtml}
+
+                ${promiseDateHtml}
+
+            </td>
+
+
+            <!-- DAY LEFT -->
+
+            <td>
+
+                <span class="${dayLeftClass(dayLeft)}">
+                    ${dayLeftText}
+                </span>
+
+            </td>
+
+
+            <!-- STATUS -->
+
+            <td>
+
+                ${statusHtml}
+
+            </td>
+
+
+            <!-- ACTION -->
+
+            <td class="text-center">
+
+                ${actionHtml}
+
+            </td>
+
+        </tr>
+    `;
+}

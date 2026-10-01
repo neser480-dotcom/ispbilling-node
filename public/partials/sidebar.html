@@ -1,0 +1,956 @@
+<!-- =========================================================
+     NODE.JS SIDEBAR
+     FILE:
+     C:\xampp\htdocs\ispbilling-node\views\partials\sidebar.html
+========================================================= -->
+
+<div class="sidebar" id="sidebar">
+
+    <!-- =====================================================
+         PROFILE
+    ====================================================== -->
+
+    <div class="sidebar-profile">
+
+        <h5 id="sidebarFullname">
+            <i class="fa fa-user"></i>
+            Loading...
+        </h5>
+
+        <p>
+            ID:
+            <span id="sidebarUserId">-</span>
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUPER ADMIN SIDEBAR
+    ====================================================== -->
+
+    <div id="superAdminSidebar" style="display:none;">
+
+        <div
+            class="sidebar-heading text-danger px-3 mt-4 mb-1 fw-bold text-uppercase"
+            style="font-size:11px;"
+        >
+            🛡️ Super Admin
+        </div>
+
+
+        <ul>
+
+            <!-- Dashboard -->
+            <li>
+                <a href="/dashboard">
+                    <i class="fa fa-home"></i>
+                    Dashboard
+                </a>
+            </li>
+
+
+            <!-- =================================================
+                 COMPANY / USER CONTROL
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#companyMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="companyMenu"
+                >
+                    <i class="fa fa-building"></i>
+                    Companies / Users
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="companyMenu">
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/users"
+                    >
+                        <i class="fa fa-users"></i>
+                        Users
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/permissions"
+                    >
+                        <i class="fa fa-user-shield"></i>
+                        Permissions
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 SOFTWARE BILLING
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#softwareBillingMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="softwareBillingMenu"
+                >
+                    <i class="fa fa-credit-card"></i>
+                    Software Billing
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="softwareBillingMenu">
+
+                    <a
+                        class="submenu"
+                        href="/billing"
+                    >
+                        <i class="fa fa-file-invoice"></i>
+                        Registration Invoices
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/billing/pay"
+                    >
+                        <i class="fa fa-money-bill-wave"></i>
+                        Pay Now
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/billing/manual"
+                    >
+                        <i class="fa fa-hand-holding-usd"></i>
+                        Manual Payment
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 NOTICE BOARD
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#noticeMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="noticeMenu"
+                >
+                    <i class="fa fa-bullhorn"></i>
+                    Notice Board
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="noticeMenu">
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/notices"
+                    >
+                        <i class="fa fa-list"></i>
+                        All Notices
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/notices/add"
+                    >
+                        <i class="fa fa-plus"></i>
+                        New Notice
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 SOFTWARE UPDATE
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#updateMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="updateMenu"
+                >
+                    <i class="fa fa-sync-alt"></i>
+                    Software Updates
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="updateMenu">
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/updates"
+                    >
+                        <i class="fa fa-code-branch"></i>
+                        Updates
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/super-admin/upgrade"
+                    >
+                        <i class="fa fa-level-up-alt"></i>
+                        Upgrade
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 SUPPORT
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#supportMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="supportMenu"
+                >
+                    <i class="fa fa-headset"></i>
+                    Support / Problems
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="supportMenu">
+
+                    <a
+                        class="submenu"
+                        href="/support"
+                    >
+                        <i class="fa fa-life-ring"></i>
+                        ISP Support
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/support/tickets"
+                    >
+                        <i class="fa fa-ticket-alt"></i>
+                        Support Tickets
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 NETWORK
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#networkMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="networkMenu"
+                >
+                    <i class="fa fa-network-wired"></i>
+                    Network
+                    <span>▼</span>
+                </a>
+
+                <div class="collapse" id="networkMenu">
+
+                    <a
+                        class="submenu"
+                        href="/mikrotik"
+                    >
+                        <i class="fa fa-network-wired"></i>
+                        MikroTik
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/olt"
+                    >
+                        <i class="fa fa-server"></i>
+                        OLT List
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/olt/onu"
+                    >
+                        <i class="fa fa-project-diagram"></i>
+                        ONU List
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/monitoring/interface"
+                    >
+                        <i class="fa fa-chart-line"></i>
+                        Interface Monitor
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/monitoring"
+                    >
+                        <i class="fa fa-exclamation-triangle"></i>
+                        Live Fault
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- Tutorial -->
+
+            <li>
+
+                <a href="/tutorial">
+
+                    <i class="fa fa-book"></i>
+                    Tutorial
+
+                </a>
+
+            </li>
+
+        </ul>
+
+    </div>
+
+
+    <!-- =====================================================
+         COMPANY USER SIDEBAR
+    ====================================================== -->
+
+    <div id="companySidebar" style="display:none;">
+
+        <ul>
+
+            <!-- Dashboard -->
+
+            <li>
+
+                <a href="/dashboard">
+
+                    <i class="fa fa-home"></i>
+                    Dashboard
+
+                </a>
+
+            </li>
+
+
+            <!-- Area -->
+
+            <li>
+
+                <a href="/areas">
+
+                    <i class="fa fa-globe"></i>
+                    Area
+
+                </a>
+
+            </li>
+
+
+            <!-- MikroTik -->
+
+            <li>
+
+                <a href="/mikrotik">
+
+                    <i class="fa fa-network-wired"></i>
+                    MikroTik
+
+                </a>
+
+            </li>
+
+
+            <!-- =================================================
+                 OLT
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#oltMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="oltMenu"
+                >
+
+                    <i class="fa fa-server"></i>
+
+                    OLT Config
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="oltMenu">
+
+                    <a
+                        class="submenu"
+                        href="/olt"
+                    >
+                        OLT List
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/olt/onu"
+                    >
+                        ONU List
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 MONITORING
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#monitorMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="monitorMenu"
+                >
+
+                    <i class="fa fa-chart-line"></i>
+
+                    Monitoring
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="monitorMenu">
+
+                    <a
+                        class="submenu"
+                        href="/monitoring/interface"
+                    >
+                        Interface Monitor
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/monitoring/customer-traffic"
+                    >
+                        Customer Traffic
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/monitoring"
+                    >
+                        Live Fault
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 CUSTOMERS
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#customerMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="customerMenu"
+                >
+
+                    <i class="fa fa-users"></i>
+
+                    Customers
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="customerMenu">
+
+                    <a
+                        class="submenu"
+                        href="/customers"
+                    >
+                        PPPoE Customers
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/customers/active-pppoe"
+                    >
+                        Active PPPoE
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/customers/other"
+                    >
+                        Other Customers
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 REPORT
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#reportMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="reportMenu"
+                >
+
+                    <i class="fa fa-chart-bar"></i>
+
+                    Report
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="reportMenu">
+
+                    <a
+                        class="submenu"
+                        href="/reports/collection"
+                    >
+                        Collection
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/reports/reseller-collection"
+                    >
+                        Reseller Collection
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/reports/deposit"
+                    >
+                        Deposit
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 STAFF
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#STAFF"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="STAFF"
+                >
+
+                    <i class="fa fa-users"></i>
+
+                    Staff
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="STAFF">
+
+                    <a
+                        class="submenu"
+                        href="/staff/manager"
+                    >
+                        Manager
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/staff/collector"
+                    >
+                        Collector
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/staff/employee"
+                    >
+                        Employee
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 RESELLER
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#resellerMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="resellerMenu"
+                >
+
+                    <i class="fa fa-user-circle"></i>
+
+                    Reseller
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="resellerMenu">
+
+                    <a
+                        class="submenu"
+                        href="/reseller"
+                    >
+                        Reseller List
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/reseller/recharge"
+                    >
+                        Recharge
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/reseller/sms"
+                    >
+                        SMS Request
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/reseller/withdrawal"
+                    >
+                        Withdrawal Payment
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 BANDWIDTH
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#bandwidthMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="bandwidthMenu"
+                >
+
+                    <i class="fa fa-user-circle"></i>
+
+                    Bandwidth Sale
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="bandwidthMenu">
+
+                    <a
+                        class="submenu"
+                        href="/bandwidth"
+                    >
+                        Bandwidth List
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/bandwidth/reseller"
+                    >
+                        Reseller
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/bandwidth/collection"
+                    >
+                        Collection
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 MESSAGE
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#messageMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="messageMenu"
+                >
+
+                    <i class="fa fa-comment"></i>
+
+                    Message
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="messageMenu">
+
+                    <a
+                        class="submenu"
+                        href="/message/send"
+                    >
+                        Bulk Message
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/message/template"
+                    >
+                        SMS Template
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/message/log"
+                    >
+                        Message Log
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 ACCOUNTS
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#accountsMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="accountsMenu"
+                >
+
+                    <i class="fa fa-wallet"></i>
+
+                    Accounts
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="accountsMenu">
+
+                    <a
+                        class="submenu"
+                        href="/accounts/expenditure"
+                    >
+                        Expenditure
+                    </a>
+
+                    <a
+                        class="submenu"
+                        href="/accounts/invoices"
+                    >
+                        Invoices
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- =================================================
+                 SUPPORT
+            ================================================== -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#companySupportMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="companySupportMenu"
+                >
+
+                    <i class="fa fa-headset"></i>
+
+                    Support
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="companySupportMenu">
+
+                    <a
+                        class="submenu"
+                        href="/support"
+                    >
+                        ISP Support
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- Activity Log -->
+
+            <li>
+
+                <a href="/activity">
+
+                    <i class="fa fa-clock"></i>
+
+                    Activity Log
+
+                </a>
+
+            </li>
+
+
+            <!-- NetFee Support -->
+
+            <li>
+
+                <a
+                    data-bs-toggle="collapse"
+                    href="#netfeeMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="netfeeMenu"
+                >
+
+                    <i class="fa fa-bell"></i>
+
+                    ISP Support
+
+                    <span>▼</span>
+
+                </a>
+
+
+                <div class="collapse" id="netfeeMenu">
+
+                    <a
+                        class="submenu"
+                        href="/support/tickets"
+                    >
+                        NetFee Tickets
+                    </a>
+
+                </div>
+
+            </li>
+
+
+            <!-- Tutorial -->
+
+            <li>
+
+                <a href="/tutorial">
+
+                    <i class="fa fa-book"></i>
+
+                    Tutorial
+
+                </a>
+
+            </li>
+
+        </ul>
+
+    </div>
+
+</div>

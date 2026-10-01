@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Customers - ISP Billing</title>
+
+
+    <!-- =====================================================
+         BOOTSTRAP
+    ====================================================== -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         FONT AWESOME
+    ====================================================== -->
+
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+
+    <!-- =====================================================
+         TOPBAR
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+
+    <!-- =====================================================
+         MAIN STYLE
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/style.css"
+    >
+
+
+    <!-- =====================================================
+         CUSTOMER STYLE
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/customer.css"
+    >
+
+
+    <!-- =====================================================
+         CSRF
+    ====================================================== -->
+
+    <meta
+        name="csrf-token"
+        content=""
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     SIDEBAR
+========================================================= -->
+
+<div id="sidebarContainer"></div>
+
+
+<!-- =========================================================
+     MAIN CONTENT
+========================================================= -->
+
+<div
+    class="main-content"
+    id="mainContent"
+>
+
+
+    <!-- =====================================================
+         TOPBAR
+    ====================================================== -->
+
+    <div id="topbarContainer"></div>
+
+
+    <!-- =====================================================
+         CUSTOMER PAGE
+    ====================================================== -->
+
+    <main class="container-fluid customer-page">
+
+
+        <!-- =================================================
+             CUSTOMER HEADER
+        ================================================== -->
+
+        <div class="cm-list-header">
+
+
+            <!-- TITLE -->
+
+            <div class="cm-list-title">
+
+                <i class="fa fa-users"></i>
+
+                <div>
+
+                    <h4>
+                        Customers
+                    </h4>
+
+                    <div
+                        id="customerRangeText"
+                        class="cm-list-subtitle"
+                    >
+                        Loading customers...
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ACTION BUTTONS -->
+
+            <div class="cm-list-actions">
+
+
+                <!-- EXPORT -->
+
+                <button
+                    type="button"
+                    class="cm-ibtn"
+                    id="exportCustomersBtn"
+                    title="Export"
+                >
+
+                    <i class="fa fa-download"></i>
+
+                </button>
+
+
+                <!-- CSV TEMPLATE -->
+
+                <button
+                    type="button"
+                    class="cm-ibtn"
+                    id="csvTemplateBtn"
+                    title="CSV Template"
+                >
+
+                    <i class="fa fa-file-csv"></i>
+
+                </button>
+
+
+                <!-- CSV IMPORT -->
+
+                <button
+                    type="button"
+                    class="cm-ibtn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#csvImportModal"
+                    title="Import CSV"
+                >
+
+                    <i class="fa fa-upload"></i>
+
+                </button>
+
+
+                <!-- REFRESH -->
+
+                <button
+                    type="button"
+                    class="cm-ibtn"
+                    id="refreshCustomersBtn"
+                    title="Refresh"
+                >
+
+                    <i class="fa fa-refresh"></i>
+
+                </button>
+
+
+                <!-- ADD CUSTOMER -->
+
+                <button
+                    type="button"
+                    class="cm-ibtn action-popup"
+                    data-url="/customers/add"
+                    data-title="Add Customer"
+                    title="Add Customer"
+                >
+
+                    <i class="fa fa-user-plus"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             SUMMARY BAR
+        ================================================== -->
+
+        <div class="cm-summary">
+
+
+            <!-- TOTAL CUSTOMER -->
+
+            <div class="cm-summary-item">
+
+                <span class="cm-summary-label">
+                    Total Customer
+                </span>
+
+                <strong
+                    id="totalCustomers"
+                >
+                    0
+                </strong>
+
+            </div>
+
+
+            <!-- MONTHLY FEE -->
+
+            <div class="cm-summary-item">
+
+                <span class="cm-summary-label">
+                    Monthly Fee
+                </span>
+
+                <strong
+                    id="totalBill"
+                >
+                    ৳0.00
+                </strong>
+
+            </div>
+
+
+            <!-- BALANCE -->
+
+            <div class="cm-summary-item">
+
+                <span class="cm-summary-label">
+                    Balance
+                </span>
+
+                <strong
+                    id="totalBalance"
+                >
+                    ৳0.00
+                </strong>
+
+            </div>
+
+
+            <!-- SEARCH -->
+
+            <div class="cm-summary-search">
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+
+                        <i class="fa fa-search"></i>
+
+                    </span>
+
+                    <input
+                        type="text"
+                        id="customerSearch"
+                        class="form-control"
+                        placeholder="Name / Customer ID / Mobile / PPPoE"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        id="clearSearchBtn"
+                        title="Clear"
+                    >
+
+                        <i class="fa fa-times"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             FILTER BAR
+        ================================================== -->
+
+        <div class="cm-filter-bar">
+
+
+            <!-- STATUS -->
+
+            <div class="cm-filter-item">
+
+                <label
+                    for="customerStatus"
+                >
+                    Status
+                </label>
+
+                <select
+                    id="customerStatus"
+                    class="form-select"
+                >
+
+                    <option value="">
+                        All Status
+                    </option>
+
+                    <option value="Active">
+                        Active
+                    </option>
+
+                    <option value="Expired">
+                        Expired
+                    </option>
+
+                    <option value="Inactive">
+                        Inactive
+                    </option>
+
+                    <option value="Suspended">
+                        Suspended
+                    </option>
+
+                    <option value="Disabled">
+                        Disabled
+                    </option>
+
+                    <option value="Pending">
+                        Pending
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- LIMIT -->
+
+            <div class="cm-filter-item">
+
+                <label
+                    for="customerLimit"
+                >
+                    Show
+                </label>
+
+                <select
+                    id="customerLimit"
+                    class="form-select"
+                >
+
+                    <option value="100">
+                        100
+                    </option>
+
+                    <option value="200">
+                        200
+                    </option>
+
+                    <option value="500">
+                        500
+                    </option>
+
+                    <option value="5000">
+                        5000
+                    </option>
+
+                    <option value="0">
+                        All
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- FILTER -->
+
+            <div class="cm-filter-item cm-filter-button">
+
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="applyCustomerFilter"
+                >
+
+                    <i class="fa fa-filter me-1"></i>
+
+                    Filter
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             CUSTOMER TABLE
+        ================================================== -->
+
+        <div class="customer-table-scroll">
+
+
+            <table
+                class="table cm-table"
+                id="customerTable"
+            >
+
+                <thead>
+
+                    <tr>
+
+
+                        <!-- SELECT -->
+
+                        <th
+                            class="text-center"
+                            style="width:45px;"
+                        >
+
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                id="selectAll"
+                            >
+
+                        </th>
+
+
+                        <!-- ID -->
+
+                        <th>
+                            ID
+                        </th>
+
+
+                        <!-- NAME -->
+
+                        <th>
+                            Name / PPPoE
+                        </th>
+
+
+                        <!-- MOBILE -->
+
+                        <th>
+                            Mobile / Address
+                        </th>
+
+
+                        <!-- PACKAGE -->
+
+                        <th>
+                            Package
+                        </th>
+
+
+                        <!-- BILL -->
+
+                        <th>
+                            Bill / Balance
+                        </th>
+
+
+                        <!-- DATE -->
+
+                        <th>
+                            Bill / Promise Date
+                        </th>
+
+
+                        <!-- DAY LEFT -->
+
+                        <th>
+                            Day Left
+                        </th>
+
+
+                        <!-- STATUS -->
+
+                        <th>
+                            Status
+                        </th>
+
+
+                        <!-- ACTION -->
+
+                        <th class="text-center">
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody
+                    id="customerTableBody"
+                >
+
+                    <tr>
+
+                        <td
+                            colspan="10"
+                            class="text-center py-5"
+                        >
+
+                            <div
+                                class="spinner-border text-primary"
+                                role="status"
+                            ></div>
+
+                            <div class="mt-2 text-muted">
+                                Loading customers...
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- =================================================
+             PAGINATION
+        ================================================== -->
+
+        <div class="cm-pagination-wrap">
+
+
+            <div
+                id="paginationInfo"
+                class="small text-muted"
+            >
+                Showing 0 - 0 of 0
+            </div>
+
+
+            <nav
+                aria-label="Customer pagination"
+            >
+
+                <ul
+                    class="pagination pagination-sm mb-0"
+                    id="customerPagination"
+                ></ul>
+
+            </nav>
+
+        </div>
+
+
+    </main>
+
+</div>
+
+
+<!-- =========================================================
+     BULK FLOATING TOGGLE
+========================================================= -->
+
+<button
+    type="button"
+    id="bulkFloatingToggle"
+    class="bulk-floating-toggle"
+    title="Bulk Actions"
+>
+
+    <i class="fa fa-cog"></i>
+
+    <span
+        id="selectedCount"
+        class="selected-count"
+    >
+        0
+    </span>
+
+</button>
+
+
+<!-- =========================================================
+     BULK FLOATING PANEL
+========================================================= -->
+
+<div
+    id="bulkFloatingPanel"
+    class="bulk-floating-panel"
+>
+
+
+    <!-- MESSAGE -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/message"
+        data-title="Bulk Message"
+    >
+
+        <i class="fa fa-comment"></i>
+
+        <span>
+            Message
+        </span>
+
+    </button>
+
+
+    <!-- PROMISE DATE -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/promise_date"
+        data-title="Promise Date"
+    >
+
+        <i class="fa fa-calendar"></i>
+
+        <span>
+            Promise Date
+        </span>
+
+    </button>
+
+
+    <!-- BILLING CYCLE -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/billing_cycle"
+        data-title="Billing Cycle"
+    >
+
+        <i class="fa fa-calendar-days"></i>
+
+        <span>
+            Billing Cycle
+        </span>
+
+    </button>
+
+
+    <!-- PAYMENT STATUS -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/payment_status"
+        data-title="Payment Status"
+    >
+
+        <i class="fa fa-money-check"></i>
+
+        <span>
+            Payment
+        </span>
+
+    </button>
+
+
+    <!-- AREA -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/area"
+        data-title="Area"
+    >
+
+        <i class="fa fa-location-dot"></i>
+
+        <span>
+            Area
+        </span>
+
+    </button>
+
+
+    <!-- STATUS -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/status"
+        data-title="Status"
+    >
+
+        <i class="fa fa-toggle-on"></i>
+
+        <span>
+            Status
+        </span>
+
+    </button>
+
+
+    <!-- BALANCE -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/balance"
+        data-title="Balance"
+    >
+
+        <i class="fa fa-wallet"></i>
+
+        <span>
+            Balance
+        </span>
+
+    </button>
+
+
+    <!-- RECHARGE -->
+
+    <button
+        type="button"
+        id="bulkRechargeBtn"
+        class="bulk-recharge-btn bulk-tile"
+    >
+
+        <i class="fa fa-credit-card"></i>
+
+        <span>
+            Recharge
+        </span>
+
+    </button>
+
+
+    <!-- RESELLER -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/reseller"
+        data-title="Reseller"
+    >
+
+        <i class="fa fa-user-tie"></i>
+
+        <span>
+            Reseller
+        </span>
+
+    </button>
+
+
+    <!-- PACKAGE -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/package"
+        data-title="Package"
+    >
+
+        <i class="fa fa-box"></i>
+
+        <span>
+            Package
+        </span>
+
+    </button>
+
+
+    <!-- CONNECTION ON -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/connection_on"
+        data-title="Connection ON"
+    >
+
+        <i class="fa fa-power-off"></i>
+
+        <span>
+            Connection ON
+        </span>
+
+    </button>
+
+
+    <!-- CONNECTION OFF -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/connection_off"
+        data-title="Connection OFF"
+    >
+
+        <i class="fa fa-power-off"></i>
+
+        <span>
+            Connection OFF
+        </span>
+
+    </button>
+
+
+    <!-- MIKROTIK -->
+
+    <button
+        type="button"
+        class="bulk-action-popup bulk-tile"
+        data-url="/customers/bulk/mikrotik"
+        data-title="MikroTik"
+    >
+
+        <i class="fa fa-server"></i>
+
+        <span>
+            MikroTik
+        </span>
+
+    </button>
+
+
+    <!-- DELETE -->
+
+    <button
+        type="button"
+        class="bulk-delete-btn bulk-tile"
+    >
+
+        <i class="fa fa-trash"></i>
+
+        <span>
+            Delete
+        </span>
+
+    </button>
+
+</div>
+
+
+<!-- =========================================================
+     CUSTOMER ACTION MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="customerActionModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-xl modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="customerActionModalLabel"
+                >
+                    Customer Action
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close bulk-popup-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="customerActionModalBody"
+            >
+
+                <div
+                    class="text-center py-5"
+                >
+
+                    <div
+                        class="spinner-border text-primary"
+                        role="status"
+                    ></div>
+
+                    <div class="mt-2 text-muted">
+                        Loading...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CSV IMPORT MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="csvImportModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-file-csv me-2"></i>
+
+                    Import Customers CSV
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <form
+                id="csvImportForm"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+
+                <div class="modal-body">
+
+
+                    <div class="alert alert-info">
+
+                        <i class="fa fa-info-circle me-1"></i>
+
+                        Upload your customer CSV file.
+
+                    </div>
+
+
+                    <!-- CSV FILE -->
+
+                    <div class="mb-3">
+
+                        <label
+                            for="csv_file"
+                            class="form-label fw-semibold"
+                        >
+                            CSV File
+                        </label>
+
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="csv_file"
+                            name="csv_file"
+                            accept=".csv,text/csv"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- TEMPLATE -->
+
+                    <div class="mb-2">
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary"
+                            id="csvTemplateModalBtn"
+                        >
+
+                            <i class="fa fa-download me-1"></i>
+
+                            Download CSV Template
+
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="csvImportMessage"
+                        class="mt-3"
+                    ></div>
+
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        id="csvImportSubmit"
+                    >
+
+                        <i class="fa fa-upload me-1"></i>
+
+                        Import CSV
+
+                    </button>
+
+                </div>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CSV REPORT MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="csvReportModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-file-circle-check me-2"></i>
+
+                    CSV Import Report
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="csvReportBody"
+            >
+
+                <div class="text-center text-muted py-4">
+
+                    No report available.
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     SINGLE RECHARGE MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="rechargeModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="rechargeModalTitle"
+                >
+                    Customer Recharge
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="rechargeModalBody"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BULK RECHARGE MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="bulkRechargeModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-xl modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-credit-card me-2"></i>
+
+                    Bulk Recharge
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+
+                <div
+                    id="bulkRechargeContent"
+                >
+
+                    <div class="text-center py-5">
+
+                        <div
+                            class="spinner-border text-primary"
+                            role="status"
+                        ></div>
+
+                        <div class="mt-2 text-muted">
+                            Loading...
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CUSTOMER TOAST
+========================================================= -->
+
+<div
+    class="customer-topbar-toast"
+    id="customerToast"
+    style="display:none;"
+>
+
+    <div
+        id="customerToastTitle"
+        class="fw-bold"
+    >
+        ISP Billing
+    </div>
+
+
+    <div
+        id="customerToastBody"
+    ></div>
+
+</div>
+
+
+<!-- =========================================================
+     HIDDEN CSRF
+========================================================= -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    id="csrfTokenInput"
+    value=""
+>
+
+
+<!-- =========================================================
+     BOOTSTRAP JS
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- =========================================================
+     SWEETALERT
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/sweetalert2@11"
+></script>
+
+
+<!-- =========================================================
+     SIDEBAR LOADER
+========================================================= -->
+
+<script
+    src="/assets/js/sidebar-loader.js"
+></script>
+
+
+<!-- =========================================================
+     TOPBAR LOADER
+========================================================= -->
+
+<script
+    src="/assets/js/topbar-loader.js"
+></script>
+
+
+<!-- =========================================================
+     CUSTOMER JS
+========================================================= -->
+
+<script
+    src="/assets/js/customer.js"
+></script>
+
+
+</body>
+
+</html>

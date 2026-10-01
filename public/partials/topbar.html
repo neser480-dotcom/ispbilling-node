@@ -1,0 +1,192 @@
+<div class="topbar">
+
+    <div class="topbar-left">
+
+        <button
+            type="button"
+            class="menu-btn"
+            id="menuBtn"
+            title="Menu"
+        >
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <input
+            type="text"
+            id="topbarCustomerSearch"
+            name="topbarCustomerSearch"
+            class="search-box"
+            placeholder="Search customer..."
+            autocomplete="off"
+        >
+
+    </div>
+
+
+    <div class="topbar-right">
+
+        <!-- SUPPORT TICKET -->
+        <a
+            href="/tickets"
+            class="btn btn-sm btn-open-ticket"
+            id="openSupportTicketBtn"
+        >
+            Open Support Ticket
+        </a>
+
+
+        <!-- BILLING CYCLE -->
+        <div
+            class="icon-box"
+            id="billingCycleBtn"
+            title="Billing Cycle"
+            data-bs-toggle="modal"
+            data-bs-target="#billingCycleModal"
+        >
+            <i class="fas fa-sync-alt"></i>
+        </div>
+
+
+        <!-- MESSAGES -->
+        <div
+            class="icon-box position-relative"
+            id="messagesBtn"
+            title="Messages"
+        >
+            <i class="fas fa-comments"></i>
+
+            <span class="badge-count">
+                124
+            </span>
+        </div>
+
+
+        <!-- DARK / LIGHT -->
+        <div
+            class="icon-box"
+            id="themeToggle"
+            title="Dark / Light Mode"
+        >
+            <i class="fas fa-moon"></i>
+        </div>
+
+
+        <!-- COLOR THEME -->
+        <div
+            class="icon-box"
+            id="colorThemeToggle"
+            title="Choose Theme Color"
+        >
+            <i class="fas fa-palette"></i>
+        </div>
+
+
+        <!-- LANGUAGE -->
+        <div
+            class="language-dropdown"
+            id="languageDropdown"
+        >
+
+            <button
+                type="button"
+                id="langBtn"
+                title="Language"
+                aria-expanded="false"
+                aria-controls="langMenu"
+            >
+                EN
+                <i class="fas fa-caret-down"></i>
+            </button>
+
+
+            <div
+                class="lang-menu"
+                id="langMenu"
+            >
+
+                <a
+                    href="#"
+                    data-lang="en"
+                >
+                    English
+                </a>
+
+                <a
+                    href="#"
+                    data-lang="bn"
+                >
+                    বাংলা
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- PROFILE -->
+        <div
+            class="profile"
+            id="profileContainer"
+        >
+
+            <div
+                class="avatar"
+                id="profileAvatar"
+                title=""
+            >
+                A
+            </div>
+
+
+            <div class="profile-info">
+
+                <strong id="profileFullname">
+                    Loading...
+                </strong>
+
+                <small id="profileRole">
+                    -
+                </small>
+
+            </div>
+
+
+            <button
+                type="button"
+                class="profile-arrow"
+                id="profileBtn"
+                title="Profile Menu"
+                aria-expanded="false"
+                aria-controls="profileMenu"
+            >
+                <i class="fas fa-caret-down"></i>
+            </button>
+
+
+            <div
+                class="profile-dropdown"
+                id="profileMenu"
+            >
+
+                <a href="/settings/profile">
+                    <i class="fas fa-user me-2"></i>
+                    Profile
+                </a>
+
+
+                <a
+                    href="/api/auth/logout"
+                    class="text-danger"
+                    id="logoutBtn"
+                >
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    Logout
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

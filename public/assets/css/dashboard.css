@@ -1,0 +1,485 @@
+/* ===============================
+   FINAL NETFEE STYLE DASHBOARD CSS
+================================*/
+
+
+body{
+    background:#f6f8fc;
+    overflow-x:hidden;
+}
+
+
+/* MAIN */
+
+.main-content{
+
+    margin-left:260px;
+    margin-top:70px;
+
+    padding:25px;
+
+    transition:.3s;
+
+}
+
+
+/* DASHBOARD HEADING */
+
+.dashboard-heading{
+
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:18px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.06);
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+}
+
+
+.dashboard-heading h2{
+
+    margin:0;
+
+    font-size:25px;
+
+    font-weight:800;
+
+    color:#1e293b;
+
+}
+
+
+.dashboard-heading p{
+
+    margin:4px 0 0;
+
+    color:#64748b;
+
+}
+
+
+/* TOP SUMMARY */
+
+.main-content .row:first-child{
+
+    border-radius:18px;
+
+}
+
+
+/* CARDS */
+
+.card{
+
+    border:none!important;
+
+    border-radius:16px!important;
+
+    overflow:hidden;
+
+    box-shadow:0 6px 18px rgba(0,0,0,.10)!important;
+
+    transition:.25s;
+
+}
+
+
+.card:hover{
+
+    transform:translateY(-3px);
+
+}
+
+
+.card-body{
+
+    padding:16px!important;
+
+    min-height:100px;
+
+}
+
+
+.card-flex{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+}
+
+
+.left-icon i{
+
+    font-size:32px;
+
+    color:#fff;
+
+    opacity:.9;
+
+}
+
+
+.card h6{
+
+    font-size:13px;
+
+    margin:0 0 5px;
+
+    color:#fff;
+
+}
+
+
+.card h2,
+.card h3,
+.card h4{
+
+    font-size:22px;
+
+    margin:0;
+
+    color:#fff;
+
+    font-weight:800;
+
+}
+
+
+/* COLORS */
+
+.bg-primary{
+
+    background:
+    linear-gradient(
+        135deg,
+        #2563eb,
+        #38bdf8
+    )!important;
+
+}
+
+
+.bg-success{
+
+    background:
+    linear-gradient(
+        135deg,
+        #10b981,
+        #14b8a6
+    )!important;
+
+}
+
+
+.bg-danger{
+
+    background:
+    linear-gradient(
+        135deg,
+        #ef4444,
+        #fb923c
+    )!important;
+
+}
+
+
+.bg-warning{
+
+    background:
+    linear-gradient(
+        135deg,
+        #f59e0b,
+        #f97316
+    )!important;
+
+}
+
+
+.bg-info{
+
+    background:
+    linear-gradient(
+        135deg,
+        #06b6d4,
+        #2563eb
+    )!important;
+
+}
+
+
+.bg-dark{
+
+    background:
+    linear-gradient(
+        135deg,
+        #334155,
+        #020617
+    )!important;
+
+}
+
+
+.bg-secondary{
+
+    background:
+    linear-gradient(
+        135deg,
+        #64748b,
+        #475569
+    )!important;
+
+}
+
+
+.bg-green{
+
+    background:
+    linear-gradient(
+        135deg,
+        #16a34a,
+        #22c55e
+    )!important;
+
+}
+
+
+.bg-purple{
+
+    background:
+    linear-gradient(
+        135deg,
+        #9333ea,
+        #6366f1
+    )!important;
+
+}
+
+
+/* CHART */
+
+canvas{
+
+    max-height:300px;
+
+}
+
+
+svg{
+
+    max-width:160px;
+
+    height:auto;
+
+}
+
+
+/* COLLAPSE CARD */
+
+.card-header{
+
+    font-weight:700;
+
+}
+
+
+/* TABLET */
+
+@media(max-width:992px){
+
+    .main-content{
+
+        margin-left:0;
+
+    }
+
+}
+
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+    .main-content{
+
+        margin-left:0!important;
+
+        margin-top:65px!important;
+
+        padding:10px!important;
+
+    }
+
+
+    .main-content .row:first-child{
+
+        padding:12px;
+
+    }
+
+
+    .col-md-3,
+    .col-md-4,
+    .col-md-6,
+    .col-md-12{
+
+        width:100%!important;
+
+        padding:6px!important;
+
+    }
+
+
+    .card{
+
+        border-radius:14px!important;
+
+    }
+
+
+    .card-body{
+
+        min-height:85px;
+
+        padding:14px!important;
+
+    }
+
+
+    .left-icon i{
+
+        font-size:26px;
+
+    }
+
+
+    .card h6{
+
+        font-size:12px;
+
+    }
+
+
+    .card h2{
+
+        font-size:19px;
+
+    }
+
+
+    svg{
+
+        width:120px;
+
+        height:120px;
+
+    }
+
+
+    .dashboard-heading{
+
+        padding:12px;
+
+    }
+
+
+    .dashboard-heading h2{
+
+        font-size:20px;
+
+    }
+
+}
+
+
+/* AREA PAGE FIX */
+
+.main-content{
+
+    margin-left:260px;
+
+    margin-top:70px;
+
+    padding:25px;
+
+}
+
+
+.table{
+
+    background:white;
+
+    border-radius:12px;
+
+    overflow:hidden;
+
+}
+
+
+.card-header{
+
+    border-radius:15px 15px 0 0!important;
+
+}
+
+
+/* PENDING BILLING */
+
+#pendingBilling .card{
+
+    box-shadow:
+        0 6px 20px
+        rgba(239,68,68,.20)!important;
+
+}
+
+
+#billingDetails{
+
+    font-size:14px;
+
+}
+
+
+/* SMALL PHONE */
+
+@media(max-width:420px){
+
+    .main-content{
+
+        padding:6px!important;
+
+    }
+
+
+    .card-flex{
+
+        gap:8px;
+
+    }
+
+
+    .left-icon i{
+
+        font-size:23px;
+
+    }
+
+
+    .card h2{
+
+        font-size:17px;
+
+    }
+
+}

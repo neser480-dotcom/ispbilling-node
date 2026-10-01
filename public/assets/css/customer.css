@@ -1,0 +1,1629 @@
+/* =========================================================
+   ISP BILLING - CUSTOMER LIST
+   File:
+   public/assets/css/customer.css
+
+   ORIGINAL CUSTOMER UI
+   - Blue customer header
+   - Export / CSV / Import / Refresh / Add
+   - Blue summary bar
+   - Customer table
+   - Floating bulk action gear
+   - Customer action modal
+   - Mobile horizontal table
+========================================================= */
+
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+#mainContent {
+    position: relative;
+
+    margin-left: 260px;
+
+    width: calc(100% - 260px);
+
+    min-height: 100vh;
+
+    padding-top: 70px;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   CUSTOMER PAGE
+========================================================= */
+
+.customer-page {
+    width: 100%;
+    max-width: 100%;
+
+    padding: 15px;
+    padding-bottom: 40px;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   CUSTOMER LIST HEADER
+========================================================= */
+
+.cm-list-header {
+    width: 100%;
+
+    min-height: 58px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 10px 14px;
+
+    margin-bottom: 12px;
+
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #1d4ed8
+        );
+
+    color: #fff;
+
+    box-shadow:
+        0 4px 12px
+        rgba(37, 99, 235, .18);
+}
+
+
+/* =========================================================
+   HEADER TITLE
+========================================================= */
+
+.cm-list-title {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    min-width: 0;
+}
+
+.cm-list-title > i {
+    width: 34px;
+
+    height: 34px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 9px;
+
+    background: rgba(255, 255, 255, .15);
+
+    font-size: 17px;
+}
+
+.cm-list-title h4 {
+    margin: 0;
+
+    font-size: 18px;
+
+    line-height: 1.2;
+
+    font-weight: 700;
+}
+
+.cm-list-subtitle {
+    margin-top: 2px;
+
+    color: rgba(255, 255, 255, .78);
+
+    font-size: 11px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   HEADER ACTION BUTTONS
+========================================================= */
+
+.cm-list-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+}
+
+.cm-ibtn {
+    width: 36px;
+
+    height: 36px;
+
+    min-width: 36px;
+
+    padding: 0;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 1px solid
+        rgba(255, 255, 255, .35);
+
+    border-radius: 8px;
+
+    background:
+        rgba(255, 255, 255, .12);
+
+    color: #fff;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+    transition:
+        background .15s ease,
+        transform .15s ease;
+}
+
+.cm-ibtn:hover {
+    background:
+        rgba(255, 255, 255, .24);
+
+    color: #fff;
+
+    transform: translateY(-1px);
+}
+
+.cm-ibtn:active {
+    transform: scale(.97);
+}
+
+
+/* =========================================================
+   SUMMARY BAR
+========================================================= */
+
+.cm-summary {
+    width: 100%;
+
+    min-height: 58px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+    padding: 9px 14px;
+
+    margin-bottom: 12px;
+
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #1d4ed8
+        );
+
+    color: #fff;
+
+    box-shadow:
+        0 4px 12px
+        rgba(37, 99, 235, .15);
+}
+
+
+/* =========================================================
+   SUMMARY ITEM
+========================================================= */
+
+.cm-summary-item {
+    min-width: 120px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+}
+
+.cm-summary-label {
+    font-size: 11px;
+
+    line-height: 1.2;
+
+    color:
+        rgba(255, 255, 255, .75);
+}
+
+.cm-summary-item strong {
+    margin-top: 2px;
+
+    font-size: 17px;
+
+    line-height: 1.2;
+
+    color: #fff;
+}
+
+
+/* =========================================================
+   SUMMARY SEARCH
+========================================================= */
+
+.cm-summary-search {
+    margin-left: auto;
+
+    width: 320px;
+
+    max-width: 100%;
+}
+
+.cm-summary-search .input-group {
+    height: 36px;
+}
+
+.cm-summary-search .input-group-text {
+    border: 0;
+
+    background: #fff;
+
+    color: #6b7280;
+}
+
+.cm-summary-search .form-control {
+    border: 0;
+
+    min-height: 36px;
+
+    box-shadow: none;
+
+    font-size: 13px;
+}
+
+.cm-summary-search .btn {
+    border: 0;
+
+    background: #fff;
+
+    color: #6b7280;
+}
+
+.cm-summary-search .btn:hover {
+    background: #f3f4f6;
+
+    color: #111827;
+}
+
+
+/* =========================================================
+   FILTER BAR
+========================================================= */
+
+.cm-filter-bar {
+    width: 100%;
+
+    display: flex;
+
+    align-items: flex-end;
+
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    margin-bottom: 12px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 10px;
+
+    background: #fff;
+
+    box-shadow:
+        0 2px 8px
+        rgba(0, 0, 0, .04);
+}
+
+.cm-filter-item {
+    min-width: 150px;
+}
+
+.cm-filter-item label {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #6b7280;
+
+    font-size: 11px;
+
+    font-weight: 600;
+}
+
+.cm-filter-item .form-control,
+.cm-filter-item .form-select {
+    min-height: 36px;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 7px;
+
+    font-size: 13px;
+
+    box-shadow: none;
+}
+
+.cm-filter-item .form-control:focus,
+.cm-filter-item .form-select:focus {
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 2px
+        rgba(37, 99, 235, .10);
+}
+
+.cm-filter-button {
+    min-width: 100px;
+}
+
+.cm-filter-button button {
+    min-height: 36px;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   CUSTOMER TABLE SCROLL
+========================================================= */
+
+.customer-table-scroll {
+    width: 100%;
+
+    overflow-x: auto;
+
+    overflow-y: hidden;
+
+    -webkit-overflow-scrolling: touch;
+
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   CUSTOMER TABLE
+========================================================= */
+
+.cm-table {
+    width: 100%;
+
+    min-width: 1100px;
+
+    margin: 0;
+
+    border-collapse: separate;
+
+    border-spacing: 0;
+
+    background: #fff;
+}
+
+
+/* =========================================================
+   TABLE HEADER
+========================================================= */
+
+.cm-table thead th {
+    padding: 10px 9px;
+
+    background: #f8fafc;
+
+    color: #374151;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    vertical-align: middle;
+}
+
+
+/* =========================================================
+   TABLE BODY
+========================================================= */
+
+.cm-table tbody td {
+    padding: 9px;
+
+    background: #fff;
+
+    color: #374151;
+
+    border-bottom: 1px solid #eef0f3;
+
+    font-size: 13px;
+
+    vertical-align: middle;
+}
+
+.cm-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
+
+.cm-table input[type="checkbox"] {
+    width: 16px;
+
+    height: 16px;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   CUSTOMER ID
+========================================================= */
+
+.cm-id {
+    color: #16a34a;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.cm-id.expired,
+.cm-id.due-negative {
+    color: #dc2626 !important;
+}
+
+
+/* =========================================================
+   NAME / PPPOE
+========================================================= */
+
+.customer-name {
+    color: #111827;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.customer-pppoe {
+    margin-top: 2px;
+
+    color: #6b7280;
+
+    font-size: 11px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   PHONE / ADDRESS
+========================================================= */
+
+.customer-phone {
+    color: #374151;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.customer-address {
+    max-width: 190px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    color: #6b7280;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   PACKAGE
+========================================================= */
+
+.cm-package,
+.customer-package {
+    color: #2563eb;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   BILL / BALANCE
+========================================================= */
+
+.customer-bill {
+    color: #111827;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.customer-balance {
+    color: #6b7280;
+
+    font-size: 11px;
+
+    white-space: nowrap;
+}
+
+.customer-balance.negative {
+    color: #dc2626;
+
+    font-weight: 700;
+}
+
+.customer-balance.positive {
+    color: #16a34a;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   BILL / PROMISE DATE
+========================================================= */
+
+.customer-bill-date {
+    color: #374151;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.customer-promise-date {
+    color: #6b7280;
+
+    font-size: 11px;
+
+    white-space: nowrap;
+}
+
+.customer-promise-date.expired {
+    color: #dc2626;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   DAY LEFT
+========================================================= */
+
+.cm-dayleft,
+.day-left {
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.cm-dayleft.normal,
+.day-left.normal {
+    color: #16a34a;
+}
+
+.cm-dayleft.warning,
+.day-left.warning {
+    color: #d97706;
+}
+
+.cm-dayleft.expired,
+.day-left.expired {
+    color: #dc2626;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.customer-status {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 70px;
+
+    padding: 4px 9px;
+
+    border-radius: 50px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.customer-status.active {
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.customer-status.inactive {
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+.customer-status.expired {
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+.customer-status.pending {
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.customer-status.suspended {
+    background: #fef3c7;
+
+    color: #92400e;
+}
+
+.customer-status.disabled {
+    background: #e5e7eb;
+
+    color: #374151;
+}
+
+
+/* =========================================================
+   ACTION COLUMN
+========================================================= */
+
+.customer-action {
+    width: 70px;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+.customer-action .dropdown {
+    display: inline-block;
+}
+
+.customer-action .btn-link {
+    padding: 0;
+
+    border: 0;
+
+    color: #2563eb;
+
+    font-size: 18px;
+
+    text-decoration: none;
+}
+
+.customer-action .btn-link:hover {
+    color: #1d4ed8;
+}
+
+
+/* =========================================================
+   DROPDOWN
+========================================================= */
+
+.customer-action .dropdown-menu {
+    min-width: 220px;
+
+    padding: 5px;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    box-shadow:
+        0 10px 30px
+        rgba(0, 0, 0, .15);
+
+    z-index: 1050;
+}
+
+.customer-action .dropdown-item {
+    padding: 7px 9px;
+
+    border-radius: 6px;
+
+    font-size: 13px;
+}
+
+.customer-action .dropdown-item:hover {
+    background: #f3f4f6;
+}
+
+
+/* =========================================================
+   PAGINATION
+========================================================= */
+
+.cm-pagination-wrap {
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+
+    padding: 12px 2px;
+
+    margin-top: 2px;
+}
+
+.cm-pagination-wrap .pagination {
+    margin: 0;
+}
+
+.cm-pagination-wrap .page-link {
+    color: #2563eb;
+
+    border-color: #e5e7eb;
+
+    font-size: 12px;
+}
+
+.cm-pagination-wrap .page-item.active .page-link {
+    background: #2563eb;
+
+    border-color: #2563eb;
+
+    color: #fff;
+}
+
+
+/* =========================================================
+   BULK FLOATING GEAR
+========================================================= */
+
+#bulkFloatingToggle,
+.bulk-floating-toggle {
+    position: fixed;
+
+    right: 15px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    z-index: 99998;
+
+    width: 48px;
+
+    height: 48px;
+
+    min-width: 48px;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 0;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background: #2563eb;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 20px
+        rgba(37, 99, 235, .30);
+
+    font-size: 18px;
+}
+
+#bulkFloatingToggle.active,
+.bulk-floating-toggle.active {
+    display: flex;
+}
+
+#bulkFloatingToggle:hover,
+.bulk-floating-toggle:hover {
+    background: #1d4ed8;
+}
+
+
+/* =========================================================
+   SELECTED COUNT
+========================================================= */
+
+#selectedCount,
+.selected-count {
+    position: absolute;
+
+    top: -4px;
+
+    right: -4px;
+
+    min-width: 18px;
+
+    height: 18px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 0 4px;
+
+    border-radius: 50%;
+
+    background: #dc2626;
+
+    color: #fff;
+
+    font-size: 10px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   BULK FLOATING PANEL
+========================================================= */
+
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    position: fixed;
+
+    right: 15px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    z-index: 99997;
+
+    width: 84px;
+
+    max-height: 80vh;
+
+    padding: 6px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+
+    overflow-y: auto;
+
+    overflow-x: hidden;
+
+    background: rgba(255, 255, 255, .98);
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 10px 30px
+        rgba(0, 0, 0, .16);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+        opacity .15s ease,
+        visibility .15s ease;
+}
+
+#bulkFloatingPanel.show,
+.bulk-floating-panel.show {
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+}
+
+
+/* =========================================================
+   BULK TILE
+========================================================= */
+
+.bulk-tile {
+    width: 100%;
+
+    min-height: 62px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 4px;
+
+    padding: 6px 3px;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    color: #fff;
+
+    cursor: pointer;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    text-align: center;
+
+    transition:
+        filter .15s ease,
+        transform .15s ease;
+}
+
+.bulk-tile i {
+    font-size: 15px;
+}
+
+.bulk-tile span {
+    line-height: 1.1;
+}
+
+.bulk-tile:hover {
+    filter: brightness(.94);
+
+    transform: translateX(-2px);
+}
+
+
+/* =========================================================
+   BULK TILE COLORS
+========================================================= */
+
+.bulk-tile:nth-child(4n + 1) {
+    background: #0ea5e9;
+}
+
+.bulk-tile:nth-child(4n + 2) {
+    background: #8b5cf6;
+}
+
+.bulk-tile:nth-child(4n + 3) {
+    background: #10b981;
+}
+
+.bulk-tile:nth-child(4n + 4) {
+    background: #f59e0b;
+}
+
+
+/* DELETE */
+.bulk-delete-btn {
+    background: #dc2626 !important;
+}
+
+
+/* =========================================================
+   CUSTOMER ACTION MODAL
+========================================================= */
+
+#customerActionModal {
+    z-index: 100000;
+}
+
+#customerActionModal .modal-dialog {
+    max-width: 860px;
+
+    width: calc(100% - 20px);
+
+    margin-left: auto;
+
+    margin-right: auto;
+}
+
+#customerActionModal .modal-content {
+    border: 0;
+
+    border-radius: 14px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 20px 50px
+        rgba(0, 0, 0, .20);
+}
+
+#customerActionModal .modal-header {
+    padding: 12px 15px;
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#customerActionModal .modal-title {
+    font-size: 16px;
+
+    font-weight: 700;
+}
+
+#customerActionModal .modal-body {
+    max-height: calc(100vh - 150px);
+
+    overflow-y: auto;
+
+    padding: 15px;
+}
+
+#customerActionModal .modal-footer {
+    border-top: 1px solid #e5e7eb;
+}
+
+
+/* =========================================================
+   BULK POPUP
+========================================================= */
+
+#customerActionModal.bulk-popup .modal-dialog {
+    max-width: 520px;
+}
+
+#customerActionModal.bulk-popup .modal-content {
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   CSV MODALS
+========================================================= */
+
+#csvImportModal,
+#csvReportModal {
+    z-index: 100001;
+}
+
+#csvImportModal .modal-content,
+#csvReportModal .modal-content {
+    border: 0;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 20px 50px
+        rgba(0, 0, 0, .20);
+}
+
+
+/* =========================================================
+   RECHARGE MODALS
+========================================================= */
+
+#rechargeModal,
+#bulkRechargeModal {
+    z-index: 100001;
+}
+
+#rechargeModal .modal-content,
+#bulkRechargeModal .modal-content {
+    border: 0;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.customer-topbar-toast {
+    position: fixed;
+
+    top: 75px;
+
+    right: 20px;
+
+    z-index: 999999;
+
+    min-width: 260px;
+
+    max-width: 400px;
+
+    padding: 10px 14px;
+
+    border-radius: 9px;
+
+    background: #111827;
+
+    color: #fff;
+
+    box-shadow:
+        0 8px 25px
+        rgba(0, 0, 0, .20);
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   EMPTY / LOADING
+========================================================= */
+
+.customer-empty {
+    padding: 50px 20px;
+
+    text-align: center;
+
+    color: #6b7280;
+}
+
+.customer-empty i {
+    display: block;
+
+    margin-bottom: 10px;
+
+    font-size: 40px;
+
+    opacity: .6;
+}
+
+.customer-loading {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-height: 150px;
+
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode #mainContent {
+    background: #111827;
+}
+
+body.dark-mode .cm-list-header,
+body.dark-mode .cm-summary {
+    box-shadow: none;
+}
+
+body.dark-mode .cm-filter-bar {
+    background: #1f2937;
+
+    border-color: #374151;
+}
+
+body.dark-mode .cm-filter-item label {
+    color: #9ca3af;
+}
+
+body.dark-mode .cm-filter-item .form-control,
+body.dark-mode .cm-filter-item .form-select {
+    background: #1f2937;
+
+    color: #fff;
+
+    border-color: #374151;
+}
+
+body.dark-mode .cm-table {
+    background: #1f2937;
+}
+
+body.dark-mode .cm-table thead th {
+    background: #111827;
+
+    color: #e5e7eb;
+
+    border-color: #374151;
+}
+
+body.dark-mode .cm-table tbody td {
+    background: #1f2937;
+
+    color: #e5e7eb;
+
+    border-color: #374151;
+}
+
+body.dark-mode .cm-table tbody tr:hover td {
+    background: #263244;
+}
+
+body.dark-mode .customer-name {
+    color: #f9fafb;
+}
+
+body.dark-mode .customer-phone,
+body.dark-mode .customer-bill,
+body.dark-mode .customer-bill-date {
+    color: #e5e7eb;
+}
+
+body.dark-mode .customer-pppoe,
+body.dark-mode .customer-address,
+body.dark-mode .customer-balance,
+body.dark-mode .customer-promise-date {
+    color: #9ca3af;
+}
+
+body.dark-mode #bulkFloatingPanel,
+body.dark-mode .bulk-floating-panel {
+    background: rgba(31, 41, 55, .98);
+
+    border-color: #374151;
+}
+
+body.dark-mode #customerActionModal .modal-content,
+body.dark-mode #csvImportModal .modal-content,
+body.dark-mode #csvReportModal .modal-content,
+body.dark-mode #rechargeModal .modal-content,
+body.dark-mode #bulkRechargeModal .modal-content {
+    background: #1f2937;
+
+    color: #e5e7eb;
+}
+
+body.dark-mode #customerActionModal .modal-header,
+body.dark-mode #customerActionModal .modal-footer {
+    border-color: #374151;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    #mainContent {
+        margin-left: 0;
+
+        width: 100%;
+
+        padding-top: 65px;
+    }
+
+
+    .customer-page {
+        padding: 8px;
+
+        padding-bottom: 30px;
+    }
+
+
+    .cm-list-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        padding: 10px;
+    }
+
+
+    .cm-list-actions {
+        width: 100%;
+
+        justify-content: flex-end;
+    }
+
+
+    .cm-summary {
+        align-items: stretch;
+
+        flex-wrap: wrap;
+
+        gap: 10px;
+
+        padding: 10px;
+    }
+
+
+    .cm-summary-item {
+        min-width: calc(50% - 5px);
+    }
+
+
+    .cm-summary-search {
+        width: 100%;
+
+        margin-left: 0;
+    }
+
+
+    .cm-filter-bar {
+        flex-wrap: wrap;
+    }
+
+
+    .cm-filter-item {
+        width: calc(50% - 5px);
+
+        min-width: 0;
+    }
+
+
+    .cm-filter-button {
+        width: 100%;
+    }
+
+
+    .customer-table-scroll {
+        width: 100%;
+
+        overflow-x: auto;
+    }
+
+
+    .cm-table {
+        min-width: 1100px;
+    }
+
+
+    #bulkFloatingToggle,
+    .bulk-floating-toggle {
+        right: 10px;
+    }
+
+
+    #bulkFloatingPanel,
+    .bulk-floating-panel {
+        right: 10px;
+
+        max-height: 80vh;
+    }
+
+
+    #customerActionModal .modal-dialog {
+        width: calc(100% - 16px);
+
+        max-width: none;
+
+        margin: 8px auto;
+    }
+
+
+    #customerActionModal .modal-body {
+        max-height: calc(100vh - 120px);
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 576px) {
+
+    .customer-page {
+        padding: 6px;
+    }
+
+
+    .cm-list-title h4 {
+        font-size: 16px;
+    }
+
+
+    .cm-list-subtitle {
+        font-size: 10px;
+    }
+
+
+    .cm-ibtn {
+        width: 34px;
+
+        height: 34px;
+
+        min-width: 34px;
+    }
+
+
+    .cm-summary-item {
+        min-width: 100%;
+    }
+
+
+    .cm-filter-item {
+        width: 100%;
+    }
+
+
+    #bulkFloatingPanel,
+    .bulk-floating-panel {
+        right: 8px;
+
+        width: 78px;
+    }
+
+
+    .bulk-tile {
+        min-height: 58px;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 420px) {
+
+    .customer-page {
+        padding: 5px;
+    }
+
+
+    .cm-list-actions {
+        gap: 4px;
+    }
+
+
+    .cm-ibtn {
+        width: 32px;
+
+        height: 32px;
+
+        min-width: 32px;
+
+        font-size: 12px;
+    }
+
+
+    #bulkFloatingToggle,
+    .bulk-floating-toggle {
+        width: 44px;
+
+        height: 44px;
+
+        min-width: 44px;
+    }
+
+
+    #bulkFloatingPanel,
+    .bulk-floating-panel {
+        right: 6px;
+
+        width: 74px;
+
+        padding: 5px;
+    }
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+
+    #sidebarContainer {
+        display: none !important;
+    }
+
+    #mainContent {
+        width: 100% !important;
+
+        margin-left: 0 !important;
+
+        padding-top: 0 !important;
+    }
+
+    .topbar {
+        display: none !important;
+    }
+
+    .cm-list-header,
+    .cm-summary,
+    .cm-filter-bar,
+    #bulkFloatingToggle,
+    #bulkFloatingPanel,
+    .customer-action,
+    .cm-pagination-wrap,
+    .btn {
+        display: none !important;
+    }
+
+    .customer-page {
+        width: 100% !important;
+
+        padding: 0 !important;
+    }
+
+    .customer-table-scroll {
+        overflow: visible !important;
+    }
+
+    .cm-table {
+        width: 100% !important;
+
+        min-width: 0 !important;
+    }
+}
