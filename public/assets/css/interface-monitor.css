@@ -1,0 +1,65 @@
+/*
+|--------------------------------------------------------------------------
+| INTERFACE MONITOR
+|--------------------------------------------------------------------------
+*/
+
+.interface-header {
+    min-height: 62px;
+}
+
+.interface-header h4 {
+    font-weight: 600;
+}
+
+.router-select {
+    min-width: 190px;
+}
+
+#interfaceTab .nav-link {
+    font-weight: 600;
+}
+
+#interfaceTab .badge {
+    font-size: 11px;
+}
+
+#ethernetBody td,
+#vlanBody td {
+    vertical-align: middle;
+}
+
+.view-bandwidth {
+    min-width: 38px;
+}
+
+.bandwidth-card {
+    border-radius: 10px;
+}
+
+#bandwidthChart {
+    width: 100%;
+    height: 300px;
+}
+
+#bandwidthLoading {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+
+    .interface-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+
+    .router-select {
+        width: 100%;
+    }
+
+}

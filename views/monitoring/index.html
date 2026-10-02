@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Live Fault - ISP Billing</title>
+
+
+<!-- =========================================
+     BOOTSTRAP CSS
+========================================== -->
+
+<link
+    rel="stylesheet"
+    href="/assets/css/bootstrap.min.css"
+>
+
+
+<!-- =========================================
+     FONT AWESOME
+========================================== -->
+
+<link
+    rel="stylesheet"
+    href="/assets/css/fontawesome.min.css"
+>
+
+
+<!-- =========================================
+     SIDEBAR CSS
+========================================== -->
+
+<link
+    rel="stylesheet"
+    href="/assets/css/sidebar.css"
+>
+
+
+<!-- =========================================
+     TOPBAR CSS
+========================================== -->
+
+<link
+    rel="stylesheet"
+    href="/assets/css/topbar.css"
+>
+
+
+<!-- =========================================
+     LIVE FAULT / MONITORING CSS
+========================================== -->
+
+<link
+    rel="stylesheet"
+    href="/assets/css/monitoring.css?v=1.0.1"
+>
+```
+
+</head>
+
+<body>
+
+```
+<!-- =========================================
+     SIDEBAR
+========================================== -->
+
+<div id="sidebarContainer"></div>
+
+
+<!-- =========================================
+     TOPBAR
+========================================== -->
+
+<div id="topbarContainer"></div>
+
+
+<!-- =========================================
+     MAIN CONTENT
+========================================== -->
+
+<main class="main-content">
+
+
+    <!-- =====================================
+         HEADER
+    ====================================== -->
+
+    <div class="monitor-header">
+
+        <div>
+
+            <h3>
+                <i class="fa fa-triangle-exclamation"></i>
+                Live Fault
+            </h3>
+
+            <small>
+                Network fault detection and monitoring
+            </small>
+
+        </div>
+
+
+        <div class="monitor-actions">
+
+            <button
+                type="button"
+                id="refreshFaults"
+                class="btn btn-primary btn-monitor"
+            >
+
+                <i class="fa fa-refresh"></i>
+                Refresh
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         SUMMARY
+    ====================================== -->
+
+    <div class="row g-3 mb-4">
+
+
+        <!-- CRITICAL -->
+
+        <div class="col-md-3">
+
+            <div class="card monitor-card bg-red">
+
+                <div class="card-body">
+
+                    <div>
+
+                        <h6>
+                            Critical
+                        </h6>
+
+                        <h2 id="criticalCount">
+                            0
+                        </h2>
+
+                    </div>
+
+                    <i class="fa fa-circle-exclamation"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- WARNING -->
+
+        <div class="col-md-3">
+
+            <div class="card monitor-card bg-orange">
+
+                <div class="card-body">
+
+                    <div>
+
+                        <h6>
+                            Warning
+                        </h6>
+
+                        <h2 id="warningCount">
+                            0
+                        </h2>
+
+                    </div>
+
+                    <i class="fa fa-triangle-exclamation"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RECOVERED -->
+
+        <div class="col-md-3">
+
+            <div class="card monitor-card bg-green">
+
+                <div class="card-body">
+
+                    <div>
+
+                        <h6>
+                            Recovered
+                        </h6>
+
+                        <h2 id="recoveredCount">
+                            0
+                        </h2>
+
+                    </div>
+
+                    <i class="fa fa-circle-check"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TOTAL -->
+
+        <div class="col-md-3">
+
+            <div class="card monitor-card bg-blue">
+
+                <div class="card-body">
+
+                    <div>
+
+                        <h6>
+                            Total Fault
+                        </h6>
+
+                        <h2 id="totalCount">
+                            0
+                        </h2>
+
+                    </div>
+
+                    <i class="fa fa-list"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         FILTER
+    ====================================== -->
+
+    <div class="card monitor-card mb-4">
+
+        <div class="card-body">
+
+            <div class="row g-3 align-items-end">
+
+
+                <!-- SEARCH -->
+
+                <div class="col-md-5">
+
+                    <label
+                        for="faultSearch"
+                        class="form-label"
+                    >
+                        Search
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+
+                            <i class="fa fa-search"></i>
+
+                        </span>
+
+                        <input
+                            type="text"
+                            id="faultSearch"
+                            class="form-control"
+                            placeholder="OLT, PON, fault type..."
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- SEVERITY -->
+
+                <div class="col-md-3">
+
+                    <label
+                        for="severityFilter"
+                        class="form-label"
+                    >
+                        Severity
+                    </label>
+
+                    <select
+                        id="severityFilter"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All
+                        </option>
+
+                        <option value="critical">
+                            Critical
+                        </option>
+
+                        <option value="warning">
+                            Warning
+                        </option>
+
+                        <option value="recovered">
+                            Recovered
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- PER PAGE -->
+
+                <div class="col-md-2">
+
+                    <label
+                        for="faultPerPage"
+                        class="form-label"
+                    >
+                        Show
+                    </label>
+
+                    <select
+                        id="faultPerPage"
+                        class="form-select"
+                    >
+
+                        <option value="10">
+                            10
+                        </option>
+
+                        <option
+                            value="25"
+                            selected
+                        >
+                            25
+                        </option>
+
+                        <option value="50">
+                            50
+                        </option>
+
+                        <option value="100">
+                            100
+                        </option>
+
+                        <option value="500">
+                            500
+                        </option>
+
+                        <option value="0">
+                            All
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- CLEAR -->
+
+                <div class="col-md-2">
+
+                    <button
+                        type="button"
+                        id="clearFaultFilter"
+                        class="btn btn-secondary w-100"
+                    >
+
+                        <i class="fa fa-filter-circle-xmark"></i>
+                        Clear
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         FAULT TABLE
+    ====================================== -->
+
+    <div class="card system-card">
+
+
+        <!-- TABLE HEADER -->
+
+        <div class="card-header">
+
+            <div
+                class="d-flex justify-content-between align-items-center"
+            >
+
+                <span>
+
+                    <i class="fa fa-bolt"></i>
+                    Live Network Faults
+
+                </span>
+
+
+                <small id="faultLastUpdate">
+                    —
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- TABLE -->
+
+        <div class="table-responsive">
+
+            <table
+                class="table table-hover align-middle mb-0"
+                id="faultTable"
+            >
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Severity
+                        </th>
+
+                        <th>
+                            Fault Type
+                        </th>
+
+                        <th>
+                            OLT
+                        </th>
+
+                        <th>
+                            PON
+                        </th>
+
+                        <th>
+                            Affected ONU
+                        </th>
+
+                        <th>
+                            Estimated Fault Area
+                        </th>
+
+                        <th>
+                            RX Evidence
+                        </th>
+
+                        <th>
+                            Reason
+                        </th>
+
+                        <th>
+                            Detected
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="faultTableBody">
+
+                    <tr>
+
+                        <td
+                            colspan="10"
+                            class="text-center py-5"
+                        >
+
+                            <i class="fa fa-spinner fa-spin"></i>
+
+                            Loading live faults...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- =================================
+             PAGINATION
+        ================================== -->
+
+        <div class="card-footer">
+
+            <div
+                id="faultPagination"
+                class="monitor-pagination"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+</main>
+
+
+<!-- =========================================
+     BOOTSTRAP JS
+========================================== -->
+
+<script
+    src="/assets/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- =========================================
+     SIDEBAR LOADER
+========================================== -->
+
+<script
+    src="/assets/js/sidebar-loader.js"
+></script>
+
+
+<!-- =========================================
+     TOPBAR LOADER
+========================================== -->
+
+<script
+    src="/assets/js/topbar-loader.js"
+></script>
+
+
+<!-- =========================================
+     LIVE FAULT JS
+========================================== -->
+
+<script
+    src="/assets/js/monitoring.js?v=1.0.1"
+></script>
+```
+
+</body>
+
+</html>

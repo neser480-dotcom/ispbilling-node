@@ -1,0 +1,245 @@
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER TRAFFIC
+|--------------------------------------------------------------------------
+*/
+
+.traffic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    background: #0d6efd;
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+.traffic-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.router-name {
+    margin-top: 4px;
+    font-size: 13px;
+    opacity: .85;
+}
+
+.traffic-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.traffic-header-actions select {
+    min-width: 190px;
+}
+
+.traffic-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 18px;
+}
+
+.traffic-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+}
+
+.traffic-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef5ff;
+    color: #0d6efd;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.traffic-card span {
+    display: block;
+    font-size: 12px;
+    color: #777;
+}
+
+.traffic-card strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 21px;
+    font-weight: 700;
+    color: #222;
+}
+
+.traffic-card small {
+    display: block;
+    margin-top: 3px;
+    color: #777;
+    font-size: 12px;
+}
+
+.last-update {
+    font-size: 14px !important;
+}
+
+.traffic-panel {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+
+.traffic-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 18px;
+    border-bottom: 1px solid #eee;
+}
+
+.traffic-panel-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.live-indicator {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.traffic-chart {
+    height: 360px;
+    width: 100%;
+    padding: 8px;
+}
+
+.traffic-table-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 18px;
+    border-bottom: 1px solid #eee;
+}
+
+.traffic-search {
+    position: relative;
+    flex: 1;
+}
+
+.traffic-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.traffic-search input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 9px 12px 9px 36px;
+    outline: none;
+}
+
+.traffic-search input:focus {
+    border-color: #0d6efd;
+}
+
+#trafficTable {
+    margin-bottom: 0;
+}
+
+#trafficTable th {
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+#trafficTable td {
+    font-size: 13px;
+}
+
+.customer-name {
+    font-weight: 600;
+}
+
+.customer-pppoe {
+    display: block;
+    margin-top: 2px;
+    color: #777;
+    font-size: 12px;
+}
+
+.speed-value {
+    font-weight: 600;
+}
+
+.speed-unit {
+    color: #777;
+    font-size: 11px;
+}
+
+.mikrotik-only-badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: #fff3cd;
+    color: #856404;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #198754;
+    margin-right: 5px;
+}
+
+@media (max-width: 1100px) {
+
+    .traffic-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .traffic-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .traffic-header-actions {
+        width: 100%;
+    }
+
+    .traffic-header-actions select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .traffic-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .traffic-chart {
+        height: 300px;
+    }
+
+}
