@@ -1,3 +1,5 @@
+"use strict";
+
 const express = require("express");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
@@ -86,12 +88,14 @@ function isHttps(req) {
 router.get("/csrf", (req, res) => {
 
     if (!req.session.csrf_token) {
-        req.session.csrf_token = createCsrfToken();
+        req.session.csrf_token =
+            createCsrfToken();
     }
 
     res.json({
         success: true,
-        csrf_token: req.session.csrf_token
+        csrf_token:
+            req.session.csrf_token
     });
 });
 
@@ -146,7 +150,8 @@ router.post("/login", async (req, res) => {
         }
 
         if (!req.session.csrf_token) {
-            req.session.csrf_token = createCsrfToken();
+            req.session.csrf_token =
+                createCsrfToken();
         }
 
 
@@ -191,7 +196,9 @@ router.post("/login", async (req, res) => {
             Math.floor(Date.now() / 1000);
 
         const lockoutUntil =
-            Number(req.session.lockout_until || 0);
+            Number(
+                req.session.lockout_until || 0
+            );
 
         if (now < lockoutUntil) {
 
@@ -227,7 +234,9 @@ router.post("/login", async (req, res) => {
         */
 
         const username =
-            String(req.body.username || "").trim();
+            String(
+                req.body.username || ""
+            ).trim();
 
         const password =
             typeof req.body.password === "string"
@@ -264,32 +273,34 @@ router.post("/login", async (req, res) => {
         | FIND ALL USERS WITH SAME USERNAME
         |--------------------------------------------------------------------------
         |
-        | IMPORTANT:
         | Same username may exist in different companies.
         |--------------------------------------------------------------------------
         */
 
-        const [rows] = await db.execute(
-            `
-            SELECT
-                id,
-                company_id,
-                username,
-                password,
-                fullname,
-                email,
-                mobile,
-                role,
-                status,
-                customer_id,
-                package_id,
-                client_type
-            FROM users
-            WHERE username = ?
-            ORDER BY id ASC
-            `,
-            [username]
-        );
+        const [rows] =
+            await db.execute(
+                `
+                SELECT
+                    id,
+                    company_id,
+                    username,
+                    password,
+                    fullname,
+                    email,
+                    mobile,
+                    role,
+                    status,
+                    customer_id,
+                    package_id,
+                    client_type
+                FROM users
+                WHERE username = ?
+                ORDER BY id ASC
+                `,
+                [
+                    username
+                ]
+            );
 
 
         /*
@@ -332,7 +343,9 @@ router.post("/login", async (req, res) => {
             */
 
             const userStatus =
-                String(user.status || "")
+                String(
+                    user.status || ""
+                )
                     .trim()
                     .toLowerCase();
 
@@ -358,11 +371,15 @@ router.post("/login", async (req, res) => {
             */
 
             const role =
-                String(user.role || "")
+                String(
+                    user.role || ""
+                )
                     .trim()
                     .toLowerCase();
 
-            if (!ALLOWED_ROLES.includes(role)) {
+            if (
+                !ALLOWED_ROLES.includes(role)
+            ) {
 
                 return res.status(403).json({
 
@@ -390,14 +407,19 @@ router.post("/login", async (req, res) => {
                 /*
                 | Super admin works across all companies.
                 */
+
                 sessionCompanyId = 0;
 
             } else {
 
                 sessionCompanyId =
-                    Number(user.company_id || 0);
+                    Number(
+                        user.company_id || 0
+                    );
 
-                if (sessionCompanyId <= 0) {
+                if (
+                    sessionCompanyId <= 0
+                ) {
 
                     return res.status(403).json({
 
@@ -467,7 +489,9 @@ router.post("/login", async (req, res) => {
                 sessionCompanyId;
 
 
-            if (role === "super_admin") {
+            if (
+                role === "super_admin"
+            ) {
 
                 req.session.company_scope =
                     "ALL";
@@ -495,7 +519,9 @@ router.post("/login", async (req, res) => {
                 user.customer_id || "";
 
             req.session.package_id =
-                Number(user.package_id || 0);
+                Number(
+                    user.package_id || 0
+                );
 
             req.session.client_type =
                 user.client_type || "";
@@ -511,10 +537,14 @@ router.post("/login", async (req, res) => {
 
                 if (
                     user.password &&
-                    isBcryptHash(user.password) &&
+                    isBcryptHash(
+                        user.password
+                    ) &&
                     await bcrypt.compare(
                         password,
-                        normalizeBcryptHash(user.password)
+                        normalizeBcryptHash(
+                            user.password
+                        )
                     )
                 ) {
 
@@ -572,7 +602,9 @@ router.post("/login", async (req, res) => {
                     WHERE id = ?
                     LIMIT 1
                     `,
-                    [user.id]
+                    [
+                        user.id
+                    ]
                 );
 
             } catch (lastLoginError) {
@@ -591,7 +623,9 @@ router.post("/login", async (req, res) => {
             */
 
             const isRemember =
-                String(req.body.remember || "") === "1";
+                String(
+                    req.body.remember || ""
+                ) === "1";
 
             const secureCookie =
                 isHttps(req);
@@ -605,10 +639,16 @@ router.post("/login", async (req, res) => {
 
             res.cookie(
                 "remember_username",
-                String(user.username || ""),
+                String(
+                    user.username || ""
+                ),
                 {
                     maxAge:
-                        365 * 24 * 60 * 60 * 1000,
+                        365 *
+                        24 *
+                        60 *
+                        60 *
+                        1000,
 
                     httpOnly: true,
 
@@ -642,7 +682,11 @@ router.post("/login", async (req, res) => {
                         encrypted,
                         {
                             maxAge:
-                                365 * 24 * 60 * 60 * 1000,
+                                365 *
+                                24 *
+                                60 *
+                                60 *
+                                1000,
 
                             httpOnly: true,
 
@@ -662,8 +706,12 @@ router.post("/login", async (req, res) => {
                     "remember_password",
                     {
                         httpOnly: true,
-                        secure: secureCookie,
+
+                        secure:
+                            secureCookie,
+
                         sameSite: "lax",
+
                         path: "/"
                     }
                 );
@@ -680,8 +728,12 @@ router.post("/login", async (req, res) => {
                 "remember_user",
                 {
                     httpOnly: true,
-                    secure: secureCookie,
+
+                    secure:
+                        secureCookie,
+
                     sameSite: "lax",
+
                     path: "/"
                 }
             );
@@ -708,6 +760,30 @@ router.post("/login", async (req, res) => {
 
             /*
             |--------------------------------------------------------------------------
+            | LOGIN REDIRECT
+            |--------------------------------------------------------------------------
+            |
+            | IMPORTANT:
+            |
+            | Login always enters Dashboard.
+            |
+            | Software billing trial/expiry is handled by
+            | middleware/softwareBilling.js.
+            |
+            | This prevents unpaid billing from bypassing
+            | the 3-hour registration trial.
+            |--------------------------------------------------------------------------
+            */
+
+            const loginRedirect =
+                "/dashboard";
+
+            const billingRequired =
+                false;
+
+
+            /*
+            |--------------------------------------------------------------------------
             | SUCCESS
             |--------------------------------------------------------------------------
             */
@@ -716,10 +792,14 @@ router.post("/login", async (req, res) => {
 
                 success: true,
 
-                message: "Login successful.",
+                message:
+                    "Login successful.",
 
                 redirect:
-                    "/dashboard",
+                    loginRedirect,
+
+                billing_required:
+                    billingRequired,
 
                 csrf_token:
                     req.session.csrf_token
@@ -734,7 +814,9 @@ router.post("/login", async (req, res) => {
         */
 
         req.session.login_attempts =
-            Number(req.session.login_attempts || 0) + 1;
+            Number(
+                req.session.login_attempts || 0
+            ) + 1;
 
 
         /*
@@ -749,7 +831,9 @@ router.post("/login", async (req, res) => {
         ) {
 
             req.session.lockout_until =
-                Math.floor(Date.now() / 1000) +
+                Math.floor(
+                    Date.now() / 1000
+                ) +
                 LOCKOUT_SECONDS;
 
             req.session.login_attempts = 0;
@@ -835,12 +919,17 @@ router.post("/logout", async (req, res) => {
             );
 
             return res.status(500).json({
+
                 success: false,
-                message: "Unable to logout."
+
+                message:
+                    "Unable to logout."
             });
         }
 
-        res.clearCookie("connect.sid");
+        res.clearCookie(
+            "connect.sid"
+        );
 
         res.clearCookie(
             "remember_password",
@@ -850,9 +939,14 @@ router.post("/logout", async (req, res) => {
         );
 
         res.json({
+
             success: true,
-            message: "Logged out successfully.",
-            redirect: "/"
+
+            message:
+                "Logged out successfully.",
+
+            redirect:
+                "/"
         });
     });
 });
@@ -889,9 +983,13 @@ function normalizeBcryptHash(hash) {
     | PHP password_hash() commonly creates $2y$.
     | Node bcrypt accepts $2b$.
     */
-    if (hash.startsWith("$2y$")) {
 
-        return "$2b$" + hash.slice(4);
+    if (
+        hash.startsWith("$2y$")
+    ) {
+
+        return "$2b$" +
+            hash.slice(4);
     }
 
     return hash;
@@ -903,13 +1001,17 @@ async function verifyPassword(
     storedHash
 ) {
 
-    if (!isBcryptHash(storedHash)) {
+    if (
+        !isBcryptHash(storedHash)
+    ) {
         return false;
     }
 
     return bcrypt.compare(
         plainPassword,
-        normalizeBcryptHash(storedHash)
+        normalizeBcryptHash(
+            storedHash
+        )
     );
 }
 
@@ -925,7 +1027,9 @@ async function verifyPassword(
 |--------------------------------------------------------------------------
 */
 
-function encryptRememberPassword(password) {
+function encryptRememberPassword(
+    password
+) {
 
     try {
 

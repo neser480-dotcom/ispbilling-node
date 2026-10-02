@@ -6,18 +6,6 @@ const mikrotik = require("./mikrotik.service");
 
 /*
 |--------------------------------------------------------------------------
-| QUERY
-|--------------------------------------------------------------------------
-*/
-
-async function query(sql, params = []) {
-    const [rows] = await db.query(sql, params);
-    return rows;
-}
-
-
-/*
-|--------------------------------------------------------------------------
 | ADD CUSTOMER
 |--------------------------------------------------------------------------
 */
@@ -29,9 +17,23 @@ async function addCustomer({
     data
 }) {
 
-    const connection = await db.getConnection();
+    const connection =
+        await db.getConnection();
+
+    /*
+    |--------------------------------------------------------------------------
+    | MikroTik compensation state
+    |--------------------------------------------------------------------------
+    */
+
+    let router = null;
 
     let mikrotikCreated = false;
+
+    let mikrotikCreatedId = "";
+
+    let mikrotikUsername = "";
+
 
     try {
 
@@ -57,42 +59,99 @@ async function addCustomer({
             Number(data.sub_area_id || 0);
 
         const customerId =
-            String(data.customer_id || "").trim();
+            String(
+                data.customer_id || ""
+            ).trim();
 
         const name =
-            String(data.name || "").trim();
+            String(
+                data.name || ""
+            ).trim();
 
         const phone =
-            String(data.phone || "").trim();
+            String(
+                data.phone || ""
+            ).trim();
 
         const address =
-            String(data.address || "").trim();
+            String(
+                data.address || ""
+            ).trim();
 
         const username =
-            String(data.pppoe_name || "").trim();
+            String(
+                data.pppoe_name || ""
+            ).trim();
 
         const password =
-            String(data.password || "");
+            String(
+                data.password || ""
+            );
 
         const email =
-            String(data.email || "").trim();
+            String(
+                data.email || ""
+            ).trim();
 
-        const comment =
-            String(data.comment || "").trim();
+        const comments =
+            String(
+                data.comment ??
+                data.comments ??
+                ""
+            ).trim();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | STATUS
+        |--------------------------------------------------------------------------
+        */
+
+        const requestedStatus =
+            String(
+                data.status || "Active"
+            ).trim();
+
 
         const status =
-            ["Active", "Inactive", "Expired"].includes(
-                data.status
+            [
+                "Active",
+                "Inactive",
+                "Expired"
+            ].includes(
+                requestedStatus
             )
-                ? data.status
+                ? requestedStatus
                 : "Active";
 
-        const billingType =
-            ["Prepaid", "Postpaid"].includes(
-                data.billing_type
+
+        /*
+        |--------------------------------------------------------------------------
+        | BILLING TYPE
+        |--------------------------------------------------------------------------
+        |
+        | Database ENUM:
+        | PREPAID / POSTPAID
+        |
+        */
+
+        const requestedBillingType =
+            String(
+                data.billing_type || "POSTPAID"
             )
-                ? data.billing_type
-                : "Prepaid";
+            .trim()
+            .toUpperCase();
+
+
+        const billingType =
+            [
+                "PREPAID",
+                "POSTPAID"
+            ].includes(
+                requestedBillingType
+            )
+                ? requestedBillingType
+                : "POSTPAID";
 
 
         /*
@@ -101,40 +160,75 @@ async function addCustomer({
         |--------------------------------------------------------------------------
         */
 
+        if (!userId) {
+
+            throw new Error(
+                "Authenticated user is required."
+            );
+
+        }
+
+
+        if (!isSuperAdmin && !companyId) {
+
+            throw new Error(
+                "Company access is not configured for this account."
+            );
+
+        }
+
+
         if (!customerId) {
+
             throw new Error(
                 "Customer ID is required."
             );
+
         }
 
+
         if (!name) {
+
             throw new Error(
                 "Customer name is required."
             );
+
         }
 
+
         if (!username) {
+
             throw new Error(
                 "PPPoE username is required."
             );
+
         }
 
+
         if (!password) {
+
             throw new Error(
                 "PPPoE password is required."
             );
+
         }
 
+
         if (!routerId) {
+
             throw new Error(
                 "MikroTik server is required."
             );
+
         }
 
+
         if (!packageId) {
+
             throw new Error(
                 "Package is required."
             );
+
         }
 
 
@@ -159,9 +253,11 @@ async function addCustomer({
             WHERE id = ?
         `;
 
+
         const routerParams = [
             routerId
         ];
+
 
         if (!isSuperAdmin) {
 
@@ -172,25 +268,32 @@ async function addCustomer({
             routerParams.push(
                 companyId
             );
+
         }
+
 
         routerSql += `
             LIMIT 1
         `;
 
-        const routerRows =
+
+        const routerResult =
             await connection.query(
                 routerSql,
                 routerParams
             );
 
-        const router =
-            routerRows[0][0] || null;
+
+        router =
+            routerResult[0][0] || null;
+
 
         if (!router) {
+
             throw new Error(
                 "Selected MikroTik server was not found."
             );
+
         }
 
 
@@ -214,10 +317,12 @@ async function addCustomer({
               AND router_id = ?
         `;
 
+
         const packageParams = [
             packageId,
             routerId
         ];
+
 
         if (!isSuperAdmin) {
 
@@ -228,11 +333,14 @@ async function addCustomer({
             packageParams.push(
                 companyId
             );
+
         }
+
 
         packageSql += `
             LIMIT 1
         `;
+
 
         const packageResult =
             await connection.query(
@@ -240,16 +348,17 @@ async function addCustomer({
                 packageParams
             );
 
-        const packageRows =
-            packageResult[0];
 
         const pkg =
-            packageRows[0] || null;
+            packageResult[0][0] || null;
+
 
         if (!pkg) {
+
             throw new Error(
                 "Selected package was not found."
             );
+
         }
 
 
@@ -267,38 +376,42 @@ async function addCustomer({
                     : pkg.price || 0
             );
 
+
         if (
             !Number.isFinite(monthlyBill) ||
             monthlyBill < 0
         ) {
+
             throw new Error(
                 "Invalid monthly bill."
             );
+
         }
 
 
         /*
         |--------------------------------------------------------------------------
-        | AREA
+        | AREA VALIDATION
         |--------------------------------------------------------------------------
+        |
+        | customers table stores only area_id.
+        |
         */
-
-        let areaName = "";
-        let subAreaName = "";
 
         if (areaId > 0) {
 
             let areaSql = `
                 SELECT
-                    id,
-                    name
+                    id
                 FROM areas
                 WHERE id = ?
             `;
 
+
             const areaParams = [
                 areaId
             ];
+
 
             if (!isSuperAdmin) {
 
@@ -309,11 +422,14 @@ async function addCustomer({
                 areaParams.push(
                     companyId
                 );
+
             }
+
 
             areaSql += `
                 LIMIT 1
             `;
+
 
             const areaResult =
                 await connection.query(
@@ -321,39 +437,43 @@ async function addCustomer({
                     areaParams
                 );
 
-            const areaRows =
-                areaResult[0];
 
-            if (!areaRows.length) {
+            if (
+                !areaResult[0].length
+            ) {
+
                 throw new Error(
                     "Selected area was not found."
                 );
+
             }
 
-            areaName =
-                areaRows[0].name || "";
         }
 
 
         /*
         |--------------------------------------------------------------------------
-        | SUB AREA
+        | SUB AREA VALIDATION
         |--------------------------------------------------------------------------
+        |
+        | customers table stores only sub_area_id.
+        |
         */
 
         if (subAreaId > 0) {
 
             let subAreaSql = `
                 SELECT
-                    id,
-                    name
+                    id
                 FROM sub_areas
                 WHERE id = ?
             `;
 
+
             const subAreaParams = [
                 subAreaId
             ];
+
 
             if (!isSuperAdmin) {
 
@@ -364,11 +484,14 @@ async function addCustomer({
                 subAreaParams.push(
                     companyId
                 );
+
             }
+
 
             subAreaSql += `
                 LIMIT 1
             `;
+
 
             const subAreaResult =
                 await connection.query(
@@ -376,17 +499,17 @@ async function addCustomer({
                     subAreaParams
                 );
 
-            const subAreaRows =
-                subAreaResult[0];
 
-            if (!subAreaRows.length) {
+            if (
+                !subAreaResult[0].length
+            ) {
+
                 throw new Error(
                     "Selected sub-area was not found."
                 );
+
             }
 
-            subAreaName =
-                subAreaRows[0].name || "";
         }
 
 
@@ -397,14 +520,18 @@ async function addCustomer({
         */
 
         let duplicateCustomerSql = `
-            SELECT id
+            SELECT
+                id
             FROM customers
             WHERE customer_id = ?
+              AND deleted_at IS NULL
         `;
+
 
         const duplicateCustomerParams = [
             customerId
         ];
+
 
         if (!isSuperAdmin) {
 
@@ -415,11 +542,14 @@ async function addCustomer({
             duplicateCustomerParams.push(
                 companyId
             );
+
         }
+
 
         duplicateCustomerSql += `
             LIMIT 1
         `;
+
 
         const duplicateCustomerResult =
             await connection.query(
@@ -427,11 +557,15 @@ async function addCustomer({
                 duplicateCustomerParams
             );
 
-        if (duplicateCustomerResult[0].length) {
+
+        if (
+            duplicateCustomerResult[0].length
+        ) {
 
             throw new Error(
                 `Customer ID ${customerId} already exists.`
             );
+
         }
 
 
@@ -442,14 +576,18 @@ async function addCustomer({
         */
 
         let duplicatePPPoESql = `
-            SELECT id
+            SELECT
+                id
             FROM customers
             WHERE pppoe_username = ?
+              AND deleted_at IS NULL
         `;
+
 
         const duplicatePPPoEParams = [
             username
         ];
+
 
         if (!isSuperAdmin) {
 
@@ -460,11 +598,14 @@ async function addCustomer({
             duplicatePPPoEParams.push(
                 companyId
             );
+
         }
+
 
         duplicatePPPoESql += `
             LIMIT 1
         `;
+
 
         const duplicatePPPoEResult =
             await connection.query(
@@ -472,11 +613,15 @@ async function addCustomer({
                 duplicatePPPoEParams
             );
 
-        if (duplicatePPPoEResult[0].length) {
+
+        if (
+            duplicatePPPoEResult[0].length
+        ) {
 
             throw new Error(
                 `PPPoE username ${username} already exists.`
             );
+
         }
 
 
@@ -491,48 +636,91 @@ async function addCustomer({
                 pkg.profile_id || ""
             ).trim();
 
+
         if (!mikrotikProfile) {
 
             mikrotikProfile =
                 String(
                     pkg.package_name || ""
                 ).trim();
+
         }
+
 
         if (!mikrotikProfile) {
 
             throw new Error(
                 "MikroTik PPP profile is missing from the selected package."
             );
+
         }
 
 
         /*
         |--------------------------------------------------------------------------
-        | MIKROTIK CREATE
+        | CHECK MIKROTIK BEFORE CREATE
         |--------------------------------------------------------------------------
         */
 
-        await mikrotik.createSecret(
-            router,
-            {
-                username,
-                password,
-                profile: mikrotikProfile,
-                service: "pppoe",
-                comment:
-                    comment ||
-                    `${customerId} - ${name}`
-            }
-        );
+        const existingMikrotikSecret =
+            await mikrotik.findSecret(
+                router,
+                username
+            );
+
+
+        if (
+            existingMikrotikSecret &&
+            existingMikrotikSecret[".id"]
+        ) {
+
+            throw new Error(
+                `PPPoE username "${username}" already exists on MikroTik.`
+            );
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREATE MIKROTIK PPP SECRET
+        |--------------------------------------------------------------------------
+        */
+
+        const createdSecret =
+            await mikrotik.createSecret(
+                router,
+                {
+                    username,
+                    password,
+                    profile: mikrotikProfile,
+                    service: "pppoe",
+                    comment:
+                        comments ||
+                        `${customerId} - ${name}`
+                }
+            );
+
 
         mikrotikCreated = true;
+
+        mikrotikUsername =
+            username;
+
+
+        mikrotikCreatedId =
+            String(
+                createdSecret?.id || ""
+            ).trim();
 
 
         /*
         |--------------------------------------------------------------------------
         | CUSTOMER INSERT
         |--------------------------------------------------------------------------
+        |
+        | Exact columns from customers table.
+        |
         */
 
         const insertSql = `
@@ -551,53 +739,92 @@ async function addCustomer({
                 mikrotik_id,
                 area_id,
                 sub_area_id,
-                area_name,
-                sub_area_name,
                 status,
                 billing_type,
                 payment_status,
                 balance,
-                comment,
+                comments,
                 sync_status,
                 created_by,
                 created_at
             )
             VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
             )
         `;
 
+
         const insertParams = [
+
             companyId,
+
             customerId,
+
             name,
+
             phone,
+
             address,
+
             email,
+
             packageId,
+
             pkg.package_name || "",
+
             monthlyBill,
+
             username,
+
             password,
+
             routerId,
+
             areaId || null,
+
             subAreaId || null,
-            areaName,
-            subAreaName,
+
             status,
+
             billingType,
+
             "unpaid",
+
             0,
-            comment,
+
+            comments,
+
             1,
+
             userId
         ];
 
-        await connection.query(
-            insertSql,
-            insertParams
-        );
+
+        const insertResult =
+            await connection.query(
+                insertSql,
+                insertParams
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VERIFY INSERT
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !insertResult ||
+            !insertResult[0] ||
+            !insertResult[0].insertId
+        ) {
+
+            throw new Error(
+                "Customer was not inserted into the database."
+            );
+
+        }
 
 
         /*
@@ -608,35 +835,132 @@ async function addCustomer({
 
         await connection.commit();
 
+
         return {
+
             success: true,
-            customer_id: customerId,
-            pppoe_username: username,
-            mikrotik_id: routerId
+
+            customer_id:
+                customerId,
+
+            pppoe_username:
+                username,
+
+            mikrotik_id:
+                routerId,
+
+            database_id:
+                insertResult[0].insertId
+
         };
+
 
     } catch (error) {
 
-        await connection.rollback();
-
         /*
         |--------------------------------------------------------------------------
-        | MIKROTIK COMPENSATION NOTICE
+        | DATABASE ROLLBACK
         |--------------------------------------------------------------------------
         */
 
-        if (mikrotikCreated) {
+        try {
 
-            error.message =
-                `${error.message} MikroTik PPP secret may have been created; please verify it on the router.`;
+            await connection.rollback();
+
+        } catch (rollbackError) {
+
+            console.error(
+                "Customer add database rollback error:",
+                rollbackError
+            );
+
         }
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | MIKROTIK COMPENSATION
+        |--------------------------------------------------------------------------
+        |
+        | DB failed after MikroTik secret was created.
+        | Remove only the secret created by this request.
+        |
+        */
+
+        if (
+            mikrotikCreated &&
+            router
+        ) {
+
+            try {
+
+                await mikrotik.deleteSecret(
+                    router,
+                    {
+                        id:
+                            mikrotikCreatedId,
+
+                        username:
+                            mikrotikUsername
+                    }
+                );
+
+
+                console.error(
+                    "Customer add compensation: MikroTik PPP secret removed.",
+                    {
+                        username:
+                            mikrotikUsername,
+
+                        mikrotikId:
+                            mikrotikCreatedId || null
+                    }
+                );
+
+
+            } catch (cleanupError) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | CRITICAL CLEANUP FAILURE
+                |--------------------------------------------------------------------------
+                */
+
+                console.error(
+                    "CRITICAL: Customer DB creation failed and MikroTik cleanup also failed.",
+                    {
+                        username:
+                            mikrotikUsername,
+
+                        mikrotikId:
+                            mikrotikCreatedId || null,
+
+                        originalError:
+                            error.message,
+
+                        cleanupError:
+                            cleanupError.message
+                    }
+                );
+
+
+                error.message =
+                    `${error.message} MikroTik PPP secret cleanup failed; please verify "${mikrotikUsername}" on the router.`;
+
+            }
+
+        }
+
+
         throw error;
+
 
     } finally {
 
         connection.release();
+
     }
+
 }
 
 

@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Permissions Management</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+    <style>
+        body {
+            background: #f5f7fb;
+        }
+
+        .permissions-page {
+            padding: 20px;
+        }
+
+        .permission-card {
+            border: 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 20px;
+        }
+
+        .permission-card .card-header {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            font-weight: 700;
+            font-size: 16px;
+            padding: 15px 18px;
+        }
+
+        .permission-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 11px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .permission-row:last-child {
+            border-bottom: 0;
+        }
+
+        .permission-label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .user-card {
+            border: 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .user-select {
+            min-height: 45px;
+        }
+
+        .permission-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .permission-count {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .permission-disabled {
+            opacity: 0.55;
+        }
+
+        .loading-box {
+            padding: 35px;
+            text-align: center;
+            color: #777;
+        }
+
+        .empty-box {
+            padding: 35px;
+            text-align: center;
+            color: #777;
+        }
+
+        @media (max-width: 767px) {
+
+            .permissions-page {
+                padding: 12px;
+            }
+
+            .permission-row {
+                align-items: flex-start;
+            }
+
+            .permission-label {
+                padding-right: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+   <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+    <main class="main-content">
+
+        <div class="container-fluid">
+
+            <div
+                class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3"
+            >
+
+                <div>
+
+                    <h4 class="mb-1">
+                        Permissions Management
+                    </h4>
+
+                    <div class="text-muted">
+                        Manage user permissions
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card user-card mb-4">
+
+                <div class="card-body">
+
+                    <div class="row g-3 align-items-end">
+
+                        <div class="col-md-6">
+
+                            <label
+                                for="userSelect"
+                                class="form-label fw-semibold"
+                            >
+                                Select User
+                            </label>
+
+                            <select
+                                id="userSelect"
+                                class="form-select user-select"
+                            >
+
+                                <option value="">
+                                    Loading users...
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <div
+                                class="permission-actions"
+                            >
+
+                                <button
+                                    type="button"
+                                    id="selectAllBtn"
+                                    class="btn btn-outline-primary"
+                                    disabled
+                                >
+                                    Select All
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="clearAllBtn"
+                                    class="btn btn-outline-secondary"
+                                    disabled
+                                >
+                                    Clear All
+                                </button>
+
+                                <span
+                                    id="permissionCount"
+                                    class="permission-count"
+                                >
+                                    0 / 45 enabled
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="permissionMessage"
+                class="alert d-none"
+            ></div>
+
+
+            <div
+                id="permissionsContainer"
+            >
+
+                <div class="loading-box">
+                    Select a user to load permissions.
+                </div>
+
+            </div>
+
+
+            <div
+                id="saveContainer"
+                class="d-none mt-3 mb-4"
+            >
+
+                <button
+                    type="button"
+                    id="savePermissionsBtn"
+                    class="btn btn-primary"
+                >
+                    Save Permissions
+                </button>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+
+
+    <script>
+        "use strict";
+
+
+        const userSelect =
+            document.getElementById("userSelect");
+
+        const permissionsContainer =
+            document.getElementById(
+                "permissionsContainer"
+            );
+
+        const permissionCount =
+            document.getElementById(
+                "permissionCount"
+            );
+
+        const permissionMessage =
+            document.getElementById(
+                "permissionMessage"
+            );
+
+        const saveContainer =
+            document.getElementById(
+                "saveContainer"
+            );
+
+        const savePermissionsBtn =
+            document.getElementById(
+                "savePermissionsBtn"
+            );
+
+        const selectAllBtn =
+            document.getElementById(
+                "selectAllBtn"
+            );
+
+        const clearAllBtn =
+            document.getElementById(
+                "clearAllBtn"
+            );
+
+
+        let currentUser = null;
+
+        let canEdit = false;
+
+        let csrfToken = "";
+
+        let systemPermissions = {};
+
+        let permissionKeys = [];
+
+
+        /*
+         * Helpers
+         */
+
+        function escapeHtml(value) {
+
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+
+        function showMessage(
+            message,
+            type = "danger"
+        ) {
+
+            permissionMessage.className =
+                `alert alert-${type}`;
+
+            permissionMessage.textContent =
+                message;
+
+            permissionMessage.classList.remove(
+                "d-none"
+            );
+        }
+
+
+        function hideMessage() {
+
+            permissionMessage.classList.add(
+                "d-none"
+            );
+        }
+
+
+        function updateCount() {
+
+            const boxes =
+                document.querySelectorAll(
+                    ".permission-checkbox"
+                );
+
+            let enabled = 0;
+
+            boxes.forEach(
+                checkbox => {
+
+                    if (checkbox.checked) {
+                        enabled++;
+                    }
+
+                }
+            );
+
+
+            permissionCount.textContent =
+                `${enabled} / ${permissionKeys.length} enabled`;
+        }
+
+
+        function getSelectedPermissions() {
+
+            const selected = [];
+
+            document
+                .querySelectorAll(
+                    ".permission-checkbox:checked"
+                )
+                .forEach(
+                    checkbox => {
+
+                        selected.push(
+                            checkbox.dataset.key
+                        );
+
+                    }
+                );
+
+            return selected;
+        }
+
+
+        /*
+         * Load users
+         */
+
+        async function loadUsers() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/super-admin/users/data",
+                        {
+                            credentials: "same-origin"
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Failed to load users."
+                    );
+                }
+
+
+                const users =
+                    Array.isArray(result.users)
+                        ? result.users
+                        : Array.isArray(result.data)
+                            ? result.data
+                            : [];
+
+
+                userSelect.innerHTML = `
+                    <option value="">
+                        Select User
+                    </option>
+                `;
+
+
+                users.forEach(
+                    user => {
+
+                        const option =
+                            document.createElement(
+                                "option"
+                            );
+
+                        option.value =
+                            user.id;
+
+                        const name =
+                            user.fullname ||
+                            user.name ||
+                            user.username ||
+                            `User ${user.id}`;
+
+                        option.textContent =
+                            `${name} — ${user.username || ""} — ${user.role || ""}`;
+
+                        userSelect.appendChild(
+                            option
+                        );
+
+                    }
+                );
+
+
+                if (!users.length) {
+
+                    userSelect.innerHTML = `
+                        <option value="">
+                            No users found
+                        </option>
+                    `;
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "[Permissions] users:",
+                    error
+                );
+
+
+                userSelect.innerHTML = `
+                    <option value="">
+                        Failed to load users
+                    </option>
+                `;
+
+
+                showMessage(
+                    error.message ||
+                    "Failed to load users."
+                );
+            }
+        }
+
+
+        /*
+         * Load CSRF token
+         *
+         * The current permissions API requires
+         * req.session.csrf_token.
+         */
+
+        async function loadCsrfToken() {
+
+            /*
+             * Try the common session token endpoint
+             * if available.
+             */
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/auth/csrf",
+                        {
+                            credentials: "same-origin"
+                        }
+                    );
+
+
+                if (response.ok) {
+
+                    const result =
+                        await response.json();
+
+                    if (result.csrf_token) {
+
+                        csrfToken =
+                            result.csrf_token;
+
+                        return;
+                    }
+
+                    if (result.token) {
+
+                        csrfToken =
+                            result.token;
+
+                        return;
+                    }
+                }
+
+            } catch (_) {}
+
+
+            /*
+             * Some applications expose the token
+             * through a meta tag.
+             */
+
+            const meta =
+                document.querySelector(
+                    'meta[name="csrf-token"]'
+                );
+
+            if (meta) {
+
+                csrfToken =
+                    meta.getAttribute(
+                        "content"
+                    ) || "";
+            }
+        }
+
+
+        /*
+         * Load permissions
+         */
+
+        async function loadPermissions(
+            userId
+        ) {
+
+            if (!userId) {
+
+                currentUser = null;
+                canEdit = false;
+
+                permissionsContainer.innerHTML = `
+                    <div class="loading-box">
+                        Select a user to load permissions.
+                    </div>
+                `;
+
+                saveContainer.classList.add(
+                    "d-none"
+                );
+
+                selectAllBtn.disabled = true;
+                clearAllBtn.disabled = true;
+
+                permissionCount.textContent =
+                    "0 / 45 enabled";
+
+                return;
+            }
+
+
+            hideMessage();
+
+
+            permissionsContainer.innerHTML = `
+                <div class="loading-box">
+                    Loading permissions...
+                </div>
+            `;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/super-admin/permissions/${encodeURIComponent(userId)}`,
+                        {
+                            credentials: "same-origin"
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Failed to load permissions."
+                    );
+                }
+
+
+                currentUser =
+                    result.user || null;
+
+                canEdit =
+                    result.can_edit === true;
+
+
+                systemPermissions =
+                    result.system_permissions || {};
+
+
+                permissionKeys =
+                    Array.isArray(
+                        result.permission_keys
+                    )
+                        ? result.permission_keys
+                        : Object.keys(
+                            systemPermissions
+                        );
+
+
+                const saved =
+                    result.permissions || {};
+
+
+                renderPermissions(
+                    saved
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "[Permissions] load:",
+                    error
+                );
+
+
+                permissionsContainer.innerHTML = `
+                    <div class="empty-box">
+                        ${escapeHtml(
+                            error.message ||
+                            "Failed to load permissions."
+                        )}
+                    </div>
+                `;
+
+                saveContainer.classList.add(
+                    "d-none"
+                );
+
+                selectAllBtn.disabled = true;
+                clearAllBtn.disabled = true;
+            }
+        }
+
+
+        /*
+         * Render permission groups
+         */
+
+        function renderPermissions(
+            saved
+        ) {
+
+            const groups = [
+                {
+                    title: "Customer",
+                    keys: [
+                        "customer_id_auto_generate",
+                        "bulk_area_edit",
+                        "bulk_status_edit",
+                        "bulk_auto_disable_edit",
+                        "bulk_package_edit",
+                        "bulk_customer_delete",
+                        "bulk_customer_mikrotik_update",
+                        "customer_auto_connection",
+                        "bulk_customer_recharge",
+                        "add_customer_with_mobile",
+                        "inactive_offline_customer_delete",
+                        "unpaid_customer_bulk_sms",
+                        "show_customer_panel_package",
+                        "customer_invoice",
+                        "without_mikrotik_customer_minus_balance",
+                        "customer_portal"
+                    ]
+                },
+
+                {
+                    title: "MikroTik",
+                    keys: [
+                        "mikrotik_add",
+                        "mikrotik_delete"
+                    ]
+                },
+
+                {
+                    title: "Billing",
+                    keys: [
+                        "promise_date",
+                        "report_delete",
+                        "expenditure_delete",
+                        "bulk_billing_cycle_edit",
+                        "bulk_promise_date_edit",
+                        "bulk_payment_status_edit",
+                        "fixed_billing_cycle_date",
+                        "instant_recharge_bill_print",
+                        "daily_recharge_feature",
+                        "deposit_update",
+                        "dashboard_probability_amount_with_new_customer"
+                    ]
+                },
+
+                {
+                    title: "Network",
+                    keys: [
+                        "network_diagram",
+                        "network_monitoring",
+                        "traffic_monitoring",
+                        "interface_monitor",
+                        "pole_box"
+                    ]
+                },
+
+                {
+                    title: "OLT",
+                    keys: [
+                        "olt_add",
+                        "olt_user_monitoring"
+                    ]
+                },
+
+                {
+                    title: "Reseller",
+                    keys: [
+                        "reseller_add",
+                        "multiple_manager",
+                        "reseller_customer_bulk_status_edit",
+                        "reseller_customer_bulk_promise_date_edit",
+                        "reseller_customer_bulk_billing_cycle_edit",
+                        "reseller_minus_balance",
+                        "reseller_customer_bulk_auto_connection_edit",
+                        "reseller_customer_bulk_area_edit",
+                        "reseller_customer_bulk_payment_status_edit"
+                    ]
+                }
+            ];
+
+
+            let html = "";
+
+
+            groups.forEach(
+                group => {
+
+                    const validKeys =
+                        group.keys.filter(
+                            key =>
+                                permissionKeys.includes(
+                                    key
+                                )
+                        );
+
+
+                    if (!validKeys.length) {
+                        return;
+                    }
+
+
+                    html += `
+                        <div class="card permission-card">
+
+                            <div class="card-header">
+                                ${escapeHtml(
+                                    group.title
+                                )}
+                            </div>
+
+                            <div class="card-body p-0">
+                    `;
+
+
+                    validKeys.forEach(
+                        key => {
+
+                            const checked =
+                                saved[key] === true;
+
+                            html += `
+                                <div class="permission-row">
+
+                                    <label
+                                        class="permission-label"
+                                        for="permission_${escapeHtml(key)}"
+                                    >
+                                        ${escapeHtml(
+                                            systemPermissions[key] ||
+                                            key
+                                        )}
+                                    </label>
+
+                                    <div class="form-check form-switch">
+
+                                        <input
+                                            class="form-check-input permission-checkbox"
+                                            type="checkbox"
+                                            id="permission_${escapeHtml(key)}"
+                                            data-key="${escapeHtml(key)}"
+                                            ${checked ? "checked" : ""}
+                                            ${canEdit ? "" : "disabled"}
+                                        >
+
+                                    </div>
+
+                                </div>
+                            `;
+                        }
+                    );
+
+
+                    html += `
+                            </div>
+
+                        </div>
+                    `;
+                }
+            );
+
+
+            permissionsContainer.innerHTML =
+                html || `
+                    <div class="empty-box">
+                        No permissions configured.
+                    </div>
+                `;
+
+
+            document
+                .querySelectorAll(
+                    ".permission-checkbox"
+                )
+                .forEach(
+                    checkbox => {
+
+                        checkbox.addEventListener(
+                            "change",
+                            updateCount
+                        );
+
+                    }
+                );
+
+
+            updateCount();
+
+
+            if (canEdit) {
+
+                saveContainer.classList.remove(
+                    "d-none"
+                );
+
+                selectAllBtn.disabled = false;
+                clearAllBtn.disabled = false;
+
+            } else {
+
+                saveContainer.classList.add(
+                    "d-none"
+                );
+
+                selectAllBtn.disabled = true;
+                clearAllBtn.disabled = true;
+            }
+
+
+            if (
+                currentUser &&
+                String(currentUser.role || "")
+                    .toLowerCase()
+                    .replace(/[\s_-]+/g, "") ===
+                    "superadmin"
+            ) {
+
+                showMessage(
+                    "Super Admin permissions are read-only.",
+                    "warning"
+                );
+            }
+        }
+
+
+        /*
+         * Select all
+         */
+
+        selectAllBtn.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .querySelectorAll(
+                        ".permission-checkbox:not(:disabled)"
+                    )
+                    .forEach(
+                        checkbox => {
+                            checkbox.checked = true;
+                        }
+                    );
+
+                updateCount();
+            }
+        );
+
+
+        /*
+         * Clear all
+         */
+
+        clearAllBtn.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .querySelectorAll(
+                        ".permission-checkbox:not(:disabled)"
+                    )
+                    .forEach(
+                        checkbox => {
+                            checkbox.checked = false;
+                        }
+                    );
+
+                updateCount();
+            }
+        );
+
+
+        /*
+         * User changed
+         */
+
+        userSelect.addEventListener(
+            "change",
+            async () => {
+
+                await loadPermissions(
+                    userSelect.value
+                );
+            }
+        );
+
+
+        /*
+         * Save
+         */
+
+        savePermissionsBtn.addEventListener(
+            "click",
+            async () => {
+
+                if (!currentUser) {
+
+                    showMessage(
+                        "Please select a user first.",
+                        "warning"
+                    );
+
+                    return;
+                }
+
+
+                if (!canEdit) {
+
+                    showMessage(
+                        "You cannot modify this user's permissions.",
+                        "warning"
+                    );
+
+                    return;
+                }
+
+
+                if (!csrfToken) {
+
+                    await loadCsrfToken();
+                }
+
+
+                if (!csrfToken) {
+
+                    showMessage(
+                        "CSRF token was not found. Please refresh the page and try again."
+                    );
+
+                    return;
+                }
+
+
+                const permissions =
+                    getSelectedPermissions();
+
+
+                savePermissionsBtn.disabled =
+                    true;
+
+                savePermissionsBtn.textContent =
+                    "Saving...";
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/super-admin/permissions/update",
+                            {
+                                method: "POST",
+
+                                credentials:
+                                    "same-origin",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify({
+                                        user_id:
+                                            Number(
+                                                currentUser.id
+                                            ),
+
+                                        permissions:
+                                            permissions,
+
+                                        csrf_token:
+                                            csrfToken
+                                    })
+                            }
+                        );
+
+
+                    const result =
+                        await response.json();
+
+
+                    if (
+                        !response.ok ||
+                        !result.success
+                    ) {
+
+                        throw new Error(
+                            result.message ||
+                            "Failed to update permissions."
+                        );
+                    }
+
+
+                    showMessage(
+                        result.message ||
+                        "Permissions updated successfully.",
+                        "success"
+                    );
+
+
+                    await loadPermissions(
+                        currentUser.id
+                    );
+
+
+                } catch (error) {
+
+                    console.error(
+                        "[Permissions] save:",
+                        error
+                    );
+
+
+                    showMessage(
+                        error.message ||
+                        "Failed to update permissions."
+                    );
+
+                } finally {
+
+                    savePermissionsBtn.disabled =
+                        false;
+
+                    savePermissionsBtn.textContent =
+                        "Save Permissions";
+                }
+            }
+        );
+
+
+        /*
+         * Initial load
+         */
+
+        (async () => {
+
+            await loadCsrfToken();
+
+            await loadUsers();
+
+        })();
+
+    </script>
+
+</body>
+</html>

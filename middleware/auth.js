@@ -1,35 +1,36 @@
 "use strict";
 
-
 const requireAuth = (
-    req,
-    res,
-    next
+req,
+res,
+next
 ) => {
 
-    if (
-        !req.session ||
-        !req.session.user_id
-    ) {
 
-        return res.status(401).json({
+if (
+    !req.session ||
+    !req.session.user_id
+) {
 
-            success: false,
+    return res.status(401).json({
 
-            status: false,
+        success: false,
 
-            message: "Not logged in."
+        status: false,
 
-        });
-    }
+        message: "Not logged in."
+
+    });
+}
 
 
-    next();
+next();
+
+
 };
-
 
 module.exports = {
 
-    requireAuth
+requireAuth
 
 };
