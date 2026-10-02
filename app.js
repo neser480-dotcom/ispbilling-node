@@ -14,6 +14,12 @@ const routerRoutes = require("./routes/router");
 const customerRoutes = require("./routes/customers");
 const customerAddRoutes =
     require("./routes/customers-add");
+const monitoringRoutes =
+    require("./routes/monitoring");
+const interfaceMonitorRoutes =
+    require("./routes/interfaceMonitor");
+const customerTrafficRoutes =
+    require("./routes/customerTraffic");
 const app = express();
 
 
@@ -206,6 +212,37 @@ app.use("/api/customers", customerRoutes);
 app.use(
     "/api/customers/add",
     customerAddRoutes
+);
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER TRAFFIC MONITORING
+|--------------------------------------------------------------------------
+*/
+app.use(
+    "/monitoring/interface",
+    interfaceMonitorRoutes
+);
+
+app.use(
+    "/monitoring/customer-traffic",
+    customerTrafficRoutes
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| NETWORK FAULT MONITORING
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+    "/monitoring",
+    monitoringRoutes
+);
+
+app.use(
+    "/api/monitoring",
+    monitoringRoutes
 );
 
 /*
