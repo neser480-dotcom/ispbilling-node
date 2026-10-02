@@ -121,57 +121,69 @@
 
 
 
-    <!-- PENDING BILLING -->
+<!-- =========================================
+     SOFTWARE BILLING NOTICE
+========================================= -->
 
-    <div
-        id="pendingBilling"
-        class="row mb-4"
-        style="display:none;"
-    >
+<div
+    id="pendingBilling"
+    class="row mb-3"
+    style="display:none;"
+>
+    <div class="col-12">
 
-        <div class="col-12">
+        <div
+            id="softwareBillingNotice"
+            class="software-billing-notice"
+        >
 
-            <div class="card bg-danger text-white">
+            <div class="software-billing-left">
 
-                <div class="card-body">
+                <div class="software-billing-icon">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
 
-                    <div class="card-flex">
+                <div>
 
-                        <div>
+                    <div class="software-billing-title">
+                        Software Billing
+                    </div>
 
-                            <h5 class="mb-2">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                Payment Required
-                            </h5>
-
-                            <div id="billingDetails">
-                            </div>
-
-                        </div>
-
-
-                        <div>
-
-                            <a
-                                href="#"
-                                id="payNowButton"
-                                class="btn btn-light"
-                            >
-                                Pay Now
-                            </a>
-
-                        </div>
-
+                    <div
+                        id="billingDetails"
+                        class="software-billing-details"
+                    >
                     </div>
 
                 </div>
 
             </div>
 
+
+            <div class="software-billing-right">
+
+                <div
+                    id="billingCountdown"
+                    class="software-billing-countdown"
+                >
+                    03:00:00
+                </div>
+
+                <a
+                    href="/software-billing"
+                    id="payNowButton"
+                    class="btn btn-light btn-sm fw-semibold"
+                >
+                    <i class="fa-solid fa-credit-card me-1"></i>
+                    Billing / Pay
+                </a>
+
+            </div>
+
         </div>
 
     </div>
-
+</div>
 
 
     <!-- COMPANY DASHBOARD -->

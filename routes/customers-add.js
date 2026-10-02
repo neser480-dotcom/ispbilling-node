@@ -1,9 +1,9 @@
+
 "use strict";
 
 const express = require("express");
 
-const router =
-    express.Router();
+const router = express.Router();
 
 const controller =
     require("../controllers/customers-add.controller");
@@ -12,15 +12,17 @@ const {
     requireAuth
 } = require("../middleware/auth");
 
+const {
+    requirePermission
+} = require("../middleware/permission");
+
 
 router.use(requireAuth);
 
 
 /*
-|--------------------------------------------------------------------------
-| ADD CUSTOMER
-|--------------------------------------------------------------------------
-*/
+ * ADD CUSTOMER FORM DATA
+ */
 
 router.get(
     "/form",
@@ -29,10 +31,8 @@ router.get(
 
 
 /*
-|--------------------------------------------------------------------------
-| PACKAGES
-|--------------------------------------------------------------------------
-*/
+ * PACKAGES
+ */
 
 router.get(
     "/packages",
@@ -41,13 +41,17 @@ router.get(
 
 
 /*
-|--------------------------------------------------------------------------
-| CREATE
-|--------------------------------------------------------------------------
-*/
+ * CREATE CUSTOMER
+ *
+ * Requires:
+ * add_customer_with_mobile
+ */
 
 router.post(
     "/",
+    requirePermission(
+        "add_customer_with_mobile"
+    ),
     controller.create
 );
 

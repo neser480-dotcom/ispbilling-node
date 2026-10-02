@@ -123,70 +123,64 @@
         </div>
 
 
-        <!-- PROFILE -->
-        <div
-            class="profile"
-            id="profileContainer"
-        >
+<!-- PROFILE -->
+<div
+    class="profile"
+    id="profileContainer"
+>
 
-            <div
-                class="avatar"
-                id="profileAvatar"
-                title=""
-            >
-                A
-            </div>
+    <div
+        class="avatar"
+        id="profileAvatar"
+        title=""
+    >
+        A
+    </div>
 
+    <div class="profile-info">
 
-            <div class="profile-info">
+        <strong id="profileFullname">
+            Loading...
+        </strong>
 
-                <strong id="profileFullname">
-                    Loading...
-                </strong>
-
-                <small id="profileRole">
-                    -
-                </small>
-
-            </div>
-
-
-            <button
-                type="button"
-                class="profile-arrow"
-                id="profileBtn"
-                title="Profile Menu"
-                aria-expanded="false"
-                aria-controls="profileMenu"
-            >
-                <i class="fas fa-caret-down"></i>
-            </button>
-
-
-            <div
-                class="profile-dropdown"
-                id="profileMenu"
-            >
-
-                <a href="/settings/profile">
-                    <i class="fas fa-user me-2"></i>
-                    Profile
-                </a>
-
-
-                <a
-                    href="/api/auth/logout"
-                    class="text-danger"
-                    id="logoutBtn"
-                >
-                    <i class="fas fa-sign-out-alt me-2"></i>
-                    Logout
-                </a>
-
-            </div>
-
-        </div>
+        <small id="profileRole">
+            -
+        </small>
 
     </div>
+
+    <button
+        type="button"
+        class="profile-arrow"
+        id="profileBtn"
+        title="Profile Menu"
+        aria-expanded="false"
+        aria-controls="profileMenu"
+    >
+        <i class="fas fa-caret-down"></i>
+    </button>
+
+    <div
+        class="profile-dropdown"
+        id="profileMenu"
+    >
+
+        <a href="/admin/profile">
+            <i class="fas fa-user me-2"></i>
+            Profile
+        </a>
+
+        <a
+            href="/api/auth/logout"
+            class="text-danger"
+            id="logoutBtn"
+        >
+            <i class="fas fa-sign-out-alt me-2"></i>
+            Logout
+        </a>
+
+    </div>
+
+</div>
 
 </div>

@@ -1,6 +1,5 @@
 "use strict";
 
-
 const {
     RouterOSAPI
 } = require("node-routeros");
@@ -14,12 +13,8 @@ const {
 
 function first(value) {
 
-    if (
-        Array.isArray(value)
-    ) {
-
+    if (Array.isArray(value)) {
         return value[0] || {};
-
     }
 
     return value || {};
@@ -75,11 +70,8 @@ async function withRouter(
     } finally {
 
         try {
-
             api.close();
-
         } catch (_) {}
-
     }
 }
 
@@ -362,7 +354,152 @@ async function createSecret(
                 );
 
 
-            return result;
+            /*
+            |------------------------------------------------------------------
+            | RETURN CREATION RESULT
+            |------------------------------------------------------------------
+            |
+            | RouterOS normally returns the newly-created
+            | item ID in the "ret" field.
+            |
+            */
+
+            const created =
+                first(result);
+
+            return {
+                result,
+                id:
+                    created.ret ||
+                    created[".id"] ||
+                    null,
+                username
+            };
+
+        }
+    );
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| DELETE PPP SECRET
+|--------------------------------------------------------------------------
+|
+| Deletes only the requested PPP secret.
+|
+| Prefer passing the exact RouterOS ".id" / "ret" returned
+| by createSecret().
+|
+| If an ID is not available, username can be used as fallback.
+|--------------------------------------------------------------------------
+*/
+
+async function deleteSecret(
+    router,
+    {
+        id = "",
+        username = ""
+    } = {}
+) {
+
+    if (!id && !username) {
+
+        throw new Error(
+            "MikroTik PPP secret ID or username is required for deletion."
+        );
+
+    }
+
+
+    return withRouter(
+        router,
+        async api => {
+
+            let secretId =
+                String(id || "").trim();
+
+
+            /*
+            |------------------------------------------------------------------
+            | FIND BY USERNAME WHEN ID IS NOT AVAILABLE
+            |------------------------------------------------------------------
+            */
+
+            if (!secretId && username) {
+
+                const result =
+                    await api.write(
+                        "/ppp/secret/print",
+                        [
+                            `?name=${username}`
+                        ]
+                    );
+
+
+                const secret =
+                    first(result);
+
+
+                if (
+                    !secret ||
+                    !secret[".id"]
+                ) {
+
+                    /*
+                    |----------------------------------------------------------
+                    | Already absent = nothing to delete
+                    |----------------------------------------------------------
+                    */
+
+                    return {
+                        success: true,
+                        deleted: false,
+                        alreadyAbsent: true,
+                        username
+                    };
+
+                }
+
+
+                secretId =
+                    secret[".id"];
+
+            }
+
+
+            /*
+            |------------------------------------------------------------------
+            | DELETE EXACT SECRET
+            |------------------------------------------------------------------
+            */
+
+            if (!secretId) {
+
+                throw new Error(
+                    `Unable to determine MikroTik PPP secret ID for "${username}".`
+                );
+
+            }
+
+
+            const result =
+                await api.write(
+                    "/ppp/secret/remove",
+                    [
+                        `=.id=${secretId}`
+                    ]
+                );
+
+
+            return {
+                success: true,
+                deleted: true,
+                id: secretId,
+                username,
+                result
+            };
 
         }
     );
@@ -528,6 +665,8 @@ module.exports = {
     findSecret,
 
     createSecret,
+
+    deleteSecret,
 
     updateSecret
 

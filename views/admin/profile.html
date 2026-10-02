@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Admin Profile - ISP Billing</title>
+
+
+    <!-- =========================================================
+         BOOTSTRAP
+    ========================================================== -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =========================================================
+         FONT AWESOME
+    ========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
+
+
+    <!-- =========================================================
+         SIDEBAR CSS
+    ========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+
+    <!-- =========================================================
+         TOPBAR CSS
+    ========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+
+    <!-- =========================================================
+         ADMIN PROFILE CSS
+    ========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/admin-profile.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     SIDEBAR
+========================================================== -->
+
+<div id="sidebarContainer"></div>
+
+
+<!-- =========================================================
+     TOPBAR
+========================================================== -->
+
+<div id="topbarContainer"></div>
+
+
+<!-- =========================================================
+     MAIN CONTENT
+========================================================== -->
+
+<div class="main-content">
+
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="container-fluid py-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+
+            <div>
+
+                <h2 class="mb-1">
+                    Admin Profile
+                </h2>
+
+                <p class="text-muted mb-0">
+                    Manage account settings, profile information and permissions.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             PROFILE CARD
+        ================================================== -->
+
+        <div class="card profile-card shadow-sm">
+
+
+            <!-- =================================================
+                 TABS HEADER
+            ================================================== -->
+
+            <div class="card-header bg-white border-0 pt-3 px-3">
+
+                <ul
+                    class="nav nav-tabs"
+                    id="profileTabs"
+                    role="tablist"
+                >
+
+
+                    <!-- SETTINGS -->
+
+                    <li
+                        class="nav-item"
+                        role="presentation"
+                    >
+
+                        <button
+                            class="nav-link active"
+                            id="settings-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#settings"
+                            type="button"
+                            role="tab"
+                            aria-controls="settings"
+                            aria-selected="true"
+                        >
+
+                            <i class="fas fa-cog me-1"></i>
+
+                            Settings
+
+                        </button>
+
+                    </li>
+
+
+                    <!-- PROFILE -->
+
+                    <li
+                        class="nav-item"
+                        role="presentation"
+                    >
+
+                        <button
+                            class="nav-link"
+                            id="profile-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#profile"
+                            type="button"
+                            role="tab"
+                            aria-controls="profile"
+                            aria-selected="false"
+                        >
+
+                            <i class="fas fa-user me-1"></i>
+
+                            Profile
+
+                        </button>
+
+                    </li>
+
+
+                    <!-- CONTROL PANEL -->
+
+                    <li
+                        class="nav-item"
+                        role="presentation"
+                    >
+
+                        <button
+                            class="nav-link"
+                            id="control-panel-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#control-panel"
+                            type="button"
+                            role="tab"
+                            aria-controls="control-panel"
+                            aria-selected="false"
+                        >
+
+                            <i class="fas fa-sliders-h me-1"></i>
+
+                            Control Panel
+
+                        </button>
+
+                    </li>
+
+                </ul>
+
+            </div>
+
+
+            <!-- =================================================
+                 TAB CONTENT
+            ================================================== -->
+
+            <div class="card-body p-4">
+
+                <div
+                    class="tab-content"
+                    id="profileTabsContent"
+                >
+
+
+                    <!-- =================================================
+                         SETTINGS
+                    ================================================== -->
+
+                    <div
+                        class="tab-pane fade show active"
+                        id="settings"
+                        role="tabpanel"
+                        aria-labelledby="settings-tab"
+                    >
+
+                        <div class="row g-4">
+
+
+                            <!-- =================================================
+                                 UPDATE PROFILE
+                            ================================================== -->
+
+                            <div class="col-lg-6">
+
+                                <div class="card h-100 border">
+
+                                    <div class="card-header bg-white">
+
+                                        <h5 class="mb-0">
+
+                                            <i class="fas fa-user-edit me-2"></i>
+
+                                            Update Profile
+
+                                        </h5>
+
+                                    </div>
+
+
+                                    <div class="card-body">
+
+                                        <form id="profileUpdateForm">
+
+
+                                            <input
+                                                type="hidden"
+                                                name="user_id"
+                                                id="profileUserId"
+                                            >
+
+
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                id="profileCsrfToken"
+                                            >
+
+
+                                            <!-- NAME -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="profileName"
+                                                    class="form-label"
+                                                >
+                                                    Name
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    id="profileName"
+                                                    name="name"
+                                                    required
+                                                >
+
+                                            </div>
+
+
+                                            <!-- COMPANY -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="profileCompany"
+                                                    class="form-label"
+                                                >
+                                                    Company
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    id="profileCompany"
+                                                    name="company"
+                                                >
+
+                                            </div>
+
+
+                                            <!-- EMAIL -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="profileEmail"
+                                                    class="form-label"
+                                                >
+                                                    Email
+                                                </label>
+
+                                                <input
+                                                    type="email"
+                                                    class="form-control"
+                                                    id="profileEmail"
+                                                    name="email"
+                                                >
+
+                                            </div>
+
+
+                                            <!-- MOBILE -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="profileMobile"
+                                                    class="form-label"
+                                                >
+                                                    Mobile
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    id="profileMobile"
+                                                    name="mobile"
+                                                >
+
+                                            </div>
+
+
+                                            <!-- ADDRESS -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="profileAddress"
+                                                    class="form-label"
+                                                >
+                                                    Address
+                                                </label>
+
+                                                <textarea
+                                                    class="form-control"
+                                                    id="profileAddress"
+                                                    name="address"
+                                                    rows="3"
+                                                ></textarea>
+
+                                            </div>
+
+
+                                            <!-- UPDATE PROFILE BUTTON -->
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary"
+                                                id="profileUpdateButton"
+                                            >
+
+                                                <i class="fas fa-save me-1"></i>
+
+                                                Update Profile
+
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================================
+                                 CHANGE PASSWORD
+                            ================================================== -->
+
+                            <div class="col-lg-6">
+
+                                <div class="card h-100 border">
+
+                                    <div class="card-header bg-white">
+
+                                        <h5 class="mb-0">
+
+                                            <i class="fas fa-lock me-2"></i>
+
+                                            Change Password
+
+                                        </h5>
+
+                                    </div>
+
+
+                                    <div class="card-body">
+
+                                        <form id="passwordUpdateForm">
+
+
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                id="passwordCsrfToken"
+                                            >
+
+
+                                            <!-- CURRENT PASSWORD -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="oldPassword"
+                                                    class="form-label"
+                                                >
+                                                    Current Password
+                                                </label>
+
+                                                <input
+                                                    type="password"
+                                                    class="form-control"
+                                                    id="oldPassword"
+                                                    name="old_password"
+                                                    autocomplete="current-password"
+                                                    required
+                                                >
+
+                                            </div>
+
+
+                                            <!-- NEW PASSWORD -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="newPassword"
+                                                    class="form-label"
+                                                >
+                                                    New Password
+                                                </label>
+
+                                                <input
+                                                    type="password"
+                                                    class="form-control"
+                                                    id="newPassword"
+                                                    name="new_password"
+                                                    minlength="8"
+                                                    autocomplete="new-password"
+                                                    required
+                                                >
+
+                                            </div>
+
+
+                                            <!-- CONFIRM PASSWORD -->
+
+                                            <div class="mb-3">
+
+                                                <label
+                                                    for="confirmPassword"
+                                                    class="form-label"
+                                                >
+                                                    Confirm Password
+                                                </label>
+
+                                                <input
+                                                    type="password"
+                                                    class="form-control"
+                                                    id="confirmPassword"
+                                                    name="confirm_password"
+                                                    minlength="8"
+                                                    autocomplete="new-password"
+                                                    required
+                                                >
+
+                                            </div>
+
+
+                                            <!-- PASSWORD BUTTON -->
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-warning"
+                                                id="passwordUpdateButton"
+                                            >
+
+                                                <i class="fas fa-key me-1"></i>
+
+                                                Change Password
+
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PROFILE INFORMATION
+                    ================================================== -->
+
+                    <div
+                        class="tab-pane fade"
+                        id="profile"
+                        role="tabpanel"
+                        aria-labelledby="profile-tab"
+                    >
+
+                        <div class="table-responsive">
+
+                            <table
+                                class="table table-bordered profile-table mb-0"
+                            >
+
+                                <tbody>
+
+
+                                    <tr>
+
+                                        <th>
+                                            NetFee ID
+                                        </th>
+
+                                        <td id="viewCustomerId">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Company
+                                        </th>
+
+                                        <td id="viewCompany">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Name
+                                        </th>
+
+                                        <td id="viewName">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Username
+                                        </th>
+
+                                        <td id="viewUsername">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Mobile
+                                        </th>
+
+                                        <td id="viewMobile">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Email
+                                        </th>
+
+                                        <td id="viewEmail">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Address
+                                        </th>
+
+                                        <td id="viewAddress">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            User ID
+                                        </th>
+
+                                        <td id="viewUserId">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Role
+                                        </th>
+
+                                        <td id="viewRole">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Company ID
+                                        </th>
+
+                                        <td id="viewCompanyId">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                        <td id="viewStatus">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Total Customer
+                                        </th>
+
+                                        <td id="viewTotalCustomer">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                    <tr>
+
+                                        <th>
+                                            Created At
+                                        </th>
+
+                                        <td id="viewCreatedAt">
+                                            -
+                                        </td>
+
+                                    </tr>
+
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         CONTROL PANEL
+                    ================================================== -->
+
+                    <div
+                        class="tab-pane fade"
+                        id="control-panel"
+                        role="tabpanel"
+                        aria-labelledby="control-panel-tab"
+                    >
+
+
+                        <div class="control-panel-header">
+
+
+                            <div
+                                class="d-flex justify-content-between align-items-center flex-wrap gap-2"
+                            >
+
+
+                                <div>
+
+                                    <h5 class="mb-1">
+
+                                        <i class="fas fa-shield-alt me-2"></i>
+
+                                        Permission Control
+
+                                    </h5>
+
+
+                                    <p class="text-muted mb-0">
+
+                                        Manage permissions for this user.
+
+                                    </p>
+
+                                </div>
+
+
+                                <div>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary btn-sm"
+                                        id="markAllPermissions"
+                                    >
+
+                                        <i class="fas fa-check-double me-1"></i>
+
+                                        Mark All
+
+                                    </button>
+
+                                </div>
+
+
+                            </div>
+
+
+                            <div
+                                class="admin-readonly-note"
+                                id="permissionReadonlyNote"
+                            >
+
+                                Only Super Admin can save permissions.
+
+                            </div>
+
+
+                        </div>
+
+
+                        <!-- PERMISSIONS -->
+
+                        <div id="permissionsContainer">
+
+                            <div class="text-center py-5 text-muted">
+
+                                <div
+                                    class="spinner-border spinner-border-sm me-2"
+                                    role="status"
+                                ></div>
+
+                                Loading permissions...
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- SAVE -->
+
+                        <div class="mt-4">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary save-permissions-btn"
+                                id="savePermissionsBtn"
+                            >
+
+                                <i class="fas fa-save me-1"></i>
+
+                                Save Permissions
+
+                            </button>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BOOTSTRAP JS
+========================================================== -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- =========================================================
+     SIDEBAR LOADER
+========================================================== -->
+
+<script
+    src="/assets/js/sidebar-loader.js"
+></script>
+
+
+<!-- =========================================================
+     TOPBAR LOADER
+========================================================== -->
+
+<script
+    src="/assets/js/topbar-loader.js"
+></script>
+
+
+<!-- =========================================================
+     ADMIN PROFILE JS
+========================================================== -->
+
+<script
+    src="/assets/js/admin-profile.js"
+></script>
+
+
+</body>
+
+</html>

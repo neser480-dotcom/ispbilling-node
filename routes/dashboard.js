@@ -1,13 +1,16 @@
+"use strict";
+
 const express = require("express");
-const path = require("path");
+const router = express.Router();
+
 const db = require("../config/database");
 const { requireAuth } = require("../middleware/auth");
 
-const router = express.Router();
+router.use(requireAuth);
 
 /*
 |--------------------------------------------------------------------------
-| HELPERS
+| Helpers
 |--------------------------------------------------------------------------
 */
 
@@ -16,182 +19,201 @@ function toNumber(value) {
     return Number.isFinite(n) ? n : 0;
 }
 
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function normalizeRows(result) {
+    if (Array.isArray(result)) {
+        return result;
+    }
+
+    if (result && Array.isArray(result[0])) {
+        return result[0];
+    }
+
+    return [];
+}
+
+async function query(sql, params = []) {
+    const result = await db.query(sql, params);
+    return normalizeRows(result);
+}
 
 /*
 |--------------------------------------------------------------------------
-| DASHBOARD PAGE
+| Dashboard HTML
 |--------------------------------------------------------------------------
 */
 
-router.get("/", requireAuth, (req, res) => {
-
-    res.sendFile(
-        path.join(
-            __dirname,
-            "..",
-            "views",
-            "dashboard.html"
-        )
-    );
-
+router.get("/", (req, res) => {
+    res.sendFile("dashboard.html", {
+        root: require("path").join(__dirname, "..", "views")
+    });
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| DASHBOARD DATA
+| Dashboard Data
 |--------------------------------------------------------------------------
 */
 
-router.get("/data", requireAuth, async (req, res) => {
-
+router.get("/data", async (req, res) => {
     try {
+        const userId = Number(req.session.user_id || req.session.userId || 0);
+        const companyId = Number(
+            req.session.company_id ||
+            req.session.companyId ||
+            0
+        );
 
-        const userId =
-            Number(req.session.user_id || 0);
-
-        const companyId =
-            Number(req.session.company_id || 0);
-
-        const role =
-            String(req.session.role || "staff").toLowerCase();
-
-        const isSuperAdmin =
-            role === "super_admin";
-
+        const role = String(req.session.role || "").toLowerCase();
+        const isSuperAdmin = role === "super_admin";
 
         /*
         |--------------------------------------------------------------------------
         | SUPER ADMIN
         |--------------------------------------------------------------------------
+        | Super Admin must not receive customer/business dashboard data.
         */
 
         if (isSuperAdmin) {
-
             const [
-                [registeredRows],
-                [activeRows],
-                [registrationRows],
-                [registrationPaidRows],
-                [registrationUnpaidRows],
-                [registrationAmountRows],
-                [registrationPaidAmountRows],
-                [registrationUnpaidAmountRows],
-                [mikrotikRows],
-                [oltRows]
+                registeredUsers,
+                activeUsers,
+                registrationInvoices,
+                paidRegistration,
+                unpaidRegistration,
+                registrationAmounts,
+                mikrotikTotal,
+                oltTotal
             ] = await Promise.all([
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM users
                 `),
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM users
-                    WHERE LOWER(status) = 'active'
+                    WHERE status = 'active'
                 `),
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM software_billing_notifications
                     WHERE billing_type = 'registration'
                 `),
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM software_billing_notifications
                     WHERE billing_type = 'registration'
-                    AND LOWER(status) = 'paid'
+                      AND status = 'paid'
                 `),
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM software_billing_notifications
                     WHERE billing_type = 'registration'
-                    AND LOWER(status) = 'unpaid'
+                      AND status <> 'paid'
                 `),
 
-                db.query(`
-                    SELECT COALESCE(SUM(amount),0) AS total
+                query(`
+                    SELECT
+                        COALESCE(
+                            SUM(CASE
+                                WHEN billing_type = 'registration'
+                                THEN amount
+                                ELSE 0
+                            END),
+                            0
+                        ) AS total_amount,
+
+                        COALESCE(
+                            SUM(CASE
+                                WHEN billing_type = 'registration'
+                                 AND status = 'paid'
+                                THEN amount
+                                ELSE 0
+                            END),
+                            0
+                        ) AS paid_amount,
+
+                        COALESCE(
+                            SUM(CASE
+                                WHEN billing_type = 'registration'
+                                 AND status <> 'paid'
+                                THEN amount
+                                ELSE 0
+                            END),
+                            0
+                        ) AS unpaid_amount
+
                     FROM software_billing_notifications
-                    WHERE billing_type = 'registration'
                 `),
 
-                db.query(`
-                    SELECT COALESCE(SUM(amount),0) AS total
-                    FROM software_billing_notifications
-                    WHERE billing_type = 'registration'
-                    AND LOWER(status) = 'paid'
-                `),
-
-                db.query(`
-                    SELECT COALESCE(SUM(amount),0) AS total
-                    FROM software_billing_notifications
-                    WHERE billing_type = 'registration'
-                    AND LOWER(status) = 'unpaid'
-                `),
-
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM mikrotik_servers
                 `),
 
-                db.query(`
+                query(`
                     SELECT COUNT(*) AS total
                     FROM olts
                 `)
-
             ]);
 
+            const amount = registrationAmounts[0] || {};
 
             return res.json({
-
                 success: true,
-
                 type: "super_admin",
 
-                data: {
+                registered_users: toNumber(
+                    registeredUsers[0]?.total
+                ),
 
-                    registered_users:
-                        toNumber(registeredRows[0]?.total),
+                active_users: toNumber(
+                    activeUsers[0]?.total
+                ),
 
-                    active_users:
-                        toNumber(activeRows[0]?.total),
+                registration_invoices: toNumber(
+                    registrationInvoices[0]?.total
+                ),
 
-                    registration_invoices:
-                        toNumber(registrationRows[0]?.total),
+                paid_registration: toNumber(
+                    paidRegistration[0]?.total
+                ),
 
-                    registration_collection:
-                        toNumber(registrationAmountRows[0]?.total),
+                unpaid_registration: toNumber(
+                    unpaidRegistration[0]?.total
+                ),
 
-                    paid_registration:
-                        toNumber(registrationPaidRows[0]?.total),
+                registration_collection: toNumber(
+                    amount.total_amount
+                ),
 
-                    unpaid_registration:
-                        toNumber(registrationUnpaidRows[0]?.total),
+                registration_paid_amount: toNumber(
+                    amount.paid_amount
+                ),
 
-                    software_payments:
-                        0,
+                registration_unpaid_amount: toNumber(
+                    amount.unpaid_amount
+                ),
 
-                    registration_paid_amount:
-                        toNumber(registrationPaidAmountRows[0]?.total),
+                mikrotik_total: toNumber(
+                    mikrotikTotal[0]?.total
+                ),
 
-                    registration_unpaid_amount:
-                        toNumber(registrationUnpaidAmountRows[0]?.total),
+                olt_total: toNumber(
+                    oltTotal[0]?.total
+                ),
 
-                    mikrotik_total:
-                        toNumber(mikrotikRows[0]?.total),
-
-                    olt_total:
-                        toNumber(oltRows[0]?.total)
-
-                }
-
+                software_payments: 0
             });
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -200,355 +222,482 @@ router.get("/data", requireAuth, async (req, res) => {
         */
 
         if (!companyId || !userId) {
-
             return res.status(403).json({
-
                 success: false,
-
-                message:
-                    "Company access is not configured for this account."
-
+                message: "Company context is missing."
             });
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
-        | CUSTOMER COUNTS
+        | Current billing period
+        |--------------------------------------------------------------------------
+        */
+
+        const periodRows = await query(`
+            SELECT
+                YEAR(CURDATE()) AS billing_year,
+                MONTH(CURDATE()) AS billing_month
+        `);
+
+        const billingYear = Number(
+            periodRows[0]?.billing_year || new Date().getFullYear()
+        );
+
+        const billingMonth = Number(
+            periodRows[0]?.billing_month ||
+            (new Date().getMonth() + 1)
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Main company metrics
         |--------------------------------------------------------------------------
         */
 
         const [
-            [totalCustomerRows],
-            [activeCustomerRows],
-            [inactiveCustomerRows],
-            [expiredCustomerRows],
-            [paidCustomerRows],
-            [freeCustomerRows],
-            [billRows],
-            [collectionRows],
-            [todayCollectionRows],
-            [connectionFeeRows],
-            [expenseRows],
-            [salaryRows],
-            [mikrotikCustomerRows],
-            [pendingBillingRows]
+            customerStats,
+            billingStats,
+            paymentStats,
+            todayCollection,
+            connectionFee,
+            expenditure,
+            salary,
+            mikrotikTotal,
+            softwareBilling,
+            chartRows
         ] = await Promise.all([
 
-            db.query(`
-                SELECT COUNT(*) AS total
+            /*
+            |--------------------------------------------------------------------------
+            | Customers
+            |--------------------------------------------------------------------------
+            */
+
+            query(`
+                SELECT
+                    COUNT(*) AS total_customer,
+
+                    SUM(
+                        CASE
+                            WHEN status = 'Active'
+                            THEN 1 ELSE 0
+                        END
+                    ) AS active_customer,
+
+                    SUM(
+                        CASE
+                            WHEN status <> 'Active'
+                              OR status IS NULL
+                            THEN 1 ELSE 0
+                        END
+                    ) AS inactive_customer,
+
+                    SUM(
+                        CASE
+                            WHEN promise_date IS NOT NULL
+                             AND promise_date < NOW()
+                            THEN 1 ELSE 0
+                        END
+                    ) AS expired_customer,
+
+                    SUM(
+                        CASE
+                            WHEN COALESCE(monthly_bill, 0) = 0
+                            THEN 1 ELSE 0
+                        END
+                    ) AS free_customer,
+
+                    COALESCE(
+                        SUM(monthly_bill),
+                        0
+                    ) AS total_bill
+
                 FROM customers
                 WHERE company_id = ?
+                  AND deleted_at IS NULL
             `, [companyId]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Current month billing/payment customer counts
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COUNT(*) AS total
-                FROM customers
-                WHERE company_id = ?
-                AND LOWER(status) = 'active'
-            `, [companyId]),
+            query(`
+                SELECT
+                    COUNT(DISTINCT CASE
+                        WHEN p.customer_id IS NOT NULL
+                        THEN c.id
+                    END) AS paid_customer,
 
+                    COUNT(DISTINCT CASE
+                        WHEN p.customer_id IS NULL
+                        THEN c.id
+                    END) AS unpaid_customer
 
-            db.query(`
-                SELECT COUNT(*) AS total
-                FROM customers
-                WHERE company_id = ?
-                AND LOWER(status) = 'inactive'
-            `, [companyId]),
+                FROM customers c
 
+                LEFT JOIN (
+                    SELECT DISTINCT customer_id
+                    FROM payments
+                    WHERE company_id = ?
+                      AND billing_month = ?
+                      AND billing_year = ?
+                      AND deleted_at IS NULL
+                ) p
+                    ON p.customer_id = c.id
 
-            db.query(`
-                SELECT COUNT(*) AS total
-                FROM customers
-                WHERE company_id = ?
-                AND promise_date IS NOT NULL
-                AND promise_date < CURDATE()
-            `, [companyId]),
-
-
-            db.query(`
-                SELECT COUNT(DISTINCT p.customer_id) AS total
-                FROM payments p
-                INNER JOIN customers c
-                    ON c.customer_id = p.customer_id
                 WHERE c.company_id = ?
-                AND p.billing_month = MONTH(CURDATE())
-                AND p.billing_year = YEAR(CURDATE())
-                AND p.deleted_at IS NULL
-            `, [companyId]),
+                  AND c.deleted_at IS NULL
+            `, [
+                companyId,
+                billingMonth,
+                billingYear,
+                companyId
+            ]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Current month collection
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COUNT(*) AS total
-                FROM customers
+            query(`
+                SELECT
+                    COALESCE(SUM(amount), 0) AS total_collection
+
+                FROM payments
+
                 WHERE company_id = ?
-                AND package_name = 'Free'
-            `, [companyId]),
+                  AND billing_month = ?
+                  AND billing_year = ?
+                  AND deleted_at IS NULL
+            `, [
+                companyId,
+                billingMonth,
+                billingYear
+            ]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Today collection
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COALESCE(SUM(monthly_bill),0) AS total
-                FROM customers
+            query(`
+                SELECT
+                    COALESCE(SUM(amount), 0) AS today_collection
+
+                FROM payments
+
                 WHERE company_id = ?
+                  AND DATE(payment_date) = CURDATE()
+                  AND deleted_at IS NULL
             `, [companyId]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Connection fee
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COALESCE(SUM(p.amount),0) AS total
-                FROM payments p
-                INNER JOIN customers c
-                    ON c.customer_id = p.customer_id
-                WHERE c.company_id = ?
-                AND p.deleted_at IS NULL
-            `, [companyId]),
+            query(`
+                SELECT
+                    COALESCE(SUM(connection_fee), 0) AS connection_fee
 
-
-            db.query(`
-                SELECT COALESCE(SUM(p.amount),0) AS total
-                FROM payments p
-                INNER JOIN customers c
-                    ON c.customer_id = p.customer_id
-                WHERE c.company_id = ?
-                AND p.payment_date = CURDATE()
-                AND p.deleted_at IS NULL
-            `, [companyId]),
-
-
-            db.query(`
-                SELECT COALESCE(SUM(connection_fee),0) AS total
                 FROM customers
+
                 WHERE company_id = ?
+                  AND deleted_at IS NULL
             `, [companyId]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Expenditure
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COALESCE(SUM(amount),0) AS total
+            query(`
+                SELECT
+                    COALESCE(SUM(amount), 0) AS expenditure
+
                 FROM expenditures
+
                 WHERE company_id = ?
+                  AND deleted_at IS NULL
             `, [companyId]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Salary
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COALESCE(SUM(amount),0) AS total
+            query(`
+                SELECT
+                    COALESCE(SUM(amount), 0) AS salary
+
                 FROM salaries
+
+                WHERE company_id = ?
+                  AND deleted_at IS NULL
+            `, [companyId]),
+
+            /*
+            |--------------------------------------------------------------------------
+            | MikroTik
+            |--------------------------------------------------------------------------
+            */
+
+            query(`
+                SELECT COUNT(*) AS total
+                FROM mikrotik_servers
                 WHERE company_id = ?
             `, [companyId]),
 
+            /*
+            |--------------------------------------------------------------------------
+            | Software billing
+            |--------------------------------------------------------------------------
+            */
 
-            db.query(`
-                SELECT COUNT(DISTINCT mikrotik_id) AS total
-                FROM customers
-                WHERE company_id = ?
-                AND mikrotik_id IS NOT NULL
-                AND mikrotik_id != 0
-            `, [companyId]),
-
-
-            db.query(`
+            query(`
                 SELECT
                     id,
-                    billing_type,
-                    package_id,
-                    package_code,
                     amount,
                     status,
-                    due_date
-                FROM software_billing_notifications
-                WHERE company_id = ?
-                AND user_id = ?
-                AND LOWER(status) = 'unpaid'
-                ORDER BY id DESC
-                LIMIT 1
-            `, [companyId, userId])
+                    due_date,
+                    invoice_date,
+                    message
 
+                FROM software_billing_notifications
+
+                WHERE company_id = ?
+                  AND (
+                        user_id = ?
+                        OR user_id IS NULL
+                      )
+
+                ORDER BY
+                    CASE
+                        WHEN status <> 'paid' THEN 0
+                        ELSE 1
+                    END,
+                    due_date ASC,
+                    id DESC
+
+                LIMIT 1
+            `, [
+                companyId,
+                userId
+            ]),
+
+            /*
+            |--------------------------------------------------------------------------
+            | Last 6 months payment chart
+            |--------------------------------------------------------------------------
+            */
+
+            query(`
+                SELECT
+                    YEAR(payment_date) AS payment_year,
+                    MONTH(payment_date) AS payment_month,
+                    COALESCE(SUM(amount), 0) AS amount
+
+                FROM payments
+
+                WHERE company_id = ?
+                  AND deleted_at IS NULL
+                  AND payment_date >= DATE_SUB(
+                        DATE_FORMAT(CURDATE(), '%Y-%m-01'),
+                        INTERVAL 5 MONTH
+                      )
+
+                GROUP BY
+                    YEAR(payment_date),
+                    MONTH(payment_date)
+
+                ORDER BY
+                    payment_year ASC,
+                    payment_month ASC
+            `, [companyId])
         ]);
 
+        const customer = customerStats[0] || {};
+        const billing = billingStats[0] || {};
+        const payment = paymentStats[0] || {};
+        const today = todayCollection[0] || {};
+        const fee = connectionFee[0] || {};
+        const expense = expenditure[0] || {};
+        const salaryRow = salary[0] || {};
+        const software = softwareBilling[0] || null;
 
-        const totalCustomer =
-            toNumber(totalCustomerRows[0]?.total);
+        const totalCustomer = toNumber(customer.total_customer);
+        const activeCustomer = toNumber(customer.active_customer);
+        const inactiveCustomer = toNumber(customer.inactive_customer);
+        const expiredCustomer = toNumber(customer.expired_customer);
+        const paidCustomer = toNumber(billing.paid_customer);
+        const unpaidCustomer = toNumber(billing.unpaid_customer);
+        const freeCustomer = toNumber(customer.free_customer);
 
-        const activeCustomer =
-            toNumber(activeCustomerRows[0]?.total);
+        const totalBill = toNumber(customer.total_bill);
+        const totalCollection = toNumber(payment.total_collection);
+        const todayCollectionValue = toNumber(today.today_collection);
 
-        const inactiveCustomer =
-            toNumber(inactiveCustomerRows[0]?.total);
-
-        const expiredCustomer =
-            toNumber(expiredCustomerRows[0]?.total);
-
-        const paidCustomer =
-            toNumber(paidCustomerRows[0]?.total);
-
-        const freeCustomer =
-            toNumber(freeCustomerRows[0]?.total);
-
-        const totalBill =
-            toNumber(billRows[0]?.total);
-
-        const totalCollection =
-            toNumber(collectionRows[0]?.total);
-
-        const todayCollection =
-            toNumber(todayCollectionRows[0]?.total);
-
-        const connectionFee =
-            toNumber(connectionFeeRows[0]?.total);
-
-        const totalExpense =
-            toNumber(expenseRows[0]?.total);
-
-        const totalSalary =
-            toNumber(salaryRows[0]?.total);
-
-        const unpaidCustomer =
-            Math.max(
-                totalCustomer - paidCustomer,
-                0
-            );
-
+        const connectionFeeValue = toNumber(fee.connection_fee);
+        const expenditureValue = toNumber(expense.expenditure);
+        const salaryValue = toNumber(salaryRow.salary);
 
         const businessBalance =
             totalCollection -
-            totalExpense -
-            totalSalary;
-
-
-        let collectionPercent = 0;
-
-        if (totalBill > 0) {
-
-            collectionPercent =
-                (totalCollection / totalBill) * 100;
-
-            collectionPercent =
-                Math.max(
-                    0,
-                    Math.min(
-                        collectionPercent,
-                        100
-                    )
-                );
-
-        }
-
+            expenditureValue -
+            salaryValue;
 
         /*
         |--------------------------------------------------------------------------
-        | RESPONSE
+        | Collection percentage
+        |--------------------------------------------------------------------------
+        */
+
+        const collectionPercent =
+            totalBill > 0
+                ? clamp(
+                    (totalCollection / totalBill) * 100,
+                    0,
+                    100
+                )
+                : 0;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Chart data
+        |--------------------------------------------------------------------------
+        */
+
+        const chartMap = {};
+
+        for (const row of chartRows) {
+            const key =
+                `${Number(row.payment_year)}-${String(
+                    Number(row.payment_month)
+                ).padStart(2, "0")}`;
+
+            chartMap[key] = toNumber(row.amount);
+        }
+
+        const chartLabels = [];
+        const chartValues = [];
+
+        const now = new Date();
+
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(
+                now.getFullYear(),
+                now.getMonth() - i,
+                1
+            );
+
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+
+            const key =
+                `${year}-${String(month).padStart(2, "0")}`;
+
+            chartLabels.push(
+                d.toLocaleString("en-US", {
+                    month: "short"
+                })
+            );
+
+            chartValues.push(
+                toNumber(chartMap[key])
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
         |--------------------------------------------------------------------------
         */
 
         return res.json({
-
             success: true,
-
             type: "company",
 
-            user: {
+            billing_year: billingYear,
+            billing_month: billingMonth,
 
-                id: userId,
+            total_customer: totalCustomer,
+            active_customer: activeCustomer,
+            inactive_customer: inactiveCustomer,
+            expired_customer: expiredCustomer,
 
-                company_id: companyId,
+            paid_customer: paidCustomer,
+            unpaid_customer: unpaidCustomer,
+            free_customer: freeCustomer,
 
-                role
+            total_bill: totalBill,
+            total_collection: totalCollection,
+            today_collection: todayCollectionValue,
 
-            },
+            connection_fee: connectionFeeValue,
 
-            pendingBilling:
-                pendingBillingRows[0] || null,
+            /*
+             * No discount table/source was supplied in the current
+             * dashboard data contract, so do not fabricate a value.
+             */
+            discount: null,
 
-            data: {
+            expenditure: expenditureValue,
+            salary: salaryValue,
 
-                total_customer:
-                    totalCustomer,
+            business_balance: businessBalance,
 
-                active_customer:
-                    activeCustomer,
+            /*
+             * These are customer counts, not MikroTik live-session counts.
+             * Keep them separate from online_user.
+             */
+            total_pppoe: totalCustomer,
+            online_user: null,
+            offline_user: null,
 
-                inactive_customer:
-                    inactiveCustomer,
+            mikrotik_total: toNumber(
+                mikrotikTotal[0]?.total
+            ),
 
-                expired_customer:
-                    expiredCustomer,
+            collection_percent: collectionPercent,
 
-                paid_customer:
-                    paidCustomer,
+            mikrotik_router_id: null,
 
-                unpaid_customer:
-                    unpaidCustomer,
+            pending_billing: software
+                ? {
+                    id: Number(software.id),
+                    amount: toNumber(software.amount),
+                    status: software.status,
+                    due_date: software.due_date,
+                    invoice_date: software.invoice_date,
+                    message: software.message || ""
+                }
+                : null,
 
-                free_customer:
-                    freeCustomer,
-
-                total_bill:
-                    totalBill,
-
-                total_collection:
-                    totalCollection,
-
-                today_collection:
-                    todayCollection,
-
-                connection_fee:
-                    connectionFee,
-
-                discount:
-                    0,
-
-                expenditure:
-                    totalExpense,
-
-                salary:
-                    totalSalary,
-
-                business_balance:
-                    businessBalance,
-
-                total_pppoe:
-                    totalCustomer,
-
-                online_user:
-                    activeCustomer,
-
-                offline_user:
-                    inactiveCustomer,
-
-                mikrotik_total:
-                    toNumber(
-                        mikrotikCustomerRows[0]?.total
-                    ),
-
-                collection_percent:
-                    Number(
-                        collectionPercent.toFixed(2)
-                    )
-
+            chart: {
+                labels: chartLabels,
+                values: chartValues
             }
-
         });
 
-
     } catch (error) {
-
         console.error(
-            "Dashboard data error:",
+            "[Dashboard] Data error:",
             error
         );
 
         return res.status(500).json({
-
             success: false,
-
-            message:
-                "Unable to load dashboard data."
-
+            message: "Failed to load dashboard data."
         });
-
     }
-
 });
-
 
 module.exports = router;

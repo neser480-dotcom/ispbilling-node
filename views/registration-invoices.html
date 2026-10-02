@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Registration Invoices</title>
+
+
+    <!-- Bootstrap -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- Font Awesome -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
+
+
+    <!-- Sidebar CSS -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+
+    <!-- Topbar CSS -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+
+    <style>
+
+        /*
+        |--------------------------------------------------------------------------
+        | PAGE
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-page {
+
+            padding: 20px;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | HEADER
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-header {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 15px;
+
+            margin-bottom: 20px;
+
+            flex-wrap: wrap;
+
+        }
+
+
+        .registration-invoice-header h3 {
+
+            margin: 0;
+
+            font-weight: 700;
+
+        }
+
+
+        .registration-invoice-header p {
+
+            margin: 5px 0 0;
+
+            color: #6c757d;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUMMARY
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-summary-card {
+
+            border: 0;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 2px 12px
+                rgba(0, 0, 0, 0.06);
+
+            height: 100%;
+
+        }
+
+
+        .registration-summary-title {
+
+            font-size: 13px;
+
+            color: #6c757d;
+
+            margin-bottom: 5px;
+
+        }
+
+
+        .registration-summary-value {
+
+            font-size: 24px;
+
+            font-weight: 700;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TABLE CARD
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-table-card {
+
+            margin-top: 20px;
+
+            border: 0;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 2px 12px
+                rgba(0, 0, 0, 0.06);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TABLE WRAPPER
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-table-wrapper {
+
+            width: 100%;
+
+            overflow-x: auto;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TABLE
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-table {
+
+            min-width: 900px;
+
+            margin-bottom: 0;
+
+        }
+
+
+        .registration-invoice-table th {
+
+            white-space: nowrap;
+
+            font-size: 13px;
+
+            background: #f8f9fa;
+
+        }
+
+
+        .registration-invoice-table td {
+
+            vertical-align: middle;
+
+            white-space: nowrap;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | INVOICE NUMBER
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-number {
+
+            font-weight: 700;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | STATUS
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-status {
+
+            display: inline-block;
+
+            padding: 5px 10px;
+
+            border-radius: 20px;
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+        }
+
+
+        .registration-invoice-status-paid {
+
+            color: #198754;
+
+            background: #d1e7dd;
+
+        }
+
+
+        .registration-invoice-status-unpaid {
+
+            color: #dc3545;
+
+            background: #f8d7da;
+
+        }
+
+
+        .registration-invoice-status-other {
+
+            color: #495057;
+
+            background: #e9ecef;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EMPTY / LOADING
+        |--------------------------------------------------------------------------
+        */
+
+        .registration-invoice-empty {
+
+            text-align: center;
+
+            padding: 50px 20px;
+
+            color: #6c757d;
+
+        }
+
+
+        .registration-invoice-loading {
+
+            text-align: center;
+
+            padding: 40px 20px;
+
+            color: #6c757d;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MOBILE
+        |--------------------------------------------------------------------------
+        */
+
+        @media (max-width: 768px) {
+
+            .registration-invoice-page {
+
+                padding: 12px;
+
+            }
+
+
+            .registration-invoice-header h3 {
+
+                font-size: 20px;
+
+            }
+
+
+            .registration-summary-value {
+
+                font-size: 20px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================================
+         SIDEBAR
+    ========================================= -->
+
+    <div id="sidebarContainer"></div>
+
+
+    <!-- =========================================
+         TOPBAR
+    ========================================= -->
+
+    <div id="topbarContainer"></div>
+
+
+    <!-- =========================================
+         MAIN CONTENT
+    ========================================= -->
+
+    <div class="main-content">
+
+
+        <!-- =====================================
+             REGISTRATION INVOICE PAGE
+        ====================================== -->
+
+        <main class="registration-invoice-page">
+
+
+            <!-- HEADER -->
+
+            <div class="registration-invoice-header">
+
+                <div>
+
+                    <h3>
+
+                        <i class="fa fa-file-invoice"></i>
+
+                        Registration Invoices
+
+                    </h3>
+
+
+                    <p>
+
+                        Registration and software signup invoices
+
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    id="refreshRegistrationInvoices"
+                >
+
+                    <i class="fa fa-refresh"></i>
+
+                    Refresh
+
+                </button>
+
+            </div>
+
+
+            <!-- =================================
+                 SUMMARY CARDS
+            ================================== -->
+
+            <div class="row g-3">
+
+
+                <!-- TOTAL -->
+
+                <div class="col-md-4">
+
+                    <div class="card registration-summary-card">
+
+                        <div class="card-body">
+
+                            <div class="registration-summary-title">
+
+                                Total Registration Invoices
+
+                            </div>
+
+
+                            <div
+                                class="registration-summary-value"
+                                id="registrationTotalInvoices"
+                            >
+
+                                0
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PAID -->
+
+                <div class="col-md-4">
+
+                    <div class="card registration-summary-card">
+
+                        <div class="card-body">
+
+                            <div class="registration-summary-title">
+
+                                Paid
+
+                            </div>
+
+
+                            <div
+                                class="registration-summary-value text-success"
+                                id="registrationPaidInvoices"
+                            >
+
+                                0
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- UNPAID -->
+
+                <div class="col-md-4">
+
+                    <div class="card registration-summary-card">
+
+                        <div class="card-body">
+
+                            <div class="registration-summary-title">
+
+                                Unpaid
+
+                            </div>
+
+
+                            <div
+                                class="registration-summary-value text-danger"
+                                id="registrationUnpaidInvoices"
+                            >
+
+                                0
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================
+                 TABLE
+            ================================== -->
+
+            <div
+                class="card registration-invoice-table-card"
+            >
+
+                <div class="card-body p-0">
+
+
+                    <div
+                        class="registration-invoice-table-wrapper"
+                    >
+
+                        <table
+                            class="table table-hover registration-invoice-table"
+                        >
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        #
+                                    </th>
+
+                                    <th>
+                                        Invoice ID
+                                    </th>
+
+                                    <th>
+                                        User
+                                    </th>
+
+                                    <th>
+                                        Amount
+                                    </th>
+
+                                    <th>
+                                        Status
+                                    </th>
+
+                                    <th>
+                                        Invoice Date
+                                    </th>
+
+                                    <th>
+                                        Due Date
+                                    </th>
+
+                                    <th>
+                                        Paid Date
+                                    </th>
+
+                                    <th>
+                                        Action
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody
+                                id="registrationInvoiceTableBody"
+                            >
+
+                                <tr>
+
+                                    <td
+                                        colspan="9"
+                                        class="registration-invoice-loading"
+                                    >
+
+                                        <i
+                                            class="fa fa-spinner fa-spin"
+                                        ></i>
+
+                                        Loading invoices...
+
+                                    </td>
+
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </main>
+
+    </div>
+
+
+    <!-- =========================================
+         BOOTSTRAP JS
+    ========================================= -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+
+    <!-- =========================================
+         SIDEBAR LOADER
+    ========================================= -->
+
+    <script
+        src="/assets/js/sidebar-loader.js"
+    ></script>
+
+
+    <!-- =========================================
+         TOPBAR LOADER
+    ========================================= -->
+
+    <script
+        src="/assets/js/topbar-loader.js"
+    ></script>
+
+
+    <!-- =========================================
+         REGISTRATION INVOICE JS
+    ========================================= -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                "use strict";
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | ELEMENTS
+                |--------------------------------------------------------------------------
+                */
+
+                const tableBody =
+                    document.getElementById(
+                        "registrationInvoiceTableBody"
+                    );
+
+
+                const totalInvoices =
+                    document.getElementById(
+                        "registrationTotalInvoices"
+                    );
+
+
+                const paidInvoices =
+                    document.getElementById(
+                        "registrationPaidInvoices"
+                    );
+
+
+                const unpaidInvoices =
+                    document.getElementById(
+                        "registrationUnpaidInvoices"
+                    );
+
+
+                const refreshButton =
+                    document.getElementById(
+                        "refreshRegistrationInvoices"
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | ESCAPE HTML
+                |--------------------------------------------------------------------------
+                */
+
+                function escapeHtml(value) {
+
+                    return String(
+                        value ?? ""
+                    )
+                    .replace(
+                        /&/g,
+                        "&amp;"
+                    )
+                    .replace(
+                        /</g,
+                        "&lt;"
+                    )
+                    .replace(
+                        />/g,
+                        "&gt;"
+                    )
+                    .replace(
+                        /"/g,
+                        "&quot;"
+                    )
+                    .replace(
+                        /'/g,
+                        "&#039;"
+                    );
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | MONEY
+                |--------------------------------------------------------------------------
+                */
+
+                function formatMoney(value) {
+
+                    const amount =
+                        Number(
+                            value || 0
+                        );
+
+
+                    return amount.toLocaleString(
+                        "en-BD",
+                        {
+                            minimumFractionDigits: 2,
+
+                            maximumFractionDigits: 2
+                        }
+                    );
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | DATE
+                |--------------------------------------------------------------------------
+                */
+
+                function formatDate(value) {
+
+                    if (!value) {
+
+                        return "-";
+
+                    }
+
+
+                    const date =
+                        new Date(value);
+
+
+                    if (
+                        Number.isNaN(
+                            date.getTime()
+                        )
+                    ) {
+
+                        return escapeHtml(
+                            value
+                        );
+
+                    }
+
+
+                    return date.toLocaleString(
+                        "en-BD",
+                        {
+                            year: "numeric",
+
+                            month: "short",
+
+                            day: "2-digit",
+
+                            hour: "2-digit",
+
+                            minute: "2-digit"
+                        }
+                    );
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | STATUS BADGE
+                |--------------------------------------------------------------------------
+                */
+
+                function statusBadge(status) {
+
+                    const normalized =
+                        String(
+                            status || ""
+                        )
+                        .trim()
+                        .toLowerCase();
+
+
+                    let className =
+                        "registration-invoice-status-other";
+
+
+                    if (
+                        normalized === "paid"
+                    ) {
+
+                        className =
+                            "registration-invoice-status-paid";
+
+                    } else if (
+                        normalized === "unpaid"
+                    ) {
+
+                        className =
+                            "registration-invoice-status-unpaid";
+
+                    }
+
+
+                    const label =
+                        normalized
+                            ? normalized.toUpperCase()
+                            : "UNKNOWN";
+
+
+                    return `
+                        <span
+                            class="registration-invoice-status ${className}"
+                        >
+                            ${escapeHtml(label)}
+                        </span>
+                    `;
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | LOAD REGISTRATION INVOICES
+                |--------------------------------------------------------------------------
+                */
+
+                async function loadRegistrationInvoices() {
+
+                    if (!tableBody) {
+
+                        return;
+
+                    }
+
+
+                    tableBody.innerHTML = `
+                        <tr>
+
+                            <td
+                                colspan="9"
+                                class="registration-invoice-loading"
+                            >
+
+                                <i
+                                    class="fa fa-spinner fa-spin"
+                                ></i>
+
+                                Loading invoices...
+
+                            </td>
+
+                        </tr>
+                    `;
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                "/billing/data",
+                                {
+                                    method: "GET",
+
+                                    credentials:
+                                        "same-origin",
+
+                                    cache: "no-store",
+
+                                    headers: {
+
+                                        "Accept":
+                                            "application/json",
+
+                                        "X-Requested-With":
+                                            "XMLHttpRequest"
+
+                                    }
+
+                                }
+                            );
+
+
+                        const result =
+                            await response.json();
+
+
+                        if (
+                            !response.ok ||
+                            !result.success
+                        ) {
+
+                            throw new Error(
+                                result.message ||
+                                "Unable to load invoices."
+                            );
+
+                        }
+
+
+                        const allRows =
+                            Array.isArray(
+                                result.rows
+                            )
+                                ? result.rows
+                                : [];
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | REGISTRATION ONLY
+                        |--------------------------------------------------------------------------
+                        */
+
+                        const rows =
+                            allRows.filter(
+                                function (invoice) {
+
+                                    const type =
+                                        String(
+                                            invoice.type || ""
+                                        )
+                                        .trim()
+                                        .toLowerCase();
+
+
+                                    const messageType =
+                                        String(
+                                            invoice.message_type || ""
+                                        )
+                                        .trim()
+                                        .toLowerCase();
+
+
+                                    return (
+                                        type ===
+                                            "registration"
+
+                                        ||
+
+                                        messageType ===
+                                            "registration_fee"
+                                    );
+
+                                }
+                            );
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | SUMMARY
+                        |--------------------------------------------------------------------------
+                        */
+
+                        let paid = 0;
+
+                        let unpaid = 0;
+
+
+                        rows.forEach(
+                            function (invoice) {
+
+                                const status =
+                                    String(
+                                        invoice.status || ""
+                                    )
+                                    .trim()
+                                    .toLowerCase();
+
+
+                                if (
+                                    status === "paid"
+                                ) {
+
+                                    paid++;
+
+                                } else if (
+                                    status === "unpaid"
+                                ) {
+
+                                    unpaid++;
+
+                                }
+
+                            }
+                        );
+
+
+                        if (totalInvoices) {
+
+                            totalInvoices.textContent =
+                                rows.length;
+
+                        }
+
+
+                        if (paidInvoices) {
+
+                            paidInvoices.textContent =
+                                paid;
+
+                        }
+
+
+                        if (unpaidInvoices) {
+
+                            unpaidInvoices.textContent =
+                                unpaid;
+
+                        }
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | EMPTY
+                        |--------------------------------------------------------------------------
+                        */
+
+                        if (!rows.length) {
+
+                            tableBody.innerHTML = `
+                                <tr>
+
+                                    <td
+                                        colspan="9"
+                                        class="registration-invoice-empty"
+                                    >
+
+                                        <i
+                                            class="fa fa-file-invoice fa-2x mb-3"
+                                        ></i>
+
+                                        <div>
+
+                                            No registration invoices found.
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            `;
+
+                            return;
+
+                        }
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | SORT
+                        |--------------------------------------------------------------------------
+                        */
+
+                        rows.sort(
+                            function (a, b) {
+
+                                return (
+                                    Number(b.id || 0) -
+                                    Number(a.id || 0)
+                                );
+
+                            }
+                        );
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | TABLE
+                        |--------------------------------------------------------------------------
+                        */
+
+                        tableBody.innerHTML =
+                            rows
+                                .map(
+                                    function (
+                                        invoice,
+                                        index
+                                    ) {
+
+                                        const userName =
+                                            invoice.user_name ||
+                                            invoice.username ||
+                                            (
+                                                invoice.user_id
+                                                    ? `User #${invoice.user_id}`
+                                                    : "-"
+                                            );
+
+
+                                        return `
+                                            <tr>
+
+                                                <td>
+                                                    ${index + 1}
+                                                </td>
+
+
+                                                <td>
+
+                                                    <span
+                                                        class="registration-invoice-number"
+                                                    >
+
+                                                        #${escapeHtml(
+                                                            invoice.id
+                                                        )}
+
+                                                    </span>
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${escapeHtml(
+                                                        userName
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${formatMoney(
+                                                        invoice.amount
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${statusBadge(
+                                                        invoice.status
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${formatDate(
+                                                        invoice.invoice_date
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${formatDate(
+                                                        invoice.due_date
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    ${formatDate(
+                                                        invoice.paid_date
+                                                    )}
+
+                                                </td>
+
+
+                                                <td>
+
+                                                    <a
+                                                        href="/billing/invoice/${encodeURIComponent(
+                                                            invoice.id
+                                                        )}"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                    >
+
+                                                        <i
+                                                            class="fa fa-eye"
+                                                        ></i>
+
+                                                        View
+
+                                                    </a>
+
+                                                </td>
+
+                                            </tr>
+                                        `;
+
+                                    }
+                                )
+                                .join("");
+
+
+                    } catch (error) {
+
+                        console.error(
+                            "REGISTRATION INVOICE ERROR:",
+                            error
+                        );
+
+
+                        if (tableBody) {
+
+                            tableBody.innerHTML = `
+                                <tr>
+
+                                    <td
+                                        colspan="9"
+                                        class="registration-invoice-empty text-danger"
+                                    >
+
+                                        <i
+                                            class="fa fa-triangle-exclamation fa-2x mb-3"
+                                        ></i>
+
+                                        <div>
+
+                                            ${escapeHtml(
+                                                error.message ||
+                                                "Unable to load invoices."
+                                            )}
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            `;
+
+                        }
+
+                    }
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | REFRESH
+                |--------------------------------------------------------------------------
+                */
+
+                if (refreshButton) {
+
+                    refreshButton.addEventListener(
+                        "click",
+                        function () {
+
+                            loadRegistrationInvoices();
+
+                        }
+                    );
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | INITIAL LOAD
+                |--------------------------------------------------------------------------
+                */
+
+                loadRegistrationInvoices();
+
+            }
+        );
+
+    </script>
+
+
+</body>
+
+</html>
