@@ -214,10 +214,12 @@ app.use(
     customerAddRoutes
 );
 /*
+/*
 |--------------------------------------------------------------------------
 | CUSTOMER TRAFFIC MONITORING
 |--------------------------------------------------------------------------
 */
+
 app.use(
     "/monitoring/interface",
     interfaceMonitorRoutes
@@ -225,6 +227,11 @@ app.use(
 
 app.use(
     "/monitoring/customer-traffic",
+    customerTrafficRoutes
+);
+
+app.use(
+    "/api/monitoring/customer-traffic",
     customerTrafficRoutes
 );
 

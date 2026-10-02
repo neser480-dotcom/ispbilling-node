@@ -5,7 +5,7 @@ const db = require("../config/database");
 
 /*
 |--------------------------------------------------------------------------
-| Customer Traffic Service
+| CUSTOMER TRAFFIC SERVICE
 |--------------------------------------------------------------------------
 | Live data:
 | - MikroTik PPP Active
@@ -16,16 +16,26 @@ const db = require("../config/database");
 |--------------------------------------------------------------------------
 */
 
+
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
 function normalizeUsername(username) {
     return String(username || "")
         .trim()
         .toLowerCase();
 }
 
+
 function bytesToGB(bytes) {
     const value = Number(bytes) || 0;
+
     return value / (1024 * 1024 * 1024);
 }
+
 
 function bytesToMbps(bytes, seconds) {
     const value = Number(bytes) || 0;
@@ -38,18 +48,28 @@ function bytesToMbps(bytes, seconds) {
     return (value * 8) / sec / 1000000;
 }
 
+
 function toNumber(value) {
-    if (value === null || value === undefined || value === "") {
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
         return 0;
     }
 
     const n = Number(value);
 
-    return Number.isFinite(n) ? n : 0;
+    return Number.isFinite(n)
+        ? n
+        : 0;
 }
 
+
 function firstValue(row, keys) {
+
     for (const key of keys) {
+
         if (
             row &&
             row[key] !== undefined &&
@@ -58,65 +78,116 @@ function firstValue(row, keys) {
         ) {
             return row[key];
         }
+
     }
 
     return "";
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| ROUTER OBJECT
+|--------------------------------------------------------------------------
+*/
+
 function routerRowToObject(row) {
+
     return {
-        id: Number(row.id),
-        name: String(row.name || ""),
-        ip: String(row.ip || ""),
-        username: String(row.username || ""),
-        password: String(row.password || ""),
-        port: Number(row.port || 8728),
-        timeout: Number(row.timeout || 5),
+
+        id:
+            Number(row.id),
+
+        name:
+            String(row.name || ""),
+
+        ip:
+            String(row.ip || ""),
+
+        username:
+            String(row.username || ""),
+
+        password:
+            String(row.password || ""),
+
+        port:
+            Number(row.port || 8728),
+
+        timeout:
+            Number(row.timeout || 5),
+
         use_ssl:
             row.use_ssl === 1 ||
             row.use_ssl === true ||
             String(row.use_ssl) === "1"
+
     };
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| DATABASE
+| DATABASE - ROUTERS
 |--------------------------------------------------------------------------
 */
 
-async function getRouters(companyId, isSuperAdmin) {
-    const scope = isSuperAdmin
-        ? ""
-        : "WHERE company_id = ?";
+async function getRouters(
+    companyId,
+    isSuperAdmin
+) {
 
-    const params = isSuperAdmin
-        ? []
-        : [companyId];
+    const scope =
+        isSuperAdmin
+            ? ""
+            : "WHERE company_id = ?";
 
-    const [rows] = await db.query(
-        `
-        SELECT
-            id,
-            company_id,
-            name,
-            ip,
-            username,
-            password,
-            port,
-            timeout,
-            use_ssl
-        FROM mikrotik_servers
-        ${scope}
-        ORDER BY name ASC
-        `,
-        params
+    const params =
+        isSuperAdmin
+            ? []
+            : [companyId];
+
+
+    const [rows] =
+        await db.query(
+            `
+            SELECT
+                id,
+                company_id,
+                name,
+                ip,
+                username,
+                password,
+                port,
+                timeout,
+                use_ssl
+            FROM mikrotik_servers
+            ${scope}
+            ORDER BY name ASC
+            `,
+            params
+        );
+
+
+    return rows.map(
+        routerRowToObject
     );
 
-    return rows.map(routerRowToObject);
 }
 
-async function getRouter(routerId, companyId, isSuperAdmin) {
+
+/*
+|--------------------------------------------------------------------------
+| DATABASE - SINGLE ROUTER
+|--------------------------------------------------------------------------
+*/
+
+async function getRouter(
+    routerId,
+    companyId,
+    isSuperAdmin
+) {
+
     let sql = `
         SELECT
             id,
@@ -132,129 +203,256 @@ async function getRouter(routerId, companyId, isSuperAdmin) {
         WHERE id = ?
     `;
 
-    const params = [routerId];
+
+    const params = [
+        routerId
+    ];
+
 
     if (!isSuperAdmin) {
-        sql += ` AND company_id = ?`;
-        params.push(companyId);
+
+        sql += `
+            AND company_id = ?
+        `;
+
+        params.push(
+            companyId
+        );
+
     }
 
-    sql += ` LIMIT 1`;
 
-    const [rows] = await db.query(sql, params);
+    sql += `
+        LIMIT 1
+    `;
+
+
+    const [rows] =
+        await db.query(
+            sql,
+            params
+        );
+
 
     if (!rows.length) {
         return null;
     }
 
-    return routerRowToObject(rows[0]);
-}
 
-async function getCustomers(companyId, isSuperAdmin) {
-    const where = isSuperAdmin
-        ? "1 = 1"
-        : "c.company_id = ?";
-
-    const params = isSuperAdmin
-        ? []
-        : [companyId];
-
-    const [rows] = await db.query(
-        `
-        SELECT
-            c.id,
-            c.customer_id,
-            c.name,
-            c.pppoe_username,
-            c.username,
-            c.company_id,
-            c.package_id,
-            COALESCE(
-                NULLIF(c.package_name, ''),
-                p.package_name,
-                ''
-            ) AS package_name
-        FROM customers c
-        LEFT JOIN packages p
-            ON p.id = c.package_id
-        WHERE ${where}
-        `,
-        params
+    return routerRowToObject(
+        rows[0]
     );
 
-    const customers = new Map();
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| DATABASE - CUSTOMERS
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| customers table does NOT have c.username.
+| PPPoE username is stored in c.pppoe_username.
+|--------------------------------------------------------------------------
+*/
+
+async function getCustomers(
+    companyId,
+    isSuperAdmin
+) {
+
+    const where =
+        isSuperAdmin
+            ? "1 = 1"
+            : "c.company_id = ?";
+
+
+    const params =
+        isSuperAdmin
+            ? []
+            : [companyId];
+
+
+    const [rows] =
+        await db.query(
+            `
+            SELECT
+                c.id,
+                c.customer_id,
+                c.name,
+                c.pppoe_username,
+                c.company_id,
+                c.package_id,
+
+                COALESCE(
+                    NULLIF(
+                        c.package_name,
+                        ''
+                    ),
+                    p.package_name,
+                    ''
+                ) AS package_name
+
+            FROM customers c
+
+            LEFT JOIN mikrotik_packages p
+                ON p.id = c.package_id
+                AND p.company_id = c.company_id
+
+            WHERE ${where}
+            `,
+            params
+        );
+
+
+    const customers =
+        new Map();
+
 
     for (const row of rows) {
+
         const username =
             row.pppoe_username ||
-            row.username ||
             "";
 
-        const key = normalizeUsername(username);
+
+        const key =
+            normalizeUsername(
+                username
+            );
+
 
         if (!key) {
             continue;
         }
 
-        customers.set(key, {
-            id: row.id,
-            customer_id: row.customer_id || "",
-            name: row.name || "",
-            username,
-            company_id: row.company_id,
-            package_id: row.package_id,
-            package_name: row.package_name || ""
-        });
+
+        customers.set(
+            key,
+            {
+
+                id:
+                    row.id,
+
+                customer_id:
+                    row.customer_id || "",
+
+                name:
+                    row.name || "",
+
+                username,
+
+                company_id:
+                    row.company_id,
+
+                package_id:
+                    row.package_id,
+
+                package_name:
+                    row.package_name || ""
+
+            }
+        );
+
     }
 
+
     return customers;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| ROUTEROS
+| ROUTEROS CONNECT
 |--------------------------------------------------------------------------
 */
 
 async function connectRouter(router) {
-    const api = new RouterOSAPI({
-        host: router.ip,
-        user: router.username,
-        password: router.password,
-        port: router.port || 8728,
-        timeout: (router.timeout || 5) * 1000,
-        tls: !!router.use_ssl
-    });
+
+    const api =
+        new RouterOSAPI({
+
+            host:
+                router.ip,
+
+            user:
+                router.username,
+
+            password:
+                router.password,
+
+            port:
+                router.port || 8728,
+
+            timeout:
+                (router.timeout || 5) * 1000,
+
+            tls:
+                !!router.use_ssl
+
+        });
+
 
     await api.connect();
 
+
     return api;
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| ACTIVE PPPoE USERS
+|--------------------------------------------------------------------------
+*/
 
 async function getActiveUsers(api) {
-    const rows = await api.write("/ppp/active/print");
+
+    const rows =
+        await api.write(
+            "/ppp/active/print"
+        );
+
 
     if (!Array.isArray(rows)) {
         return [];
     }
 
+
     return rows;
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| PPPoE INTERFACES
+|--------------------------------------------------------------------------
+*/
 
 async function getPppoeInterfaces(api) {
-    const rows = await api.write(
-        "/interface/print",
-        [
-            "?type=pppoe-in"
-        ]
-    );
+
+    const rows =
+        await api.write(
+            "/interface/print",
+            [
+                "?type=pppoe-in"
+            ]
+        );
+
 
     if (!Array.isArray(rows)) {
         return [];
     }
 
+
     return rows;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -263,45 +461,76 @@ async function getPppoeInterfaces(api) {
 */
 
 function buildInterfaceMap(rows) {
-    const map = new Map();
+
+    const map =
+        new Map();
+
 
     for (const row of rows) {
-        const name = String(
-            firstValue(row, [
-                "name",
-                ".id"
-            ])
-        ).trim();
+
+        const name =
+            String(
+                firstValue(
+                    row,
+                    [
+                        "name",
+                        ".id"
+                    ]
+                )
+            ).trim();
+
 
         if (!name) {
             continue;
         }
 
-        const rx = toNumber(
-            firstValue(row, [
-                "rx-byte",
-                "rx_bytes",
-                "rx-byte-total"
-            ])
+
+        const rx =
+            toNumber(
+                firstValue(
+                    row,
+                    [
+                        "rx-byte",
+                        "rx_bytes",
+                        "rx-byte-total"
+                    ]
+                )
+            );
+
+
+        const tx =
+            toNumber(
+                firstValue(
+                    row,
+                    [
+                        "tx-byte",
+                        "tx_bytes",
+                        "tx-byte-total"
+                    ]
+                )
+            );
+
+
+        map.set(
+            name.toLowerCase(),
+            {
+
+                name,
+
+                rx,
+
+                tx
+
+            }
         );
 
-        const tx = toNumber(
-            firstValue(row, [
-                "tx-byte",
-                "tx_bytes",
-                "tx-byte-total"
-            ])
-        );
-
-        map.set(name.toLowerCase(), {
-            name,
-            rx,
-            tx
-        });
     }
 
+
     return map;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -310,59 +539,109 @@ function buildInterfaceMap(rows) {
 */
 
 function buildActiveMap(rows) {
-    const map = new Map();
+
+    const map =
+        new Map();
+
 
     for (const row of rows) {
-        const username = String(
-            firstValue(row, [
-                "name",
-                "user"
-            ])
-        ).trim();
+
+        const username =
+            String(
+                firstValue(
+                    row,
+                    [
+                        "name",
+                        "user"
+                    ]
+                )
+            ).trim();
+
 
         if (!username) {
             continue;
         }
 
-        map.set(normalizeUsername(username), row);
+
+        map.set(
+            normalizeUsername(
+                username
+            ),
+            row
+        );
+
     }
 
+
     return map;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| SINGLE SAMPLE
+| COLLECT SAMPLE
 |--------------------------------------------------------------------------
 */
 
 async function collectSample(api) {
-    const [activeRows, interfaceRows] =
-        await Promise.all([
-            getActiveUsers(api),
-            getPppoeInterfaces(api)
-        ]);
+
+    const [
+        activeRows,
+        interfaceRows
+    ] =
+        await Promise.all(
+            [
+                getActiveUsers(api),
+                getPppoeInterfaces(api)
+            ]
+        );
+
 
     return {
+
         activeRows,
-        activeMap: buildActiveMap(activeRows),
-        interfaces: buildInterfaceMap(interfaceRows)
+
+        activeMap:
+            buildActiveMap(
+                activeRows
+            ),
+
+        interfaces:
+            buildInterfaceMap(
+                interfaceRows
+            )
+
     };
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| MAIN LIVE TRAFFIC
+| MAIN CUSTOMER TRAFFIC
 |--------------------------------------------------------------------------
 */
 
 async function getCustomerTraffic({
+
     routerId,
+
     companyId,
+
     role
+
 }) {
+
     const isSuperAdmin =
         role === "super_admin";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | GET ROUTERS
+    |--------------------------------------------------------------------------
+    */
 
     const routers =
         await getRouters(
@@ -370,39 +649,91 @@ async function getCustomerTraffic({
             isSuperAdmin
         );
 
+
     if (!routers.length) {
+
         return {
-            success: false,
-            message: "No Router Found!",
-            routers: [],
-            router: null,
-            customers: [],
+
+            success:
+                false,
+
+            message:
+                "No Router Found!",
+
+            routers:
+                [],
+
+            router:
+                null,
+
+            customers:
+                [],
+
             totals: {
-                activeUsers: 0,
-                downloadMbps: 0,
-                uploadMbps: 0,
-                downloadGB: 0,
-                uploadGB: 0
+
+                activeUsers:
+                    0,
+
+                downloadMbps:
+                    0,
+
+                uploadMbps:
+                    0,
+
+                downloadGB:
+                    0,
+
+                uploadGB:
+                    0
+
             },
-            chart: [],
-            lastUpdate: new Date().toISOString()
+
+            chart:
+                [],
+
+            lastUpdate:
+                new Date().toISOString()
+
         };
+
     }
 
-    let selectedRouter = null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELECT ROUTER
+    |--------------------------------------------------------------------------
+    */
+
+    let selectedRouter =
+        null;
+
 
     if (routerId) {
+
         selectedRouter =
             routers.find(
                 router =>
                     Number(router.id) ===
                     Number(routerId)
             ) || null;
+
     }
 
+
     if (!selectedRouter) {
-        selectedRouter = routers[0];
+
+        selectedRouter =
+            routers[0];
+
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER DATABASE
+    |--------------------------------------------------------------------------
+    */
 
     const customers =
         await getCustomers(
@@ -410,12 +741,24 @@ async function getCustomerTraffic({
             isSuperAdmin
         );
 
-    let api = null;
+
+    let api =
+        null;
+
 
     try {
-        api = await connectRouter(
-            selectedRouter
-        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONNECT MIKROTIK
+        |--------------------------------------------------------------------------
+        */
+
+        api =
+            await connectRouter(
+                selectedRouter
+            );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -424,17 +767,25 @@ async function getCustomerTraffic({
         */
 
         const sample1 =
-            await collectSample(api);
+            await collectSample(
+                api
+            );
+
 
         /*
         |--------------------------------------------------------------------------
-        | PHP source uses 300ms between samples
+        | 300ms SAMPLE INTERVAL
         |--------------------------------------------------------------------------
         */
 
-        await new Promise(resolve =>
-            setTimeout(resolve, 300)
+        await new Promise(
+            resolve =>
+                setTimeout(
+                    resolve,
+                    300
+                )
         );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -443,19 +794,35 @@ async function getCustomerTraffic({
         */
 
         const sample2 =
-            await collectSample(api);
+            await collectSample(
+                api
+            );
 
-        const elapsedSeconds = 0.3;
+
+        const elapsedSeconds =
+            0.3;
+
 
         const activeRows =
             sample2.activeRows;
 
-        const result = [];
 
-        let totalDownloadMbps = 0;
-        let totalUploadMbps = 0;
-        let totalDownloadGB = 0;
-        let totalUploadGB = 0;
+        const result =
+            [];
+
+
+        let totalDownloadMbps =
+            0;
+
+        let totalUploadMbps =
+            0;
+
+        let totalDownloadGB =
+            0;
+
+        let totalUploadGB =
+            0;
+
 
         /*
         |--------------------------------------------------------------------------
@@ -463,42 +830,60 @@ async function getCustomerTraffic({
         |--------------------------------------------------------------------------
         */
 
-        for (const active of activeRows) {
+        for (
+            const active of activeRows
+        ) {
+
             const username =
                 String(
-                    firstValue(active, [
-                        "name",
-                        "user"
-                    ])
+                    firstValue(
+                        active,
+                        [
+                            "name",
+                            "user"
+                        ]
+                    )
                 ).trim();
+
 
             if (!username) {
                 continue;
             }
+
 
             const normalized =
                 normalizeUsername(
                     username
                 );
 
+
             const customer =
                 customers.get(
                     normalized
                 ) || null;
 
+
             const comment =
                 String(
-                    firstValue(active, [
-                        "comment"
-                    ])
+                    firstValue(
+                        active,
+                        [
+                            "comment"
+                        ]
+                    )
                 ).trim();
+
 
             const service =
                 String(
-                    firstValue(active, [
-                        "service"
-                    ])
+                    firstValue(
+                        active,
+                        [
+                            "service"
+                        ]
+                    )
                 ).trim();
+
 
             /*
             |--------------------------------------------------------------------------
@@ -515,6 +900,7 @@ async function getCustomerTraffic({
                         username
                     );
 
+
             /*
             |--------------------------------------------------------------------------
             | PACKAGE
@@ -530,6 +916,7 @@ async function getCustomerTraffic({
                         "PPPoE"
                     );
 
+
             /*
             |--------------------------------------------------------------------------
             | PPPoE INTERFACE
@@ -539,8 +926,10 @@ async function getCustomerTraffic({
             const interfaceName =
                 `pppoe-${username}`;
 
+
             const key =
                 interfaceName.toLowerCase();
+
 
             const current =
                 sample2.interfaces.get(
@@ -551,13 +940,24 @@ async function getCustomerTraffic({
                 ) ||
                 null;
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | INTERFACE NOT FOUND
+            |--------------------------------------------------------------------------
+            */
+
             if (!current) {
+
                 result.push({
+
                     id:
-                        customer?.id || null,
+                        customer?.id ||
+                        null,
 
                     customer_id:
-                        customer?.customer_id || "",
+                        customer?.customer_id ||
+                        "",
 
                     name:
                         displayName,
@@ -587,16 +987,22 @@ async function getCustomerTraffic({
 
                     address:
                         String(
-                            firstValue(active, [
-                                "address"
-                            ])
+                            firstValue(
+                                active,
+                                [
+                                    "address"
+                                ]
+                            )
                         ),
 
                     uptime:
                         String(
-                            firstValue(active, [
-                                "uptime"
-                            ])
+                            firstValue(
+                                active,
+                                [
+                                    "uptime"
+                                ]
+                            )
                         ),
 
                     comment,
@@ -606,15 +1012,33 @@ async function getCustomerTraffic({
 
                     matched:
                         !!customer
+
                 });
 
+
                 continue;
+
             }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | PREVIOUS SAMPLE
+            |--------------------------------------------------------------------------
+            */
 
             const previous =
                 sample1.interfaces.get(
                     key
-                ) || current;
+                ) ||
+                current;
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | BYTE DIFFERENCE
+            |--------------------------------------------------------------------------
+            */
 
             const rxDifference =
                 Math.max(
@@ -623,6 +1047,7 @@ async function getCustomerTraffic({
                     previous.rx
                 );
 
+
             const txDifference =
                 Math.max(
                     0,
@@ -630,11 +1055,11 @@ async function getCustomerTraffic({
                     previous.tx
                 );
 
+
             /*
             |--------------------------------------------------------------------------
-            | MikroTik:
-            | RX = Download
-            | TX = Upload
+            | RX = DOWNLOAD
+            | TX = UPLOAD
             |--------------------------------------------------------------------------
             */
 
@@ -644,40 +1069,63 @@ async function getCustomerTraffic({
                     elapsedSeconds
                 );
 
+
             const uploadMbps =
                 bytesToMbps(
                     txDifference,
                     elapsedSeconds
                 );
 
+
             const downloadGB =
                 bytesToGB(
                     current.rx
                 );
+
 
             const uploadGB =
                 bytesToGB(
                     current.tx
                 );
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | TOTALS
+            |--------------------------------------------------------------------------
+            */
+
             totalDownloadMbps +=
                 downloadMbps;
+
 
             totalUploadMbps +=
                 uploadMbps;
 
+
             totalDownloadGB +=
                 downloadGB;
+
 
             totalUploadGB +=
                 uploadGB;
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | RESULT
+            |--------------------------------------------------------------------------
+            */
+
             result.push({
+
                 id:
-                    customer?.id || null,
+                    customer?.id ||
+                    null,
 
                 customer_id:
-                    customer?.customer_id || "",
+                    customer?.customer_id ||
+                    "",
 
                 name:
                     displayName,
@@ -707,16 +1155,22 @@ async function getCustomerTraffic({
 
                 address:
                     String(
-                        firstValue(active, [
-                            "address"
-                        ])
+                        firstValue(
+                            active,
+                            [
+                                "address"
+                            ]
+                        )
                     ),
 
                 uptime:
                     String(
-                        firstValue(active, [
-                            "uptime"
-                        ])
+                        firstValue(
+                            active,
+                            [
+                                "uptime"
+                            ]
+                        )
                     ),
 
                 comment,
@@ -726,8 +1180,11 @@ async function getCustomerTraffic({
 
                 matched:
                     !!customer
+
             });
+
         }
+
 
         /*
         |--------------------------------------------------------------------------
@@ -742,71 +1199,114 @@ async function getCustomerTraffic({
                         b.download_mbps -
                         a.download_mbps
                 )
-                .slice(0, 20)
-                .map(row => ({
-                    label:
-                        `${row.name} (${row.username})`,
+                .slice(
+                    0,
+                    20
+                )
+                .map(
+                    row => ({
 
-                    download:
-                        Number(
-                            row.download_mbps.toFixed(2)
-                        ),
+                        label:
+                            `${row.name} (${row.username})`,
 
-                    upload:
-                        Number(
-                            row.upload_mbps.toFixed(2)
-                        )
-                }));
+                        download:
+                            Number(
+                                row.download_mbps
+                                    .toFixed(2)
+                            ),
+
+                        upload:
+                            Number(
+                                row.upload_mbps
+                                    .toFixed(2)
+                            )
+
+                    })
+                );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUCCESS RESPONSE
+        |--------------------------------------------------------------------------
+        */
 
         return {
-            success: true,
+
+            success:
+                true,
 
             routers,
 
             router: {
+
                 id:
                     selectedRouter.id,
 
                 name:
                     selectedRouter.name
+
             },
 
-            customers: result,
+            customers:
+                result,
 
             totals: {
+
                 activeUsers:
                     result.length,
 
                 downloadMbps:
                     Number(
-                        totalDownloadMbps.toFixed(2)
+                        totalDownloadMbps
+                            .toFixed(2)
                     ),
 
                 uploadMbps:
                     Number(
-                        totalUploadMbps.toFixed(2)
+                        totalUploadMbps
+                            .toFixed(2)
                     ),
 
                 downloadGB:
                     Number(
-                        totalDownloadGB.toFixed(2)
+                        totalDownloadGB
+                            .toFixed(2)
                     ),
 
                 uploadGB:
                     Number(
-                        totalUploadGB.toFixed(2)
+                        totalUploadGB
+                            .toFixed(2)
                     )
+
             },
 
             chart,
 
             lastUpdate:
                 new Date().toISOString()
+
         };
 
     } catch (error) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | MIKROTIK ERROR
+        |--------------------------------------------------------------------------
+        */
+
+        console.error(
+            "Customer Traffic MikroTik Error:",
+            error
+        );
+
+
         return {
-            success: false,
+
+            success:
+                false,
 
             message:
                 "MikroTik Connection Failed!",
@@ -819,38 +1319,77 @@ async function getCustomerTraffic({
             routers,
 
             router: {
+
                 id:
                     selectedRouter.id,
 
                 name:
                     selectedRouter.name
+
             },
 
-            customers: [],
+            customers:
+                [],
 
             totals: {
-                activeUsers: 0,
-                downloadMbps: 0,
-                uploadMbps: 0,
-                downloadGB: 0,
-                uploadGB: 0
+
+                activeUsers:
+                    0,
+
+                downloadMbps:
+                    0,
+
+                uploadMbps:
+                    0,
+
+                downloadGB:
+                    0,
+
+                uploadGB:
+                    0
+
             },
 
-            chart: [],
+            chart:
+                [],
 
             lastUpdate:
                 new Date().toISOString()
+
         };
+
     } finally {
+
+        /*
+        |--------------------------------------------------------------------------
+        | CLOSE MIKROTIK
+        |--------------------------------------------------------------------------
+        */
+
         if (api) {
+
             try {
+
                 await api.close();
+
             } catch (e) {
+
                 // Ignore close error
+
             }
+
         }
+
     }
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| EXPORT
+|--------------------------------------------------------------------------
+*/
 
 module.exports = {
     getCustomerTraffic
