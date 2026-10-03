@@ -1,0 +1,144 @@
+/*
+|--------------------------------------------------------------------------
+| ACTIVITY LOG
+|--------------------------------------------------------------------------
+*/
+
+.activity-table-wrapper {
+
+    width: 100%;
+    overflow-x: auto;
+
+}
+
+
+.activity-table-wrapper table {
+
+    min-width: 1250px;
+
+}
+
+
+.activity-table-wrapper th {
+
+    white-space: nowrap;
+    font-size: 13px;
+
+}
+
+
+.activity-table-wrapper td {
+
+    font-size: 13px;
+    vertical-align: middle;
+
+}
+
+
+.activity-limit {
+
+    width: 85px;
+
+}
+
+
+.activity-description {
+
+    min-width: 260px;
+    max-width: 420px;
+
+}
+
+
+.activity-description strong {
+
+    display: block;
+    word-break: break-word;
+
+}
+
+
+.activity-module {
+
+    white-space: nowrap;
+
+}
+
+
+.activity-ip {
+
+    white-space: nowrap;
+    font-family: monospace;
+
+}
+
+
+.activity-user {
+
+    min-width: 140px;
+
+}
+
+
+.activity-date {
+
+    white-space: nowrap;
+
+}
+
+
+.activity-action {
+
+    white-space: nowrap;
+
+}
+
+
+.detail-box {
+
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #f8f9fa;
+
+}
+
+
+.detail-box strong {
+
+    display: block;
+    margin-bottom: 5px;
+
+}
+
+
+.detail-box div {
+
+    color: #6c757d;
+    word-break: break-word;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| MOBILE
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 768px) {
+
+    .activity-table-wrapper table {
+
+        min-width: 1100px;
+
+    }
+
+
+    .activity-limit {
+
+        width: 75px;
+
+    }
+
+}

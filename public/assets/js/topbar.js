@@ -15,7 +15,7 @@
 
 
     /* =========================================================
-       HELPERS
+       HELPER
     ========================================================= */
 
     function getElement(id) {
@@ -23,120 +23,24 @@
     }
 
 
-    function getCurrentLanguage() {
-
-        const saved =
-            localStorage.getItem('ispbilling_lang');
-
-        if (saved === 'bn' || saved === 'en') {
-            return saved;
-        }
-
-        const params =
-            new URLSearchParams(window.location.search);
-
-        const urlLang =
-            params.get('lang');
-
-        if (urlLang === 'bn' || urlLang === 'en') {
-            return urlLang;
-        }
-
-        return 'en';
-    }
-
-
-    function setLanguage(lang) {
-
-        if (lang !== 'bn' && lang !== 'en') {
-            lang = 'en';
-        }
-
-        localStorage.setItem(
-            'ispbilling_lang',
-            lang
-        );
-
-        const url =
-            new URL(window.location.href);
-
-        url.searchParams.set(
-            'lang',
-            lang
-        );
-
-        window.location.href =
-            url.toString();
-    }
-
-
-    function updateLanguageUI(lang) {
-
-        const langBtn =
-            getElement('langBtn');
-
-        if (!langBtn) {
-            return;
-        }
-
-        if (lang === 'bn') {
-
-            langBtn.innerHTML =
-                'বাংলা <i class="fas fa-caret-down"></i>';
-
-        } else {
-
-            langBtn.innerHTML =
-                'EN <i class="fas fa-caret-down"></i>';
-
-        }
-
-        const search =
-            getElement('topbarCustomerSearch');
-
-        if (search) {
-
-            search.placeholder =
-                lang === 'bn'
-                    ? 'কাস্টমার খুঁজুন...'
-                    : 'Search customer...';
-
-        }
-
-        const menuBtn =
-            getElement('menuBtn');
-
-        if (menuBtn) {
-
-            menuBtn.title =
-                lang === 'bn'
-                    ? 'মেনু'
-                    : 'Menu';
-
-        }
-
-    }
-
-
     /* =========================================================
-       LOAD USER INFORMATION
+       USER
     ========================================================= */
 
     async function loadTopbarUser() {
 
         try {
 
-            const response =
-                await fetch(
-                    '/api/sidebar/data',
-                    {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
+            const response = await fetch(
+                '/api/sidebar/data',
+                {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
                     }
-                );
+                }
+            );
 
 
             if (!response.ok) {
@@ -174,15 +78,21 @@
 
 
             const fullnameElement =
-                getElement('profileFullname');
+                getElement(
+                    'profileFullname'
+                );
 
 
             const roleElement =
-                getElement('profileRole');
+                getElement(
+                    'profileRole'
+                );
 
 
             const avatarElement =
-                getElement('profileAvatar');
+                getElement(
+                    'profileAvatar'
+                );
 
 
             if (fullnameElement) {
@@ -203,26 +113,17 @@
 
             if (avatarElement) {
 
-                let letter = 'A';
+                const firstLetter =
+                    fullname
+                        ? Array.from(fullname)[0]
+                        : 'A';
 
-                if (fullname) {
-
-                    const chars =
-                        Array.from(fullname);
-
-                    if (chars.length > 0) {
-                        letter = chars[0];
-                    }
-
-                }
 
                 avatarElement.textContent =
-                    letter.toUpperCase();
-
-                avatarElement.title =
-                    fullname || 'User';
+                    firstLetter.toUpperCase();
 
             }
+
 
         } catch (error) {
 
@@ -243,13 +144,21 @@
     function initProfile() {
 
         const profileBtn =
-            getElement('profileBtn');
+            getElement(
+                'profileBtn'
+            );
+
 
         const profileMenu =
-            getElement('profileMenu');
+            getElement(
+                'profileMenu'
+            );
+
 
         const profileContainer =
-            getElement('profileContainer');
+            getElement(
+                'profileContainer'
+            );
 
 
         if (
@@ -260,22 +169,38 @@
         }
 
 
+        if (
+            profileBtn.dataset.bound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        profileBtn.dataset.bound =
+            'true';
+
+
         profileBtn.addEventListener(
             'click',
-            function (e) {
+            function (event) {
 
-                e.preventDefault();
-                e.stopPropagation();
+                event.preventDefault();
+
+                event.stopPropagation();
 
 
                 const langMenu =
-                    getElement('langMenu');
+                    getElement(
+                        'langMenu'
+                    );
 
-                const langBtn =
-                    getElement('langBtn');
 
+                const colorPanel =
+                    getElement(
+                        'netfeeColorPanel'
+                    );
 
-                /* CLOSE LANGUAGE */
 
                 if (langMenu) {
 
@@ -286,69 +211,48 @@
                 }
 
 
-                if (langBtn) {
+                if (colorPanel) {
 
-                    langBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
+                    colorPanel.classList.remove(
+                        'show'
                     );
 
                 }
 
 
-                /* TOGGLE PROFILE */
+                profileMenu.classList.toggle(
+                    'show'
+                );
 
-                const isOpen =
+
+                profileBtn.setAttribute(
+                    'aria-expanded',
                     profileMenu.classList.contains(
                         'show'
-                    );
+                    )
+                        ? 'true'
+                        : 'false'
+                );
 
-
-                if (isOpen) {
-
-                    profileMenu.classList.remove(
-                        'show'
-                    );
-
-                    profileBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
-
-                } else {
-
-                    profileMenu.classList.add(
-                        'show'
-                    );
-
-                    profileBtn.setAttribute(
-                        'aria-expanded',
-                        'true'
-                    );
-
-                }
-
-            },
-            true
+            }
         );
 
 
-        /* OUTSIDE CLICK */
-
         document.addEventListener(
             'click',
-            function (e) {
+            function (event) {
 
                 if (
                     profileContainer &&
                     !profileContainer.contains(
-                        e.target
+                        event.target
                     )
                 ) {
 
                     profileMenu.classList.remove(
                         'show'
                     );
+
 
                     profileBtn.setAttribute(
                         'aria-expanded',
@@ -370,13 +274,21 @@
     function initLanguage() {
 
         const langBtn =
-            getElement('langBtn');
+            getElement(
+                'langBtn'
+            );
+
 
         const langMenu =
-            getElement('langMenu');
+            getElement(
+                'langMenu'
+            );
+
 
         const languageDropdown =
-            getElement('languageDropdown');
+            getElement(
+                'languageDropdown'
+            );
 
 
         if (
@@ -387,22 +299,49 @@
         }
 
 
+        if (
+            langBtn.dataset.bound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        langBtn.dataset.bound =
+            'true';
+
+
+        const savedLanguage =
+            localStorage.getItem(
+                'ispbilling_lang'
+            ) || 'en';
+
+
+        updateLanguageUI(
+            savedLanguage
+        );
+
+
         langBtn.addEventListener(
             'click',
-            function (e) {
+            function (event) {
 
-                e.preventDefault();
-                e.stopPropagation();
+                event.preventDefault();
+
+                event.stopPropagation();
 
 
                 const profileMenu =
-                    getElement('profileMenu');
+                    getElement(
+                        'profileMenu'
+                    );
 
-                const profileBtn =
-                    getElement('profileBtn');
 
+                const colorPanel =
+                    getElement(
+                        'netfeeColorPanel'
+                    );
 
-                /* CLOSE PROFILE */
 
                 if (profileMenu) {
 
@@ -413,86 +352,75 @@
                 }
 
 
-                if (profileBtn) {
+                if (colorPanel) {
 
-                    profileBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
+                    colorPanel.classList.remove(
+                        'show'
                     );
 
                 }
 
 
-                /* TOGGLE LANGUAGE */
+                langMenu.classList.toggle(
+                    'show'
+                );
 
-                const isOpen =
-                    langMenu.classList.contains(
-                        'show'
-                    );
-
-
-                if (isOpen) {
-
-                    langMenu.classList.remove(
-                        'show'
-                    );
-
-                    langBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
-
-                } else {
-
-                    langMenu.classList.add(
-                        'show'
-                    );
-
-                    langBtn.setAttribute(
-                        'aria-expanded',
-                        'true'
-                    );
-
-                }
-
-            },
-            true
+            }
         );
 
 
-        /* LANGUAGE LINKS */
-
         langMenu
-            .querySelectorAll('a[data-lang]')
-            .forEach(function (link) {
+            .querySelectorAll(
+                'a[data-lang]'
+            )
+            .forEach(
+                function (link) {
 
-                link.addEventListener(
-                    'click',
-                    function (e) {
+                    link.addEventListener(
+                        'click',
+                        function (event) {
 
-                        e.preventDefault();
+                            event.preventDefault();
 
-                        const lang =
-                            link.dataset.lang;
-
-                        setLanguage(lang);
-
-                    }
-                );
-
-            });
+                            event.stopPropagation();
 
 
-        /* OUTSIDE CLICK */
+                            const language =
+                                link.getAttribute(
+                                    'data-lang'
+                                );
+
+
+                            localStorage.setItem(
+                                'ispbilling_lang',
+                                language
+                            );
+
+
+                            updateLanguageUI(
+                                language
+                            );
+
+
+                            langMenu.classList.remove(
+                                'show'
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
 
         document.addEventListener(
             'click',
-            function (e) {
+            function (event) {
 
                 if (
                     languageDropdown &&
                     !languageDropdown.contains(
-                        e.target
+                        event.target
                     )
                 ) {
 
@@ -500,9 +428,422 @@
                         'show'
                     );
 
-                    langBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
+                }
+
+            }
+        );
+
+    }
+
+
+    function updateLanguageUI(language) {
+
+        const langBtn =
+            getElement(
+                'langBtn'
+            );
+
+
+        if (langBtn) {
+
+            langBtn.innerHTML =
+                language === 'bn'
+                    ? 'বাংলা <i class="fas fa-caret-down"></i>'
+                    : 'EN <i class="fas fa-caret-down"></i>';
+
+        }
+
+
+        const search =
+            getElement(
+                'topbarCustomerSearch'
+            );
+
+
+        if (search) {
+
+            search.placeholder =
+                language === 'bn'
+                    ? 'কাস্টমার খুঁজুন...'
+                    : 'Search customer...';
+
+        }
+
+    }
+
+
+    /* =========================================================
+       THEME CONFIG
+    ========================================================= */
+
+    const themes = {
+
+        blue: {
+            accent: '#2563eb',
+            accentHover: '#1d4ed8',
+            accentSoft: '#dbeafe'
+        },
+
+        purple: {
+            accent: '#7c3aed',
+            accentHover: '#6d28d9',
+            accentSoft: '#ede9fe'
+        },
+
+        green: {
+            accent: '#16a34a',
+            accentHover: '#15803d',
+            accentSoft: '#dcfce7'
+        },
+
+        orange: {
+            accent: '#ea580c',
+            accentHover: '#c2410c',
+            accentSoft: '#ffedd5'
+        },
+
+        red: {
+            accent: '#dc2626',
+            accentHover: '#b91c1c',
+            accentSoft: '#fee2e2'
+        },
+
+        cyan: {
+            accent: '#0891b2',
+            accentHover: '#0e7490',
+            accentSoft: '#cffafe'
+        },
+
+        pink: {
+            accent: '#db2777',
+            accentHover: '#be185d',
+            accentSoft: '#fce7f3'
+        },
+
+        amber: {
+            accent: '#d97706',
+            accentHover: '#b45309',
+            accentSoft: '#fef3c7'
+        }
+
+    };
+
+
+    /* =========================================================
+       APPLY COLOR THEME
+    ========================================================= */
+
+    function applyColorTheme(themeName) {
+
+        if (!themes[themeName]) {
+
+            themeName =
+                'blue';
+
+        }
+
+
+        const theme =
+            themes[themeName];
+
+
+        document.documentElement.style.setProperty(
+            '--theme-primary',
+            theme.accent
+        );
+
+
+        document.documentElement.style.setProperty(
+            '--theme-primary-hover',
+            theme.accentHover
+        );
+
+
+        document.documentElement.style.setProperty(
+            '--theme-primary-soft',
+            theme.accentSoft
+        );
+
+
+        document.documentElement.setAttribute(
+            'data-color-theme',
+            themeName
+        );
+
+
+        localStorage.setItem(
+            'ispbilling_color_theme',
+            themeName
+        );
+
+
+        /*
+         * CSS class অনুযায়ী active button
+         */
+
+        document
+            .querySelectorAll(
+                '.netfee-color-option'
+            )
+            .forEach(
+                function (item) {
+
+                    item.classList.remove(
+                        'active'
+                    );
+
+                }
+            );
+
+
+        /*
+         * Existing HTML/old class support
+         */
+
+        document
+            .querySelectorAll(
+                '.netfee-color'
+            )
+            .forEach(
+                function (item) {
+
+                    item.classList.remove(
+                        'active'
+                    );
+
+                }
+            );
+
+
+        const selected =
+            document.querySelector(
+                '.netfee-color-option[data-color-theme="' +
+                themeName +
+                '"]'
+            );
+
+
+        if (selected) {
+
+            selected.classList.add(
+                'active'
+            );
+
+        }
+
+
+        const oldSelected =
+            document.querySelector(
+                '.netfee-color[data-theme="' +
+                themeName +
+                '"]'
+            );
+
+
+        if (oldSelected) {
+
+            oldSelected.classList.add(
+                'active'
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       APPLY DAY / NIGHT MODE
+    ========================================================= */
+
+    function applyMode(mode) {
+
+        const isDark =
+            mode === 'dark';
+
+
+        if (isDark) {
+
+            document.body.classList.add(
+                'dark-mode'
+            );
+
+            document.body.classList.remove(
+                'light-mode'
+            );
+
+        } else {
+
+            document.body.classList.remove(
+                'dark-mode'
+            );
+
+            document.body.classList.add(
+                'light-mode'
+            );
+
+        }
+
+
+        localStorage.setItem(
+            'ispbilling_theme_mode',
+            isDark
+                ? 'dark'
+                : 'light'
+        );
+
+
+        updateThemeToggleIcon(
+            isDark
+                ? 'dark'
+                : 'light'
+        );
+
+    }
+
+
+    /* =========================================================
+       UPDATE DAY / NIGHT ICON
+    ========================================================= */
+
+    function updateThemeToggleIcon(mode) {
+
+        const themeToggle =
+            getElement(
+                'themeToggle'
+            );
+
+
+        if (!themeToggle) {
+            return;
+        }
+
+
+        const icon =
+            themeToggle.querySelector(
+                'i'
+            );
+
+
+        if (!icon) {
+            return;
+        }
+
+
+        if (mode === 'dark') {
+
+            icon.className =
+                'fas fa-sun';
+
+
+            themeToggle.title =
+                'Light Mode';
+
+
+            themeToggle.setAttribute(
+                'aria-label',
+                'Switch to Light Mode'
+            );
+
+        } else {
+
+            icon.className =
+                'fas fa-moon';
+
+
+            themeToggle.title =
+                'Dark Mode';
+
+
+            themeToggle.setAttribute(
+                'aria-label',
+                'Switch to Dark Mode'
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       DAY / NIGHT BUTTON
+       
+       themeToggle = ONLY DAY/NIGHT
+    ========================================================= */
+
+    function initThemeToggle() {
+
+        const themeToggle =
+            getElement(
+                'themeToggle'
+            );
+
+
+        if (!themeToggle) {
+            return;
+        }
+
+
+        if (
+            themeToggle.dataset.modeBound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        themeToggle.dataset.modeBound =
+            'true';
+
+
+        themeToggle.addEventListener(
+            'click',
+            function (event) {
+
+                event.preventDefault();
+
+                event.stopPropagation();
+
+                event.stopImmediatePropagation();
+
+
+                const currentMode =
+                    localStorage.getItem(
+                        'ispbilling_theme_mode'
+                    ) ||
+                    (
+                        document.body.classList.contains(
+                            'dark-mode'
+                        )
+                            ? 'dark'
+                            : 'light'
+                    );
+
+
+                const nextMode =
+                    currentMode === 'dark'
+                        ? 'light'
+                        : 'dark';
+
+
+                applyMode(
+                    nextMode
+                );
+
+
+                /*
+                 * Close color panel
+                 */
+
+                const colorPanel =
+                    getElement(
+                        'netfeeColorPanel'
+                    );
+
+
+                if (colorPanel) {
+
+                    colorPanel.classList.remove(
+                        'show'
                     );
 
                 }
@@ -514,51 +855,301 @@
 
 
     /* =========================================================
-       ESCAPE
-    ========================================================= */
+       COLOR PANEL
+       
+       IMPORTANT:
+       CSS ID = #netfeeColorPanel
+       ========================================================= */
 
-    function initEscape() {
+    function initColorPanel() {
 
-        document.addEventListener(
-            'keydown',
-            function (e) {
+        const colorThemeToggle =
+            getElement(
+                'colorThemeToggle'
+            );
 
-                if (
-                    e.key !== 'Escape' &&
-                    e.key !== 'Esc'
-                ) {
-                    return;
-                }
+
+        if (!colorThemeToggle) {
+            return;
+        }
+
+
+        if (
+            colorThemeToggle.dataset.colorPanelBound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        colorThemeToggle.dataset.colorPanelBound =
+            'true';
+
+
+        /*
+         * Find existing panel
+         */
+
+        let colorPanel =
+            getElement(
+                'netfeeColorPanel'
+            );
+
+
+        /*
+         * If panel does not exist,
+         * create it.
+         */
+
+        if (!colorPanel) {
+
+            colorPanel =
+                document.createElement(
+                    'div'
+                );
+
+
+            colorPanel.id =
+                'netfeeColorPanel';
+
+
+            colorPanel.innerHTML = `
+
+                <div class="netfee-color-panel-header">
+
+                    <div>
+
+                        <strong>
+                            Theme Color
+                        </strong>
+
+                        <small>
+                            Customize dashboard color
+                        </small>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="closeNetfeeColorPanel"
+                        aria-label="Close">
+
+                        <i class="fas fa-times"></i>
+
+                    </button>
+
+                </div>
+
+
+                <div class="netfee-theme-mode-buttons">
+
+                    <button
+                        type="button"
+                        data-theme-mode="light">
+
+                        <i class="fas fa-sun"></i>
+
+                        Light
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        data-theme-mode="dark">
+
+                        <i class="fas fa-moon"></i>
+
+                        Dark
+
+                    </button>
+
+                </div>
+
+
+                <div class="netfee-color-title">
+                    Color
+                </div>
+
+
+                <div class="netfee-color-options">
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="blue">
+
+                        <span
+                            style="background:#2563eb">
+                        </span>
+
+                        <small>
+                            Blue
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="purple">
+
+                        <span
+                            style="background:#7c3aed">
+                        </span>
+
+                        <small>
+                            Purple
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="green">
+
+                        <span
+                            style="background:#16a34a">
+                        </span>
+
+                        <small>
+                            Green
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="orange">
+
+                        <span
+                            style="background:#ea580c">
+                        </span>
+
+                        <small>
+                            Orange
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="red">
+
+                        <span
+                            style="background:#dc2626">
+                        </span>
+
+                        <small>
+                            Red
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="cyan">
+
+                        <span
+                            style="background:#0891b2">
+                        </span>
+
+                        <small>
+                            Cyan
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="pink">
+
+                        <span
+                            style="background:#db2777">
+                        </span>
+
+                        <small>
+                            Pink
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="netfee-color-option"
+                        data-color-theme="amber">
+
+                        <span
+                            style="background:#d97706">
+                        </span>
+
+                        <small>
+                            Amber
+                        </small>
+
+                    </button>
+
+                </div>
+
+            `;
+
+
+            /*
+             * CSS uses position:fixed.
+             * So body is correct.
+             */
+
+            document.body.appendChild(
+                colorPanel
+            );
+
+        }
+
+
+        /* =====================================================
+           OPEN / CLOSE COLOR PANEL
+        ===================================================== */
+
+        colorThemeToggle.addEventListener(
+            'click',
+            function (event) {
+
+                event.preventDefault();
+
+                event.stopPropagation();
+
+                event.stopImmediatePropagation();
 
 
                 const profileMenu =
-                    getElement('profileMenu');
-
-                const profileBtn =
-                    getElement('profileBtn');
+                    getElement(
+                        'profileMenu'
+                    );
 
 
                 const langMenu =
-                    getElement('langMenu');
-
-                const langBtn =
-                    getElement('langBtn');
+                    getElement(
+                        'langMenu'
+                    );
 
 
                 if (profileMenu) {
 
                     profileMenu.classList.remove(
                         'show'
-                    );
-
-                }
-
-
-                if (profileBtn) {
-
-                    profileBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
                     );
 
                 }
@@ -573,88 +1164,166 @@
                 }
 
 
-                if (langBtn) {
-
-                    langBtn.setAttribute(
-                        'aria-expanded',
-                        'false'
-                    );
-
-                }
-
-            }
-        );
-
-    }
-
-
-    /* =========================================================
-       MOBILE SIDEBAR BUTTON
-    ========================================================= */
-
-    function initMenuButton() {
-
-        const menuBtn =
-            getElement('menuBtn');
-
-
-        if (!menuBtn) {
-            return;
-        }
-
-
-        menuBtn.addEventListener(
-            'click',
-            function (e) {
-
-                e.preventDefault();
-
-                const sidebar =
-                    document.querySelector(
-                        '.sidebar'
-                    );
-
-
-                if (!sidebar) {
-                    return;
-                }
-
-
-                sidebar.classList.toggle(
-                    'active'
+                colorPanel.classList.toggle(
+                    'show'
                 );
 
             }
         );
 
-    }
 
+        /* =====================================================
+           CLOSE BUTTON
+        ===================================================== */
 
-    /* =========================================================
-       SUPPORT TICKET
-    ========================================================= */
-
-    function initSupportTicket() {
-
-        const button =
+        const closeButton =
             getElement(
-                'openSupportTicketBtn'
+                'closeNetfeeColorPanel'
             );
 
 
-        if (!button) {
-            return;
+        if (closeButton) {
+
+            closeButton.addEventListener(
+                'click',
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+
+                    colorPanel.classList.remove(
+                        'show'
+                    );
+
+                }
+            );
+
         }
 
 
-        button.addEventListener(
-            'click',
-            function () {
+        /* =====================================================
+           LIGHT BUTTON
+        ===================================================== */
 
-                /* 
-                   Route is intentionally kept simple.
-                   Actual ticket module can be connected later.
-                */
+        const lightBtn =
+            colorPanel.querySelector(
+                '[data-theme-mode="light"]'
+            );
+
+
+        if (lightBtn) {
+
+            lightBtn.addEventListener(
+                'click',
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+
+                    applyMode(
+                        'light'
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           DARK BUTTON
+        ===================================================== */
+
+        const darkBtn =
+            colorPanel.querySelector(
+                '[data-theme-mode="dark"]'
+            );
+
+
+        if (darkBtn) {
+
+            darkBtn.addEventListener(
+                'click',
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+
+                    applyMode(
+                        'dark'
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           COLOR BUTTONS
+        ===================================================== */
+
+        colorPanel
+            .querySelectorAll(
+                '.netfee-color-option'
+            )
+            .forEach(
+                function (button) {
+
+                    button.addEventListener(
+                        'click',
+                        function (event) {
+
+                            event.preventDefault();
+
+                            event.stopPropagation();
+
+
+                            const selectedTheme =
+                                button.getAttribute(
+                                    'data-color-theme'
+                                );
+
+
+                            applyColorTheme(
+                                selectedTheme
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+
+        /* =====================================================
+           OUTSIDE CLICK
+        ===================================================== */
+
+        document.addEventListener(
+            'click',
+            function (event) {
+
+                if (
+                    !colorPanel.contains(
+                        event.target
+                    ) &&
+                    !colorThemeToggle.contains(
+                        event.target
+                    )
+                ) {
+
+                    colorPanel.classList.remove(
+                        'show'
+                    );
+
+                }
 
             }
         );
@@ -669,7 +1338,9 @@
     function initMessages() {
 
         const messagesBtn =
-            getElement('messagesBtn');
+            getElement(
+                'messagesBtn'
+            );
 
 
         if (!messagesBtn) {
@@ -677,9 +1348,24 @@
         }
 
 
+        if (
+            messagesBtn.dataset.bound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        messagesBtn.dataset.bound =
+            'true';
+
+
         messagesBtn.addEventListener(
             'click',
-            function () {
+            function (event) {
+
+                event.preventDefault();
+
 
                 if (
                     typeof window.openMessages ===
@@ -689,14 +1375,12 @@
                     window.openMessages();
 
                     return;
+
                 }
 
 
-                /*
-                   Do not invent message module behavior.
-                   Existing page-specific message functionality
-                   can define window.openMessages().
-                */
+                window.location.href =
+                    '/message/log';
 
             }
         );
@@ -705,7 +1389,7 @@
 
 
     /* =========================================================
-       TOPBAR CUSTOMER SEARCH
+       CUSTOMER SEARCH
     ========================================================= */
 
     function initCustomerSearch() {
@@ -721,11 +1405,25 @@
         }
 
 
+        if (
+            search.dataset.bound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        search.dataset.bound =
+            'true';
+
+
         search.addEventListener(
             'keydown',
-            function (e) {
+            function (event) {
 
-                if (e.key !== 'Enter') {
+                if (
+                    event.key !== 'Enter'
+                ) {
                     return;
                 }
 
@@ -739,14 +1437,11 @@
                 }
 
 
-                /*
-                   If customer list page exists,
-                   pass search through URL.
-                */
-
                 window.location.href =
                     '/customers?search=' +
-                    encodeURIComponent(value);
+                    encodeURIComponent(
+                        value
+                    );
 
             }
         );
@@ -761,7 +1456,9 @@
     function initLogout() {
 
         const logoutBtn =
-            getElement('logoutBtn');
+            getElement(
+                'logoutBtn'
+            );
 
 
         if (!logoutBtn) {
@@ -769,11 +1466,23 @@
         }
 
 
+        if (
+            logoutBtn.dataset.bound ===
+            'true'
+        ) {
+            return;
+        }
+
+
+        logoutBtn.dataset.bound =
+            'true';
+
+
         logoutBtn.addEventListener(
             'click',
-            async function (e) {
+            async function (event) {
 
-                e.preventDefault();
+                event.preventDefault();
 
 
                 try {
@@ -783,7 +1492,10 @@
                             '/api/auth/logout',
                             {
                                 method: 'POST',
-                                credentials: 'same-origin',
+
+                                credentials:
+                                    'same-origin',
+
                                 headers: {
                                     'Accept':
                                         'application/json'
@@ -792,9 +1504,7 @@
                         );
 
 
-                    if (
-                        response.ok
-                    ) {
+                    if (response.ok) {
 
                         window.location.href =
                             '/';
@@ -823,29 +1533,139 @@
 
 
     /* =========================================================
-       INIT TOPBAR
+       ESCAPE
+    ========================================================= */
+
+    function initEscape() {
+
+        if (
+            window.__ispBillingTopbarEscapeBound
+        ) {
+            return;
+        }
+
+
+        window.__ispBillingTopbarEscapeBound =
+            true;
+
+
+        document.addEventListener(
+            'keydown',
+            function (event) {
+
+                if (
+                    event.key !== 'Escape' &&
+                    event.key !== 'Esc'
+                ) {
+                    return;
+                }
+
+
+                const profileMenu =
+                    getElement(
+                        'profileMenu'
+                    );
+
+
+                const langMenu =
+                    getElement(
+                        'langMenu'
+                    );
+
+
+                const colorPanel =
+                    getElement(
+                        'netfeeColorPanel'
+                    );
+
+
+                if (profileMenu) {
+
+                    profileMenu.classList.remove(
+                        'show'
+                    );
+
+                }
+
+
+                if (langMenu) {
+
+                    langMenu.classList.remove(
+                        'show'
+                    );
+
+                }
+
+
+                if (colorPanel) {
+
+                    colorPanel.classList.remove(
+                        'show'
+                    );
+
+                }
+
+
+                if (
+                    window.innerWidth <= 850
+                ) {
+
+                    const sidebar =
+                        document.querySelector(
+                            '.sidebar'
+                        );
+
+
+                    const menuBtn =
+                        getElement(
+                            'menuBtn'
+                        );
+
+
+                    if (sidebar) {
+
+                        sidebar.classList.remove(
+                            'active'
+                        );
+
+                    }
+
+
+                    if (menuBtn) {
+
+                        menuBtn.classList.remove(
+                            'active'
+                        );
+
+
+                        menuBtn.setAttribute(
+                            'aria-expanded',
+                            'false'
+                        );
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       INIT
     ========================================================= */
 
     function initTopbar() {
-
-        const lang =
-            getCurrentLanguage();
-
-
-        updateLanguageUI(
-            lang
-        );
-
 
         initProfile();
 
         initLanguage();
 
-        initEscape();
+        initThemeToggle();
 
-        initMenuButton();
-
-        initSupportTicket();
+        initColorPanel();
 
         initMessages();
 
@@ -853,7 +1673,39 @@
 
         initLogout();
 
+        initEscape();
+
         loadTopbarUser();
+
+
+        /* =====================================================
+           RESTORE SAVED COLOR
+        ===================================================== */
+
+        const savedColor =
+            localStorage.getItem(
+                'ispbilling_color_theme'
+            ) || 'blue';
+
+
+        applyColorTheme(
+            savedColor
+        );
+
+
+        /* =====================================================
+           RESTORE SAVED MODE
+        ===================================================== */
+
+        const savedMode =
+            localStorage.getItem(
+                'ispbilling_theme_mode'
+            ) || 'light';
+
+
+        applyMode(
+            savedMode
+        );
 
     }
 
@@ -880,5 +1732,20 @@
         initTopbar();
 
     }
+
+
+    /* =========================================================
+       OPTIONAL GLOBAL ACCESS
+    ========================================================= */
+
+    window.applyColorTheme =
+        applyColorTheme;
+
+    window.applyMode =
+        applyMode;
+
+    window.initTopbar =
+        initTopbar;
+
 
 })();

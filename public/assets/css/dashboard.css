@@ -3,43 +3,92 @@
 ================================*/
 
 
-body{
-    background:#f6f8fc;
-    overflow-x:hidden;
+/* =========================================================
+   ROOT THEME VARIABLES
+========================================================= */
+
+:root{
+
+    --theme-primary:#2563eb;
+    --theme-primary-hover:#1d4ed8;
+    --theme-primary-soft:#dbeafe;
+
+    --theme-bg:#f6f8fc;
+    --theme-card:#ffffff;
+
+    --theme-text:#1f2937;
+    --theme-muted:#64748b;
+
+    --theme-border:#e5e7eb;
+
 }
 
 
-/* MAIN */
+/* =========================================================
+   BODY
+========================================================= */
+
+body{
+
+    background:var(--theme-bg);
+
+    color:var(--theme-text);
+
+    overflow-x:hidden;
+
+    transition:
+        background-color .25s ease,
+        color .25s ease;
+
+}
+
+
+/* =========================================================
+   MAIN
+========================================================= */
 
 .main-content{
 
     margin-left:260px;
+
     margin-top:70px;
 
     padding:25px;
 
-    transition:.3s;
+    transition:
+        .3s,
+        background-color .25s ease,
+        color .25s ease;
 
 }
 
 
-/* DASHBOARD HEADING */
+/* =========================================================
+   DASHBOARD HEADING
+========================================================= */
 
 .dashboard-heading{
 
-    background:#fff;
+    background:var(--theme-card);
 
     border-radius:18px;
 
     padding:18px;
 
-    box-shadow:0 5px 20px rgba(0,0,0,.06);
+    box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.06);
 
     display:flex;
 
     align-items:center;
 
     justify-content:space-between;
+
+    transition:
+        background-color .25s ease,
+        color .25s ease,
+        box-shadow .25s ease;
 
 }
 
@@ -52,7 +101,7 @@ body{
 
     font-weight:800;
 
-    color:#1e293b;
+    color:var(--theme-text);
 
 }
 
@@ -61,12 +110,14 @@ body{
 
     margin:4px 0 0;
 
-    color:#64748b;
+    color:var(--theme-muted);
 
 }
 
 
-/* TOP SUMMARY */
+/* =========================================================
+   TOP SUMMARY
+========================================================= */
 
 .main-content .row:first-child{
 
@@ -75,7 +126,9 @@ body{
 }
 
 
-/* CARDS */
+/* =========================================================
+   CARDS
+========================================================= */
 
 .card{
 
@@ -85,9 +138,15 @@ body{
 
     overflow:hidden;
 
-    box-shadow:0 6px 18px rgba(0,0,0,.10)!important;
+    box-shadow:
+        0 6px 18px
+        rgba(0,0,0,.10)!important;
 
-    transition:.25s;
+    transition:
+        .25s,
+        background-color .25s ease,
+        color .25s ease,
+        box-shadow .25s ease;
 
 }
 
@@ -108,6 +167,10 @@ body{
 }
 
 
+/* =========================================================
+   CARD FLEX
+========================================================= */
+
 .card-flex{
 
     display:flex;
@@ -119,6 +182,10 @@ body{
 }
 
 
+/* =========================================================
+   CARD ICON
+========================================================= */
+
 .left-icon i{
 
     font-size:32px;
@@ -129,6 +196,10 @@ body{
 
 }
 
+
+/* =========================================================
+   CARD TEXT
+========================================================= */
 
 .card h6{
 
@@ -156,7 +227,10 @@ body{
 }
 
 
-/* COLORS */
+/* =========================================================
+   COLORS
+   KEEP ORIGINAL DESIGN
+========================================================= */
 
 .bg-primary{
 
@@ -266,7 +340,9 @@ body{
 }
 
 
-/* CHART */
+/* =========================================================
+   CHART
+========================================================= */
 
 canvas{
 
@@ -284,16 +360,384 @@ svg{
 }
 
 
-/* COLLAPSE CARD */
+/* =========================================================
+   COLLAPSE CARD
+========================================================= */
 
 .card-header{
 
     font-weight:700;
 
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    border-color:var(--theme-border);
+
 }
 
 
-/* TABLET */
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    border-radius:12px;
+
+    overflow:hidden;
+
+}
+
+
+.table th,
+.table td{
+
+    color:var(--theme-text);
+
+    border-color:var(--theme-border);
+
+}
+
+
+.table thead th{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+}
+
+
+/* =========================================================
+   PENDING BILLING
+========================================================= */
+
+#pendingBilling .card{
+
+    box-shadow:
+        0 6px 20px
+        rgba(239,68,68,.20)!important;
+
+}
+
+
+#billingDetails{
+
+    font-size:14px;
+
+}
+
+
+/* =========================================================
+   FORM ELEMENTS
+========================================================= */
+
+.main-content input,
+.main-content select,
+.main-content textarea{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    border-color:var(--theme-border);
+
+}
+
+
+.main-content input::placeholder,
+.main-content textarea::placeholder{
+
+    color:var(--theme-muted);
+
+}
+
+
+/* =========================================================
+   DROPDOWN
+========================================================= */
+
+.main-content .dropdown-menu{
+
+    background:var(--theme-card);
+
+    border-color:var(--theme-border);
+
+}
+
+
+.main-content .dropdown-item{
+
+    color:var(--theme-text);
+
+}
+
+
+.main-content .dropdown-item:hover{
+
+    background:var(--theme-primary-soft);
+
+    color:var(--theme-text);
+
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode{
+
+    --theme-bg:#0f172a;
+
+    --theme-card:#1e293b;
+
+    --theme-text:#f1f5f9;
+
+    --theme-muted:#94a3b8;
+
+    --theme-border:#334155;
+
+}
+
+
+/* =========================================================
+   DARK BODY
+========================================================= */
+
+body.dark-mode{
+
+    background:var(--theme-bg);
+
+    color:var(--theme-text);
+
+}
+
+
+/* =========================================================
+   DARK MAIN
+========================================================= */
+
+body.dark-mode .main-content{
+
+    background:var(--theme-bg);
+
+    color:var(--theme-text);
+
+}
+
+
+/* =========================================================
+   DARK DASHBOARD HEADING
+========================================================= */
+
+body.dark-mode .dashboard-heading{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.30);
+
+}
+
+
+body.dark-mode .dashboard-heading h2{
+
+    color:var(--theme-text);
+
+}
+
+
+body.dark-mode .dashboard-heading p{
+
+    color:var(--theme-muted);
+
+}
+
+
+/* =========================================================
+   DARK NORMAL CARDS
+========================================================= */
+
+body.dark-mode .card:not(
+    .bg-primary,
+    .bg-success,
+    .bg-danger,
+    .bg-warning,
+    .bg-info,
+    .bg-dark,
+    .bg-secondary,
+    .bg-green,
+    .bg-purple
+){
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+}
+
+
+/* =========================================================
+   DARK CARD HEADER
+========================================================= */
+
+body.dark-mode .card-header{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    border-color:var(--theme-border);
+
+}
+
+
+/* =========================================================
+   DARK TABLE
+========================================================= */
+
+body.dark-mode .table{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+}
+
+
+body.dark-mode .table th,
+body.dark-mode .table td{
+
+    background:var(--theme-card);
+
+    color:var(--theme-text);
+
+    border-color:var(--theme-border);
+
+}
+
+
+body.dark-mode .table thead th{
+
+    background:#172033;
+
+    color:#f1f5f9;
+
+}
+
+
+/* =========================================================
+   DARK FORM
+========================================================= */
+
+body.dark-mode .main-content input,
+body.dark-mode .main-content select,
+body.dark-mode .main-content textarea{
+
+    background:#172033;
+
+    color:#f1f5f9;
+
+    border-color:#334155;
+
+}
+
+
+body.dark-mode .main-content input::placeholder,
+body.dark-mode .main-content textarea::placeholder{
+
+    color:#94a3b8;
+
+}
+
+
+/* =========================================================
+   DARK DROPDOWN
+========================================================= */
+
+body.dark-mode .main-content .dropdown-menu{
+
+    background:#1e293b;
+
+    border-color:#334155;
+
+}
+
+
+body.dark-mode .main-content .dropdown-item{
+
+    color:#f1f5f9;
+
+}
+
+
+body.dark-mode .main-content .dropdown-item:hover{
+
+    background:#334155;
+
+    color:#fff;
+
+}
+
+
+/* =========================================================
+   DARK LINKS
+========================================================= */
+
+body.dark-mode .main-content a{
+
+    color:#93c5fd;
+
+}
+
+
+/* =========================================================
+   DARK MUTED TEXT
+========================================================= */
+
+body.dark-mode .main-content .text-muted{
+
+    color:#94a3b8!important;
+
+}
+
+
+/* =========================================================
+   DARK BORDER
+========================================================= */
+
+body.dark-mode .main-content .border{
+
+    border-color:var(--theme-border)!important;
+
+}
+
+
+/* =========================================================
+   DARK SHADOW
+========================================================= */
+
+body.dark-mode .main-content .card{
+
+    box-shadow:
+        0 6px 18px
+        rgba(0,0,0,.30)!important;
+
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
 
 @media(max-width:992px){
 
@@ -306,7 +750,9 @@ svg{
 }
 
 
-/* MOBILE */
+/* =========================================================
+   MOBILE
+========================================================= */
 
 @media(max-width:768px){
 
@@ -402,7 +848,9 @@ svg{
 }
 
 
-/* AREA PAGE FIX */
+/* =========================================================
+   AREA PAGE FIX
+========================================================= */
 
 .main-content{
 
@@ -415,43 +863,9 @@ svg{
 }
 
 
-.table{
-
-    background:white;
-
-    border-radius:12px;
-
-    overflow:hidden;
-
-}
-
-
-.card-header{
-
-    border-radius:15px 15px 0 0!important;
-
-}
-
-
-/* PENDING BILLING */
-
-#pendingBilling .card{
-
-    box-shadow:
-        0 6px 20px
-        rgba(239,68,68,.20)!important;
-
-}
-
-
-#billingDetails{
-
-    font-size:14px;
-
-}
-
-
-/* SMALL PHONE */
+/* =========================================================
+   SMALL PHONE
+========================================================= */
 
 @media(max-width:420px){
 
