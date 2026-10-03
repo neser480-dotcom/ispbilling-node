@@ -59,7 +59,11 @@ const areaRoutes =
 
 const routerRoutes =
     require("./routes/router");
-
+const dashboardRoutes =
+    require("./routes/dashboard");
+const reportsRoutes = require("./routes/reports");
+const activityLogRoutes =
+    require("./routes/activity-log");
 
 /*
 |--------------------------------------------------------------------------
@@ -446,7 +450,17 @@ app.use(
     requireSoftwareBilling,
     areaRoutes
 );
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD API
+|--------------------------------------------------------------------------
+*/
 
+app.use(
+    "/api/dashboard",
+    requireSoftwareBilling,
+    dashboardRoutes
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -1028,43 +1042,11 @@ app.get(
 | REPORTS
 |--------------------------------------------------------------------------
 */
-
-app.get(
-    "/reports/collection",
+app.use(
+    "/reports",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Collection Report module is not implemented yet."
-        );
-
-    }
+    reportsRoutes
 );
-
-app.get(
-    "/reports/reseller-collection",
-    requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Reseller Collection Report module is not implemented yet."
-        );
-
-    }
-);
-
-app.get(
-    "/reports/deposit",
-    requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Deposit Report module is not implemented yet."
-        );
-
-    }
-);
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1297,25 +1279,17 @@ app.get(
     }
 );
 
-
 /*
 |--------------------------------------------------------------------------
 | ACTIVITY LOG
 |--------------------------------------------------------------------------
 */
 
-app.get(
+app.use(
     "/activity",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Activity Log module is not implemented yet."
-        );
-
-    }
+    activityLogRoutes
 );
-
 
 /*
 |--------------------------------------------------------------------------
