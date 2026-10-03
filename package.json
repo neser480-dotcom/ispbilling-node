@@ -23,5 +23,8 @@
     "mysql2": "^3.24.5",
     "node-routeros": "^1.6.8",
     "routeros-client": "^1.1.1"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
   }
 }
