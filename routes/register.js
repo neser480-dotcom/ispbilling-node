@@ -1,663 +1,199 @@
+"use strict";
+
 const express = require("express");
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+
 const db = require("../config/database");
 
 const router = express.Router();
 
 const TRIAL_HOURS = 3;
+const BCRYPT_ROUNDS = 12;
 
-function cleanText(value) {
-    return String(value ?? "")
-        .replace(/\s+/g, " ")
-        .trim();
+const registrationAttempts = new Map();
+
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 10;
+
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+function getClientIp(req) {
+    return (
+        req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+        req.ip ||
+        req.socket?.remoteAddress ||
+        "unknown"
+    );
 }
 
-function money(value) {
-    const n = Number(value || 0);
-    return Number.isFinite(n) ? n : 0;
+
+function cleanupRateLimit() {
+    const now = Date.now();
+
+    for (const [key, data] of registrationAttempts.entries()) {
+        if (now - data.firstAttempt > RATE_LIMIT_WINDOW) {
+            registrationAttempts.delete(key);
+        }
+    }
 }
 
-function getCsrf(req) {
 
-    if (!req.session.csrf_token) {
+function checkRateLimit(req) {
+    cleanupRateLimit();
 
-        req.session.csrf_token =
-            crypto.randomBytes(32).toString("hex");
+    const ip = getClientIp(req);
+    const now = Date.now();
+
+    let record = registrationAttempts.get(ip);
+
+    if (!record) {
+        record = {
+            firstAttempt: now,
+            count: 0
+        };
+
+        registrationAttempts.set(ip, record);
     }
 
-    return req.session.csrf_token;
+    if (now - record.firstAttempt > RATE_LIMIT_WINDOW) {
+        record.firstAttempt = now;
+        record.count = 0;
+    }
+
+    record.count++;
+
+    if (record.count > RATE_LIMIT_MAX) {
+        return false;
+    }
+
+    return true;
 }
 
-function rotateCsrf(req) {
 
-    req.session.csrf_token =
-        crypto.randomBytes(32).toString("hex");
-
-    return req.session.csrf_token;
+function generateCsrfToken() {
+    return crypto.randomBytes(32).toString("hex");
 }
 
 
-/* =========================================================
-   GET CSRF
-========================================================= */
+function ensureCsrfToken(req) {
+    if (!req.session) {
+        return null;
+    }
 
-router.get("/csrf", (req, res) => {
+    if (!req.session.register_csrf_token) {
+        req.session.register_csrf_token = generateCsrfToken();
+    }
 
-    res.json({
-        success: true,
-        csrf_token: getCsrf(req)
-    });
-
-});
+    return req.session.register_csrf_token;
+}
 
 
-/* =========================================================
-   REGISTER DATA
-========================================================= */
+function verifyCsrfToken(req, token) {
+    const sessionToken = req.session?.register_csrf_token;
+
+    if (!sessionToken || !token) {
+        return false;
+    }
+
+    if (
+        typeof sessionToken !== "string" ||
+        typeof token !== "string"
+    ) {
+        return false;
+    }
+
+    if (sessionToken.length !== token.length) {
+        return false;
+    }
+
+    try {
+        return crypto.timingSafeEqual(
+            Buffer.from(sessionToken),
+            Buffer.from(token)
+        );
+    } catch (error) {
+        return false;
+    }
+}
+
+
+function cleanString(value) {
+    if (value === undefined || value === null) {
+        return "";
+    }
+
+    return String(value).trim();
+}
+
+
+function cleanEmail(value) {
+    const email = cleanString(value).toLowerCase();
+
+    return email || null;
+}
+
+
+function cleanNullable(value) {
+    const valueString = cleanString(value);
+
+    return valueString || null;
+}
+
+
+function parseMoney(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number) || number < 0) {
+        return 0;
+    }
+
+    return Number(number.toFixed(2));
+}
+
+
+function calculateDiscount(
+    signupFee,
+    discountType,
+    discountValue
+) {
+    let discount = 0;
+
+    if (discountType === "percent") {
+        discount = signupFee * (discountValue / 100);
+    } else if (discountType === "fixed") {
+        discount = discountValue;
+    }
+
+    if (discount < 0) {
+        discount = 0;
+    }
+
+    if (discount > signupFee) {
+        discount = signupFee;
+    }
+
+    return Number(discount.toFixed(2));
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| GET registration data
+|--------------------------------------------------------------------------
+*/
 
 router.get("/data", async (req, res) => {
-
     try {
+        const csrfToken = ensureCsrfToken(req);
 
-        const sessionUserId =
-            Number(req.session.user_id || 0);
-
-        const sessionCompanyId =
-            Number(req.session.company_id || 0);
-
-        const currentRole =
-            String(req.session.role || "")
-                .trim()
-                .toLowerCase();
-
-        const isLoggedIn =
-            sessionUserId > 0;
-
-        const isSuperAdmin =
-            currentRole === "super_admin";
-
-        const useExistingTenant =
-            isLoggedIn && !isSuperAdmin;
-
-        const existingTenantId =
-            useExistingTenant
-                ? sessionCompanyId
-                : 0;
-
-        let companyMessage = "";
-
-        if (
-            useExistingTenant &&
-            existingTenantId <= 0
-        ) {
-
-            companyMessage =
-                "Company information is missing for this account.";
-        }
-
-        const canApplyDiscount =
-            currentRole === "super_admin" ||
-            currentRole === "admin";
-
-
-        const [packages] =
-            await db.execute(`
-                SELECT
-                    id,
-                    package_code,
-                    package_name,
-                    customer_limit,
-                    signup_fee,
-                    monthly_fee
-                FROM software_packages
-                WHERE status = 'active'
-                ORDER BY id ASC
-            `);
-
-
-        res.json({
-
-            success: true,
-
-            csrf_token:
-                getCsrf(req),
-
-            trial_hours:
-                TRIAL_HOURS,
-
-            can_apply_discount:
-                canApplyDiscount,
-
-            company_message:
-                companyMessage,
-
-            use_existing_tenant:
-                useExistingTenant,
-
-            existing_tenant_id:
-                existingTenantId,
-
-            packages
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "REGISTER DATA ERROR:",
-            error
-        );
-
-        res.status(500).json({
-
-            success: false,
-
-            message:
-                "Unable to load registration data."
-
-        });
-
-    }
-
-});
-
-
-/* =========================================================
-   REGISTER
-========================================================= */
-
-router.post("/", async (req, res) => {
-
-    let connection = null;
-
-    try {
-
-        /* =================================================
-           CSRF
-        ================================================= */
-
-        if (
-            !req.body.csrf_token ||
-            !req.session.csrf_token ||
-            !crypto.timingSafeEqual(
-                Buffer.from(
-                    String(req.session.csrf_token)
-                ),
-                Buffer.from(
-                    String(req.body.csrf_token)
-                )
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid request. Please refresh the page and try again.",
-
-                csrf_token:
-                    getCsrf(req)
-
-            });
-        }
-
-
-        /* =================================================
-           SESSION / TENANT
-        ================================================= */
-
-        const sessionUserId =
-            Number(req.session.user_id || 0);
-
-        const sessionCompanyId =
-            Number(req.session.company_id || 0);
-
-        const currentRole =
-            String(req.session.role || "")
-                .trim()
-                .toLowerCase();
-
-        const isLoggedIn =
-            sessionUserId > 0;
-
-        const isSuperAdmin =
-            currentRole === "super_admin";
-
-        const useExistingTenant =
-            isLoggedIn && !isSuperAdmin;
-
-        const existingTenantId =
-            sessionCompanyId;
-
-
-        if (
-            useExistingTenant &&
-            existingTenantId <= 0
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Company information is missing for this account.",
-
-                csrf_token:
-                    getCsrf(req)
-
-            });
-        }
-
-
-        /* =================================================
-           INPUT
-        ================================================= */
-
-        const name =
-            cleanText(req.body.name);
-
-        const companyName =
-            cleanText(req.body.company_name);
-
-        const mobile =
-            cleanText(req.body.mobile);
-
-        const email =
-            cleanText(req.body.email)
-                .toLowerCase();
-
-        const username =
-            cleanText(req.body.username);
-
-        const rawPassword =
-            String(req.body.password || "");
-
-        const address =
-            cleanText(req.body.address);
-
-        const nid =
-            cleanText(req.body.nid);
-
-        const packageId =
-            Number(req.body.package_id || 0);
-
-        const clientType =
-            cleanText(req.body.customer_type);
-
-        const referenceName =
-            cleanText(req.body.reference_name);
-
-        const referenceMobile =
-            cleanText(req.body.reference_mobile);
-
-        /*
-
-        These are intentionally received.
-
-        Same as PHP version, they are currently
-        not inserted into users because there are
-        no confirmed dedicated reference columns.
-
-        */
-
-        void referenceName;
-        void referenceMobile;
-
-
-        /* =================================================
-           DISCOUNT
-        ================================================= */
-
-        const canApplyDiscount =
-            currentRole === "super_admin" ||
-            currentRole === "admin";
-
-        let discountType =
-            cleanText(
-                req.body.discount_type ||
-                "percent"
-            ).toLowerCase();
-
-        let discountValueRaw =
-            cleanText(
-                req.body.discount_value || "0"
-            );
-
-
-        if (!canApplyDiscount) {
-
-            discountType =
-                "percent";
-
-            discountValueRaw =
-                "0";
-        }
-
-
-        let discountValue =
-            Number(discountValueRaw);
-
-        if (!Number.isFinite(discountValue)) {
-
-            discountValue = -1;
-        }
-
-
-        /* =================================================
-           VALIDATION
-        ================================================= */
-
-        if (!name) {
-
-            return res.status(400).json({
-                success: false,
-                message: "Please enter your name.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (!companyName) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please enter your institution/company name.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (!mobile) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please enter your mobile number.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (!address) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please enter your area/address.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        const emailValid =
-            /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                .test(email);
-
-        if (!emailValid) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please enter a valid email address.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (!/^\+?[0-9]{7,15}$/.test(mobile)) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please enter a valid mobile number.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (
-            username.length < 3 ||
-            !/^[a-zA-Z0-9_.]+$/.test(username)
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Username must be at least 3 characters (letters, numbers, dot, underscore only).",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (rawPassword.length < 8) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Password must be at least 8 characters long.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (packageId <= 0) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please choose a valid package.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (
-            ![
-                "PPPoE",
-                "Static",
-                "Hotspot"
-            ].includes(clientType)
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Please choose a valid connection type.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (
-            ![
-                "percent",
-                "fixed"
-            ].includes(discountType)
-        ) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Invalid discount type.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-        if (discountValue < 0) {
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Discount cannot be negative.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-
-        /* =================================================
-           DUPLICATE CHECK
-        ================================================= */
-
-        let duplicateRows;
-
-        if (useExistingTenant) {
-
-            [
-                duplicateRows
-            ] = await db.execute(`
-
-                SELECT
-                    id,
-                    name,
-                    company_name,
-                    mobile,
-                    address,
-                    username,
-                    email
-
-                FROM users
-
-                WHERE company_id = ?
-
-                AND (
-                       mobile = ?
-                    OR company_name = ?
-                    OR address = ?
-                    OR username = ?
-                    OR email = ?
-                )
-
-                LIMIT 1
-
-            `, [
-                existingTenantId,
-                mobile,
-                companyName,
-                address,
-                username,
-                email
-            ]);
-
-        } else {
-
-            [
-                duplicateRows
-            ] = await db.execute(`
-
-                SELECT
-                    id,
-                    name,
-                    company_name,
-                    mobile,
-                    address,
-                    username,
-                    email
-
-                FROM users
-
-                WHERE
-                       mobile = ?
-                    OR company_name = ?
-                    OR address = ?
-                    OR username = ?
-                    OR email = ?
-
-                LIMIT 1
-
-            `, [
-                mobile,
-                companyName,
-                address,
-                username,
-                email
-            ]);
-        }
-
-
-        if (duplicateRows.length > 0) {
-
-            const duplicate =
-                duplicateRows[0];
-
-            if (
-                String(duplicate.mobile) ===
-                mobile
-            ) {
-
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "This mobile number is already registered.",
-                    csrf_token: getCsrf(req)
-                });
-            }
-
-            if (
-                cleanText(
-                    duplicate.company_name
-                ) === companyName
-            ) {
-
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "This institution/company is already registered.",
-                    csrf_token: getCsrf(req)
-                });
-            }
-
-            if (
-                cleanText(
-                    duplicate.address
-                ) === address
-            ) {
-
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "This area/address is already registered.",
-                    csrf_token: getCsrf(req)
-                });
-            }
-
-            if (
-                String(duplicate.username)
-                    .toLowerCase() ===
-                username.toLowerCase()
-            ) {
-
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "This username is already registered.",
-                    csrf_token: getCsrf(req)
-                });
-            }
-
-            if (
-                String(duplicate.email)
-                    .toLowerCase() ===
-                email.toLowerCase()
-            ) {
-
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "This email address is already registered.",
-                    csrf_token: getCsrf(req)
-                });
-            }
-
-            return res.status(400).json({
-                success: false,
-                message:
-                    "Duplicate registration information found.",
-                csrf_token: getCsrf(req)
-            });
-        }
-
-
-        /* =================================================
-           PACKAGE
-        ================================================= */
-
-        const [
-            packageRows
-        ] = await db.execute(`
-
+        const [packages] = await db.execute(
+            `
             SELECT
                 id,
                 package_code,
@@ -665,253 +201,384 @@ router.post("/", async (req, res) => {
                 customer_limit,
                 signup_fee,
                 monthly_fee
-
             FROM software_packages
+            WHERE status = 'active'
+            ORDER BY id ASC
+            `
+        );
 
-            WHERE id = ?
+        let canApplyDiscount = false;
 
-            AND status = 'active'
+        if (req.session?.user_id) {
+            canApplyDiscount =
+                req.session.role === "admin" ||
+                req.session.role === "super_admin";
+        }
 
-            LIMIT 1
+        res.json({
+            success: true,
+            csrf_token: csrfToken,
+            can_apply_discount: canApplyDiscount,
+            packages: packages.map((pkg) => ({
+                id: pkg.id,
+                package_code: pkg.package_code,
+                package_name: pkg.package_name,
+                customer_limit: Number(pkg.customer_limit || 0),
+                signup_fee: Number(pkg.signup_fee || 0),
+                monthly_fee: Number(pkg.monthly_fee || 0)
+            })),
+            company_message: ""
+        });
+    } catch (error) {
+        console.error("Register data error:", error);
 
-        `, [
-            packageId
-        ]);
+        res.status(500).json({
+            success: false,
+            message: "Unable to load registration data."
+        });
+    }
+});
 
 
-        if (packageRows.length !== 1) {
+/*
+|--------------------------------------------------------------------------
+| POST registration
+|--------------------------------------------------------------------------
+*/
 
-            return res.status(400).json({
+router.post("/", async (req, res) => {
+    let connection = null;
+
+    try {
+        /*
+        |--------------------------------------------------------------------------
+        | Logged-in user restriction
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            req.session?.user_id &&
+            req.session.role !== "super_admin"
+        ) {
+            return res.status(403).json({
                 success: false,
-                message:
-                    "Selected package is not available.",
-                csrf_token: getCsrf(req)
+                message: "You are not allowed to create a new ISP account."
             });
         }
 
 
-        const selectedPackage =
-            packageRows[0];
+        /*
+        |--------------------------------------------------------------------------
+        | Rate limit
+        |--------------------------------------------------------------------------
+        */
 
-        const userPackageId =
-            Number(selectedPackage.id);
-
-        const packageCode =
-            String(selectedPackage.package_code);
-
-        const signupFee =
-            Math.max(
-                0,
-                money(selectedPackage.signup_fee)
-            );
-
-        const monthlyFee =
-            Math.max(
-                0,
-                money(selectedPackage.monthly_fee)
-            );
-
-        const customerLimit =
-            Number(
-                selectedPackage.customer_limit || 0
-            );
-
-
-        void monthlyFee;
-        void customerLimit;
-
-
-        /* =================================================
-           DISCOUNT CALCULATION
-        ================================================= */
-
-        let discountAmount = 0;
-
-        if (canApplyDiscount) {
-
-            if (discountType === "percent") {
-
-                if (discountValue > 100) {
-                    discountValue = 100;
-                }
-
-                discountAmount =
-                    signupFee *
-                    (
-                        discountValue / 100
-                    );
-
-            } else {
-
-                if (discountValue > signupFee) {
-                    discountValue = signupFee;
-                }
-
-                discountAmount =
-                    discountValue;
-            }
+        if (!checkRateLimit(req)) {
+            return res.status(429).json({
+                success: false,
+                message: "Too many registration attempts. Please try again later."
+            });
         }
 
 
-        discountAmount =
-            Math.min(
-                signupFee,
-                Math.max(
-                    0,
-                    discountAmount
-                )
+        /*
+        |--------------------------------------------------------------------------
+        | CSRF
+        |--------------------------------------------------------------------------
+        */
+
+        const csrfToken = cleanString(req.body.csrf_token);
+
+        if (!verifyCsrfToken(req, csrfToken)) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid or expired security token."
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Read input
+        |--------------------------------------------------------------------------
+        */
+
+        const name = cleanString(req.body.name);
+        const companyName = cleanString(req.body.company_name);
+        const mobile = cleanString(req.body.mobile);
+        const email = cleanEmail(req.body.email);
+        const username = cleanString(req.body.username);
+        const password = cleanString(req.body.password);
+
+        const packageId = Number(req.body.package_id || 0);
+
+        const customerType =
+            cleanString(req.body.customer_type) || "PPPoE";
+
+        const address = cleanNullable(req.body.address);
+        const nid = cleanNullable(req.body.nid);
+
+        const referenceName =
+            cleanNullable(req.body.reference_name);
+
+        const referenceMobile =
+            cleanNullable(req.body.reference_mobile);
+
+        const discountType =
+            cleanString(req.body.discount_type).toLowerCase();
+
+        const discountValue =
+            parseMoney(req.body.discount_value);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
+
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                message: "Name is required."
+            });
+        }
+
+        if (!companyName) {
+            return res.status(400).json({
+                success: false,
+                message: "Company name is required."
+            });
+        }
+
+        if (!mobile) {
+            return res.status(400).json({
+                success: false,
+                message: "Mobile number is required."
+            });
+        }
+
+        if (!username) {
+            return res.status(400).json({
+                success: false,
+                message: "Username is required."
+            });
+        }
+
+        if (!/^[a-zA-Z0-9._-]{3,50}$/.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Username must be 3 to 50 characters and may contain letters, numbers, dot, underscore and hyphen."
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 6 characters."
+            });
+        }
+
+        if (!Number.isInteger(packageId) || packageId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please select a valid package."
+            });
+        }
+
+        const allowedCustomerTypes = [
+            "PPPoE",
+            "Static",
+            "Hotspot"
+        ];
+
+        if (!allowedCustomerTypes.includes(customerType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid customer type."
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Duplicate username
+        |--------------------------------------------------------------------------
+        */
+
+        const [existingUsers] = await db.execute(
+            `
+            SELECT id
+            FROM users
+            WHERE username = ?
+            LIMIT 1
+            `,
+            [username]
+        );
+
+        if (existingUsers.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: "This username is already in use."
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Package
+        |--------------------------------------------------------------------------
+        */
+
+        const [packageRows] = await db.execute(
+            `
+            SELECT
+                id,
+                package_code,
+                package_name,
+                customer_limit,
+                signup_fee,
+                monthly_fee
+            FROM software_packages
+            WHERE id = ?
+              AND status = 'active'
+            LIMIT 1
+            `,
+            [packageId]
+        );
+
+        if (packageRows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Selected package is not available."
+            });
+        }
+
+        const selectedPackage = packageRows[0];
+
+        const signupFee = parseMoney(
+            selectedPackage.signup_fee
+        );
+
+        const monthlyFee = parseMoney(
+            selectedPackage.monthly_fee
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Discount
+        |--------------------------------------------------------------------------
+        */
+
+        let finalDiscount = 0;
+
+        const loggedInRole = req.session?.role || null;
+
+        const canApplyDiscount =
+            loggedInRole === "admin" ||
+            loggedInRole === "super_admin";
+
+        if (canApplyDiscount && discountValue > 0) {
+            if (
+                discountType === "percent" ||
+                discountType === "fixed"
+            ) {
+                finalDiscount = calculateDiscount(
+                    signupFee,
+                    discountType,
+                    discountValue
+                );
+            }
+        }
+
+        const finalSignupFee = Number(
+            (signupFee - finalDiscount).toFixed(2)
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Password
+        |--------------------------------------------------------------------------
+        */
+
+        const passwordHash = await bcrypt.hash(
+            password,
+            BCRYPT_ROUNDS
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Registration settings
+        |--------------------------------------------------------------------------
+        */
+
+        const trialStartedAt = new Date();
+
+        const trialExpiresAt = new Date(
+            trialStartedAt.getTime() +
+            TRIAL_HOURS * 60 * 60 * 1000
+        );
+
+        const registrationSettings = {
+            trial_hours: TRIAL_HOURS,
+            trial_started_at: trialStartedAt.toISOString(),
+            trial_expires_at: trialExpiresAt.toISOString(),
+            registration_payment: "unpaid",
+            registration_fee: signupFee,
+            registration_discount: finalDiscount,
+            registration_amount: finalSignupFee,
+            monthly_fee: monthlyFee,
+            reference_name: referenceName,
+            reference_mobile: referenceMobile
+        };
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Company / creator
+        |--------------------------------------------------------------------------
+        */
+
+        let companyId = 0;
+        let createdBy = null;
+
+        if (
+            req.session?.user_id &&
+            req.session.role === "super_admin"
+        ) {
+            companyId = Number(
+                req.session.company_id || 0
             );
 
-        const finalSignupFee =
-            Math.max(
-                0,
-                signupFee - discountAmount
+            createdBy = Number(
+                req.session.user_id
             );
+        }
 
 
-        /* =================================================
-           PASSWORD
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction
+        |--------------------------------------------------------------------------
+        */
 
-        const password =
-            await bcrypt.hash(
-                rawPassword,
-                10
-            );
-
-
-        /* =================================================
-           CONNECTION
-        ================================================= */
-
-        connection =
-            await db.getConnection();
+        connection = await db.getConnection();
 
         await connection.beginTransaction();
 
 
-        /* =================================================
-           TENANT
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Create ISP owner/admin
+        |--------------------------------------------------------------------------
+        */
 
-        let companyId =
-            useExistingTenant
-                ? existingTenantId
-                : 0;
-
-
-        /* =================================================
-           TIME
-        ================================================= */
-
-        const registeredAt =
-            new Date();
-
-        const trialExpiresAt =
-            new Date(
-                registeredAt.getTime() +
-                TRIAL_HOURS * 60 * 60 * 1000
-            );
-
-
-        function mysqlDate(date) {
-
-            const pad =
-                n =>
-                String(n).padStart(2, "0");
-
-            return (
-                date.getFullYear() +
-                "-" +
-                pad(date.getMonth() + 1) +
-                "-" +
-                pad(date.getDate()) +
-                " " +
-                pad(date.getHours()) +
-                ":" +
-                pad(date.getMinutes()) +
-                ":" +
-                pad(date.getSeconds())
-            );
-        }
-
-
-        const registeredAtSql =
-            mysqlDate(registeredAt);
-
-        const trialExpiresAtSql =
-            mysqlDate(trialExpiresAt);
-
-
-        /* =================================================
-           SETTINGS JSON
-        ================================================= */
-
-        const settingsData = {
-
-            trial: {
-
-                enabled: true,
-
-                trial_hours:
-                    TRIAL_HOURS,
-
-                registered_at:
-                    registeredAtSql,
-
-                expires_at:
-                    trialExpiresAtSql
-
-            },
-
-            registration_payment: {
-
-                status:
-                    "unpaid",
-
-                base_amount:
-                    signupFee,
-
-                discount_type:
-                    discountType,
-
-                discount_value:
-                    discountValue,
-
-                discount_amount:
-                    discountAmount,
-
-                final_amount:
-                    finalSignupFee
-
-            },
-
-            tenant: {
-
-                type:
-                    useExistingTenant
-                        ? "existing"
-                        : "new"
-
-            }
-
-        };
-
-
-        const settingsJson =
-            JSON.stringify(
-                settingsData
-            );
-
-
-        /* =================================================
-           INSERT USER
-        ================================================= */
-
-        const [
-            userResult
-        ] = await connection.execute(`
-
+        const [userResult] = await connection.execute(
+            `
             INSERT INTO users
             (
                 company_id,
@@ -935,7 +602,6 @@ router.post("/", async (req, res) => {
                 created_by,
                 name
             )
-
             VALUES
             (
                 ?,
@@ -956,120 +622,87 @@ router.post("/", async (req, res) => {
                 ?,
                 ?,
                 0,
-                NULL,
+                ?,
                 ?
             )
-
-        `, [
-
-            companyId,
-            username,
-            password,
-            name,
-            email,
-            mobile,
-            userPackageId,
-            clientType,
-            settingsJson,
-            companyName,
-            name,
-            mobile,
-            address,
-            nid,
-            name
-
-        ]);
-
-
-        const userId =
-            Number(userResult.insertId);
-
-
-        if (userId <= 0) {
-
-            throw new Error(
-                "Registration failed: invalid user ID."
-            );
-        }
-
-
-        /* =================================================
-           NEW TENANT
-        ================================================= */
-
-        if (!useExistingTenant) {
-
-            companyId =
-                userId;
-
-            await connection.execute(`
-
-                UPDATE users
-
-                SET company_id = ?
-
-                WHERE id = ?
-
-                LIMIT 1
-
-            `, [
+            `,
+            [
                 companyId,
-                userId
-            ]);
+                username,
+                passwordHash,
+                name,
+                email,
+                mobile,
+                packageId,
+                customerType,
+                JSON.stringify(registrationSettings),
+                companyName,
+                name,
+                mobile,
+                address,
+                nid,
+                createdBy,
+                name
+            ]
+        );
+
+        const userId = userResult.insertId;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Public registration company_id
+        |--------------------------------------------------------------------------
+        |
+        | This application stores the ISP/company owner in users itself.
+        | Therefore a newly registered ISP becomes its own company.
+        |
+        */
+
+        if (!req.session?.user_id) {
+            await connection.execute(
+                `
+                UPDATE users
+                SET company_id = ?
+                WHERE id = ?
+                `,
+                [userId, userId]
+            );
+
+            companyId = userId;
         }
 
 
-        /* =================================================
-           CUSTOMER ID
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Generate ISP customer ID
+        |--------------------------------------------------------------------------
+        */
 
-        const customerId =
-            "ISP-" +
-            (
-                10000 +
-                userId
-            );
+        const generatedCustomerId =
+            `ISP-${10000 + Number(userId)}`;
 
-
-        const [
-            customerUpdate
-        ] = await connection.execute(`
-
+        await connection.execute(
+            `
             UPDATE users
-
             SET customer_id = ?
-
             WHERE id = ?
-
-            AND company_id = ?
-
-            LIMIT 1
-
-        `, [
-            customerId,
-            userId,
-            companyId
-        ]);
+            `,
+            [
+                generatedCustomerId,
+                userId
+            ]
+        );
 
 
-        if (
-            customerUpdate.affectedRows !== 1
-        ) {
+        /*
+        |--------------------------------------------------------------------------
+        | Registration billing notification
+        |--------------------------------------------------------------------------
+        */
 
-            throw new Error(
-                "Customer ID update failed."
-            );
-        }
-
-
-        /* =================================================
-           SOFTWARE BILLING
-        ================================================= */
-
-        const [
-            billingResult
-        ] = await connection.execute(`
-
+        await connection.execute(
+            `
             INSERT INTO software_billing_notifications
             (
                 company_id,
@@ -1083,55 +716,40 @@ router.post("/", async (req, res) => {
                 status,
                 due_date
             )
-
             VALUES
             (
                 ?,
                 ?,
+                'registration',
                 ?,
                 ?,
+                1,
                 ?,
-                NULL,
-                NULL,
                 ?,
                 'unpaid',
-                NOW()
+                DATE_ADD(NOW(), INTERVAL ? HOUR)
             )
-
-        `, [
-
-            companyId,
-            userId,
-            "registration",
-            userPackageId,
-            packageCode,
-            finalSignupFee
-
-        ]);
-
-
-        const registrationBillId =
-            Number(
-                billingResult.insertId
-            );
+            `,
+            [
+                companyId,
+                userId,
+                selectedPackage.id,
+                selectedPackage.package_code,
+                finalSignupFee,
+                finalSignupFee,
+                TRIAL_HOURS
+            ]
+        );
 
 
-        if (registrationBillId <= 0) {
+        /*
+        |--------------------------------------------------------------------------
+        | Registration invoice
+        |--------------------------------------------------------------------------
+        */
 
-            throw new Error(
-                "Registration bill ID was not generated."
-            );
-        }
-
-
-        /* =================================================
-           INVOICE
-        ================================================= */
-
-        const [
-            invoiceResult
-        ] = await connection.execute(`
-
+        await connection.execute(
+            `
             INSERT INTO invoices
             (
                 company_id,
@@ -1143,161 +761,110 @@ router.post("/", async (req, res) => {
                 invoice_date,
                 due_date
             )
-
             VALUES
             (
                 ?,
                 ?,
-                ?,
-                ?,
+                'registration',
+                'registration_fee',
                 ?,
                 'unpaid',
                 NOW(),
-                NOW()
+                DATE_ADD(NOW(), INTERVAL ? HOUR)
             )
-
-        `, [
-
-            companyId,
-            userId,
-            "registration",
-            "registration_fee",
-            finalSignupFee
-
-        ]);
+            `,
+            [
+                companyId,
+                userId,
+                finalSignupFee,
+                TRIAL_HOURS
+            ]
+        );
 
 
-        const registrationInvoiceId =
-            Number(
-                invoiceResult.insertId
-            );
-
-
-        if (registrationInvoiceId <= 0) {
-
-            throw new Error(
-                "Registration invoice ID was not generated."
-            );
-        }
-
-
-        /* =================================================
-           FINAL TENANT CHECK
-        ================================================= */
-
-        const [
-            verifyRows
-        ] = await connection.execute(`
-
-            SELECT
-                id,
-                company_id
-
-            FROM users
-
-            WHERE id = ?
-
-            AND company_id = ?
-
-            LIMIT 1
-
-        `, [
-            userId,
-            companyId
-        ]);
-
-
-        if (verifyRows.length !== 1) {
-
-            throw new Error(
-                "Tenant verification failed."
-            );
-        }
-
-
-        /* =================================================
-           COMMIT
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Commit
+        |--------------------------------------------------------------------------
+        */
 
         await connection.commit();
 
 
-        /* =================================================
-           NEW CSRF
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Rotate registration CSRF token
+        |--------------------------------------------------------------------------
+        */
 
-        const newCsrf =
-            rotateCsrf(req);
+        if (req.session) {
+            req.session.register_csrf_token =
+                generateCsrfToken();
+        }
 
 
-        /* =================================================
-           SUCCESS
-        ================================================= */
+        /*
+        |--------------------------------------------------------------------------
+        | Success
+        |--------------------------------------------------------------------------
+        */
 
-        return res.json({
-
+        return res.status(201).json({
             success: true,
-
             message:
-                `Registration successful. Your ID: ${customerId}`,
-
-            customer_id:
-                customerId,
-
-            user_id:
-                userId,
-
-            company_id:
-                companyId,
-
+                "Registration completed successfully.",
+            customer_id: generatedCustomerId,
+            user_id: userId,
+            package: {
+                id: Number(selectedPackage.id),
+                code: selectedPackage.package_code,
+                name: selectedPackage.package_name,
+                customer_limit:
+                    Number(selectedPackage.customer_limit || 0),
+                signup_fee: signupFee,
+                discount: finalDiscount,
+                registration_amount: finalSignupFee,
+                monthly_fee: monthlyFee
+            },
+            trial_hours: TRIAL_HOURS,
             csrf_token:
-                newCsrf
-
+                req.session?.register_csrf_token || null
         });
-
-
     } catch (error) {
-
         if (connection) {
-
             try {
                 await connection.rollback();
             } catch (rollbackError) {
                 console.error(
-                    "REGISTER ROLLBACK ERROR:",
+                    "Registration rollback error:",
                     rollbackError
                 );
             }
         }
 
-
         console.error(
-            "REGISTER ERROR:",
+            "Registration error:",
             error
         );
 
+        if (error && error.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({
+                success: false,
+                message:
+                    "Username or another unique registration value already exists."
+            });
+        }
 
         return res.status(500).json({
-
             success: false,
-
             message:
-                "Registration failed: " +
-                error.message,
-
-            csrf_token:
-                getCsrf(req)
-
+                "Registration failed. Please try again."
         });
-
-
     } finally {
-
         if (connection) {
             connection.release();
         }
     }
-
 });
 
 

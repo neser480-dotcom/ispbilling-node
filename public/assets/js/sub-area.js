@@ -1,7 +1,14 @@
+
 (function () {
 
     "use strict";
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTML ESCAPE
+    |--------------------------------------------------------------------------
+    */
 
     function esc(value) {
 
@@ -11,42 +18,44 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+
     }
 
 
-    async function request(
-        url,
-        options = {}
-    ) {
+    /*
+    |--------------------------------------------------------------------------
+    | API REQUEST
+    |--------------------------------------------------------------------------
+    */
 
-        const response =
-            await fetch(
-                url,
-                {
-                    credentials: "same-origin",
+    async function request(url, options = {}) {
 
-                    ...options,
+        const response = await fetch(
+            url,
+            {
+                credentials: "same-origin",
 
-                    headers: {
-                        "Accept":
-                            "application/json",
+                ...options,
 
-                        ...(options.headers || {})
-                    }
+                headers: {
+                    "Accept": "application/json",
+                    ...(options.headers || {})
                 }
-            );
+            }
+        );
 
 
         const data =
             await response
                 .json()
-                .catch(
-                    () => ({
+                .catch(function () {
+
+                    return {
                         success: false,
-                        message:
-                            "Invalid server response."
-                    })
-                );
+                        message: "Invalid server response."
+                    };
+
+                });
 
 
         if (!response.ok) {
@@ -55,12 +64,37 @@
                 data.message ||
                 `HTTP ${response.status}`
             );
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | IMPORTANT
+        |--------------------------------------------------------------------------
+        | HTTP 200 হলেও success:false হলে error ধরতে হবে।
+        */
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message ||
+                "Request failed."
+            );
+
         }
 
 
         return data;
+
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTIFY
+    |--------------------------------------------------------------------------
+    */
 
     function notify(
         message,
@@ -68,8 +102,7 @@
     ) {
 
         if (
-            typeof Swal !==
-            "undefined"
+            typeof Swal !== "undefined"
         ) {
 
             Swal.fire({
@@ -84,16 +117,17 @@
 
                 timer: 1800,
 
-                showConfirmButton:
-                    false
+                showConfirmButton: false
 
             });
 
             return;
+
         }
 
 
-        alert(message);
+        window.alert(message);
+
     }
 
 
@@ -105,15 +139,26 @@
 
     function getAreaId() {
 
+        /*
+        |--------------------------------------------------------------------------
+        | FIXED
+        |--------------------------------------------------------------------------
+        | Correct Node route:
+        |
+        | /areas/sub/:id
+        |--------------------------------------------------------------------------
+        */
+
         const match =
             window.location.pathname.match(
-                /\/area\/sub\/(\d+)/
+                /\/areas\/sub\/(\d+)/
             );
 
 
         return match
             ? Number(match[1])
             : 0;
+
     }
 
 
@@ -139,40 +184,127 @@
             !areaId ||
             !body
         ) {
+
+            if (body) {
+
+                body.innerHTML = `
+                    <tr>
+                        <td
+                            colspan="4"
+                            class="text-center py-5 text-danger">
+
+                            <i class="fa fa-triangle-exclamation me-1"></i>
+
+                            Invalid Area ID.
+
+                        </td>
+                    </tr>
+                `;
+
+            }
+
             return;
+
         }
 
 
         try {
 
+            /*
+            |--------------------------------------------------------------------------
+            | FIXED
+            |--------------------------------------------------------------------------
+            | Correct Node route:
+            |
+            | /areas/sub-data/:id
+            |--------------------------------------------------------------------------
+            */
+
             const result =
                 await request(
-                    `/area/sub-data/${areaId}`
+                    `/areas/sub-data/${areaId}`
                 );
 
 
-            document.getElementById(
-                "mainAreaName"
-            ).textContent =
-                result.area.name;
+            /*
+            |--------------------------------------------------------------------------
+            | AREA NAME
+            |--------------------------------------------------------------------------
+            */
+
+            const areaName =
+                result.area &&
+                result.area.name
+                    ? result.area.name
+                    : "";
 
 
-            document.getElementById(
-                "mainAreaBadge"
-            ).textContent =
-                result.area.name;
+            const mainAreaName =
+                document.getElementById(
+                    "mainAreaName"
+                );
 
 
-            document.getElementById(
-                "subMainAreaReadonly"
-            ).value =
-                result.area.name;
+            if (mainAreaName) {
+
+                mainAreaName.textContent =
+                    areaName;
+
+            }
 
 
-            document.getElementById(
-                "totalSubAreaCount"
-            ).textContent =
-                result.data.length;
+            const mainAreaBadge =
+                document.getElementById(
+                    "mainAreaBadge"
+                );
+
+
+            if (mainAreaBadge) {
+
+                mainAreaBadge.textContent =
+                    areaName;
+
+            }
+
+
+            const subMainAreaReadonly =
+                document.getElementById(
+                    "subMainAreaReadonly"
+                );
+
+
+            if (subMainAreaReadonly) {
+
+                subMainAreaReadonly.value =
+                    areaName;
+
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | DATA
+            |--------------------------------------------------------------------------
+            */
+
+            const rows =
+                Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+
+            const totalSubAreaCount =
+                document.getElementById(
+                    "totalSubAreaCount"
+                );
+
+
+            if (totalSubAreaCount) {
+
+                totalSubAreaCount.textContent =
+                    rows.length;
+
+            }
 
 
             /*
@@ -181,9 +313,7 @@
             |--------------------------------------------------------------------------
             */
 
-            if (
-                result.data.length === 0
-            ) {
+            if (!rows.length) {
 
                 body.innerHTML = `
 
@@ -194,7 +324,7 @@
                             class="text-center py-5 text-muted">
 
                             <i
-                                class="fa fa-map-marker fa-2x mb-2 d-block text-light">
+                                class="fa fa-map-marker fa-2x mb-2 d-block text-secondary">
                             </i>
 
                             No Sub Area Found
@@ -206,6 +336,7 @@
                 `;
 
                 return;
+
             }
 
 
@@ -216,58 +347,53 @@
             */
 
             body.innerHTML =
-                result.data
+                rows
                     .map(
-                        (row, index) => `
+                        function (row, index) {
 
-                            <tr>
+                            return `
 
+                                <tr>
 
-                                <td>
-                                    ${index + 1}
-                                </td>
-
-
-                                <td
-                                    class="sub-area-name">
+                                    <td>
+                                        ${index + 1}
+                                    </td>
 
 
-                                    <i
-                                        class="fa fa-map-marker text-success me-2">
-                                    </i>
+                                    <td
+                                        class="sub-area-name">
+
+                                        <i
+                                            class="fa fa-map-marker text-success me-2">
+                                        </i>
+
+                                        ${esc(row.name)}
+
+                                    </td>
 
 
-                                    ${esc(
-                                        row.name
-                                    )}
+                                    <td>
 
-                                </td>
+                                        ${esc(row.remarks)}
 
-
-                                <td>
-
-                                    ${esc(
-                                        row.remarks
-                                    )}
-
-                                </td>
+                                    </td>
 
 
-                                <td
-                                    class="text-muted small">
+                                    <td
+                                        class="text-muted small">
 
-                                    ${esc(
-                                        row.created_at
-                                    )}
+                                        ${esc(row.created_at)}
 
-                                </td>
+                                    </td>
 
+                                </tr>
 
-                            </tr>
+                            `;
 
-                        `
+                        }
                     )
                     .join("");
+
 
         } catch (error) {
 
@@ -299,17 +425,33 @@
                 </tr>
 
             `;
+
+
+            const totalSubAreaCount =
+                document.getElementById(
+                    "totalSubAreaCount"
+                );
+
+
+            if (totalSubAreaCount) {
+
+                totalSubAreaCount.textContent =
+                    "0";
+
+            }
+
         }
+
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | INIT
+    | ADD SUB AREA
     |--------------------------------------------------------------------------
     */
 
-    function init() {
+    function initAddSubArea() {
 
         const form =
             document.getElementById(
@@ -317,107 +459,243 @@
             );
 
 
-        if (form) {
-
-            form.addEventListener(
-                "submit",
-                async function (event) {
-
-                    event.preventDefault();
-
-
-                    const areaId =
-                        getAreaId();
-
-
-                    if (!areaId) {
-
-                        notify(
-                            "Invalid Area.",
-                            false
-                        );
-
-                        return;
-                    }
-
-
-                    try {
-
-                        const body =
-                            new URLSearchParams(
-                                new FormData(form)
-                            );
-
-
-                        body.set(
-                            "area_id",
-                            areaId
-                        );
-
-
-                        const result =
-                            await request(
-                                "/area/sub-add",
-                                {
-                                    method:
-                                        "POST",
-
-                                    headers: {
-                                        "Content-Type":
-                                            "application/x-www-form-urlencoded;charset=UTF-8"
-                                    },
-
-                                    body:
-                                        body
-                                }
-                            );
-
-
-                        notify(
-                            result.message,
-                            true
-                        );
-
-
-                        const modalElement =
-                            document.getElementById(
-                                "addSubAreaModal"
-                            );
-
-
-                        const modal =
-                            bootstrap.Modal
-                                .getInstance(
-                                    modalElement
-                                );
-
-
-                        if (modal) {
-                            modal.hide();
-                        }
-
-
-                        form.reset();
-
-
-                        await loadSubAreas();
-
-                    } catch (error) {
-
-                        notify(
-                            error.message,
-                            false
-                        );
-                    }
-
-                }
-            );
+        if (!form) {
+            return;
         }
 
 
-        loadSubAreas();
+        form.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                const areaId =
+                    getAreaId();
+
+
+                if (!areaId) {
+
+                    notify(
+                        "Invalid Area.",
+                        false
+                    );
+
+                    return;
+
+                }
+
+
+                const submitButton =
+                    form.querySelector(
+                        'button[type="submit"]'
+                    );
+
+
+                const oldButtonHtml =
+                    submitButton
+                        ? submitButton.innerHTML
+                        : "";
+
+
+                if (submitButton) {
+
+                    submitButton.disabled =
+                        true;
+
+                    submitButton.innerHTML = `
+
+                        <i
+                            class="fa fa-spinner fa-spin me-1">
+                        </i>
+
+                        Saving...
+
+                    `;
+
+                }
+
+
+                try {
+
+                    const body =
+                        new URLSearchParams(
+                            new FormData(form)
+                        );
+
+
+                    body.set(
+                        "area_id",
+                        String(areaId)
+                    );
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | FIXED
+                    |--------------------------------------------------------------------------
+                    | Correct Node route:
+                    |
+                    | /areas/sub-add
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const result =
+                        await request(
+                            "/areas/sub-add",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/x-www-form-urlencoded;charset=UTF-8"
+                                },
+
+                                body:
+                                    body.toString()
+                            }
+                        );
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | SUCCESS
+                    |--------------------------------------------------------------------------
+                    */
+
+                    notify(
+                        result.message ||
+                        "Sub Area Added Successfully",
+                        true
+                    );
+
+
+                    const modalElement =
+                        document.getElementById(
+                            "addSubAreaModal"
+                        );
+
+
+                    if (
+                        modalElement &&
+                        typeof bootstrap !==
+                            "undefined"
+                    ) {
+
+                        const modal =
+                            bootstrap.Modal
+                                .getOrCreateInstance(
+                                    modalElement
+                                );
+
+                        modal.hide();
+
+                    }
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | RESET ONLY FORM INPUTS
+                    |--------------------------------------------------------------------------
+                    */
+
+                    form.reset();
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | KEEP MAIN AREA FIELD
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const mainAreaName =
+                        document.getElementById(
+                            "mainAreaName"
+                        );
+
+
+                    const subMainAreaReadonly =
+                        document.getElementById(
+                            "subMainAreaReadonly"
+                        );
+
+
+                    if (
+                        mainAreaName &&
+                        subMainAreaReadonly
+                    ) {
+
+                        subMainAreaReadonly.value =
+                            mainAreaName.textContent.trim();
+
+                    }
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | RELOAD
+                    |--------------------------------------------------------------------------
+                    */
+
+                    await loadSubAreas();
+
+
+                } catch (error) {
+
+                    console.error(
+                        "Add Sub Area Error:",
+                        error
+                    );
+
+
+                    notify(
+                        error.message ||
+                        "Failed to add Sub Area.",
+                        false
+                    );
+
+
+                } finally {
+
+                    if (submitButton) {
+
+                        submitButton.disabled =
+                            false;
+
+                        submitButton.innerHTML =
+                            oldButtonHtml;
+
+                    }
+
+                }
+
+            }
+        );
+
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | INITIALIZE
+    |--------------------------------------------------------------------------
+    */
+
+    function init() {
+
+        initAddSubArea();
+
+        loadSubAreas();
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DOM READY
+    |--------------------------------------------------------------------------
+    */
 
     if (
         document.readyState ===

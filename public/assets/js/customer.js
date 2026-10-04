@@ -1,95 +1,8 @@
 "use strict";
 
-/*
-|--------------------------------------------------------------------------
-| ISP BILLING - CUSTOMER LIST
-|--------------------------------------------------------------------------
-| File:
-| public/assets/js/customer.js
-|
-| Handles:
-| - Customer loading
-| - Customer summary
-| - Search
-| - Status filter
-| - Limit
-| - Pagination
-| - Select all
-| - Bulk selection bar
-| - Refresh
-| - Customer action modal
-| - Customer row rendering
-|--------------------------------------------------------------------------
-*/
-
-document.addEventListener("DOMContentLoaded", function () {
-
-    /*
-    |--------------------------------------------------------------------------
-    | ELEMENTS
-    |--------------------------------------------------------------------------
-    */
-
-    const tableBody =
-        document.getElementById("customerTableBody");
-
-    const searchInput =
-        document.getElementById("customerSearch");
-
-    const statusSelect =
-        document.getElementById("customerStatus");
-
-    const limitSelect =
-        document.getElementById("customerLimit");
-
-    const applyFilterBtn =
-        document.getElementById("applyCustomerFilter");
-
-    const refreshBtn =
-        document.getElementById("refreshCustomersBtn");
-
-    const clearSearchBtn =
-        document.getElementById("clearSearchBtn");
-
-    const selectAllCheckbox =
-        document.getElementById("selectAllCustomers");
-
-    const bulkActionBar =
-        document.getElementById("bulkActionBar");
-
-    const selectedCustomerCount =
-        document.getElementById("selectedCustomerCount");
-
-    const clearSelectionBtn =
-        document.getElementById("clearSelectionBtn");
-
-    const pagination =
-        document.getElementById("customerPagination");
-
-    const paginationInfo =
-        document.getElementById("paginationInfo");
-
-    const customerRangeText =
-        document.getElementById("customerRangeText");
-
-    const totalCustomers =
-        document.getElementById("totalCustomers");
-
-    const totalBill =
-        document.getElementById("totalBill");
-
-    const totalBalance =
-        document.getElementById("totalBalance");
-
-    const actionModalElement =
-        document.getElementById("customerActionModal");
-
-    const actionModalTitle =
-        document.getElementById("customerActionModalTitle");
-
-    const actionModalBody =
-        document.getElementById("customerActionModalBody");
-
+document.addEventListener(
+"DOMContentLoaded",
+() => {
 
     /*
     |--------------------------------------------------------------------------
@@ -98,16 +11,11 @@ document.addEventListener("DOMContentLoaded", function () {
     */
 
     let currentPage = 1;
-
-    let currentLimit =
-        Number(limitSelect?.value || 100);
-
+    let currentLimit = 100;
     let currentSearch = "";
-
     let currentStatus = "";
 
-    let loadingCustomers = false;
-
+    let searchTimer = null;
 
     /*
     |--------------------------------------------------------------------------
@@ -115,180 +23,693 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    function escapeHtml(value) {
+    function getElement(id) {
+        return document.getElementById(id);
+    }
 
-        if (value === null || value === undefined) {
-            return "";
+    function csrfToken() {
+
+        const meta =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            );
+
+        if (meta && meta.content) {
+            return meta.content;
         }
 
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        const input =
+            document.getElementById(
+                "csrfTokenInput"
+            );
+
+        return input
+            ? input.value
+            : "";
     }
 
+    function escapeHtml(value) {
 
-    function formatMoney(value) {
-
-        const amount =
-            Number(value || 0);
-
-        return amount.toLocaleString("en-US", {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        });
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
     }
 
+    function number(value) {
+
+        const n =
+            Number(value);
+
+        return Number.isFinite(n)
+            ? n
+            : 0;
+    }
+
+    function money(value) {
+
+        return number(value)
+            .toLocaleString(
+                "en-US",
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            );
+    }
+
+    function onlyDigits(value) {
+
+        return String(
+            value || ""
+        ).replace(
+            /\D/g,
+            ""
+        );
+    }
 
     function formatDate(value) {
 
         if (!value) {
-            return "-";
+            return "—";
         }
 
         const date =
-            new Date(value);
+            new Date(
+                String(value)
+                    .replace(
+                        " ",
+                        "T"
+                    )
+            );
 
-        if (Number.isNaN(date.getTime())) {
-            return escapeHtml(value);
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return escapeHtml(
+                value
+            );
         }
-
-        const day =
-            String(date.getDate()).padStart(2, "0");
-
-        const month =
-            String(date.getMonth() + 1).padStart(2, "0");
 
         const year =
             date.getFullYear();
 
-        const hours =
-            String(date.getHours()).padStart(2, "0");
+        const month =
+            String(
+                date.getMonth() + 1
+            ).padStart(
+                2,
+                "0"
+            );
 
-        const minutes =
-            String(date.getMinutes()).padStart(2, "0");
+        const day =
+            String(
+                date.getDate()
+            ).padStart(
+                2,
+                "0"
+            );
 
-        return `${day}-${month}-${year} ${hours}:${minutes}`;
-    }
+        let hour =
+            date.getHours();
 
+        const minute =
+            String(
+                date.getMinutes()
+            ).padStart(
+                2,
+                "0"
+            );
 
-    function formatAddress(value) {
+        const ampm =
+            hour >= 12
+                ? "PM"
+                : "AM";
 
-        if (!value) {
-            return "-";
-        }
+        hour =
+            hour % 12 || 12;
 
-        return escapeHtml(value);
-    }
-
-
-    function dayLeftClass(dayLeft) {
-
-        const days =
-            Number(dayLeft);
-
-        if (days < 0) {
-            return "text-danger fw-bold";
-        }
-
-        if (days <= 3) {
-            return "text-warning fw-bold";
-        }
-
-        return "text-success fw-bold";
-    }
-
-
-    function getCustomerId(customer) {
-
-        return (
-            customer.id ??
-            customer.customer_id ??
-            ""
-        );
-    }
-
-
-    function getBill(customer) {
-
-        return Number(
-            customer.display_bill ??
-            customer.monthly_bill ??
-            0
-        );
-    }
-
-
-    function getPackage(customer) {
+        hour =
+            String(hour)
+                .padStart(
+                    2,
+                    "0"
+                );
 
         return (
-            customer.display_package ??
-            customer.package_name ??
-            "-"
+            `${year}/${month}/${day} ` +
+            `${hour}:${minute} ${ampm}`
         );
     }
-
-
-    function getPaymentStatus(customer) {
-
-        return String(
-            customer.payment_status ||
-            ""
-        ).toLowerCase();
-    }
-
-
-    function getCustomerStatus(customer) {
-
-        return String(
-            customer.status ||
-            ""
-        ).toLowerCase();
-    }
-
 
     /*
     |--------------------------------------------------------------------------
-    | RENDER CUSTOMER ROW
+    | TOAST
     |--------------------------------------------------------------------------
     */
 
-    function renderCustomerRow(customer) {
+    function showSuccess(message) {
+
+        if (
+            typeof Swal !==
+            "undefined"
+        ) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: message,
+                showConfirmButton: false,
+                timer: 2200,
+                timerProgressBar: true
+            });
+
+            return;
+        }
+
+        alert(message);
+    }
+
+    function showError(message) {
+
+        if (
+            typeof Swal !==
+            "undefined"
+        ) {
+            Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "error",
+                title: message,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+
+            return;
+        }
+
+        alert(message);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ACTION URL
+    |--------------------------------------------------------------------------
+    |
+    | CUSTOMER API prefix:
+    | /api/customers
+    |
+    */
+
+    function actionUrl(
+        action,
+        id
+    ) {
+
+        return (
+            `/api/customers/${action}` +
+            `?id=${encodeURIComponent(id)}`
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTION MENU
+    |--------------------------------------------------------------------------
+    */
+
+    function renderActionMenu(customer) {
 
         const id =
-            getCustomerId(customer);
+            customer.id;
 
-        const customerId =
-            customer.customer_id ??
-            id;
+        const phone =
+            onlyDigits(
+                customer.phone
+            );
+
+let html = `
+    <div class="dropdown">
+        <button
+            type="button"
+            class="btn btn-sm btn-light"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            title="Actions"
+            style="
+                border: 0;
+                background: transparent;
+                font-size: 20px;
+                font-weight: 700;
+                line-height: 1;
+                padding: 4px 8px;
+            ">
+            ...
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end">
+`;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "profile",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "profile",
+                        id
+                    )}"
+                    data-title="Customer Profile">
+                    <i class="fa-solid fa-user me-2"></i>
+                    Profile
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="javascript:void(0)"
+                    class="dropdown-item recharge-single-btn"
+                    data-id="${escapeHtml(id)}"
+                    data-customer-id="${escapeHtml(customer.customer_id)}"
+                    data-name="${escapeHtml(customer.name)}"
+                    data-pppoe="${escapeHtml(customer.pppoe_username)}"
+                    data-mobile="${escapeHtml(customer.phone)}"
+                    data-monthly="${escapeHtml(customer.display_bill)}"
+                    data-package="${escapeHtml(customer.display_package)}"
+                    data-balance="${escapeHtml(customer.balance)}">
+                    <i class="fa-solid fa-bolt me-2"></i>
+                    Recharge
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="javascript:void(0)"
+                    class="dropdown-item edit-customer-btn"
+                    data-id="${escapeHtml(id)}">
+                    <i class="fa-solid fa-pen me-2"></i>
+                    Edit
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "report",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "report",
+                        id
+                    )}"
+                    data-title="Customer Report">
+                    <i class="fa-solid fa-file-lines me-2"></i>
+                    Report
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "note",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "note",
+                        id
+                    )}"
+                    data-title="Customer Note">
+                    <i class="fa-solid fa-note-sticky me-2"></i>
+                    Note
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "message",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "message",
+                        id
+                    )}"
+                    data-title="Customer Message">
+                    <i class="fa-solid fa-message me-2"></i>
+                    Message
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "transfer",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "transfer",
+                        id
+                    )}"
+                    data-title="Transfer Customer">
+                    <i class="fa-solid fa-right-left me-2"></i>
+                    Transfer
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "reseller",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "reseller",
+                        id
+                    )}"
+                    data-title="Reseller">
+                    <i class="fa-solid fa-users me-2"></i>
+                    Reseller
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "support-ticket",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "support-ticket",
+                        id
+                    )}"
+                    data-title="Support Ticket">
+                    <i class="fa-solid fa-ticket me-2"></i>
+                    Support Ticket
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "reset-password",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "reset-password",
+                        id
+                    )}"
+                    data-title="Reset Password">
+                    <i class="fa-solid fa-key me-2"></i>
+                    Reset Password
+                </a>
+            </li>
+        `;
+
+        html += `
+            <li>
+                <a
+                    href="${actionUrl(
+                        "activity-log",
+                        id
+                    )}"
+                    class="dropdown-item action-popup"
+                    data-url="${actionUrl(
+                        "activity-log",
+                        id
+                    )}"
+                    data-title="Activity Log">
+                    <i class="fa-solid fa-clock-rotate-left me-2"></i>
+                    Activity Log
+                </a>
+            </li>
+        `;
+
+        if (phone) {
+
+            html += `
+                <li>
+                    <a
+                        href="https://wa.me/${phone}"
+                        target="_blank"
+                        rel="noopener"
+                        class="dropdown-item">
+                        <i class="fa-brands fa-whatsapp me-2"></i>
+                        WhatsApp
+                    </a>
+                </li>
+            `;
+        }
+
+        html += `
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <li>
+                    <a
+                        href="javascript:void(0)"
+                        class="dropdown-item text-danger delete-customer-btn"
+                        data-id="${escapeHtml(id)}"
+                        data-name="${escapeHtml(customer.name)}">
+                        <i class="fa-solid fa-trash me-2"></i>
+                        Delete
+                    </a>
+                </li>
+            </ul>
+        </div>
+        `;
+
+        return html;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS BADGE
+    |--------------------------------------------------------------------------
+    */
+
+    function renderStatus(status) {
+
+        const value =
+            String(
+                status || "inactive"
+            ).toLowerCase();
+
+        const label =
+            value
+                .charAt(0)
+                .toUpperCase() +
+            value.slice(1);
+
+        let cls =
+            "bg-secondary";
+
+        if (
+            value === "active"
+        ) {
+            cls =
+                "bg-success";
+        } else if (
+            value === "expired"
+        ) {
+            cls =
+                "bg-danger";
+        } else if (
+            value === "inactive"
+        ) {
+            cls =
+                "bg-secondary";
+        } else if (
+            value === "pending"
+        ) {
+            cls =
+                "bg-warning text-dark";
+        }
+
+        return `
+            <span class="badge ${cls}">
+                ${escapeHtml(label)}
+            </span>
+        `;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAYMENT BADGE
+    |--------------------------------------------------------------------------
+    */
+
+    function renderPaymentStatus(
+        status
+    ) {
+
+        const value =
+            String(
+                status || "paid"
+            ).toLowerCase();
+
+        if (
+            value === "paid"
+        ) {
+            return `
+                <span class="badge bg-success">
+                    Paid
+                </span>
+            `;
+        }
+
+        return `
+            <span class="badge bg-danger">
+                ${escapeHtml(
+                    value
+                        .charAt(0)
+                        .toUpperCase() +
+                    value.slice(1)
+                )}
+            </span>
+        `;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DAY LEFT
+    |--------------------------------------------------------------------------
+    */
+
+    function renderDayLeft(
+        dayLeft
+    ) {
+
+        if (
+            dayLeft === null ||
+            dayLeft === undefined ||
+            dayLeft === ""
+        ) {
+            return `
+                <span class="cm-dayleft-na">
+                    —
+                </span>
+            `;
+        }
+
+        dayLeft =
+            Number(dayLeft);
+
+        if (
+            !Number.isFinite(dayLeft)
+        ) {
+            return `
+                <span class="cm-dayleft-na">
+                    —
+                </span>
+            `;
+        }
+
+        if (dayLeft < 0) {
+
+            return `
+                <span class="cm-dayleft cm-dayleft-over">
+                    ${Math.abs(dayLeft)} days overdue
+                </span>
+            `;
+        }
+
+        return `
+            <span class="cm-dayleft">
+                ${dayLeft} days
+            </span>
+        `;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ROW
+    |--------------------------------------------------------------------------
+    */
+
+    function renderCustomerRow(
+        customer
+    ) {
+
+        const id =
+            customer.id;
 
         const name =
-            customer.name ||
-            "-";
+            customer.name || "—";
 
         const pppoe =
             customer.pppoe_username ||
-            customer.pppoe ||
-            "-";
+            "—";
 
         const phone =
-            customer.phone ||
-            "-";
+            customer.phone || "—";
 
         const address =
-            customer.address ||
-            "";
+            customer.address || "—";
 
         const packageName =
-            getPackage(customer);
+            customer.display_package ||
+            "—";
 
         const bill =
-            getBill(customer);
+            number(
+                customer.display_bill
+            );
 
         const balance =
-            Number(customer.balance || 0);
+            number(
+                customer.balance
+            );
 
         const billingCycle =
             customer.billing_cycle;
@@ -296,274 +717,26 @@ document.addEventListener("DOMContentLoaded", function () {
         const promiseDate =
             customer.promise_date;
 
-        const dayLeft =
-            Number(customer.day_left ?? 0);
-
-        const paymentStatus =
-            getPaymentStatus(customer);
-
-        const customerStatus =
-            getCustomerStatus(customer);
-
-        const autoConnection =
-            Number(customer.auto_connection ?? 1);
-
-        /*
-        |--------------------------------------------------------------------------
-        | ID COLOR
-        |--------------------------------------------------------------------------
-        */
-
-        const idClass =
-            autoConnection === 0 || dayLeft < 0
-                ? "text-danger fw-bold"
-                : "fw-bold";
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | PAYMENT STATUS
-        |--------------------------------------------------------------------------
-        */
-
-        let paymentHtml = "";
-
-        if (paymentStatus === "paid") {
-
-            paymentHtml = `
-                <span class="badge bg-success">
-                    Paid
-                </span>
-            `;
-
-        } else {
-
-            paymentHtml = `
-                <span class="badge bg-danger">
-                    Unpaid
-                </span>
-            `;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CUSTOMER STATUS
-        |--------------------------------------------------------------------------
-        */
-
-        let statusHtml = "";
-
-        if (
-            customerStatus === "active" ||
-            customerStatus === "1"
-        ) {
-
-            statusHtml = `
-                <span class="badge bg-success">
-                    Active
-                </span>
-            `;
-
-        } else if (
-            customerStatus === "inactive" ||
-            customerStatus === "0"
-        ) {
-
-            statusHtml = `
-                <span class="badge bg-secondary">
-                    Inactive
-                </span>
-            `;
-
-        } else if (
-            customerStatus === "expired"
-        ) {
-
-            statusHtml = `
-                <span class="badge bg-danger">
-                    Expired
-                </span>
-            `;
-
-        } else {
-
-            statusHtml = `
-                <span class="badge bg-secondary">
-                    ${escapeHtml(customer.status || "-")}
-                </span>
-            `;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | BILL / BALANCE
-        |--------------------------------------------------------------------------
-        */
-
-        const billBalanceHtml = `
-            <div class="fw-bold">
-                ৳${formatMoney(bill)}
-            </div>
-
-            <div class="small text-muted">
-                Balance:
-                <span class="${
-                    balance > 0
-                        ? "text-danger fw-bold"
-                        : "text-success"
-                }">
-                    ৳${formatMoney(balance)}
-                </span>
-            </div>
-        `;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | BILLING / PROMISE DATE
-        |--------------------------------------------------------------------------
-        */
-
-        let billingHtml = "-";
-
-        if (billingCycle) {
-
-            billingHtml = `
-                <div>
-                    <strong>
-                        ${formatDate(billingCycle)}
-                    </strong>
-                </div>
-            `;
-        }
-
-        if (promiseDate) {
-
-            billingHtml += `
-                <div class="small text-muted">
-                    Promise:
-                    ${formatDate(promiseDate)}
-                </div>
-            `;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | DAY LEFT
-        |--------------------------------------------------------------------------
-        */
-
-        const dayLeftHtml = `
-            <span class="${dayLeftClass(dayLeft)}">
-                ${dayLeft}
-            </span>
-        `;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | ACTION MENU
-        |--------------------------------------------------------------------------
-        */
-
-        const actionHtml = `
-            <div class="dropdown">
-
-                <button
-                    type="button"
-                    class="btn btn-link text-decoration-none fw-bold customer-action-btn"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                    data-customer-id="${escapeHtml(id)}"
-                    style="
-                        font-size:18px;
-                        padding:0;
-                    "
-                >
-                    <i class="fa fa-ellipsis"></i>
-                </button>
-
-                <ul class="dropdown-menu dropdown-menu-end">
-
-                    <li>
-                        <a
-                            href="#"
-                            class="dropdown-item customer-action-item"
-                            data-action="view"
-                            data-id="${escapeHtml(id)}"
-                        >
-                            <i class="fa fa-eye me-2"></i>
-                            View
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="#"
-                            class="dropdown-item customer-action-item"
-                            data-action="recharge"
-                            data-id="${escapeHtml(id)}"
-                        >
-                            <i class="fa fa-money-bill-wave me-2"></i>
-                            Recharge
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="#"
-                            class="dropdown-item customer-action-item"
-                            data-action="edit"
-                            data-id="${escapeHtml(id)}"
-                        >
-                            <i class="fa fa-edit me-2"></i>
-                            Edit
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="#"
-                            class="dropdown-item customer-action-item"
-                            data-action="report"
-                            data-id="${escapeHtml(id)}"
-                        >
-                            <i class="fa fa-file-lines me-2"></i>
-                            Report
-                        </a>
-                    </li>
-
-                </ul>
-
-            </div>
-        `;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | ROW
-        |--------------------------------------------------------------------------
-        */
-
         return `
-            <tr data-customer-id="${escapeHtml(id)}">
+            <tr>
 
-                <td class="text-center">
+                <td>
                     <input
                         type="checkbox"
                         class="form-check-input customer-checkbox"
                         name="customer_ids[]"
                         value="${escapeHtml(id)}"
-                    >
+                        data-name="${escapeHtml(name)}"
+                        data-pppoe="${escapeHtml(pppoe)}"
+                        data-package="${escapeHtml(packageName)}"
+                        data-monthly="${escapeHtml(bill)}">
                 </td>
 
-                <td class="text-center">
-                    <span class="${idClass}">
-                        ${escapeHtml(customerId)}
-                    </span>
+                <td class="cm-id">
+                    ${escapeHtml(
+                        customer.customer_id ||
+                        id
+                    )}
                 </td>
 
                 <td>
@@ -572,249 +745,157 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
 
                     <div class="small text-muted">
+                        <i class="fa-solid fa-user me-1"></i>
                         ${escapeHtml(pppoe)}
                     </div>
                 </td>
 
                 <td>
                     <div>
+                        <i class="fa-solid fa-phone me-1"></i>
                         ${escapeHtml(phone)}
                     </div>
 
                     <div class="small text-muted">
-                        ${formatAddress(address)}
+                        <i class="fa-solid fa-location-dot me-1"></i>
+                        ${escapeHtml(address)}
                     </div>
                 </td>
 
-                <td>
+                <td class="cm-package">
                     ${escapeHtml(packageName)}
                 </td>
 
                 <td>
-                    ${billBalanceHtml}
+                    <div class="fw-semibold">
+                        ৳${money(bill)}
+                    </div>
+
+                    <div class="small text-muted">
+                        Balance:
+                        <span class="fw-semibold">
+                            ৳${money(balance)}
+                        </span>
+                    </div>
                 </td>
 
                 <td>
-                    ${billingHtml}
-                </td>
-
-                <td class="text-center">
-                    ${dayLeftHtml}
-                </td>
-
-                <td class="text-center">
-
-                    <div class="mb-1">
-                        ${paymentHtml}
-                    </div>
-
                     <div>
-                        ${statusHtml}
+                        ${formatDate(
+                            billingCycle
+                        )}
                     </div>
 
+                    <div class="small text-muted">
+                        Promise:
+                        ${formatDate(
+                            promiseDate
+                        )}
+                    </div>
                 </td>
 
-                <td class="text-center">
-                    ${actionHtml}
+                <td>
+                    ${renderDayLeft(
+                        customer.day_left
+                    )}
+                </td>
+
+                <td>
+                    <div>
+                        ${renderPaymentStatus(
+                            customer.payment_status
+                        )}
+                    </div>
+
+                    <div class="mt-1">
+                        ${renderStatus(
+                            customer.status
+                        )}
+                    </div>
+                </td>
+
+                <td>
+                    ${renderActionMenu(
+                        customer
+                    )}
                 </td>
 
             </tr>
         `;
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | LOAD CUSTOMERS
+    | LOADING
     |--------------------------------------------------------------------------
     */
 
-    async function loadCustomers(page = currentPage) {
+    function showTableLoading() {
 
-        if (loadingCustomers) {
+        const body =
+            getElement(
+                "customerTableBody"
+            );
+
+        if (!body) {
             return;
         }
 
-        loadingCustomers = true;
+        body.innerHTML = `
+            <tr>
+                <td
+                    colspan="10"
+                    class="text-center py-5">
 
-        currentPage = page;
+                    <div
+                        class="spinner-border"
+                        role="status">
+                    </div>
 
-        if (tableBody) {
-
-            tableBody.innerHTML = `
-                <tr>
-                    <td
-                        colspan="10"
-                        class="text-center py-4"
-                    >
-                        <div class="spinner-border spinner-border-sm me-2"></div>
+                    <div class="mt-2 text-muted">
                         Loading customers...
-                    </td>
-                </tr>
-            `;
-        }
+                    </div>
 
-        try {
-
-            const params =
-                new URLSearchParams();
-
-            params.set(
-                "page",
-                String(currentPage)
-            );
-
-            params.set(
-                "limit",
-                String(currentLimit)
-            );
-
-            if (currentSearch) {
-
-                params.set(
-                    "search",
-                    currentSearch
-                );
-            }
-
-            if (currentStatus) {
-
-                params.set(
-                    "status",
-                    currentStatus
-                );
-            }
-
-
-            const response =
-                await fetch(
-                    `/api/customers?${params.toString()}`,
-                    {
-                        method: "GET",
-                        headers: {
-                            "Accept": "application/json"
-                        },
-                        credentials: "same-origin"
-                    }
-                );
-
-
-            const result =
-                await response.json();
-
-
-            if (!response.ok || !result.success) {
-
-                throw new Error(
-                    result.message ||
-                    "Failed to load customers."
-                );
-            }
-
-
-            const customers =
-                Array.isArray(result.data)
-                    ? result.data
-                    : [];
-
-
-            if (!tableBody) {
-                return;
-            }
-
-
-            if (customers.length === 0) {
-
-                tableBody.innerHTML = `
-                    <tr>
-                        <td
-                            colspan="10"
-                            class="text-center py-5 text-muted"
-                        >
-                            No customers found.
-                        </td>
-                    </tr>
-                `;
-
-            } else {
-
-                tableBody.innerHTML =
-                    customers
-                        .map(renderCustomerRow)
-                        .join("");
-            }
-
-
-            renderPagination(
-                result.pagination
-            );
-
-            updateRangeText(
-                result.pagination,
-                customers.length
-            );
-
-            updateSelectionBar();
-
-            await loadSummary();
-
-        } catch (error) {
-
-            console.error(
-                "Customer loading error:",
-                error
-            );
-
-            if (tableBody) {
-
-                tableBody.innerHTML = `
-                    <tr>
-                        <td
-                            colspan="10"
-                            class="text-center py-5"
-                        >
-                            <div class="text-danger fw-bold mb-2">
-                                Failed to load customers.
-                            </div>
-
-                            <div class="small text-muted">
-                                ${escapeHtml(error.message)}
-                            </div>
-
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-primary mt-3"
-                                id="retryCustomerLoad"
-                            >
-                                <i class="fa fa-refresh me-1"></i>
-                                Retry
-                            </button>
-                        </td>
-                    </tr>
-                `;
-
-                const retryBtn =
-                    document.getElementById(
-                        "retryCustomerLoad"
-                    );
-
-                if (retryBtn) {
-
-                    retryBtn.addEventListener(
-                        "click",
-                        function () {
-                            loadCustomers(currentPage);
-                        }
-                    );
-                }
-            }
-
-        } finally {
-
-            loadingCustomers = false;
-        }
+                </td>
+            </tr>
+        `;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | EMPTY
+    |--------------------------------------------------------------------------
+    */
+
+    function showEmptyCustomers() {
+
+        const body =
+            getElement(
+                "customerTableBody"
+            );
+
+        if (!body) {
+            return;
+        }
+
+        body.innerHTML = `
+            <tr>
+                <td
+                    colspan="10"
+                    class="text-center py-5">
+
+                    <i
+                        class="fa-solid fa-users-slash fa-2x text-muted mb-2">
+                    </i>
+
+                    <div class="text-muted">
+                        No customers found.
+                    </div>
+
+                </td>
+            </tr>
+        `;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -824,94 +905,134 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function loadSummary() {
 
+        const params =
+            new URLSearchParams();
+
+        if (currentSearch) {
+            params.set(
+                "search",
+                currentSearch
+            );
+        }
+
+        if (currentStatus) {
+            params.set(
+                "status",
+                currentStatus
+            );
+        }
+
         try {
-
-            const params =
-                new URLSearchParams();
-
-            if (currentSearch) {
-
-                params.set(
-                    "search",
-                    currentSearch
-                );
-            }
-
-            if (currentStatus) {
-
-                params.set(
-                    "status",
-                    currentStatus
-                );
-            }
-
 
             const response =
                 await fetch(
                     `/api/customers/summary?${params.toString()}`,
                     {
-                        method: "GET",
+                        credentials:
+                            "same-origin",
                         headers: {
-                            "Accept": "application/json"
-                        },
-                        credentials: "same-origin"
+                            "Accept":
+                                "application/json"
+                        }
                     }
                 );
 
+            const contentType =
+                response.headers.get(
+                    "content-type"
+                ) || "";
+
+            if (
+                !contentType.includes(
+                    "application/json"
+                )
+            ) {
+                const text =
+                    await response.text();
+
+                throw new Error(
+                    text
+                        .replace(
+                            /<[^>]*>/g,
+                            " "
+                        )
+                        .replace(
+                            /\s+/g,
+                            " "
+                        )
+                        .trim()
+                        .slice(
+                            0,
+                            300
+                        ) ||
+                    `Invalid server response (${response.status}).`
+                );
+            }
 
             const result =
                 await response.json();
 
-
-            if (!response.ok || !result.success) {
-                return;
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+                throw new Error(
+                    result.message ||
+                    "Failed to load summary."
+                );
             }
 
-
-            const summary =
+            const data =
                 result.data || {};
 
+            const totalCustomers =
+                getElement(
+                    "totalCustomers"
+                );
+
+            const totalBill =
+                getElement(
+                    "totalBill"
+                );
+
+            const totalBalance =
+                getElement(
+                    "totalBalance"
+                );
 
             if (totalCustomers) {
-
                 totalCustomers.textContent =
-                    Number(
-                        summary.total_customers ??
-                        summary.total ??
-                        0
-                    ).toLocaleString();
+                    number(
+                        data.total_customer
+                    ).toLocaleString(
+                        "en-US"
+                    );
             }
-
 
             if (totalBill) {
-
                 totalBill.textContent =
-                    `৳${formatMoney(
-                        summary.total_bill ??
-                        summary.total_monthly_bill ??
-                        0
-                    )}`;
+                    "৳" +
+                    money(
+                        data.total_bill
+                    );
             }
 
-
             if (totalBalance) {
-
                 totalBalance.textContent =
-                    `৳${formatMoney(
-                        summary.total_balance ??
-                        0
-                    )}`;
+                    "৳" +
+                    money(
+                        data.total_balance
+                    );
             }
 
         } catch (error) {
 
             console.error(
-                "Customer summary error:",
+                "Summary error:",
                 error
             );
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -919,53 +1040,42 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    function renderPagination(data) {
+    function renderPagination(
+        pagination
+    ) {
 
-        if (!pagination) {
-            return;
-        }
-
-        pagination.innerHTML = "";
-
-
-        if (!data) {
-            return;
-        }
-
-
-        const total =
-            Number(
-                data.total ??
-                data.total_records ??
-                0
+        const container =
+            getElement(
+                "customerPagination"
             );
+
+        if (!container) {
+            return;
+        }
 
         const page =
             Number(
-                data.page ??
-                currentPage
-            );
-
-        const limit =
-            Number(
-                data.limit ??
-                currentLimit
+                pagination?.page || 1
             );
 
         const totalPages =
             Number(
-                data.totalPages ??
-                data.total_pages ??
-                Math.ceil(
-                    total / Math.max(limit, 1)
-                )
+                pagination?.totalPages || 1
             );
 
+        const limit =
+            Number(
+                pagination?.limit || 0
+            );
 
-        if (totalPages <= 1) {
+        container.innerHTML = "";
+
+        if (
+            totalPages <= 1 ||
+            limit === 0
+        ) {
             return;
         }
-
 
         function addPage(
             pageNumber,
@@ -975,20 +1085,26 @@ document.addEventListener("DOMContentLoaded", function () {
         ) {
 
             const li =
-                document.createElement("li");
+                document.createElement(
+                    "li"
+                );
 
             li.className =
-                `page-item ${
-                    disabled ? "disabled" : ""
-                } ${
-                    active ? "active" : ""
-                }`;
-
+                "page-item" +
+                (disabled
+                    ? " disabled"
+                    : "") +
+                (active
+                    ? " active"
+                    : "");
 
             const button =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
-            button.type = "button";
+            button.type =
+                "button";
 
             button.className =
                 "page-link";
@@ -996,91 +1112,96 @@ document.addEventListener("DOMContentLoaded", function () {
             button.textContent =
                 label;
 
-
-            if (disabled) {
-
-                button.disabled = true;
-
-            } else {
+            if (!disabled) {
 
                 button.addEventListener(
                     "click",
-                    function () {
+                    () => {
 
-                        if (
-                            pageNumber !== currentPage
-                        ) {
+                        currentPage =
+                            pageNumber;
 
-                            loadCustomers(
-                                pageNumber
-                            );
-                        }
+                        loadCustomers();
                     }
                 );
             }
 
+            li.appendChild(
+                button
+            );
 
-            li.appendChild(button);
-
-            pagination.appendChild(li);
+            container.appendChild(
+                li
+            );
         }
-
 
         addPage(
             page - 1,
-            "‹",
+            "Previous",
             page <= 1
         );
-
-
-        const maxVisible =
-            7;
 
         let start =
             Math.max(
                 1,
-                page - 3
+                page - 2
             );
 
         let end =
             Math.min(
                 totalPages,
-                start + maxVisible - 1
+                page + 2
             );
 
-
         if (
-            end - start + 1 <
-            maxVisible
+            page <= 3
         ) {
-
-            start =
-                Math.max(
-                    1,
-                    end - maxVisible + 1
+            end =
+                Math.min(
+                    totalPages,
+                    5
                 );
         }
 
+        if (
+            page >=
+            totalPages - 2
+        ) {
+            start =
+                Math.max(
+                    1,
+                    totalPages - 4
+                );
+        }
 
         if (start > 1) {
 
             addPage(
                 1,
-                "1",
-                false,
-                page === 1
+                "1"
             );
 
             if (start > 2) {
 
-                addPage(
-                    null,
-                    "...",
-                    true
+                const li =
+                    document.createElement(
+                        "li"
+                    );
+
+                li.className =
+                    "page-item disabled";
+
+                li.innerHTML = `
+                    <span class="page-link">
+                        ...
+                    </span>
+                `;
+
+                container.appendChild(
+                    li
                 );
             }
         }
-
 
         for (
             let i = start;
@@ -1096,184 +1217,389 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
 
+        if (
+            end < totalPages
+        ) {
 
-        if (end < totalPages) {
+            if (
+                end <
+                totalPages - 1
+            ) {
 
-            if (end < totalPages - 1) {
+                const li =
+                    document.createElement(
+                        "li"
+                    );
 
-                addPage(
-                    null,
-                    "...",
-                    true
+                li.className =
+                    "page-item disabled";
+
+                li.innerHTML = `
+                    <span class="page-link">
+                        ...
+                    </span>
+                `;
+
+                container.appendChild(
+                    li
                 );
             }
 
             addPage(
                 totalPages,
-                String(totalPages),
-                false,
-                page === totalPages
+                String(totalPages)
             );
         }
 
-
         addPage(
             page + 1,
-            "›",
+            "Next",
             page >= totalPages
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | RANGE TEXT
+    | RANGE
     |--------------------------------------------------------------------------
     */
 
-    function updateRangeText(
-        paginationData,
-        loadedCount
+    function updateRange(
+        pagination
     ) {
 
-        if (!paginationData) {
+        const info =
+            getElement(
+                "paginationInfo"
+            );
+
+        if (!info) {
             return;
         }
 
-
         const total =
-            Number(
-                paginationData.total ??
-                paginationData.total_records ??
-                0
+            number(
+                pagination?.total
             );
 
-        const page =
-            Number(
-                paginationData.page ??
-                currentPage
+        const from =
+            number(
+                pagination?.from
             );
 
-        const limit =
-            Number(
-                paginationData.limit ??
-                currentLimit
+        const to =
+            number(
+                pagination?.to
             );
 
+        if (!total) {
 
-        if (paginationInfo) {
+            info.textContent =
+                "Showing 0 of 0";
 
-            const from =
-                total === 0
-                    ? 0
-                    : ((page - 1) * limit) + 1;
-
-            const to =
-                Math.min(
-                    page * limit,
-                    total
-                );
-
-            paginationInfo.textContent =
-                `Showing ${from}-${to} of ${total}`;
+            return;
         }
 
-
-        if (customerRangeText) {
-
-            const from =
-                total === 0
-                    ? 0
-                    : ((page - 1) * limit) + 1;
-
-            const to =
-                Math.min(
-                    page * limit,
-                    total
-                );
-
-            customerRangeText.textContent =
-                `${from}-${to} / ${total}`;
-        }
+        info.textContent =
+            `Showing ${from.toLocaleString()} - ` +
+            `${to.toLocaleString()} of ` +
+            `${total.toLocaleString()}`;
     }
-
 
     /*
     |--------------------------------------------------------------------------
-    | SELECTION
+    | LOAD CUSTOMERS
     |--------------------------------------------------------------------------
     */
 
-    function getSelectedCheckboxes() {
+    async function loadCustomers() {
+
+        showTableLoading();
+
+        const params =
+            new URLSearchParams();
+
+        params.set(
+            "page",
+            String(currentPage)
+        );
+
+        params.set(
+            "limit",
+            String(currentLimit)
+        );
+
+        if (currentSearch) {
+            params.set(
+                "search",
+                currentSearch
+            );
+        }
+
+        if (currentStatus) {
+            params.set(
+                "status",
+                currentStatus
+            );
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/customers/?${params.toString()}`,
+                    {
+                        credentials:
+                            "same-origin",
+                        headers: {
+                            "Accept":
+                                "application/json"
+                        }
+                    }
+                );
+
+            const contentType =
+                response.headers.get(
+                    "content-type"
+                ) || "";
+
+            if (
+                !contentType.includes(
+                    "application/json"
+                )
+            ) {
+
+                const text =
+                    await response.text();
+
+                throw new Error(
+                    text
+                        .replace(
+                            /<[^>]*>/g,
+                            " "
+                        )
+                        .replace(
+                            /\s+/g,
+                            " "
+                        )
+                        .trim()
+                        .slice(
+                            0,
+                            500
+                        ) ||
+                    `Invalid server response (${response.status}).`
+                );
+            }
+
+            const result =
+                await response.json();
+
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+                throw new Error(
+                    result.message ||
+                    "Failed to load customers."
+                );
+            }
+
+            const customers =
+                Array.isArray(
+                    result.data
+                )
+                    ? result.data
+                    : [];
+
+            const body =
+                getElement(
+                    "customerTableBody"
+                );
+
+            if (!body) {
+                return;
+            }
+
+            if (!customers.length) {
+                showEmptyCustomers();
+            } else {
+
+                body.innerHTML =
+                    customers
+                        .map(
+                            renderCustomerRow
+                        )
+                        .join("");
+            }
+
+            renderPagination(
+                result.pagination
+            );
+
+            updateRange(
+                result.pagination
+            );
+
+            updateSelectedCount();
+
+            await loadSummary();
+
+        } catch (error) {
+
+            console.error(
+                "Customer list error:",
+                error
+            );
+
+            const body =
+                getElement(
+                    "customerTableBody"
+                );
+
+            if (body) {
+
+                body.innerHTML = `
+                    <tr>
+                        <td
+                            colspan="10"
+                            class="text-center text-danger py-5">
+
+                            <i
+                                class="fa-solid fa-triangle-exclamation fa-2x mb-2">
+                            </i>
+
+                            <div>
+                                ${escapeHtml(
+                                    error.message
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary mt-3"
+                                id="retryCustomerLoad">
+                                Retry
+                            </button>
+
+                        </td>
+                    </tr>
+                `;
+
+                const retry =
+                    getElement(
+                        "retryCustomerLoad"
+                    );
+
+                if (retry) {
+                    retry.addEventListener(
+                        "click",
+                        loadCustomers
+                    );
+                }
+            }
+
+            showError(
+                error.message ||
+                "Failed to load customers."
+            );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELECTED CUSTOMER IDS
+    |--------------------------------------------------------------------------
+    */
+
+    function getSelectedCustomerIds() {
 
         return Array.from(
             document.querySelectorAll(
-                ".customer-checkbox:checked"
+                'input[name="customer_ids[]"]:checked'
             )
+        ).map(
+            checkbox =>
+                checkbox.value
         );
     }
 
-
-    function updateSelectionBar() {
+    function updateSelectedCount() {
 
         const selected =
-            getSelectedCheckboxes();
+            getSelectedCustomerIds();
 
+        const count =
+            selected.length;
 
-        if (selectedCustomerCount) {
+        const selectAll =
+            getElement(
+                "selectAll"
+            );
 
-            selectedCustomerCount.textContent =
-                selected.length;
-        }
+        const toggle =
+            document.querySelector(
+                ".bulk-floating-toggle"
+            );
 
+        const panel =
+            document.querySelector(
+                ".bulk-floating-panel"
+            );
 
-        if (bulkActionBar) {
+        const countElements =
+            document.querySelectorAll(
+                ".selected-customer-count"
+            );
 
-            if (selected.length > 0) {
-
-                bulkActionBar.classList.remove(
-                    "d-none"
-                );
-
-            } else {
-
-                bulkActionBar.classList.add(
-                    "d-none"
-                );
+        countElements.forEach(
+            element => {
+                element.textContent =
+                    count;
             }
+        );
+
+        const selectedCountElement =
+            getElement(
+                "selectedCount"
+            );
+
+        if (selectedCountElement) {
+            selectedCountElement.textContent =
+                count;
         }
 
+        if (toggle) {
 
-        if (selectAllCheckbox) {
+            toggle.classList.toggle(
+                "active",
+                count > 0
+            );
+        }
 
-            const allCheckboxes =
+        if (panel) {
+
+            panel.classList.toggle(
+                "show",
+                count > 0
+            );
+        }
+
+        if (selectAll) {
+
+            const boxes =
                 document.querySelectorAll(
                     ".customer-checkbox"
                 );
 
+            selectAll.checked =
+                boxes.length > 0 &&
+                count === boxes.length;
 
-            if (allCheckboxes.length === 0) {
-
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-
-            } else {
-
-                const checkedCount =
-                    selected.length;
-
-                selectAllCheckbox.checked =
-                    checkedCount ===
-                    allCheckboxes.length;
-
-                selectAllCheckbox.indeterminate =
-                    checkedCount > 0 &&
-                    checkedCount <
-                    allCheckboxes.length;
-            }
+            selectAll.indeterminate =
+                count > 0 &&
+                count < boxes.length;
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1281,94 +1607,839 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    if (selectAllCheckbox) {
+    const selectAll =
+        getElement(
+            "selectAll"
+        );
 
-        selectAllCheckbox.addEventListener(
+    if (selectAll) {
+
+        selectAll.addEventListener(
             "change",
             function () {
-
-                const checked =
-                    this.checked;
 
                 document
                     .querySelectorAll(
                         ".customer-checkbox"
                     )
                     .forEach(
-                        function (checkbox) {
-
+                        checkbox => {
                             checkbox.checked =
-                                checked;
+                                this.checked;
                         }
                     );
 
-                updateSelectionBar();
+                updateSelectedCount();
             }
         );
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | INDIVIDUAL CHECKBOX
-    |--------------------------------------------------------------------------
-    */
-
     document.addEventListener(
         "change",
-        function (event) {
+        event => {
 
             if (
-                event.target &&
-                event.target.classList.contains(
-                    "customer-checkbox"
+                event.target.matches(
+                    ".customer-checkbox"
                 )
             ) {
-
-                updateSelectionBar();
+                updateSelectedCount();
             }
         }
     );
 
-
     /*
     |--------------------------------------------------------------------------
-    | CLEAR SELECTION
+    | BULK FLOATING PANEL
     |--------------------------------------------------------------------------
     */
 
-    if (clearSelectionBtn) {
+    const bulkToggle =
+        document.querySelector(
+            ".bulk-floating-toggle"
+        );
 
-        clearSelectionBtn.addEventListener(
+    const bulkPanel =
+        document.querySelector(
+            ".bulk-floating-panel"
+        );
+
+    if (bulkToggle) {
+
+        bulkToggle.addEventListener(
             "click",
-            function () {
+            event => {
 
-                document
-                    .querySelectorAll(
-                        ".customer-checkbox"
-                    )
-                    .forEach(
-                        function (checkbox) {
+                event.stopPropagation();
 
-                            checkbox.checked =
-                                false;
-                        }
+                const ids =
+                    getSelectedCustomerIds();
+
+                if (!ids.length) {
+
+                    showError(
+                        "Please select at least one customer."
                     );
 
-                if (selectAllCheckbox) {
-
-                    selectAllCheckbox.checked =
-                        false;
-
-                    selectAllCheckbox.indeterminate =
-                        false;
+                    return;
                 }
 
-                updateSelectionBar();
+                if (bulkPanel) {
+
+                    bulkPanel.classList.toggle(
+                        "show"
+                    );
+                }
             }
         );
     }
 
+    document.addEventListener(
+        "click",
+        event => {
+
+            if (
+                bulkPanel &&
+                bulkToggle &&
+                !bulkPanel.contains(
+                    event.target
+                ) &&
+                !bulkToggle.contains(
+                    event.target
+                )
+            ) {
+                bulkPanel.classList.remove(
+                    "show"
+                );
+            }
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK ACTION POPUP
+    |--------------------------------------------------------------------------
+    */
+
+    function openBulkAction(
+        url,
+        title
+    ) {
+
+        const ids =
+            getSelectedCustomerIds();
+
+        if (!ids.length) {
+
+            showError(
+                "Please select at least one customer."
+            );
+
+            return;
+        }
+
+        const separator =
+            url.includes("?")
+                ? "&"
+                : "?";
+
+        loadPopup(
+            `${url}${separator}ids=${encodeURIComponent(ids.join(","))}`,
+            title,
+            {
+                bulk: true
+            }
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | UNIVERSAL POPUP
+    |--------------------------------------------------------------------------
+    */
+
+    const actionModal =
+        getElement(
+            "customerActionModal"
+        );
+
+    let actionModalInstance =
+        null;
+
+    if (
+        actionModal &&
+        typeof bootstrap !==
+        "undefined"
+    ) {
+
+        actionModalInstance =
+            bootstrap.Modal.getOrCreateInstance(
+                actionModal
+            );
+    }
+
+    async function loadPopup(
+        url,
+        title = "Action",
+        options = {}
+    ) {
+
+        if (!actionModal) {
+            return;
+        }
+
+        const titleElement =
+            actionModal.querySelector(
+                ".modal-title"
+            );
+
+        const bodyElement =
+            actionModal.querySelector(
+                ".modal-body"
+            );
+
+        if (titleElement) {
+            titleElement.textContent =
+                title;
+        }
+
+        if (bodyElement) {
+
+            bodyElement.innerHTML = `
+                <div
+                    class="text-center py-5">
+
+                    <div
+                        class="spinner-border"
+                        role="status">
+                    </div>
+
+                    <div
+                        class="mt-2 text-muted">
+                        Loading...
+                    </div>
+
+                </div>
+            `;
+        }
+
+        actionModal.classList.toggle(
+            "bulk-popup",
+            Boolean(options.bulk)
+        );
+
+        if (actionModalInstance) {
+            actionModalInstance.show();
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        credentials:
+                            "same-origin",
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest",
+                            "Accept":
+                                "text/html, application/json"
+                        }
+                    }
+                );
+
+            const html =
+                await response.text();
+
+            if (!response.ok) {
+                throw new Error(
+                    `Server returned ${response.status}`
+                );
+            }
+
+            if (bodyElement) {
+                bodyElement.innerHTML =
+                    html;
+            }
+
+            activatePopupForms(
+                bodyElement
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | RUN INLINE SCRIPTS
+            |--------------------------------------------------------------------------
+            */
+
+            if (bodyElement) {
+
+                const scripts =
+                    Array.from(
+                        bodyElement.querySelectorAll(
+                            "script"
+                        )
+                    );
+
+                scripts.forEach(
+                    oldScript => {
+
+                        const newScript =
+                            document.createElement(
+                                "script"
+                            );
+
+                        Array.from(
+                            oldScript.attributes
+                        ).forEach(
+                            attribute => {
+
+                                newScript.setAttribute(
+                                    attribute.name,
+                                    attribute.value
+                                );
+                            }
+                        );
+
+                        newScript.textContent =
+                            oldScript.textContent;
+
+                        oldScript.replaceWith(
+                            newScript
+                        );
+                    }
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Popup error:",
+                error
+            );
+
+            if (bodyElement) {
+
+                bodyElement.innerHTML = `
+                    <div
+                        class="alert alert-danger">
+                        ${escapeHtml(
+                            error.message
+                        )}
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | POPUP FORMS
+    |--------------------------------------------------------------------------
+    */
+
+    function activatePopupForms(
+        container
+    ) {
+
+        if (!container) {
+            return;
+        }
+
+        container
+            .querySelectorAll("form")
+            .forEach(
+                form => {
+
+                    if (
+                        form.dataset.ajaxBound ===
+                        "1"
+                    ) {
+                        return;
+                    }
+
+                    form.dataset.ajaxBound =
+                        "1";
+
+                    form.addEventListener(
+                        "submit",
+                        async event => {
+
+                            event.preventDefault();
+
+                            const formData =
+                                new FormData(
+                                    form
+                                );
+
+                            const token =
+                                csrfToken();
+
+                            if (
+                                token &&
+                                !formData.has(
+                                    "_csrf"
+                                ) &&
+                                !formData.has(
+                                    "csrf_token"
+                                )
+                            ) {
+                                formData.append(
+                                    "csrf_token",
+                                    token
+                                );
+                            }
+
+                            const selected =
+                                getSelectedCustomerIds();
+
+                            if (
+                                selected.length &&
+                                !formData.has(
+                                    "customer_ids[]"
+                                )
+                            ) {
+
+                                selected.forEach(
+                                    id => {
+
+                                        formData.append(
+                                            "customer_ids[]",
+                                            id
+                                        );
+                                    }
+                                );
+                            }
+
+                            const submitButton =
+                                form.querySelector(
+                                    '[type="submit"]'
+                                );
+
+                            if (submitButton) {
+                                submitButton.disabled =
+                                    true;
+                            }
+
+                            try {
+
+                                const response =
+                                    await fetch(
+                                        form.action ||
+                                        window.location.href,
+                                        {
+                                            method:
+                                                "POST",
+                                            body:
+                                                formData,
+                                            credentials:
+                                                "same-origin",
+                                            headers: {
+                                                "X-Requested-With":
+                                                    "XMLHttpRequest",
+                                                "Accept":
+                                                    "application/json"
+                                            }
+                                        }
+                                    );
+
+                                const contentType =
+                                    response.headers.get(
+                                        "content-type"
+                                    ) || "";
+
+                                if (
+                                    contentType.includes(
+                                        "application/json"
+                                    )
+                                ) {
+
+                                    const result =
+                                        await response.json();
+
+                                    if (
+                                        !response.ok ||
+                                        !result.success
+                                    ) {
+                                        throw new Error(
+                                            result.message ||
+                                            "Action failed."
+                                        );
+                                    }
+
+                                    showSuccess(
+                                        result.message ||
+                                        "Action completed."
+                                    );
+
+                                    if (
+                                        actionModalInstance
+                                    ) {
+                                        actionModalInstance.hide();
+                                    }
+
+                                    await loadCustomers();
+
+                                } else {
+
+                                    const text =
+                                        await response.text();
+
+                                    throw new Error(
+                                        text
+                                            .replace(
+                                                /<[^>]*>/g,
+                                                " "
+                                            )
+                                            .replace(
+                                                /\s+/g,
+                                                " "
+                                            )
+                                            .trim()
+                                            .slice(
+                                                0,
+                                                500
+                                            ) ||
+                                        "Server returned an invalid response."
+                                    );
+                                }
+
+                            } catch (error) {
+
+                                console.error(
+                                    "Form action error:",
+                                    error
+                                );
+
+                                showError(
+                                    error.message
+                                );
+
+                            } finally {
+
+                                if (submitButton) {
+                                    submitButton.disabled =
+                                        false;
+                                }
+                            }
+                        }
+                    );
+                }
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTION POPUP
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const link =
+                event.target.closest(
+                    ".action-popup"
+                );
+
+            if (!link) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const url =
+                link.dataset.url ||
+                link.getAttribute(
+                    "href"
+                );
+
+            const title =
+                link.dataset.title ||
+                "Customer Action";
+
+            if (url) {
+
+                loadPopup(
+                    url,
+                    title
+                );
+            }
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK ACTION POPUP
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    ".bulk-action-popup"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const url =
+                button.dataset.url ||
+                button.getAttribute(
+                    "href"
+                );
+
+            const title =
+                button.dataset.title ||
+                button.textContent.trim() ||
+                "Bulk Action";
+
+            if (url) {
+
+                openBulkAction(
+                    url,
+                    title
+                );
+            }
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK RECHARGE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    "#bulkRechargeBtn, .bulk-recharge-btn"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const ids =
+                getSelectedCustomerIds();
+
+            if (!ids.length) {
+
+                showError(
+                    "Please select at least one customer."
+                );
+
+                return;
+            }
+
+            if (
+                typeof window.openBulkRecharge ===
+                "function"
+            ) {
+
+                window.openBulkRecharge(
+                    ids
+                );
+
+                return;
+            }
+
+            openBulkAction(
+                "/api/customers/bulk-recharge",
+                "Bulk Recharge"
+            );
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | SINGLE DELETE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        async event => {
+
+            const button =
+                event.target.closest(
+                    ".delete-customer-btn"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const id =
+                button.dataset.id;
+
+            const name =
+                button.dataset.name ||
+                "this customer";
+
+            if (!id) {
+                return;
+            }
+
+            let confirmed = false;
+
+            if (
+                typeof Swal !==
+                "undefined"
+            ) {
+
+                const result =
+                    await Swal.fire({
+                        icon: "warning",
+                        title:
+                            "Delete Customer?",
+                        html:
+                            `Are you sure you want to delete <strong>${escapeHtml(name)}</strong>?`,
+                        showCancelButton: true,
+                        confirmButtonText:
+                            "Delete",
+                        cancelButtonText:
+                            "Cancel",
+                        reverseButtons: true
+                    });
+
+                confirmed =
+                    result.isConfirmed;
+
+            } else {
+
+                confirmed =
+                    window.confirm(
+                        `Delete ${name}?`
+                    );
+            }
+
+            if (!confirmed) {
+                return;
+            }
+
+            const form =
+                document.createElement(
+                    "form"
+                );
+
+            form.method =
+                "POST";
+
+            form.action =
+                "/api/customers/delete";
+
+            form.style.display =
+                "none";
+
+            const idInput =
+                document.createElement(
+                    "input"
+                );
+
+            idInput.type =
+                "hidden";
+
+            idInput.name =
+                "id";
+
+            idInput.value =
+                id;
+
+            form.appendChild(
+                idInput
+            );
+
+            const token =
+                csrfToken();
+
+            if (token) {
+
+                const tokenInput =
+                    document.createElement(
+                        "input"
+                    );
+
+                tokenInput.type =
+                    "hidden";
+
+                tokenInput.name =
+                    "csrf_token";
+
+                tokenInput.value =
+                    token;
+
+                form.appendChild(
+                    tokenInput
+                );
+            }
+
+            document.body.appendChild(
+                form
+            );
+
+            form.submit();
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK DELETE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    ".bulk-delete-btn"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const ids =
+                getSelectedCustomerIds();
+
+            if (!ids.length) {
+
+                showError(
+                    "Please select at least one customer."
+                );
+
+                return;
+            }
+
+            const url =
+                button.dataset.url ||
+                "/api/customers/bulk/delete";
+
+            openBulkAction(
+                url,
+                "Delete Customers"
+            );
+        }
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -1376,56 +2447,65 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    function applyFilters() {
-
-        currentSearch =
-            String(
-                searchInput?.value || ""
-            ).trim();
-
-        currentStatus =
-            String(
-                statusSelect?.value || ""
-            ).trim();
-
-        currentLimit =
-            Number(
-                limitSelect?.value || 100
-            );
-
-        currentPage = 1;
-
-        loadCustomers(1);
-    }
-
-
-    if (applyFilterBtn) {
-
-        applyFilterBtn.addEventListener(
-            "click",
-            applyFilters
+    const searchInput =
+        getElement(
+            "customerSearch"
         );
-    }
-
 
     if (searchInput) {
 
         searchInput.addEventListener(
+            "input",
+            function () {
+
+                clearTimeout(
+                    searchTimer
+                );
+
+                searchTimer =
+                    setTimeout(
+                        () => {
+
+                            currentSearch =
+                                this.value.trim();
+
+                            currentPage =
+                                1;
+
+                            loadCustomers();
+
+                        },
+                        350
+                    );
+            }
+        );
+
+        searchInput.addEventListener(
             "keydown",
-            function (event) {
+            event => {
 
                 if (
-                    event.key === "Enter"
+                    event.key ===
+                    "Enter"
                 ) {
 
                     event.preventDefault();
 
-                    applyFilters();
+                    clearTimeout(
+                        searchTimer
+                    );
+
+                    currentSearch =
+                        searchInput.value.trim();
+
+                    currentPage =
+                        1;
+
+                    loadCustomers();
                 }
             }
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1433,79 +2513,94 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    if (clearSearchBtn) {
+    const clearSearch =
+        getElement(
+            "clearSearchBtn"
+        );
 
-        clearSearchBtn.addEventListener(
+    if (clearSearch) {
+
+        clearSearch.addEventListener(
             "click",
-            function () {
+            () => {
 
                 if (searchInput) {
-                    searchInput.value = "";
+                    searchInput.value =
+                        "";
                 }
 
-                if (statusSelect) {
-                    statusSelect.value = "";
-                }
+                currentSearch =
+                    "";
 
-                currentSearch = "";
-                currentStatus = "";
-                currentPage = 1;
+                currentPage =
+                    1;
 
-                loadCustomers(1);
+                loadCustomers();
             }
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | LIMIT CHANGE
+    | STATUS + LIMIT
     |--------------------------------------------------------------------------
     */
 
-    if (limitSelect) {
-
-        limitSelect.addEventListener(
-            "change",
-            function () {
-
-                currentLimit =
-                    Number(
-                        this.value || 100
-                    );
-
-                currentPage = 1;
-
-                loadCustomers(1);
-            }
+    const statusSelect =
+        getElement(
+            "customerStatus"
         );
-    }
 
+    const limitSelect =
+        getElement(
+            "customerLimit"
+        );
 
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS CHANGE
-    |--------------------------------------------------------------------------
-    */
+    const applyFilter =
+        getElement(
+            "applyCustomerFilter"
+        );
 
-    if (statusSelect) {
+    if (applyFilter) {
 
-        statusSelect.addEventListener(
-            "change",
-            function () {
+        applyFilter.addEventListener(
+            "click",
+            () => {
 
                 currentStatus =
-                    String(
-                        this.value || ""
-                    ).trim();
+                    statusSelect
+                        ? statusSelect.value
+                        : "";
 
-                currentPage = 1;
+                currentLimit =
+                    limitSelect
+                        ? Number(
+                            limitSelect.value
+                        )
+                        : 100;
 
-                loadCustomers(1);
+                if (
+                    ![
+                        100,
+                        200,
+                        500,
+                        5000,
+                        0
+                    ].includes(
+                        currentLimit
+                    )
+                ) {
+                    currentLimit =
+                        100;
+                }
+
+                currentPage =
+                    1;
+
+                loadCustomers();
             }
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1513,305 +2608,407 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    if (refreshBtn) {
+    const refreshButton =
+        getElement(
+            "refreshCustomersBtn"
+        );
 
-        refreshBtn.addEventListener(
+    if (refreshButton) {
+
+        refreshButton.addEventListener(
             "click",
-            function () {
+            () => {
 
-                loadCustomers(
-                    currentPage
-                );
+                loadCustomers();
             }
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | CUSTOMER ACTIONS
+    | EDIT CUSTOMER
     |--------------------------------------------------------------------------
     */
 
-    document.addEventListener(
-        "click",
-        async function (event) {
+    async function openEditCustomer(
+        id
+    ) {
 
-            const actionItem =
-                event.target.closest(
-                    ".customer-action-item"
+        if (!id) {
+            return;
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/customers/${encodeURIComponent(id)}`,
+                    {
+                        credentials:
+                            "same-origin",
+                        headers: {
+                            "Accept":
+                                "application/json"
+                        }
+                    }
                 );
 
+            const contentType =
+                response.headers.get(
+                    "content-type"
+                ) || "";
 
-            if (!actionItem) {
-                return;
+            if (
+                !contentType.includes(
+                    "application/json"
+                )
+            ) {
+
+                const text =
+                    await response.text();
+
+                throw new Error(
+                    text
+                        .replace(
+                            /<[^>]*>/g,
+                            " "
+                        )
+                        .replace(
+                            /\s+/g,
+                            " "
+                        )
+                        .trim()
+                        .slice(
+                            0,
+                            500
+                        ) ||
+                    `Invalid server response (${response.status}).`
+                );
             }
 
+            const result =
+                await response.json();
+
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+                throw new Error(
+                    result.message ||
+                    "Failed to load customer."
+                );
+            }
+
+            const customer =
+                result.customer ||
+                result.data;
+
+            if (!customer) {
+                throw new Error(
+                    "Customer data not found."
+                );
+            }
+
+            const fields = {
+                edit_db_id:
+                    customer.id,
+
+                edit_customer_id:
+                    customer.customer_id,
+
+                edit_name:
+                    customer.name,
+
+                edit_phone:
+                    customer.phone,
+
+                edit_address:
+                    customer.address,
+
+                edit_nid_no:
+                    customer.nid_no,
+
+                edit_birth_date:
+                    customer.birth_date,
+
+                edit_email:
+                    customer.email,
+
+                edit_monthly_bill:
+                    customer.monthly_bill,
+
+                edit_balance:
+                    customer.balance,
+
+                edit_pppoe_username:
+                    customer.pppoe_username,
+
+                edit_pppoe_password:
+                    customer.pppoe_password,
+
+                edit_billing_cycle:
+                    customer.billing_cycle,
+
+                edit_promise_date:
+                    customer.promise_date,
+
+                edit_connection_fee:
+                    customer.connection_fee,
+
+                edit_billing_type:
+                    customer.billing_type,
+
+                edit_payment_status:
+                    customer.payment_status,
+
+                edit_status:
+                    customer.status,
+
+                edit_reference_name:
+                    customer.reference_name,
+
+                edit_reference_mobile:
+                    customer.reference_mobile,
+
+                edit_comments:
+                    customer.comments
+            };
+
+            Object.entries(
+                fields
+            ).forEach(
+                ([fieldId, value]) => {
+
+                    const element =
+                        getElement(
+                            fieldId
+                        );
+
+                    if (!element) {
+                        return;
+                    }
+
+                    element.value =
+                        value ?? "";
+                }
+            );
+
+            const header =
+                getElement(
+                    "modalCustomerNameHeader"
+                );
+
+            if (header) {
+                header.textContent =
+                    customer.name ||
+                    customer.customer_id ||
+                    "Customer";
+            }
+
+            const modal =
+                getElement(
+                    "customerActionModal"
+                );
+
+            if (
+                modal &&
+                typeof bootstrap !==
+                "undefined"
+            ) {
+
+                bootstrap.Modal
+                    .getOrCreateInstance(
+                        modal
+                    )
+                    .show();
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Edit customer error:",
+                error
+            );
+
+            showError(
+                error.message
+            );
+        }
+    }
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            const button =
+                event.target.closest(
+                    ".edit-customer-btn"
+                );
+
+            if (!button) {
+                return;
+            }
 
             event.preventDefault();
 
-
-            const action =
-                actionItem.dataset.action;
-
-            const id =
-                actionItem.dataset.id;
-
-
-            if (!id) {
-                return;
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | VIEW
-            |--------------------------------------------------------------------------
-            */
-
-            if (action === "view") {
-
-                openCustomerActionModal(
-                    "View Customer",
-                    `
-                        <div class="text-center py-4">
-                            <div class="spinner-border"></div>
-                            <div class="mt-2">
-                                Loading customer...
-                            </div>
-                        </div>
-                    `
-                );
-
-
-                try {
-
-                    const response =
-                        await fetch(
-                            `/api/customers/${encodeURIComponent(id)}`,
-                            {
-                                method: "GET",
-                                headers: {
-                                    "Accept":
-                                        "application/json"
-                                },
-                                credentials:
-                                    "same-origin"
-                            }
-                        );
-
-
-                    const result =
-                        await response.json();
-
-
-                    if (
-                        !response.ok ||
-                        !result.success
-                    ) {
-
-                        throw new Error(
-                            result.message ||
-                            "Failed to load customer."
-                        );
-                    }
-
-
-                    const customer =
-                        result.data || {};
-
-
-                    openCustomerActionModal(
-                        "Customer Details",
-                        `
-                            <div class="row g-3">
-
-                                <div class="col-md-6">
-                                    <strong>ID</strong>
-                                    <div>
-                                        ${escapeHtml(
-                                            customer.customer_id ??
-                                            customer.id ??
-                                            "-"
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <strong>Name</strong>
-                                    <div>
-                                        ${escapeHtml(
-                                            customer.name ||
-                                            "-"
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <strong>PPPoE</strong>
-                                    <div>
-                                        ${escapeHtml(
-                                            customer.pppoe_username ||
-                                            "-"
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <strong>Phone</strong>
-                                    <div>
-                                        ${escapeHtml(
-                                            customer.phone ||
-                                            "-"
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <strong>Package</strong>
-                                    <div>
-                                        ${escapeHtml(
-                                            customer.display_package ||
-                                            customer.package_name ||
-                                            "-"
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <strong>Bill</strong>
-                                    <div>
-                                        ৳${formatMoney(
-                                            customer.display_bill ??
-                                            customer.monthly_bill ??
-                                            0
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-12">
-                                    <strong>Address</strong>
-                                    <div>
-                                        ${formatAddress(
-                                            customer.address
-                                        )}
-                                    </div>
-                                </div>
-
-                            </div>
-                        `
-                    );
-
-                } catch (error) {
-
-                    openCustomerActionModal(
-                        "Customer Details",
-                        `
-                            <div class="alert alert-danger">
-                                ${escapeHtml(
-                                    error.message
-                                )}
-                            </div>
-                        `
-                    );
-                }
-
-                return;
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | OTHER ACTIONS
-            |--------------------------------------------------------------------------
-            */
-
-            let title =
-                "Customer Action";
-
-            let message =
-                "This action is ready for the customer.";
-
-            if (action === "recharge") {
-
-                title =
-                    "Recharge Customer";
-
-                message =
-                    `Customer ID: ${escapeHtml(id)}`;
-            }
-
-            if (action === "edit") {
-
-                title =
-                    "Edit Customer";
-
-                message =
-                    `Customer ID: ${escapeHtml(id)}`;
-            }
-
-            if (action === "report") {
-
-                title =
-                    "Customer Report";
-
-                message =
-                    `Customer ID: ${escapeHtml(id)}`;
-            }
-
-
-            openCustomerActionModal(
-                title,
-                `
-                    <div class="py-3">
-                        ${message}
-                    </div>
-                `
+            openEditCustomer(
+                button.dataset.id
             );
         }
     );
 
-
     /*
     |--------------------------------------------------------------------------
-    | ACTION MODAL
+    | PACKAGE PRICE / PROFILE
     |--------------------------------------------------------------------------
     */
 
-    function openCustomerActionModal(
-        title,
-        body
+    function updatePackageFields(
+        packageSelect,
+        billId,
+        profileId
     ) {
 
-        if (
-            !actionModalElement ||
-            !actionModalTitle ||
-            !actionModalBody
-        ) {
+        if (!packageSelect) {
             return;
         }
 
+        const option =
+            packageSelect.options[
+                packageSelect.selectedIndex
+            ];
 
-        actionModalTitle.textContent =
-            title;
+        if (!option) {
+            return;
+        }
 
-        actionModalBody.innerHTML =
-            body;
+        const price =
+            option.dataset.price;
 
+        const profile =
+            option.dataset.profile;
+
+        const bill =
+            getElement(
+                billId
+            );
+
+        const profileElement =
+            getElement(
+                profileId
+            );
 
         if (
-            typeof bootstrap !== "undefined"
+            bill &&
+            price !== undefined
         ) {
+            bill.value =
+                price;
+        }
 
-            const modal =
-                bootstrap.Modal.getOrCreateInstance(
-                    actionModalElement
-                );
-
-            modal.show();
+        if (
+            profileElement &&
+            profile !== undefined
+        ) {
+            profileElement.value =
+                profile;
         }
     }
 
+    document.addEventListener(
+        "change",
+        event => {
+
+            if (
+                event.target.matches(
+                    "#package_id"
+                )
+            ) {
+
+                updatePackageFields(
+                    event.target,
+                    "monthly_bill",
+                    "profile"
+                );
+            }
+
+            if (
+                event.target.matches(
+                    "#edit_package_id"
+                )
+            ) {
+
+                updatePackageFields(
+                    event.target,
+                    "edit_monthly_bill",
+                    "edit_profile"
+                );
+            }
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSV EXPORT
+    |--------------------------------------------------------------------------
+    */
+
+    const exportButton =
+        getElement(
+            "exportCustomersBtn"
+        );
+
+    if (exportButton) {
+
+        exportButton.addEventListener(
+            "click",
+            () => {
+
+                const params =
+                    new URLSearchParams();
+
+                if (currentSearch) {
+                    params.set(
+                        "search",
+                        currentSearch
+                    );
+                }
+
+                if (currentStatus) {
+                    params.set(
+                        "status",
+                        currentStatus
+                    );
+                }
+
+                window.location.href =
+                    `/api/customers/csv/export?${params.toString()}`;
+            }
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSV TEMPLATE
+    |--------------------------------------------------------------------------
+    */
+
+    const templateButton =
+        getElement(
+            "csvTemplateBtn"
+        );
+
+    if (templateButton) {
+
+        templateButton.addEventListener(
+            "click",
+            () => {
+
+                window.location.href =
+                    "/api/customers/csv/template";
+            }
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -1819,6 +3016,11 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
-    loadCustomers(1);
+    updateSelectedCount();
 
-});
+    loadCustomers();
+
+}
+
+
+);

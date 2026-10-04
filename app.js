@@ -208,9 +208,13 @@ app.use(
         name:
             "ispbilling.sid",
 
-        secret:
-            process.env.SESSION_SECRET ||
-            "ispbilling_node_test_secret",
+      secret:
+    process.env.SESSION_SECRET ||
+    (() => {
+        throw new Error(
+            "SESSION_SECRET is required. Set it in .env before starting the server."
+        );
+    })(),
 
         store:
             sessionStore,
@@ -236,8 +240,7 @@ app.use(
                 "lax",
 
             secure:
-                false,
-
+    process.env.NODE_ENV === "production",
             path:
                 "/"
 

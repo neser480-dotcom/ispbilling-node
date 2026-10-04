@@ -1,58 +1,136 @@
+'use strict';
 
-"use strict";
+const express = require('express');
 
-const express = require("express");
+const controller =
+    require('../controllers/customers-add.controller');
 
 const router = express.Router();
 
-const controller =
-    require("../controllers/customers-add.controller");
-
-const {
-    requireAuth
-} = require("../middleware/auth");
-
-const {
-    requirePermission
-} = require("../middleware/permission");
-
-
-router.use(requireAuth);
-
 
 /*
- * ADD CUSTOMER FORM DATA
- */
+|--------------------------------------------------------------------------
+| ADD CUSTOMER FORM DATA
+|--------------------------------------------------------------------------
+| GET /api/customers/add/form
+|--------------------------------------------------------------------------
+*/
 
 router.get(
-    "/form",
-    controller.formData
+    '/form',
+    controller.meta
 );
 
 
 /*
- * PACKAGES
- */
+|--------------------------------------------------------------------------
+| MIKROTIK
+|--------------------------------------------------------------------------
+| GET /api/customers/add/mikrotiks
+|--------------------------------------------------------------------------
+*/
 
 router.get(
-    "/packages",
+    '/mikrotiks',
+    controller.routers
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| AREAS
+|--------------------------------------------------------------------------
+| GET /api/customers/add/areas?mikrotik_id=1
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/areas',
+    controller.areas
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| PACKAGES
+|--------------------------------------------------------------------------
+| GET /api/customers/add/packages?router_id=1
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/packages',
     controller.packages
 );
 
 
 /*
- * CREATE CUSTOMER
- *
- * Requires:
- * add_customer_with_mobile
- */
+|--------------------------------------------------------------------------
+| SUB AREAS
+|--------------------------------------------------------------------------
+| GET /api/customers/add/sub-areas?area_id=1
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/sub-areas',
+    controller.subAreas
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| BANGLADESH DIVISIONS
+|--------------------------------------------------------------------------
+| GET /api/customers/add/divisions
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/divisions',
+    controller.divisions
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| DISTRICTS
+|--------------------------------------------------------------------------
+| GET /api/customers/add/districts?division_id=1
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/districts',
+    controller.districts
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| UPAZILAS / THANA
+|--------------------------------------------------------------------------
+| GET /api/customers/add/upazilas?district_id=1
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    '/upazilas',
+    controller.upazilas
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| SAVE CUSTOMER
+|--------------------------------------------------------------------------
+| POST /api/customers/add
+|--------------------------------------------------------------------------
+*/
 
 router.post(
-    "/",
-    requirePermission(
-        "add_customer_with_mobile"
-    ),
-    controller.create
+    '/',
+    controller.save
 );
 
 

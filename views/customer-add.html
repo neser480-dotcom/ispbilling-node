@@ -1,885 +1,2597 @@
-<!DOCTYPE html>
-<html lang="en">
+<style>
+.cm-wrap{
+    width:100%;
+    background:#f1f3f6;
+    padding:18px;
+    box-sizing:border-box;
+}
 
-<head>
+.cm-page{
+    width:100%;
+    max-width:1000px;
+    margin:0 auto;
+    background:#fff;
+    border:1px solid #dfe3e8;
+    border-radius:8px;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+    overflow:hidden;
+}
 
-    <meta charset="UTF-8">
+.cm-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 16px;
+    background:#fff;
+    border-bottom:1px solid #e5e7eb;
+}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+.cm-badge{
+    font-size:15px;
+    font-weight:600;
+    color:#202124;
+}
 
-    <title>Add Customer</title>
+.cm-close{
+    border:0;
+    background:transparent;
+    font-size:22px;
+    line-height:1;
+    color:#6b7280;
+    cursor:pointer;
+    padding:2px 6px;
+}
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+.cm-body{
+    padding:16px;
+}
 
-    <link
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-        rel="stylesheet"
-    >
+.cm-lbl{
+    display:block;
+    margin-bottom:5px;
+    font-size:13px;
+    font-weight:600;
+    color:#374151;
+}
 
-    <link
-        rel="stylesheet"
-        href="/assets/css/sidebar.css"
-    >
+.req{
+    color:#dc2626;
+}
 
-    <link
-        rel="stylesheet"
-        href="/assets/css/topbar.css"
-    >
+.cm-in,
+.cm-sel{
+    width:100%;
+    height:36px;
+    padding:6px 10px;
+    border:1px solid #d1d5db;
+    border-radius:5px;
+    background:#fff;
+    color:#111827;
+    font-size:13px;
+    box-sizing:border-box;
+    outline:none;
+}
 
-    <link
-        rel="stylesheet"
-        href="/assets/css/style.css"
-    >
+.cm-in:focus,
+.cm-sel:focus{
+    border-color:#86b7fe;
+    box-shadow:0 0 0 2px rgba(13,110,253,.08);
+}
 
-</head>
+.cm-in:disabled,
+.cm-sel:disabled{
+    background:#f3f4f6;
+    cursor:not-allowed;
+}
 
-<body>
+.cm-chk{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-height:36px;
+    font-size:13px;
+    color:#374151;
+}
 
-    <div id="sidebar-container"></div>
+.cm-chk input{
+    margin:0;
+}
 
-    <div id="topbar-container"></div>
+.cm-info{
+    margin-top:12px;
+    padding:9px 11px;
+    border:1px solid #dbeafe;
+    background:#eff6ff;
+    color:#1e40af;
+    border-radius:5px;
+    font-size:12px;
+}
+
+.cm-foot{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    padding:12px 16px;
+    border-top:1px solid #e5e7eb;
+    background:#fafafa;
+}
+
+.cm-btn{
+    height:36px;
+    padding:0 16px;
+    border:0;
+    border-radius:5px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.cm-cancel{
+    background:#e5e7eb;
+    color:#374151;
+}
+
+.cm-save{
+    background:#0d6efd;
+    color:#fff;
+}
+
+.cm-save:disabled{
+    opacity:.65;
+    cursor:not-allowed;
+}
+
+.cm-row{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin-bottom:12px;
+}
+
+.cm-row.one{
+    grid-template-columns:1fr;
+}
+
+.cm-field{
+    min-width:0;
+}
+
+@media(max-width:700px){
+    .cm-wrap{
+        padding:8px;
+    }
+
+    .cm-body{
+        padding:12px;
+    }
+
+    .cm-row{
+        grid-template-columns:1fr;
+        gap:10px;
+        margin-bottom:10px;
+    }
+
+    .cm-foot{
+        padding:10px 12px;
+    }
+}
+</style>
 
 
-    <main
-        class="main-content"
-        style="
-            margin-left:250px;
-            padding:90px 20px 30px;
-        "
-    >
+<div class="cm-wrap">
 
-        <div class="container-fluid">
+    <div class="cm-page">
 
-            <div
-                class="d-flex
-                       justify-content-between
-                       align-items-center
-                       mb-3"
+        <!-- HEADER -->
+        <div class="cm-head">
+
+            <div class="cm-badge">
+                Add Customer
+            </div>
+
+            <button
+                type="button"
+                class="cm-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
             >
-
-                <div>
-
-                    <h4 class="mb-1">
-                        <i class="fa fa-user-plus"></i>
-                        Add Customer
-                    </h4>
-
-                    <small class="text-muted">
-                        Create PPPoE customer
-                    </small>
-
-                </div>
-
-                <a
-                    href="/customers"
-                    class="btn btn-secondary"
-                >
-                    <i class="fa fa-arrow-left"></i>
-                    Back
-                </a>
-
-            </div>
-
-
-            <div class="card shadow-sm">
-
-                <div class="card-body">
-
-                    <form id="customerAddForm">
-
-                        <div class="row g-3">
-
-
-                            <!-- CUSTOMER ID -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Customer ID
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="customer_id"
-                                    id="customer_id"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <!-- NAME -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Customer Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="name"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <!-- PHONE -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Mobile
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="phone"
-                                >
-
-                            </div>
-
-
-                            <!-- MIKROTIK -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    MikroTik Server
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="mikrotik_id"
-                                    id="mikrotik_id"
-                                    required
-                                >
-
-                                    <option value="">
-                                        Select MikroTik
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- PACKAGE -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Package
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="package_id"
-                                    id="package_id"
-                                    required
-                                >
-
-                                    <option value="">
-                                        Select Package
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- MONTHLY BILL -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Monthly Bill
-                                </label>
-
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    class="form-control"
-                                    name="monthly_fee"
-                                    id="monthly_fee"
-                                >
-
-                            </div>
-
-
-                            <!-- PPPOE -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    PPPoE Username
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="pppoe_name"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <!-- PASSWORD -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    PPPoE Password
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="password"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <!-- ADDRESS -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Address
-                                </label>
-
-                                <textarea
-                                    class="form-control"
-                                    name="address"
-                                    rows="3"
-                                ></textarea>
-
-                            </div>
-
-
-                            <!-- EMAIL -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Email
-                                </label>
-
-                                <input
-                                    type="email"
-                                    class="form-control"
-                                    name="email"
-                                >
-
-                            </div>
-
-
-                            <!-- AREA -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Area
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="area_id"
-                                    id="area_id"
-                                >
-
-                                    <option value="">
-                                        Select Area
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- SUB AREA -->
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Sub Area
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="sub_area_id"
-                                    id="sub_area_id"
-                                >
-
-                                    <option value="">
-                                        Select Sub Area
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- BILLING TYPE -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Billing Type
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="billing_type"
-                                >
-
-                                    <option value="Prepaid">
-                                        Prepaid
-                                    </option>
-
-                                    <option value="Postpaid">
-                                        Postpaid
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- STATUS -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Status
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="status"
-                                >
-
-                                    <option value="Active">
-                                        Active
-                                    </option>
-
-                                    <option value="Inactive">
-                                        Inactive
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <!-- COMMENT -->
-
-                            <div class="col-md-4">
-
-                                <label class="form-label">
-                                    Comment
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="comment"
-                                >
-
-                            </div>
-
-
-                            <!-- SUBMIT -->
-
-                            <div
-                                class="col-12
-                                       d-flex
-                                       justify-content-end
-                                       gap-2
-                                       mt-4"
-                            >
-
-                                <a
-                                    href="/customers"
-                                    class="btn btn-secondary"
-                                >
-                                    Cancel
-                                </a>
-
-                                <button
-                                    type="submit"
-                                    class="btn btn-primary"
-                                    id="saveCustomerBtn"
-                                >
-
-                                    <i class="fa fa-save"></i>
-
-                                    Save Customer
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
+                &times;
+            </button>
 
         </div>
 
-    </main>
+
+        <!-- FORM -->
+        <form
+            id="addNewCustomerForm"
+            method="POST"
+            action="/api/customers/add"
+            autocomplete="off"
+        >
+
+            <div class="cm-body">
+
+                <!-- CSRF -->
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    id="add_csrf_token"
+                    value=""
+                >
 
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    ></script>
+                <!-- 1. CUSTOMER ID -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="customer_id"
+                        >
+                            Customer ID <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="customer_id"
+                            name="customer_id"
+                            required
+                        >
+
+                    </div>
+
+                </div>
 
 
-    <script>
+                <!-- 2. MIKROTIK -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_mikrotik"
+                        >
+                            MikroTik <span class="req">*</span>
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_mikrotik"
+                            name="mikrotik_id"
+                            required
+                        >
+
+                            <option value="">
+                                Select MikroTik
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- 3. PACKAGE -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_package"
+                        >
+                            Package <span class="req">*</span>
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_package"
+                            name="package_id"
+                            required
+                            disabled
+                        >
+
+                            <option value="">
+                                Select Package
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 4. MONTHLY FEE -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="monthly_fee"
+                        >
+                            Monthly Fee <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="number"
+                            class="cm-in"
+                            id="monthly_fee"
+                            name="monthly_fee"
+                            value="0"
+                            min="0"
+                            step="0.01"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- 5. BALANCE -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="balance"
+                        >
+                            Balance
+                        </label>
+
+                        <input
+                            type="number"
+                            class="cm-in"
+                            id="balance"
+                            name="balance"
+                            value="0"
+                            step="0.01"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 6. PPPOE NAME -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="pppoe_name"
+                        >
+                            PPPoE Name <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="pppoe_name"
+                            name="pppoe_name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- 7. PPPOE PASSWORD -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="password"
+                        >
+                            PPPoE Password <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="password"
+                            name="password"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 8. AREA -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_area_id"
+                        >
+                            Area <span class="req">*</span>
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_area_id"
+                            name="area_id"
+                            required
+                            disabled
+                        >
+
+                            <option value="">
+                                Select Area
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- 9. SUB AREA -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_sub_area_id"
+                        >
+                            Sub-Area <span class="req">*</span>
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_sub_area_id"
+                            name="sub_area_id"
+                            required
+                            disabled
+                        >
+
+                            <option value="">
+                                Select Sub-Area
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 10. CUSTOMER NAME -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="name"
+                        >
+                            Customer Name <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="name"
+                            name="name"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 11. MOBILE -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="mobile"
+                        >
+                            Mobile
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="mobile"
+                            name="mobile"
+                        >
+
+                    </div>
+
+
+                    <!-- 12. NID -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="nid"
+                        >
+                            NID
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="nid"
+                            name="nid"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 13. BIRTH DATE -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="birth_date"
+                        >
+                            Birth Date
+                        </label>
+
+                        <input
+                            type="date"
+                            class="cm-in"
+                            id="birth_date"
+                            name="birth_date"
+                        >
+
+                    </div>
+
+
+                    <!-- 14. ADDRESS -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="address"
+                        >
+                            Address
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="address"
+                            name="address"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 15. EMAIL -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="email"
+                        >
+                            Email
+                        </label>
+
+                        <input
+                            type="email"
+                            class="cm-in"
+                            id="email"
+                            name="email"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 16. BILLING CYCLE -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="billing_cycle"
+                        >
+                            Billing Cycle <span class="req">*</span>
+                        </label>
+
+                        <input
+                            type="datetime-local"
+                            class="cm-in"
+                            id="billing_cycle"
+                            name="billing_cycle"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- 17. CONNECTION DATE -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="connection_date"
+                        >
+                            Connection Date
+                        </label>
+
+                        <input
+                            type="datetime-local"
+                            class="cm-in"
+                            id="connection_date"
+                            name="connection_date"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 18. CONNECTION FEE -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="connection_fee"
+                        >
+                            Connection Fee
+                        </label>
+
+                        <input
+                            type="number"
+                            class="cm-in"
+                            id="connection_fee"
+                            name="connection_fee"
+                            value="0"
+                            min="0"
+                            step="0.01"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 19. BILLING TYPE -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label class="cm-lbl">
+                            Billing Type <span class="req">*</span>
+                        </label>
+
+                        <div class="cm-chk">
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="billing_type"
+                                    value="Prepaid"
+                                    checked
+                                >
+                                Prepaid
+                            </label>
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="billing_type"
+                                    value="Postpaid"
+                                >
+                                Postpaid
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 20. DIVISION -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_division_id"
+                        >
+                            Division
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_division_id"
+                            name="division_id"
+                        >
+
+                            <option value="">
+                                Select Division
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- 21. DISTRICT -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_district_id"
+                        >
+                            District
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_district_id"
+                            name="district_id"
+                            disabled
+                        >
+
+                            <option value="">
+                                Select District
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 22. UPAZILA -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="add_upazila_id"
+                        >
+                            Upazila/Thana
+                        </label>
+
+                        <select
+                            class="cm-sel"
+                            id="add_upazila_id"
+                            name="upazila_id"
+                            disabled
+                        >
+
+                            <option value="">
+                                Select Upazila/Thana
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 23. COMMENT -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="comment"
+                        >
+                            Comment
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="comment"
+                            name="comment"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 24. STATUS -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label class="cm-lbl">
+                            Status
+                        </label>
+
+                        <div class="cm-chk">
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="status"
+                                    value="Active"
+                                    checked
+                                >
+                                Active
+                            </label>
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="status"
+                                    value="Inactive"
+                                >
+                                Inactive
+                            </label>
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="status"
+                                    value="Expired"
+                                    disabled
+                                >
+                                Expired
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- 25. REFERENCE NAME -->
+                <div class="cm-row">
+
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="reference_name"
+                        >
+                            Reference Name
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="reference_name"
+                            name="reference_name"
+                        >
+
+                    </div>
+
+
+                    <!-- 26. REFERENCE MOBILE -->
+                    <div class="cm-field">
+
+                        <label
+                            class="cm-lbl"
+                            for="reference_mobile"
+                        >
+                            Reference Mobile
+                        </label>
+
+                        <input
+                            type="text"
+                            class="cm-in"
+                            id="reference_mobile"
+                            name="reference_mobile"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- 27. AUTOMATIC CONNECTION -->
+                <div class="cm-row one">
+
+                    <div class="cm-field">
+
+                        <label class="cm-lbl">
+                            Automatic Connection
+                        </label>
+
+                        <div class="cm-chk">
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="auto_connection"
+                                    value="Will continue"
+                                    checked
+                                >
+                                Will continue
+                            </label>
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="auto_connection"
+                                    value="Next Month"
+                                >
+                                Next Month
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="cm-info">
+                    MikroTik থেকে Package ও Area নির্বাচন করার পর
+                    সংশ্লিষ্ট data automatically load হবে।
+                </div>
+
+            </div>
+
+
+            <!-- FOOTER -->
+            <div class="cm-foot">
+
+                <button
+                    type="button"
+                    class="cm-btn cm-cancel"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="submit"
+                    class="cm-btn cm-save"
+                    id="addCustomerSubmit"
+                >
+                    Submit
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+(function(){
+
+    'use strict';
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PREVENT DUPLICATE INITIALIZATION
+    |--------------------------------------------------------------------------
+    */
+
+    const form =
+        document.getElementById(
+            'addNewCustomerForm'
+        );
+
+    if (!form) {
+        return;
+    }
+
+    if (form.dataset.initialized === '1') {
+        return;
+    }
+
+    form.dataset.initialized = '1';
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ELEMENTS
+    |--------------------------------------------------------------------------
+    */
+
+    const csrfInput =
+        document.getElementById(
+            'add_csrf_token'
+        );
+
+    const mikrotik =
+        document.getElementById(
+            'add_mikrotik'
+        );
+
+    const packageSelect =
+        document.getElementById(
+            'add_package'
+        );
+
+    const monthlyFee =
+        document.getElementById(
+            'monthly_fee'
+        );
+
+    const area =
+        document.getElementById(
+            'add_area_id'
+        );
+
+    const subArea =
+        document.getElementById(
+            'add_sub_area_id'
+        );
+
+    const division =
+        document.getElementById(
+            'add_division_id'
+        );
+
+    const district =
+        document.getElementById(
+            'add_district_id'
+        );
+
+    const upazila =
+        document.getElementById(
+            'add_upazila_id'
+        );
+
+    const submitButton =
+        document.getElementById(
+            'addCustomerSubmit'
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESET SELECT
+    |--------------------------------------------------------------------------
+    */
+
+    function resetSelect(
+        select,
+        text,
+        disabled
+    ){
+
+        if (!select) {
+            return;
+        }
+
+        select.innerHTML =
+            '<option value="">' +
+            text +
+            '</option>';
+
+        select.disabled =
+            disabled;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | JSON RESPONSE
+    |--------------------------------------------------------------------------
+    */
+
+    async function getJson(response){
+
+        let data;
+
+        try {
+
+            data =
+                await response.json();
+
+        } catch (error) {
+
+            throw new Error(
+                'Invalid server response.'
+            );
+
+        }
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data &&
+                data.message
+                    ? data.message
+                    : 'Request failed.'
+            );
+
+        }
+
+
+        if (
+            data &&
+            data.success === false
+        ) {
+
+            throw new Error(
+                data.message ||
+                'Request failed.'
+            );
+
+        }
+
+
+        return data;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD META
+    |--------------------------------------------------------------------------
+    */
+
+    async function loadMeta(){
+
+        const response =
+            await fetch(
+                '/api/customers/add/form',
+                {
+                    method: 'GET',
+
+                    credentials:
+                        'same-origin',
+
+                    headers:{
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+
+                        'Accept':
+                            'application/json'
+                    }
+                }
+            );
+
+
+        const data =
+            await getJson(
+                response
+            );
+
 
         /*
         |--------------------------------------------------------------------------
-        | SIDEBAR / TOPBAR
+        | CSRF
         |--------------------------------------------------------------------------
         */
 
-        async function loadLayout() {
+        if (
+            csrfInput &&
+            data.csrf_token
+        ) {
+
+            csrfInput.value =
+                data.csrf_token;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MIKROTIK
+        |--------------------------------------------------------------------------
+        */
+
+        if (!mikrotik) {
+            return;
+        }
+
+
+        mikrotik.innerHTML =
+            '<option value="">' +
+            'Select MikroTik' +
+            '</option>';
+
+
+        const routers =
+            Array.isArray(
+                data.mikrotiks
+            )
+                ? data.mikrotiks
+                : [];
+
+
+        routers.forEach(
+            function(router){
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    router.id;
+
+
+                option.textContent =
+                    router.name ||
+                    router.ip ||
+                    (
+                        'MikroTik #' +
+                        router.id
+                    );
+
+
+                mikrotik.appendChild(
+                    option
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD AREAS
+    |--------------------------------------------------------------------------
+    */
+
+    async function loadAreas(
+        routerId
+    ){
+
+        resetSelect(
+            area,
+            'Loading Area...',
+            true
+        );
+
+
+        resetSelect(
+            subArea,
+            'Select Sub-Area',
+            true
+        );
+
+
+        if (!routerId) {
+
+            resetSelect(
+                area,
+                'Select Area',
+                true
+            );
+
+            return;
+        }
+
+
+        const response =
+            await fetch(
+                '/api/customers/add/areas?mikrotik_id=' +
+                encodeURIComponent(
+                    routerId
+                ),
+                {
+                    method: 'GET',
+
+                    credentials:
+                        'same-origin',
+
+                    headers:{
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+
+                        'Accept':
+                            'application/json'
+                    }
+                }
+            );
+
+
+        const data =
+            await getJson(
+                response
+            );
+
+
+        let areas = [];
+
+
+        if (
+            Array.isArray(
+                data.data
+            )
+        ) {
+
+            areas =
+                data.data;
+
+        } else if (
+            Array.isArray(
+                data.areas
+            )
+        ) {
+
+            areas =
+                data.areas;
+
+        }
+
+
+        resetSelect(
+            area,
+            'Select Area',
+            false
+        );
+
+
+        areas.forEach(
+            function(item){
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    item.id;
+
+
+                option.textContent =
+                    item.name ||
+                    item.area_name ||
+                    (
+                        'Area #' +
+                        item.id
+                    );
+
+
+                area.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+        if (!areas.length) {
+
+            resetSelect(
+                area,
+                'No Area Found',
+                true
+            );
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD PACKAGES
+    |--------------------------------------------------------------------------
+    */
+
+    async function loadPackages(
+        routerId
+    ){
+
+        resetSelect(
+            packageSelect,
+            'Loading Package...',
+            true
+        );
+
+
+        if (!routerId) {
+
+            resetSelect(
+                packageSelect,
+                'Select Package',
+                true
+            );
+
+            return;
+        }
+
+
+        const response =
+            await fetch(
+                '/api/customers/add/packages?router_id=' +
+                encodeURIComponent(
+                    routerId
+                ),
+                {
+                    method: 'GET',
+
+                    credentials:
+                        'same-origin',
+
+                    headers:{
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+
+                        'Accept':
+                            'application/json'
+                    }
+                }
+            );
+
+
+        const data =
+            await getJson(
+                response
+            );
+
+
+        const packages =
+            Array.isArray(
+                data.packages
+            )
+                ? data.packages
+                : [];
+
+
+        resetSelect(
+            packageSelect,
+            'Select Package',
+            false
+        );
+
+
+        packages.forEach(
+            function(pkg){
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    pkg.id;
+
+
+                option.dataset.price =
+                    pkg.price || 0;
+
+
+                let label =
+                    pkg.package_name ||
+                    'Package';
+
+
+                if (
+                    pkg.alias_name
+                ) {
+
+                    label +=
+                        ' (' +
+                        pkg.alias_name +
+                        ')';
+
+                }
+
+
+                label +=
+                    ' - ৳' +
+                    Number(
+                        pkg.price || 0
+                    ).toFixed(2);
+
+
+                option.textContent =
+                    label;
+
+
+                packageSelect.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+        if (!packages.length) {
+
+            resetSelect(
+                packageSelect,
+                'No Package Found',
+                true
+            );
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MIKROTIK CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (mikrotik) {
+
+        mikrotik.addEventListener(
+            'change',
+            async function(){
+
+                const routerId =
+                    this.value;
+
+
+                resetSelect(
+                    packageSelect,
+                    'Select Package',
+                    true
+                );
+
+
+                resetSelect(
+                    area,
+                    'Select Area',
+                    true
+                );
+
+
+                resetSelect(
+                    subArea,
+                    'Select Sub-Area',
+                    true
+                );
+
+
+                if (monthlyFee) {
+
+                    monthlyFee.value =
+                        '0';
+
+                }
+
+
+                if (!routerId) {
+                    return;
+                }
+
+
+                try {
+
+                    await Promise.all([
+                        loadAreas(
+                            routerId
+                        ),
+
+                        loadPackages(
+                            routerId
+                        )
+                    ]);
+
+                } catch (error) {
+
+                    console.error(
+                        'MikroTik loading:',
+                        error
+                    );
+
+                    alert(
+                        error.message ||
+                        'Unable to load MikroTik data.'
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PACKAGE CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (packageSelect) {
+
+        packageSelect.addEventListener(
+            'change',
+            function(){
+
+                const selected =
+                    this.options[
+                        this.selectedIndex
+                    ];
+
+
+                if (
+                    monthlyFee &&
+                    selected
+                ) {
+
+                    monthlyFee.value =
+                        selected.dataset.price ||
+                        '0';
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | AREA CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (area) {
+
+        area.addEventListener(
+            'change',
+            async function(){
+
+                const areaId =
+                    this.value;
+
+
+                resetSelect(
+                    subArea,
+                    'Loading Sub-Area...',
+                    true
+                );
+
+
+                if (!areaId) {
+
+                    resetSelect(
+                        subArea,
+                        'Select Sub-Area',
+                        true
+                    );
+
+                    return;
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            '/api/customers/add/sub-areas?area_id=' +
+                            encodeURIComponent(
+                                areaId
+                            ),
+                            {
+                                method: 'GET',
+
+                                credentials:
+                                    'same-origin',
+
+                                headers:{
+                                    'X-Requested-With':
+                                        'XMLHttpRequest',
+
+                                    'Accept':
+                                        'application/json'
+                                }
+                            }
+                        );
+
+
+                    const data =
+                        await getJson(
+                            response
+                        );
+
+
+                    let rows = [];
+
+
+                    if (
+                        Array.isArray(
+                            data.data
+                        )
+                    ) {
+
+                        rows =
+                            data.data;
+
+                    } else if (
+                        Array.isArray(
+                            data.sub_areas
+                        )
+                    ) {
+
+                        rows =
+                            data.sub_areas;
+
+                    }
+
+
+                    resetSelect(
+                        subArea,
+                        'Select Sub-Area',
+                        false
+                    );
+
+
+                    rows.forEach(
+                        function(item){
+
+                            const option =
+                                document.createElement(
+                                    'option'
+                                );
+
+
+                            option.value =
+                                item.id;
+
+
+                            option.textContent =
+                                item.name ||
+                                item.sub_area_name ||
+                                (
+                                    'Sub-Area #' +
+                                    item.id
+                                );
+
+
+                            subArea.appendChild(
+                                option
+                            );
+
+                        }
+                    );
+
+
+                    if (!rows.length) {
+
+                        resetSelect(
+                            subArea,
+                            'No Sub-Area Found',
+                            true
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        'Sub-Area:',
+                        error
+                    );
+
+
+                    resetSelect(
+                        subArea,
+                        'Unable to load Sub-Area',
+                        true
+                    );
+
+
+                    alert(
+                        error.message ||
+                        'Unable to load sub areas.'
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD DIVISIONS
+    |--------------------------------------------------------------------------
+    */
+
+    async function loadDivisions(){
+
+        if (!division) {
+            return;
+        }
+
+
+        const response =
+            await fetch(
+                '/api/customers/add/divisions',
+                {
+                    method: 'GET',
+
+                    credentials:
+                        'same-origin',
+
+                    headers:{
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+
+                        'Accept':
+                            'application/json'
+                    }
+                }
+            );
+
+
+        const data =
+            await getJson(
+                response
+            );
+
+
+        const rows =
+            Array.isArray(
+                data.data
+            )
+                ? data.data
+                : [];
+
+
+        resetSelect(
+            division,
+            'Select Division',
+            false
+        );
+
+
+        rows.forEach(
+            function(item){
+
+                const option =
+                    document.createElement(
+                        'option'
+                    );
+
+
+                option.value =
+                    item.id;
+
+
+                option.textContent =
+                    item.name || '';
+
+
+                division.appendChild(
+                    option
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DIVISION CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (division) {
+
+        division.addEventListener(
+            'change',
+            async function(){
+
+                const divisionId =
+                    this.value;
+
+
+                resetSelect(
+                    district,
+                    'Select District',
+                    true
+                );
+
+
+                resetSelect(
+                    upazila,
+                    'Select Upazila/Thana',
+                    true
+                );
+
+
+                if (!divisionId) {
+                    return;
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            '/api/customers/add/districts?division_id=' +
+                            encodeURIComponent(
+                                divisionId
+                            ),
+                            {
+                                method: 'GET',
+
+                                credentials:
+                                    'same-origin',
+
+                                headers:{
+                                    'X-Requested-With':
+                                        'XMLHttpRequest',
+
+                                    'Accept':
+                                        'application/json'
+                                }
+                            }
+                        );
+
+
+                    const data =
+                        await getJson(
+                            response
+                        );
+
+
+                    const rows =
+                        Array.isArray(
+                            data.data
+                        )
+                            ? data.data
+                            : [];
+
+
+                    resetSelect(
+                        district,
+                        'Select District',
+                        false
+                    );
+
+
+                    rows.forEach(
+                        function(item){
+
+                            const option =
+                                document.createElement(
+                                    'option'
+                                );
+
+
+                            option.value =
+                                item.id;
+
+
+                            option.textContent =
+                                item.name || '';
+
+
+                            district.appendChild(
+                                option
+                            );
+
+                        }
+                    );
+
+
+                    if (!rows.length) {
+
+                        resetSelect(
+                            district,
+                            'No District Found',
+                            true
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        'Districts:',
+                        error
+                    );
+
+
+                    alert(
+                        error.message ||
+                        'Unable to load districts.'
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DISTRICT CHANGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (district) {
+
+        district.addEventListener(
+            'change',
+            async function(){
+
+                const districtId =
+                    this.value;
+
+
+                resetSelect(
+                    upazila,
+                    'Select Upazila/Thana',
+                    true
+                );
+
+
+                if (!districtId) {
+                    return;
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            '/api/customers/add/upazilas?district_id=' +
+                            encodeURIComponent(
+                                districtId
+                            ),
+                            {
+                                method: 'GET',
+
+                                credentials:
+                                    'same-origin',
+
+                                headers:{
+                                    'X-Requested-With':
+                                        'XMLHttpRequest',
+
+                                    'Accept':
+                                        'application/json'
+                                }
+                            }
+                        );
+
+
+                    const data =
+                        await getJson(
+                            response
+                        );
+
+
+                    const rows =
+                        Array.isArray(
+                            data.data
+                        )
+                            ? data.data
+                            : [];
+
+
+                    resetSelect(
+                        upazila,
+                        'Select Upazila/Thana',
+                        false
+                    );
+
+
+                    rows.forEach(
+                        function(item){
+
+                            const option =
+                                document.createElement(
+                                    'option'
+                                );
+
+
+                            option.value =
+                                item.id;
+
+
+                            option.textContent =
+                                item.name || '';
+
+
+                            upazila.appendChild(
+                                option
+                            );
+
+                        }
+                    );
+
+
+                    if (!rows.length) {
+
+                        resetSelect(
+                            upazila,
+                            'No Upazila Found',
+                            true
+                        );
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        'Upazilas:',
+                        error
+                    );
+
+
+                    alert(
+                        error.message ||
+                        'Unable to load upazilas.'
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUBMIT CUSTOMER
+    |--------------------------------------------------------------------------
+    */
+
+    form.addEventListener(
+        'submit',
+        async function(event){
+
+            event.preventDefault();
+
+
+            if (submitButton) {
+
+                submitButton.disabled =
+                    true;
+
+                submitButton.textContent =
+                    'Saving...';
+
+            }
+
 
             try {
 
-                const sidebar =
-                    await fetch(
-                        "/partials/sidebar.html"
+                /*
+                |--------------------------------------------------------------------------
+                | ENSURE CSRF
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    !csrfInput ||
+                    !csrfInput.value
+                ) {
+
+                    await loadMeta();
+
+                }
+
+
+                if (
+                    !csrfInput ||
+                    !csrfInput.value
+                ) {
+
+                    throw new Error(
+                        'Security token missing. Please refresh the page.'
                     );
-
-                if (sidebar.ok) {
-
-                    document
-                        .getElementById(
-                            "sidebar-container"
-                        )
-                        .innerHTML =
-                        await sidebar.text();
 
                 }
 
 
-                const topbar =
-                    await fetch(
-                        "/partials/topbar.html"
+                /*
+                |--------------------------------------------------------------------------
+                | BUILD URL ENCODED BODY
+                |--------------------------------------------------------------------------
+                */
+
+                const formData =
+                    new URLSearchParams();
+
+
+                const elements =
+                    form.querySelectorAll(
+                        'input, select, textarea'
                     );
 
-                if (topbar.ok) {
 
-                    document
-                        .getElementById(
-                            "topbar-container"
-                        )
-                        .innerHTML =
-                        await topbar.text();
+                elements.forEach(
+                    function(element){
+
+                        if (!element.name) {
+                            return;
+                        }
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | CHECKBOX
+                        |----------------------------------------------------------------------
+                        */
+
+                        if (
+                            element.type ===
+                            'checkbox'
+                        ) {
+
+                            if (
+                                element.checked
+                            ) {
+
+                                formData.append(
+                                    element.name,
+                                    element.value ||
+                                    '1'
+                                );
+
+                            }
+
+                            return;
+                        }
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | RADIO
+                        |----------------------------------------------------------------------
+                        */
+
+                        if (
+                            element.type ===
+                            'radio'
+                        ) {
+
+                            if (
+                                element.checked
+                            ) {
+
+                                formData.append(
+                                    element.name,
+                                    element.value
+                                );
+
+                            }
+
+                            return;
+                        }
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | NORMAL FIELD
+                        |----------------------------------------------------------------------
+                        */
+
+                        formData.append(
+                            element.name,
+                            element.value
+                        );
+
+                    }
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | FORCE CSRF
+                |--------------------------------------------------------------------------
+                */
+
+                formData.set(
+                    'csrf_token',
+                    csrfInput.value
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | POST
+                |--------------------------------------------------------------------------
+                */
+
+                const response =
+                    await fetch(
+                        '/api/customers/add',
+                        {
+                            method: 'POST',
+
+                            credentials:
+                                'same-origin',
+
+                            headers:{
+                                'X-Requested-With':
+                                    'XMLHttpRequest',
+
+                                'Accept':
+                                    'application/json',
+
+                                'Content-Type':
+                                    'application/x-www-form-urlencoded; charset=UTF-8'
+                            },
+
+                            body:
+                                formData.toString()
+                        }
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | RESPONSE
+                |--------------------------------------------------------------------------
+                */
+
+                const data =
+                    await getJson(
+                        response
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | SUCCESS
+                |--------------------------------------------------------------------------
+                */
+
+                alert(
+                    data.message ||
+                    'Customer added successfully.'
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | CLOSE MODAL
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    typeof bootstrap !==
+                    'undefined'
+                ) {
+
+                    const modalElement =
+                        form.closest(
+                            '.modal'
+                        );
+
+
+                    if (modalElement) {
+
+                        const modal =
+                            bootstrap.Modal
+                                .getInstance(
+                                    modalElement
+                                );
+
+
+                        if (modal) {
+
+                            modal.hide();
+
+                        }
+
+                    }
 
                 }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | RESET
+                |--------------------------------------------------------------------------
+                */
+
+                form.reset();
+
+
+                resetSelect(
+                    packageSelect,
+                    'Select Package',
+                    true
+                );
+
+
+                resetSelect(
+                    area,
+                    'Select Area',
+                    true
+                );
+
+
+                resetSelect(
+                    subArea,
+                    'Select Sub-Area',
+                    true
+                );
+
+
+                resetSelect(
+                    district,
+                    'Select District',
+                    true
+                );
+
+
+                resetSelect(
+                    upazila,
+                    'Select Upazila/Thana',
+                    true
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | RELOAD CUSTOMER LIST
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    typeof window.loadCustomers ===
+                    'function'
+                ) {
+
+                    window.loadCustomers();
+
+                } else {
+
+                    window.location.reload();
+
+                }
+
 
             } catch (error) {
 
                 console.error(
-                    "Layout load error:",
+                    'Add Customer save:',
                     error
                 );
 
-            }
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOAD FORM DATA
-        |--------------------------------------------------------------------------
-        */
-
-        async function loadFormData() {
-
-            const response =
-                await fetch(
-                    "/api/customers/add/form"
-                );
-
-            const result =
-                await response.json();
-
-            if (!result.success) {
-                throw new Error(
-                    result.message ||
-                    "Failed to load form."
-                );
-            }
-
-
-            const routerSelect =
-                document.getElementById(
-                    "mikrotik_id"
-                );
-
-            const areaSelect =
-                document.getElementById(
-                    "area_id"
-                );
-
-
-            result.data.routers
-                .forEach(router => {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-                    option.value =
-                        router.id;
-
-                    option.textContent =
-                        router.name ||
-                        router.ip;
-
-                    routerSelect.appendChild(
-                        option
-                    );
-
-                });
-
-
-            result.data.areas
-                .forEach(area => {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-                    option.value =
-                        area.id;
-
-                    option.textContent =
-                        area.name;
-
-                    areaSelect.appendChild(
-                        option
-                    );
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOAD PACKAGES
-        |--------------------------------------------------------------------------
-        */
-
-        document
-            .getElementById(
-                "mikrotik_id"
-            )
-            .addEventListener(
-                "change",
-                async function () {
-
-                    const routerId =
-                        this.value;
-
-                    const packageSelect =
-                        document.getElementById(
-                            "package_id"
-                        );
-
-                    const billInput =
-                        document.getElementById(
-                            "monthly_fee"
-                        );
-
-                    packageSelect.innerHTML = `
-                        <option value="">
-                            Loading packages...
-                        </option>
-                    `;
-
-                    billInput.value = "";
-
-
-                    if (!routerId) {
-
-                        packageSelect.innerHTML = `
-                            <option value="">
-                                Select Package
-                            </option>
-                        `;
-
-                        return;
-                    }
-
-
-                    try {
-
-                        const response =
-                            await fetch(
-                                `/api/customers/add/packages?router_id=${encodeURIComponent(routerId)}`
-                            );
-
-                        const result =
-                            await response.json();
-
-                        if (!result.success) {
-                            throw new Error(
-                                result.message
-                            );
-                        }
-
-
-                        packageSelect.innerHTML = `
-                            <option value="">
-                                Select Package
-                            </option>
-                        `;
-
-
-                        result.data
-                            .forEach(pkg => {
-
-                                const option =
-                                    document.createElement(
-                                        "option"
-                                    );
-
-                                option.value =
-                                    pkg.id;
-
-                                option.dataset.price =
-                                    pkg.price || 0;
-
-                                option.textContent =
-                                    pkg.package_name +
-                                    (
-                                        pkg.price !== null &&
-                                        pkg.price !== undefined
-                                            ? ` - ${pkg.price}`
-                                            : ""
-                                    );
-
-                                packageSelect
-                                    .appendChild(
-                                        option
-                                    );
-
-                            });
-
-                    } catch (error) {
-
-                        console.error(
-                            error
-                        );
-
-                        packageSelect.innerHTML = `
-                            <option value="">
-                                Failed to load packages
-                            </option>
-                        `;
-                    }
-
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | PACKAGE PRICE
-        |--------------------------------------------------------------------------
-        */
-
-        document
-            .getElementById(
-                "package_id"
-            )
-            .addEventListener(
-                "change",
-                function () {
-
-                    const option =
-                        this.options[
-                            this.selectedIndex
-                        ];
-
-                    if (
-                        option &&
-                        option.dataset.price
-                    ) {
-
-                        document
-                            .getElementById(
-                                "monthly_fee"
-                            )
-                            .value =
-                            option.dataset.price;
-                    }
-
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE
-        |--------------------------------------------------------------------------
-        */
-
-        document
-            .getElementById(
-                "customerAddForm"
-            )
-            .addEventListener(
-                "submit",
-                async function (event) {
-
-                    event.preventDefault();
-
-
-                    const button =
-                        document.getElementById(
-                            "saveCustomerBtn"
-                        );
-
-
-                    const formData =
-                        new FormData(this);
-
-                    const data =
-                        Object.fromEntries(
-                            formData.entries()
-                        );
-
-
-                    button.disabled = true;
-
-                    button.innerHTML = `
-                        <span
-                            class="spinner-border
-                                   spinner-border-sm"
-                        ></span>
-                        Creating...
-                    `;
-
-
-                    try {
-
-                        const response =
-                            await fetch(
-                                "/api/customers/add",
-                                {
-                                    method: "POST",
-
-                                    headers: {
-                                        "Content-Type":
-                                            "application/json"
-                                    },
-
-                                    body:
-                                        JSON.stringify(
-                                            data
-                                        )
-                                }
-                            );
-
-
-                        const result =
-                            await response.json();
-
-
-                        if (!result.success) {
-
-                            throw new Error(
-                                result.message ||
-                                "Failed to create customer."
-                            );
-
-                        }
-
-
-                        alert(
-                            "Customer created successfully.\n\n" +
-                            "Customer ID: " +
-                            result.customer_id +
-                            "\nPPPoE: " +
-                            result.pppoe_username
-                        );
-
-
-                        window.location.href =
-                            "/customers";
-
-
-                    } catch (error) {
-
-                        alert(
-                            error.message ||
-                            "Failed to create customer."
-                        );
-
-                        button.disabled = false;
-
-                        button.innerHTML = `
-                            <i class="fa fa-save"></i>
-                            Save Customer
-                        `;
-                    }
-
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | START
-        |--------------------------------------------------------------------------
-        */
-
-        Promise
-            .all([
-                loadLayout(),
-                loadFormData()
-            ])
-            .catch(error => {
-
-                console.error(
-                    error
-                );
 
                 alert(
                     error.message ||
-                    "Failed to load form."
+                    'Customer could not be saved.'
                 );
 
-            });
 
-    </script>
+            } finally {
 
-</body>
+                if (submitButton) {
 
-</html>
+                    submitButton.disabled =
+                        false;
+
+                    submitButton.textContent =
+                        'Submit';
+
+                }
+
+            }
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DEFAULT DATE/TIME
+    |--------------------------------------------------------------------------
+    */
+
+    function currentDateTime(){
+
+        const now =
+            new Date();
+
+
+        const offset =
+            now.getTimezoneOffset();
+
+
+        const local =
+            new Date(
+                now.getTime() -
+                offset * 60000
+            );
+
+
+        return local
+            .toISOString()
+            .slice(
+                0,
+                16
+            );
+
+    }
+
+
+    const nowValue =
+        currentDateTime();
+
+
+    const billingCycle =
+        document.getElementById(
+            'billing_cycle'
+        );
+
+
+    const connectionDate =
+        document.getElementById(
+            'connection_date'
+        );
+
+
+    if (
+        billingCycle &&
+        !billingCycle.value
+    ) {
+
+        billingCycle.value =
+            nowValue;
+
+    }
+
+
+    if (
+        connectionDate &&
+        !connectionDate.value
+    ) {
+
+        connectionDate.value =
+            nowValue;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INITIAL LOAD
+    |--------------------------------------------------------------------------
+    */
+
+    Promise.all([
+        loadMeta(),
+        loadDivisions()
+    ]).catch(
+        function(error){
+
+            console.error(
+                'Customer Add initialization:',
+                error
+            );
+
+        }
+    );
+
+})();
+</script>

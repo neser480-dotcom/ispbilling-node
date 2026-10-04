@@ -1626,4 +1626,135 @@ body.dark-mode #customerActionModal .modal-footer {
 
         min-width: 0 !important;
     }
+}/* =========================================================
+   CUSTOMER TOAST POSITION
+   Show SweetAlert toast below the topbar / blue navbar
+   ========================================================= */
+
+.swal2-container.swal2-top-end {
+    top: 72px !important;
+    right: 15px !important;
+    z-index: 99999 !important;
+}
+
+@media (max-width: 767.98px) {
+
+    .swal2-container.swal2-top-end {
+        top: 68px !important;
+        right: 10px !important;
+        left: 10px !important;
+        width: auto !important;
+    }
+
+    .swal2-container.swal2-top-end
+    .swal2-popup {
+        width: 100% !important;
+    }
+}
+/* =========================================================
+   CUSTOMER TABLE - CLEAN READABLE FONT
+========================================================= */
+
+.cm-table thead th {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .1px;
+}
+
+.cm-table tbody td {
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+/* Customer name */
+.cm-table .fw-semibold {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* PPPoE / secondary information */
+.cm-table .small {
+    font-size: 12px !important;
+    line-height: 1.4;
+}
+
+/* Customer ID */
+.cm-table .cm-id {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Package */
+.cm-table .cm-package {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Bill */
+.cm-table td .fw-semibold {
+    font-size: 14px;
+}
+
+/* Day left */
+.cm-table .cm-dayleft {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Day left unavailable */
+.cm-table .cm-dayleft-na {
+    font-size: 14px;
+}
+
+/* Status badges */
+.cm-table .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 9px;
+}
+
+/* Action three dots */
+.customer-action .btn-link {
+    font-size: 22px !important;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Action dropdown text */
+.customer-action .dropdown-menu {
+    min-width: 220px;
+}
+
+.customer-action .dropdown-item {
+    padding: 9px 11px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.customer-action .dropdown-item i {
+    width: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Mobile - keep readable */
+@media (max-width: 768px) {
+
+    .cm-table thead th {
+        font-size: 13px;
+    }
+
+    .cm-table tbody td {
+        font-size: 14px;
+    }
+
+    .cm-table .small {
+        font-size: 12px !important;
+    }
+
+    .customer-action .dropdown-item {
+        font-size: 14px;
+        padding: 9px 11px;
+    }
 }
