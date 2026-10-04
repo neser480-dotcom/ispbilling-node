@@ -96,15 +96,11 @@ function normalizeDate(value) {
         return `${text} 00:00:00`;
     }
 
-    if (
-        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(text)
-    ) {
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(text)) {
         return `${text}:00`;
     }
 
-    if (
-        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text)
-    ) {
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(text)) {
         return text;
     }
 
@@ -132,14 +128,49 @@ function normalizeDate(value) {
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| DATETIME LOCAL FORMATTER
+|--------------------------------------------------------------------------
+|
+| Supports:
+| - Date object
+| - MySQL datetime string
+| - HTML datetime-local string
+|--------------------------------------------------------------------------
+*/
+
 function formatDateTimeLocal(value) {
 
     if (!value) {
         return "";
     }
 
-    const text = String(value)
-        .replace("T", " ");
+    if (value instanceof Date) {
+
+        if (Number.isNaN(value.getTime())) {
+            return "";
+        }
+
+        const pad =
+            n => String(n).padStart(2, "0");
+
+        return [
+            value.getFullYear(),
+            "-",
+            pad(value.getMonth() + 1),
+            "-",
+            pad(value.getDate()),
+            "T",
+            pad(value.getHours()),
+            ":",
+            pad(value.getMinutes())
+        ].join("");
+    }
+
+    const text =
+        String(value)
+            .replace(" ", "T");
 
     return text.substring(0, 16);
 }
@@ -167,27 +198,31 @@ function calculateDayLeft(value) {
         return null;
     }
 
-    const target = new Date(
-        String(value).replace(" ", "T")
-    );
+    const target =
+        new Date(
+            String(value).replace(" ", "T")
+        );
 
     if (Number.isNaN(target.getTime())) {
         return null;
     }
 
-    const now = new Date();
+    const now =
+        new Date();
 
-    const a = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-    );
+    const a =
+        new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+        );
 
-    const b = new Date(
-        target.getFullYear(),
-        target.getMonth(),
-        target.getDate()
-    );
+    const b =
+        new Date(
+            target.getFullYear(),
+            target.getMonth(),
+            target.getDate()
+        );
 
     return Math.ceil(
         (b - a) / 86400000
@@ -203,33 +238,40 @@ function calculateDayLeft(value) {
 
 function normalizeCustomer(row) {
 
-    const bill = Number(
-        row.display_bill ??
-        row.monthly_bill ??
-        0
-    );
+    const bill =
+        Number(
+            row.display_bill ??
+            row.monthly_bill ??
+            0
+        );
 
-    const balance = Number(
-        row.balance || 0
-    );
+    const balance =
+        Number(
+            row.balance || 0
+        );
 
-    const dayLeft = calculateDayLeft(
-        row.billing_cycle ||
-        row.promise_date
-    );
+    const dayLeft =
+        calculateDayLeft(
+            row.billing_cycle ||
+            row.promise_date
+        );
 
     return {
         ...row,
 
-        id: Number(row.id),
+        id:
+            Number(row.id),
 
-        monthly_bill: bill,
+        monthly_bill:
+            bill,
 
-        display_bill: bill,
+        display_bill:
+            bill,
 
         balance,
 
-        day_left: dayLeft,
+        day_left:
+            dayLeft,
 
         display_package:
             row.display_package ||
@@ -253,7 +295,10 @@ function normalizeCustomer(row) {
 |--------------------------------------------------------------------------
 */
 
-async function getCustomers(user, options = {}) {
+async function getCustomers(
+    user,
+    options = {}
+) {
 
     const page =
         Math.max(
@@ -278,22 +323,30 @@ async function getCustomers(user, options = {}) {
             : 100;
 
     const search =
-        String(options.search || "").trim();
+        String(
+            options.search || ""
+        ).trim();
 
     const status =
-        String(options.status || "").trim();
+        String(
+            options.status || ""
+        ).trim();
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     let where = `
         WHERE c.deleted_at IS NULL
         ${scope.sql}
     `;
 
-    const params = [
-        ...scope.params
-    ];
+    const params =
+        [
+            ...scope.params
+        ];
 
     if (search) {
 
@@ -307,7 +360,8 @@ async function getCustomers(user, options = {}) {
             )
         `;
 
-        const q = `%${search}%`;
+        const q =
+            `%${search}%`;
 
         params.push(
             q,
@@ -327,17 +381,20 @@ async function getCustomers(user, options = {}) {
         params.push(status);
     }
 
-    const countRows = await query(
-        `
-        SELECT COUNT(*) AS total
-        FROM customers c
-        ${where}
-        `,
-        params
-    );
+    const countRows =
+        await query(
+            `
+            SELECT COUNT(*) AS total
+            FROM customers c
+            ${where}
+            `,
+            params
+        );
 
     const total =
-        Number(countRows[0]?.total || 0);
+        Number(
+            countRows[0]?.total || 0
+        );
 
     let sql = `
         SELECT
@@ -402,10 +459,14 @@ async function getCustomers(user, options = {}) {
     }
 
     const rows =
-        await query(sql, params);
+        await query(
+            sql,
+            params
+        );
 
     return {
-        data: rows.map(normalizeCustomer),
+        data:
+            rows.map(normalizeCustomer),
 
         pagination: {
             page,
@@ -426,13 +487,21 @@ async function getCustomers(user, options = {}) {
 |--------------------------------------------------------------------------
 */
 
-async function getSummary(user, options = {}) {
+async function getSummary(
+    user,
+    options = {}
+) {
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const params =
-        [...scope.params];
+        [
+            ...scope.params
+        ];
 
     let where = `
         WHERE c.deleted_at IS NULL
@@ -441,69 +510,115 @@ async function getSummary(user, options = {}) {
 
     if (options.search) {
 
-        where += `
-            AND (
-                c.customer_id LIKE ?
-                OR c.name LIKE ?
-                OR c.phone LIKE ?
-                OR c.pppoe_username LIKE ?
-            )
-        `;
+        const search =
+            String(
+                options.search
+            ).trim();
 
-        const q =
-            `%${String(options.search).trim()}%`;
+        if (search) {
 
-        params.push(
-            q,
-            q,
-            q,
-            q
-        );
+            where += `
+                AND (
+                    c.customer_id LIKE ?
+                    OR c.name LIKE ?
+                    OR c.phone LIKE ?
+                    OR c.pppoe_username LIKE ?
+                )
+            `;
+
+            const q =
+                `%${search}%`;
+
+            params.push(
+                q,
+                q,
+                q,
+                q
+            );
+        }
     }
 
-    const rows = await query(
-        `
-        SELECT
+    const rows =
+        await query(
+            `
+            SELECT
 
-            COUNT(*) AS total,
+                COUNT(*) AS total_customer,
 
-            SUM(
-                LOWER(c.status) = 'active'
-            ) AS active,
+                COUNT(*) AS total,
 
-            SUM(
-                LOWER(c.status) = 'expired'
-            ) AS expired,
+                SUM(
+                    LOWER(c.status) = 'active'
+                ) AS active,
 
-            SUM(
-                LOWER(c.status) = 'inactive'
-            ) AS inactive,
+                SUM(
+                    LOWER(c.status) = 'expired'
+                ) AS expired,
 
-            SUM(
-                LOWER(c.status) = 'suspended'
-            ) AS suspended,
+                SUM(
+                    LOWER(c.status) = 'inactive'
+                ) AS inactive,
 
-            SUM(
-                LOWER(c.status) = 'disabled'
-            ) AS disabled,
+                SUM(
+                    LOWER(c.status) = 'suspended'
+                ) AS suspended,
 
-            SUM(
-                LOWER(c.status) = 'pending'
-            ) AS pending,
+                SUM(
+                    LOWER(c.status) = 'disabled'
+                ) AS disabled,
 
-            COALESCE(
-                SUM(c.balance),
-                0
-            ) AS balance
+                SUM(
+                    LOWER(c.status) = 'pending'
+                ) AS pending,
 
-        FROM customers c
+                COALESCE(
+                    SUM(c.balance),
+                    0
+                ) AS total_balance,
 
-        ${where}
-        `,
-        params
-    );
+                COALESCE(
+                    SUM(c.balance),
+                    0
+                ) AS balance,
 
-    return rows[0] || {};
+                COALESCE(
+                    SUM(
+                        COALESCE(
+                            NULLIF(c.monthly_bill, 0),
+                            mp.price,
+                            0
+                        )
+                    ),
+                    0
+                ) AS total_bill
+
+            FROM customers c
+
+            LEFT JOIN mikrotik_packages mp
+                ON mp.id = c.package_id
+                AND (
+                    mp.company_id = c.company_id
+                    OR mp.company_id = 0
+                )
+
+            ${where}
+            `,
+            params
+        );
+
+    return rows[0] || {
+        total_customer: 0,
+        total: 0,
+        active: 0,
+        expired: 0,
+        inactive: 0,
+        suspended: 0,
+        disabled: 0,
+        pending: 0,
+        total_balance: 0,
+        balance: 0,
+        total_bill: 0
+    };
 }
 
 
@@ -513,10 +628,16 @@ async function getSummary(user, options = {}) {
 |--------------------------------------------------------------------------
 */
 
-async function getCustomerById(user, id) {
+async function getCustomerById(
+    user,
+    id
+) {
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const rows =
         await query(
@@ -563,9 +684,17 @@ async function getCustomerById(user, id) {
 
             LEFT JOIN areas a
                 ON a.id = c.area_id
+                AND (
+                    a.company_id = c.company_id
+                    OR a.company_id = 0
+                )
 
             LEFT JOIN sub_areas sa
                 ON sa.id = c.sub_area_id
+                AND (
+                    sa.company_id = c.company_id
+                    OR sa.company_id = 0
+                )
 
             WHERE c.id = ?
               AND c.deleted_at IS NULL
@@ -606,10 +735,15 @@ async function getSelectedCustomers(
     }
 
     const placeholders =
-        sqlPlaceholders(ids.length);
+        sqlPlaceholders(
+            ids.length
+        );
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const sql = `
         SELECT
@@ -637,10 +771,11 @@ async function getSelectedCustomers(
         ${forUpdate ? "FOR UPDATE" : ""}
     `;
 
-    const params = [
-        ...ids,
-        ...scope.params
-    ];
+    const params =
+        [
+            ...ids,
+            ...scope.params
+        ];
 
     if (connection) {
 
@@ -672,7 +807,9 @@ async function getRouter(
 ) {
 
     const id =
-        Number(routerId || 0);
+        Number(
+            routerId || 0
+        );
 
     if (!id) {
         throw new Error(
@@ -681,19 +818,21 @@ async function getRouter(
     }
 
     const scope =
-        buildCompanyScope(user, "m");
+        buildCompanyScope(
+            user,
+            "m"
+        );
 
     const rows =
         await query(
             `
             SELECT *
             FROM mikrotik_servers m
+
             WHERE m.id = ?
-              AND (
-                    m.deleted_at IS NULL
-                    OR m.deleted_at IS NULL
-                  )
+              AND m.deleted_at IS NULL
               ${scope.sql}
+
             LIMIT 1
             `,
             [
@@ -748,22 +887,71 @@ async function resolveCustomerRouter(
     }
 
     const scope =
-        buildCompanyScope(user, "m");
+        buildCompanyScope(
+            user,
+            "m"
+        );
 
     const rows =
         await query(
             `
             SELECT *
             FROM mikrotik_servers m
+
             WHERE m.deleted_at IS NULL
             ${scope.sql}
+
             ORDER BY m.id ASC
             `,
             scope.params
         );
 
+    if (!rows.length) {
+        return null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Only one company router
+    |--------------------------------------------------------------------------
+    */
+
     if (rows.length === 1) {
-        return rows[0];
+
+        const router =
+            rows[0];
+
+        /*
+        | Persist resolved router.
+        */
+
+        try {
+
+            const customerScope =
+                buildCompanyScope(
+                    user,
+                    "c"
+                );
+
+            await db.query(
+                `
+                UPDATE customers c
+                SET c.mikrotik_id = ?
+
+                WHERE c.id = ?
+                  AND c.deleted_at IS NULL
+                  ${customerScope.sql}
+                `,
+                [
+                    router.id,
+                    customer.id,
+                    ...customerScope.params
+                ]
+            );
+
+        } catch (_) {}
+
+        return router;
     }
 
     /*
@@ -792,6 +980,38 @@ async function resolveCustomerRouter(
                     secret &&
                     secret[".id"]
                 ) {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Persist discovered router
+                    |--------------------------------------------------------------------------
+                    */
+
+                    try {
+
+                        const customerScope =
+                            buildCompanyScope(
+                                user,
+                                "c"
+                            );
+
+                        await db.query(
+                            `
+                            UPDATE customers c
+                            SET c.mikrotik_id = ?
+
+                            WHERE c.id = ?
+                              AND c.deleted_at IS NULL
+                              ${customerScope.sql}
+                            `,
+                            [
+                                router.id,
+                                customer.id,
+                                ...customerScope.params
+                            ]
+                        );
+
+                    } catch (_) {}
 
                     return router;
                 }
@@ -826,39 +1046,46 @@ async function resolvePackageProfile(
 
     if (selectedPackageId) {
 
-        const scope =
-            buildCompanyScope(user, "mp");
+        const companyId =
+            getCompanyId(user);
 
         const rows =
             await query(
                 `
                 SELECT *
                 FROM mikrotik_packages mp
+
                 WHERE mp.id = ?
+
                   AND (
                         mp.company_id = ?
                         OR mp.company_id = 0
                         OR ? = 1
                       )
+
                   ${
                       routerId
                           ? " AND mp.router_id = ? "
                           : ""
                   }
+
                 LIMIT 1
                 `,
                 [
                     selectedPackageId,
-                    getCompanyId(user),
-                    isSuperAdmin(user) ? 1 : 0,
+                    companyId,
+                    isSuperAdmin(user)
+                        ? 1
+                        : 0,
                     ...(routerId
-                        ? [Number(routerId)]
+                        ? [
+                            Number(routerId)
+                        ]
                         : [])
                 ]
             );
 
         if (rows.length) {
-
             return rows[0];
         }
     }
@@ -905,6 +1132,7 @@ async function kickCustomer(
 ) {
 
     if (!router || !username) {
+
         return {
             success: false,
             skipped: true
@@ -973,7 +1201,11 @@ async function setSecret(
     values
 ) {
 
-    if (!secret || !secret[".id"]) {
+    if (
+        !secret ||
+        !secret[".id"]
+    ) {
+
         throw new Error(
             "PPPoE secret was not found on MikroTik."
         );
@@ -992,6 +1224,7 @@ async function setSecret(
                 values.profile !== undefined &&
                 values.profile !== null
             ) {
+
                 command.push(
                     `=profile=${values.profile}`
                 );
@@ -1000,6 +1233,7 @@ async function setSecret(
             if (
                 values.disabled !== undefined
             ) {
+
                 command.push(
                     `=disabled=${values.disabled ? "yes" : "no"}`
                 );
@@ -1009,6 +1243,7 @@ async function setSecret(
                 values.password !== undefined &&
                 values.password !== ""
             ) {
+
                 command.push(
                     `=password=${values.password}`
                 );
@@ -1018,6 +1253,7 @@ async function setSecret(
                 values.name !== undefined &&
                 values.name !== ""
             ) {
+
                 command.push(
                     `=name=${values.name}`
                 );
@@ -1026,6 +1262,7 @@ async function setSecret(
             if (
                 values.comment !== undefined
             ) {
+
                 command.push(
                     `=comment=${values.comment || ""}`
                 );
@@ -1101,21 +1338,41 @@ async function blockCustomer(
 
         try {
 
-            await query(
-                `
-                INSERT INTO ppp_profile_backup
-                (
-                    customer_id,
-                    profile_name,
-                    created_at
-                )
-                VALUES (?, ?, NOW())
-                `,
-                [
-                    customer.id,
-                    currentProfile
-                ]
-            );
+            /*
+            |--------------------------------------------------------------------------
+            | Avoid unnecessary duplicate backup entries.
+            |--------------------------------------------------------------------------
+            */
+
+            const existing =
+                await query(
+                    `
+                    SELECT id
+                    FROM ppp_profile_backup
+                    WHERE customer_id = ?
+                    LIMIT 1
+                    `,
+                    [customer.id]
+                );
+
+            if (!existing.length) {
+
+                await query(
+                    `
+                    INSERT INTO ppp_profile_backup
+                    (
+                        customer_id,
+                        profile_name,
+                        created_at
+                    )
+                    VALUES (?, ?, NOW())
+                    `,
+                    [
+                        customer.id,
+                        currentProfile
+                    ]
+                );
+            }
 
         } catch (_) {
 
@@ -1142,7 +1399,8 @@ async function blockCustomer(
 
     return {
         success: true,
-        router_id: router.id
+        router_id:
+            router.id
     };
 }
 
@@ -1291,7 +1549,8 @@ async function restoreCustomer(
 
     return {
         success: true,
-        router_id: router.id,
+        router_id:
+            router.id,
         profile
     };
 }
@@ -1313,12 +1572,14 @@ async function bulkMessage(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     if (!String(message || "").trim()) {
+
         throw new Error(
             "Message is required."
         );
@@ -1331,6 +1592,7 @@ async function bulkMessage(
         );
 
     if (!customers.length) {
+
         throw new Error(
             "No valid customers found."
         );
@@ -1345,7 +1607,8 @@ async function bulkMessage(
 
     return {
         success: true,
-        updated: customers.length,
+        updated:
+            customers.length,
         message:
             "Bulk message processed successfully."
     };
@@ -1368,28 +1631,37 @@ async function bulkPromiseDate(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     const date =
-        normalizeDate(promiseDate);
+        normalizeDate(
+            promiseDate
+        );
 
     if (!date) {
+
         throw new Error(
             "Valid promise date is required."
         );
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.promise_date = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1425,28 +1697,37 @@ async function bulkBillingCycle(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     const date =
-        normalizeDate(billingCycle);
+        normalizeDate(
+            billingCycle
+        );
 
     if (!date) {
+
         throw new Error(
             "Valid billing cycle is required."
         );
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.billing_cycle = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1487,6 +1768,7 @@ async function bulkPaymentStatus(
             .trim();
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
@@ -1505,13 +1787,18 @@ async function bulkPaymentStatus(
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.payment_status = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1547,6 +1834,7 @@ async function bulkBalance(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
@@ -1556,19 +1844,25 @@ async function bulkBalance(
         Number(balance);
 
     if (!Number.isFinite(amount)) {
+
         throw new Error(
             "Valid balance is required."
         );
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.balance = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1611,12 +1905,14 @@ async function bulkArea(
         Number(subAreaId || 0);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     if (!area) {
+
         throw new Error(
             "Area is required."
         );
@@ -1639,6 +1935,7 @@ async function bulkArea(
             );
 
         if (!areas.length) {
+
             throw new Error(
                 "Area not found."
             );
@@ -1651,8 +1948,10 @@ async function bulkArea(
                 `
                 SELECT *
                 FROM areas
+
                 WHERE id = ?
                   AND company_id = ?
+
                 LIMIT 1
                 `,
                 [
@@ -1662,6 +1961,7 @@ async function bulkArea(
             );
 
         if (!areas.length) {
+
             throw new Error(
                 "Invalid area."
             );
@@ -1670,14 +1970,24 @@ async function bulkArea(
 
     if (subArea) {
 
+        /*
+        |--------------------------------------------------------------------------
+        | FIX:
+        | was isSuperAdmin() without user
+        |--------------------------------------------------------------------------
+        */
+
         const subScope =
-            isSuperAdmin()
+            isSuperAdmin(user)
                 ? ""
                 : "AND company_id = ?";
 
         const subParams =
-            isSuperAdmin()
-                ? [subArea, area]
+            isSuperAdmin(user)
+                ? [
+                    subArea,
+                    area
+                ]
                 : [
                     subArea,
                     area,
@@ -1689,15 +1999,18 @@ async function bulkArea(
                 `
                 SELECT *
                 FROM sub_areas
+
                 WHERE id = ?
                   AND area_id = ?
                   ${subScope}
+
                 LIMIT 1
                 `,
                 subParams
             );
 
         if (!subAreas.length) {
+
             throw new Error(
                 "Invalid sub-area."
             );
@@ -1705,12 +2018,16 @@ async function bulkArea(
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET
                 c.area_id = ?,
                 c.sub_area_id = ?
@@ -1731,7 +2048,8 @@ async function bulkArea(
         success: true,
         affected:
             result.affectedRows,
-        area_id: area,
+        area_id:
+            area,
         sub_area_id:
             subArea || null
     };
@@ -1753,19 +2071,25 @@ async function bulkConnectionOff(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.auto_connection = 0
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1801,32 +2125,33 @@ async function bulkConnectionOn(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     const auto =
-        Number(autoStatus) ? 1 : 0;
+        Number(autoStatus)
+            ? 1
+            : 0;
 
     const nextMonth =
-        Number(nextMonthStatus) ? 1 : 0;
+        Number(nextMonthStatus)
+            ? 1
+            : 0;
 
     const scope =
-        buildCompanyScope(user, "c");
-
-    /*
-    |--------------------------------------------------------------------------
-    | Current schema:
-    | auto_connection
-    | continue_next_month
-    |--------------------------------------------------------------------------
-    */
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET
                 c.auto_connection = ?,
                 c.continue_next_month = ?
@@ -1870,6 +2195,7 @@ async function bulkMikrotik(
         Number(routerId || 0);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
@@ -1882,13 +2208,18 @@ async function bulkMikrotik(
         );
 
     const scope =
-        buildCompanyScope(user, "c");
+        buildCompanyScope(
+            user,
+            "c"
+        );
 
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.mikrotik_id = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -1926,6 +2257,13 @@ async function bulkPackage(
     ids =
         normalizeIds(ids);
 
+    if (!ids.length) {
+
+        throw new Error(
+            "No customers selected."
+        );
+    }
+
     const router =
         await getRouter(
             user,
@@ -1933,9 +2271,12 @@ async function bulkPackage(
         );
 
     const packageIdNumber =
-        Number(packageId || 0);
+        Number(
+            packageId || 0
+        );
 
     if (!packageIdNumber) {
+
         throw new Error(
             "Package is required."
         );
@@ -1949,24 +2290,30 @@ async function bulkPackage(
             `
             SELECT *
             FROM mikrotik_packages
+
             WHERE id = ?
               AND router_id = ?
+
               AND (
                     company_id = ?
                     OR company_id = 0
                     OR ? = 1
                   )
+
             LIMIT 1
             `,
             [
                 packageIdNumber,
                 router.id,
                 companyId,
-                isSuperAdmin(user) ? 1 : 0
+                isSuperAdmin(user)
+                    ? 1
+                    : 0
             ]
         );
 
     if (!packageRows.length) {
+
         throw new Error(
             "Selected package is not valid for this MikroTik router."
         );
@@ -1976,6 +2323,7 @@ async function bulkPackage(
         packageRows[0];
 
     if (!pkg.profile_id) {
+
         throw new Error(
             "Selected package has no MikroTik profile."
         );
@@ -1988,6 +2336,7 @@ async function bulkPackage(
         );
 
     if (!customers.length) {
+
         throw new Error(
             "No valid customers found."
         );
@@ -2044,6 +2393,7 @@ async function bulkPackage(
                 await db.query(
                     `
                     UPDATE customers c
+
                     SET
                         c.mikrotik_id = ?,
                         c.package_id = ?,
@@ -2060,7 +2410,9 @@ async function bulkPackage(
                         pkg.package_name ||
                             pkg.alias_name ||
                             pkg.profile_id,
-                        Number(pkg.price || 0),
+                        Number(
+                            pkg.price || 0
+                        ),
                         customer.id,
                         ...scope.params
                     ]
@@ -2076,7 +2428,8 @@ async function bulkPackage(
             success++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: true
             });
 
@@ -2085,16 +2438,19 @@ async function bulkPackage(
             failed++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: false,
-                error: error.message
+                error:
+                    error.message
             });
         }
     }
 
     return {
         success: true,
-        updated: success,
+        updated:
+            success,
         failed,
         results
     };
@@ -2115,6 +2471,13 @@ async function bulkStatus(
 
     ids =
         normalizeIds(ids);
+
+    if (!ids.length) {
+
+        throw new Error(
+            "No customers selected."
+        );
+    }
 
     const newStatus =
         String(status || "")
@@ -2143,6 +2506,7 @@ async function bulkStatus(
         );
 
     if (!customers.length) {
+
         throw new Error(
             "No valid customers found."
         );
@@ -2159,7 +2523,8 @@ async function bulkStatus(
 
             /*
             |--------------------------------------------------------------------------
-            | Active / Expired MUST complete MikroTik operation first.
+            | Active / Expired:
+            | MikroTik operation MUST complete first.
             |--------------------------------------------------------------------------
             */
 
@@ -2189,7 +2554,9 @@ async function bulkStatus(
                 await db.query(
                     `
                     UPDATE customers c
+
                     SET c.status = ?
+
                     WHERE c.id = ?
                       AND c.deleted_at IS NULL
                       ${scope.sql}
@@ -2211,9 +2578,11 @@ async function bulkStatus(
             success++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: true,
-                status: newStatus
+                status:
+                    newStatus
             });
 
         } catch (error) {
@@ -2221,16 +2590,19 @@ async function bulkStatus(
             failed++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: false,
-                error: error.message
+                error:
+                    error.message
             });
         }
     }
 
     return {
         success: true,
-        updated: success,
+        updated:
+            success,
         failed,
         results
     };
@@ -2253,6 +2625,7 @@ async function bulkDelete(
         normalizeIds(ids);
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
@@ -2265,6 +2638,7 @@ async function bulkDelete(
         );
 
     if (!customers.length) {
+
         throw new Error(
             "No valid customers found."
         );
@@ -2283,7 +2657,6 @@ async function bulkDelete(
             |--------------------------------------------------------------------------
             | PHP source:
             | MikroTik deletion FIRST.
-            | If MikroTik deletion fails, DB customer stays.
             |--------------------------------------------------------------------------
             */
 
@@ -2316,16 +2689,11 @@ async function bulkDelete(
                 }
             }
 
-            const scope =
-                buildCompanyScope(
-                    user,
-                    "c"
-                );
-
             const [result] =
                 await db.query(
                     `
                     DELETE FROM customers
+
                     WHERE id = ?
                       AND deleted_at IS NULL
                       ${
@@ -2335,7 +2703,9 @@ async function bulkDelete(
                       }
                     `,
                     isSuperAdmin(user)
-                        ? [customer.id]
+                        ? [
+                            customer.id
+                        ]
                         : [
                             customer.id,
                             getCompanyId(user)
@@ -2352,7 +2722,8 @@ async function bulkDelete(
             deleted++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: true
             });
 
@@ -2361,9 +2732,11 @@ async function bulkDelete(
             failed++;
 
             results.push({
-                id: customer.id,
+                id:
+                    customer.id,
                 success: false,
-                error: error.message
+                error:
+                    error.message
             });
         }
     }
@@ -2379,7 +2752,7 @@ async function bulkDelete(
 
 /*
 |--------------------------------------------------------------------------
-| BULK RESELLER
+| RESELLERS
 |--------------------------------------------------------------------------
 */
 
@@ -2453,15 +2826,19 @@ async function bulkReseller(
         normalizeIds(ids);
 
     const reseller =
-        Number(resellerId || 0);
+        Number(
+            resellerId || 0
+        );
 
     if (!ids.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     if (!reseller) {
+
         throw new Error(
             "Reseller is required."
         );
@@ -2477,6 +2854,7 @@ async function bulkReseller(
         );
 
     if (!exists) {
+
         throw new Error(
             "Invalid reseller."
         );
@@ -2488,17 +2866,13 @@ async function bulkReseller(
             "c"
         );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Current schema has reseller_id.
-    |--------------------------------------------------------------------------
-    */
-
     const [result] =
         await db.query(
             `
             UPDATE customers c
+
             SET c.reseller_id = ?
+
             WHERE c.id IN (${sqlPlaceholders(ids.length)})
               AND c.deleted_at IS NULL
               ${scope.sql}
@@ -2524,12 +2898,15 @@ async function bulkReseller(
 |--------------------------------------------------------------------------
 |
 | IMPORTANT:
-| This follows PHP bulk recharge.
-| It does NOT call MikroTik.
+| Follows existing PHP bulk recharge behavior.
+| Does NOT call MikroTik.
 |--------------------------------------------------------------------------
 */
 
-function addMonths(date, months) {
+function addMonths(
+    date,
+    months
+) {
 
     const d =
         new Date(date);
@@ -2578,7 +2955,7 @@ function formatDateOnly(date) {
 
 async function bulkRecharge(
     user,
-    payload
+    payload = {}
 ) {
 
     let items =
@@ -2605,23 +2982,29 @@ async function bulkRecharge(
             payload.amount || {};
 
         items =
-            ids.map(id => ({
-                customer_id: id,
-                amount:
-                    Array.isArray(amounts)
-                        ? amounts[id]
-                        : amounts[id] ??
-                          payload.amount
-            }));
+            ids.map(
+                id => ({
+                    customer_id:
+                        id,
+
+                    amount:
+                        Array.isArray(amounts)
+                            ? amounts[id]
+                            : amounts[id] ??
+                              payload.amount
+                })
+            );
     }
 
     if (!items.length) {
+
         throw new Error(
             "No customers selected."
         );
     }
 
     if (items.length > 50000) {
+
         throw new Error(
             "Maximum 50,000 customers can be processed at once."
         );
@@ -2639,6 +3022,7 @@ async function bulkRecharge(
             "yearly"
         ].includes(billingType)
     ) {
+
         throw new Error(
             "Invalid billing type."
         );
@@ -2680,7 +3064,9 @@ async function bulkRecharge(
         new Date();
 
     const paymentDate =
-        formatDateOnly(today);
+        formatDateOnly(
+            today
+        );
 
     const resultRows = [];
 
@@ -2710,7 +3096,9 @@ async function bulkRecharge(
             resultRows.push({
                 customer_id:
                     customerId,
+
                 success: false,
+
                 error:
                     "Invalid customer ID."
             });
@@ -2728,7 +3116,9 @@ async function bulkRecharge(
             resultRows.push({
                 customer_id:
                     customerId,
+
                 success: false,
+
                 error:
                     "Invalid recharge amount."
             });
@@ -2799,7 +3189,8 @@ async function bulkRecharge(
 
             /*
             |--------------------------------------------------------------------------
-            | Old promise date today/future => continue from it.
+            | Future promise date:
+            | Continue from existing future date.
             |--------------------------------------------------------------------------
             */
 
@@ -2843,7 +3234,8 @@ async function bulkRecharge(
                 );
 
             const newBalance =
-                currentBalance + amount;
+                currentBalance +
+                amount;
 
             const billingMonth =
                 newPromise.getMonth() + 1;
@@ -2904,6 +3296,7 @@ async function bulkRecharge(
             await connection.query(
                 `
                 UPDATE customers
+
                 SET
                     balance = ?,
                     status = 'Active',
@@ -2924,7 +3317,9 @@ async function bulkRecharge(
             await connection.commit();
 
             ok++;
-            totalAmount += amount;
+
+            totalAmount +=
+                amount;
 
             resultRows.push({
                 customer_id:
@@ -2978,16 +3373,24 @@ async function bulkRecharge(
 
     return {
         success: true,
+
         total,
+
         ok,
+
         failed,
+
         total_amount:
             totalAmount,
+
         billing_type:
             billingType,
+
         medium,
+
         months_paid:
             monthsPaid,
+
         results:
             resultRows
     };
@@ -3040,6 +3443,12 @@ function hiddenIds(ids) {
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| BULK MESSAGE FORM
+|--------------------------------------------------------------------------
+*/
+
 async function bulkMessageForm(
     user,
     ids
@@ -3055,6 +3464,7 @@ async function bulkMessageForm(
             ${hiddenIds(ids)}
 
             <div class="mb-3">
+
                 <label class="form-label">
                     Message
                 </label>
@@ -3064,6 +3474,7 @@ async function bulkMessageForm(
                     name="message"
                     rows="5"
                     required></textarea>
+
             </div>
 
             <button
@@ -3071,16 +3482,30 @@ async function bulkMessageForm(
                 class="btn btn-primary">
                 Process
             </button>
+
         </form>
         `
     );
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| BULK PROMISE DATE FORM
+|--------------------------------------------------------------------------
+*/
+
 async function bulkPromiseDateForm(
     user,
     ids
 ) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | FIX:
+    | formatDateTimeLocal now correctly supports Date object.
+    |--------------------------------------------------------------------------
+    */
 
     const value =
         formatDateTimeLocal(
@@ -3097,6 +3522,7 @@ async function bulkPromiseDateForm(
             ${hiddenIds(ids)}
 
             <div class="mb-3">
+
                 <label class="form-label">
                     Promise Date
                 </label>
@@ -3107,6 +3533,7 @@ async function bulkPromiseDateForm(
                     name="promise_date"
                     value="${escapeHtml(value)}"
                     required>
+
             </div>
 
             <button
@@ -3114,11 +3541,18 @@ async function bulkPromiseDateForm(
                 class="btn btn-primary">
                 Update
             </button>
+
         </form>
         `
     );
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| BULK BILLING CYCLE FORM
+|--------------------------------------------------------------------------
+*/
 
 async function bulkBillingCycleForm(
     user,
@@ -3128,19 +3562,10 @@ async function bulkBillingCycleForm(
     const now =
         new Date();
 
-    const pad =
-        n => String(n).padStart(2, "0");
-
     const value =
-        `${now.getFullYear()}-${pad(
-            now.getMonth() + 1
-        )}-${pad(
-            now.getDate()
-        )}T${pad(
-            now.getHours()
-        )}:${pad(
-            now.getMinutes()
-        )}`;
+        formatDateTimeLocal(
+            now
+        );
 
     return renderModal(
         "Bulk Billing Cycle",
@@ -3152,6 +3577,7 @@ async function bulkBillingCycleForm(
             ${hiddenIds(ids)}
 
             <div class="mb-3">
+
                 <label class="form-label">
                     Billing Date
                 </label>
@@ -3160,8 +3586,9 @@ async function bulkBillingCycleForm(
                     type="datetime-local"
                     class="form-control"
                     name="billing_cycle"
-                    value="${value}"
+                    value="${escapeHtml(value)}"
                     required>
+
             </div>
 
             <button
@@ -3169,11 +3596,18 @@ async function bulkBillingCycleForm(
                 class="btn btn-primary">
                 Update
             </button>
+
         </form>
         `
     );
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| BULK PAYMENT STATUS FORM
+|--------------------------------------------------------------------------
+*/
 
 async function bulkPaymentStatusForm(
     user,
@@ -3190,6 +3624,7 @@ async function bulkPaymentStatusForm(
             ${hiddenIds(ids)}
 
             <div class="mb-3">
+
                 <label class="form-label">
                     Payment Status
                 </label>
@@ -3208,6 +3643,7 @@ async function bulkPaymentStatusForm(
                     </option>
 
                 </select>
+
             </div>
 
             <button
@@ -3215,11 +3651,18 @@ async function bulkPaymentStatusForm(
                 class="btn btn-primary">
                 Update
             </button>
+
         </form>
         `
     );
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| BULK BALANCE FORM
+|--------------------------------------------------------------------------
+*/
 
 async function bulkBalanceForm(
     user,
@@ -3236,6 +3679,7 @@ async function bulkBalanceForm(
             ${hiddenIds(ids)}
 
             <div class="mb-3">
+
                 <label class="form-label">
                     Balance
                 </label>
@@ -3247,6 +3691,7 @@ async function bulkBalanceForm(
                     name="balance"
                     value="0"
                     required>
+
             </div>
 
             <button
@@ -3254,11 +3699,18 @@ async function bulkBalanceForm(
                 class="btn btn-primary">
                 Update
             </button>
+
         </form>
         `
     );
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| BULK STATUS FORM
+|--------------------------------------------------------------------------
+*/
 
 async function bulkStatusForm(
     user,
@@ -3343,8 +3795,10 @@ async function getAreas(user) {
         `
         SELECT *
         FROM areas a
-        WHERE 1=1
+
+        WHERE 1 = 1
         ${scope.sql}
+
         ORDER BY a.name ASC
         `,
         scope.params
@@ -3389,7 +3843,9 @@ async function bulkAreaForm(
                             `
                             <option
                                 value="${area.id}">
-                                ${escapeHtml(area.name)}
+                                ${escapeHtml(
+                                    area.name
+                                )}
                             </option>
                             `
                     ).join("")}
@@ -3632,8 +4088,10 @@ async function bulkPackageForm(
                         '<option value="">Loading...</option>';
 
                     if (!this.value) {
+
                         pkg.innerHTML =
                             '<option value="">Select Router First</option>';
+
                         return;
                     }
 

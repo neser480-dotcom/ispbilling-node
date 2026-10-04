@@ -64,8 +64,7 @@ function getBulkIds(req) {
         }
 
         const parts =
-            String(value)
-                .split(",");
+            String(value).split(",");
 
         for (const part of parts) {
 
@@ -89,6 +88,27 @@ function getBulkIds(req) {
 }
 
 
+/**
+ * Return first available value.
+ */
+function firstValue(body, keys, fallback = null) {
+
+    for (const key of keys) {
+
+        if (
+            body &&
+            body[key] !== undefined &&
+            body[key] !== null &&
+            body[key] !== ""
+        ) {
+            return body[key];
+        }
+    }
+
+    return fallback;
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER LIST
@@ -100,14 +120,10 @@ async function list(req, res) {
     try {
 
         const page =
-            Number(
-                req.query.page || 1
-            );
+            Number(req.query.page || 1);
 
         const limit =
-            Number(
-                req.query.limit || 100
-            );
+            Number(req.query.limit || 100);
 
         const search =
             String(
@@ -119,19 +135,50 @@ async function list(req, res) {
                 req.query.status || ""
             ).trim();
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | IMPORTANT
+        |--------------------------------------------------------------------------
+        | customer.service.js expects:
+        |
+        | getCustomers(user, options)
+        |
+        | NOT:
+        |
+        | getCustomers({ user, ... })
+        |--------------------------------------------------------------------------
+        */
+
         const result =
-            await customerService.getCustomers({
-                user: req.session,
-                page,
-                limit,
-                search,
-                status
-            });
+            await customerService.getCustomers(
+                req.session,
+                {
+                    page,
+                    limit,
+                    search,
+                    status
+                }
+            );
+
 
         return res.json({
+
             success: true,
-            data: result.customers,
-            pagination: result.pagination
+
+            data:
+                Array.isArray(result?.data)
+                    ? result.data
+                    : [],
+
+            pagination:
+                result?.pagination || {
+                    page,
+                    limit,
+                    total: 0,
+                    totalPages: 0
+                }
+
         });
 
     } catch (error) {
@@ -142,9 +189,12 @@ async function list(req, res) {
         );
 
         return res.status(500).json({
+
             success: false,
+
             message:
                 "Failed to load customers."
+
         });
     }
 }
@@ -170,16 +220,36 @@ async function summary(req, res) {
                 req.query.status || ""
             ).trim();
 
+
         const result =
-            await customerService.getSummary({
-                user: req.session,
-                search,
-                status
-            });
+            await customerService.getSummary(
+                req.session,
+                {
+                    search,
+                    status
+                }
+            );
+
 
         return res.json({
+
             success: true,
-            data: result
+
+            data:
+                result || {
+                    total_customer: 0,
+                    total: 0,
+                    active: 0,
+                    expired: 0,
+                    inactive: 0,
+                    suspended: 0,
+                    disabled: 0,
+                    pending: 0,
+                    total_balance: 0,
+                    balance: 0,
+                    total_bill: 0
+                }
+
         });
 
     } catch (error) {
@@ -190,9 +260,12 @@ async function summary(req, res) {
         );
 
         return res.status(500).json({
+
             success: false,
+
             message:
                 "Failed to load customer summary."
+
         });
     }
 }
@@ -215,31 +288,52 @@ async function view(req, res) {
             !Number.isInteger(id) ||
             id <= 0
         ) {
+
             return res.status(400).json({
+
                 success: false,
+
                 message:
                     "Invalid customer ID."
+
             });
         }
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | customer.service.js expects:
+        |
+        | getCustomerById(user, id)
+        |--------------------------------------------------------------------------
+        */
+
         const customer =
-            await customerService.getCustomerById({
-                user: req.session,
+            await customerService.getCustomerById(
+                req.session,
                 id
-            });
+            );
+
 
         if (!customer) {
 
             return res.status(404).json({
+
                 success: false,
+
                 message:
                     "Customer not found."
+
             });
         }
 
+
         return res.json({
+
             success: true,
+
             data: customer
+
         });
 
     } catch (error) {
@@ -250,33 +344,14 @@ async function view(req, res) {
         );
 
         return res.status(500).json({
+
             success: false,
+
             message:
                 "Failed to load customer."
+
         });
     }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| BULK POPUP HELPERS
-|--------------------------------------------------------------------------
-|
-| These handlers will return the popup HTML.
-|
-| The actual business logic stays in customer.service.js.
-|
-|--------------------------------------------------------------------------
-*/
-
-function bulkFormNotReady(res, action) {
-
-    return res.status(501).send(`
-        <div class="alert alert-warning m-3">
-            Bulk ${action} service is not implemented yet.
-        </div>
-    `);
 }
 
 
@@ -288,9 +363,11 @@ function bulkFormNotReady(res, action) {
 
 async function bulkMessageForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -298,31 +375,49 @@ async function bulkMessageForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkMessageForm({
-        req,
-        res,
+
+    return customerService.bulkMessageForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkMessage(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkMessage({
-        user: req.session,
+
+    const message =
+        firstValue(
+            req.body,
+            [
+                "message",
+                "comments",
+                "comment"
+            ],
+            ""
+        );
+
+
+    return customerService.bulkMessage(
+        req.session,
         ids,
-        body: req.body
-    });
+        message
+    );
 }
 
 
@@ -334,9 +429,11 @@ async function bulkMessage(req, res) {
 
 async function bulkPromiseDateForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -344,31 +441,48 @@ async function bulkPromiseDateForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkPromiseDateForm({
-        req,
-        res,
+
+    return customerService.bulkPromiseDateForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkPromiseDate(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkPromiseDate({
-        user: req.session,
+
+    const promiseDate =
+        firstValue(
+            req.body,
+            [
+                "promise_date",
+                "promiseDate"
+            ],
+            null
+        );
+
+
+    return customerService.bulkPromiseDate(
+        req.session,
         ids,
-        body: req.body
-    });
+        promiseDate
+    );
 }
 
 
@@ -380,9 +494,11 @@ async function bulkPromiseDate(req, res) {
 
 async function bulkBillingCycleForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -390,31 +506,48 @@ async function bulkBillingCycleForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkBillingCycleForm({
-        req,
-        res,
+
+    return customerService.bulkBillingCycleForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkBillingCycle(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkBillingCycle({
-        user: req.session,
+
+    const billingCycle =
+        firstValue(
+            req.body,
+            [
+                "billing_cycle",
+                "billingCycle"
+            ],
+            null
+        );
+
+
+    return customerService.bulkBillingCycle(
+        req.session,
         ids,
-        body: req.body
-    });
+        billingCycle
+    );
 }
 
 
@@ -426,9 +559,11 @@ async function bulkBillingCycle(req, res) {
 
 async function bulkPaymentStatusForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -436,31 +571,49 @@ async function bulkPaymentStatusForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkPaymentStatusForm({
-        req,
-        res,
+
+    return customerService.bulkPaymentStatusForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkPaymentStatus(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkPaymentStatus({
-        user: req.session,
+
+    const status =
+        firstValue(
+            req.body,
+            [
+                "status",
+                "payment_status",
+                "paymentStatus"
+            ],
+            null
+        );
+
+
+    return customerService.bulkPaymentStatus(
+        req.session,
         ids,
-        body: req.body
-    });
+        status
+    );
 }
 
 
@@ -472,9 +625,11 @@ async function bulkPaymentStatus(req, res) {
 
 async function bulkAreaForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -482,32 +637,59 @@ async function bulkAreaForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkAreaForm({
-        user: req.session,
-        req,
-        res,
+
+    return customerService.bulkAreaForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkArea(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkArea({
-        user: req.session,
+
+    const areaId =
+        firstValue(
+            req.body,
+            [
+                "area_id",
+                "areaId"
+            ],
+            null
+        );
+
+    const subAreaId =
+        firstValue(
+            req.body,
+            [
+                "sub_area_id",
+                "subAreaId"
+            ],
+            null
+        );
+
+
+    return customerService.bulkArea(
+        req.session,
         ids,
-        body: req.body
-    });
+        areaId,
+        subAreaId
+    );
 }
 
 
@@ -519,9 +701,11 @@ async function bulkArea(req, res) {
 
 async function bulkStatusForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -529,32 +713,47 @@ async function bulkStatusForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkStatusForm({
-        user: req.session,
-        req,
-        res,
+
+    return customerService.bulkStatusForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkStatus(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkStatus({
-        user: req.session,
+
+    const status =
+        firstValue(
+            req.body,
+            [
+                "status"
+            ],
+            null
+        );
+
+
+    return customerService.bulkStatus(
+        req.session,
         ids,
-        body: req.body
-    });
+        status
+    );
 }
 
 
@@ -566,9 +765,11 @@ async function bulkStatus(req, res) {
 
 async function bulkBalanceForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -576,31 +777,47 @@ async function bulkBalanceForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkBalanceForm({
-        req,
-        res,
+
+    return customerService.bulkBalanceForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkBalance(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkBalance({
-        user: req.session,
+
+    const balance =
+        firstValue(
+            req.body,
+            [
+                "balance"
+            ],
+            null
+        );
+
+
+    return customerService.bulkBalance(
+        req.session,
         ids,
-        body: req.body
-    });
+        balance
+    );
 }
 
 
@@ -612,9 +829,11 @@ async function bulkBalance(req, res) {
 
 async function bulkRechargeForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -622,31 +841,117 @@ async function bulkRechargeForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkRechargeForm({
-        req,
-        res,
-        ids
-    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | bulkRechargeForm is not exported by the current service.
+    |
+    | Keep this handler compatible with the existing API structure.
+    |--------------------------------------------------------------------------
+    */
+
+    return res.status(501).send(`
+        <div class="alert alert-warning m-3">
+            Bulk recharge form is not implemented yet.
+        </div>
+    `);
 }
 
 
 async function bulkRecharge(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
+
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkRecharge({
-        user: req.session,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current service signature:
+    |
+    | bulkRecharge(user, payload)
+    |
+    | Payload supports:
+    | - items[]
+    | - customer_ids / ids
+    | - amount[id] / amount
+    | - billing_type
+    | - medium / payment_method
+    | - comment
+    |--------------------------------------------------------------------------
+    */
+
+    const payload = {
+
+        ...req.body,
+
         ids,
-        body: req.body
-    });
+
+        customer_ids:
+            req.body?.customer_ids ||
+            ids,
+
+        billing_type:
+            firstValue(
+                req.body,
+                [
+                    "billing_type",
+                    "billingType"
+                ],
+                undefined
+            ),
+
+        medium:
+            firstValue(
+                req.body,
+                [
+                    "medium",
+                    "payment_method",
+                    "paymentMethod"
+                ],
+                undefined
+            ),
+
+        payment_method:
+            firstValue(
+                req.body,
+                [
+                    "payment_method",
+                    "paymentMethod",
+                    "medium"
+                ],
+                undefined
+            ),
+
+        comment:
+            firstValue(
+                req.body,
+                [
+                    "comment",
+                    "comments"
+                ],
+                undefined
+            )
+
+    };
+
+
+    return customerService.bulkRecharge(
+        req.session,
+        payload
+    );
 }
 
 
@@ -658,9 +963,11 @@ async function bulkRecharge(req, res) {
 
 async function bulkResellerForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -668,32 +975,67 @@ async function bulkResellerForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkResellerForm({
-        user: req.session,
-        req,
-        res,
-        ids
-    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current customer.service.js does not export
+    | bulkResellerForm.
+    |--------------------------------------------------------------------------
+    */
+
+    return res.status(501).send(`
+        <div class="alert alert-warning m-3">
+            Bulk reseller form is not implemented yet.
+        </div>
+    `);
 }
 
 
 async function bulkReseller(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkReseller({
-        user: req.session,
+
+    const resellerId =
+        firstValue(
+            req.body,
+            [
+                "reseller_id",
+                "resellerId"
+            ],
+            null
+        );
+
+    const subAreaId =
+        firstValue(
+            req.body,
+            [
+                "sub_area_id",
+                "subAreaId"
+            ],
+            null
+        );
+
+
+    return customerService.bulkReseller(
+        req.session,
         ids,
-        body: req.body
-    });
+        resellerId,
+        subAreaId
+    );
 }
 
 
@@ -705,9 +1047,11 @@ async function bulkReseller(req, res) {
 
 async function bulkPackageForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -715,32 +1059,59 @@ async function bulkPackageForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkPackageForm({
-        user: req.session,
-        req,
-        res,
+
+    return customerService.bulkPackageForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkPackage(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkPackage({
-        user: req.session,
+
+    const routerId =
+        firstValue(
+            req.body,
+            [
+                "router_id",
+                "routerId"
+            ],
+            null
+        );
+
+    const packageId =
+        firstValue(
+            req.body,
+            [
+                "package_id",
+                "packageId"
+            ],
+            null
+        );
+
+
+    return customerService.bulkPackage(
+        req.session,
         ids,
-        body: req.body
-    });
+        routerId,
+        packageId
+    );
 }
 
 
@@ -752,9 +1123,11 @@ async function bulkPackage(req, res) {
 
 async function bulkConnectionOnForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -762,31 +1135,69 @@ async function bulkConnectionOnForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkConnectionOnForm({
-        req,
-        res,
-        ids
-    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current customer.service.js does not export
+    | bulkConnectionOnForm.
+    |--------------------------------------------------------------------------
+    */
+
+    return res.status(501).send(`
+        <div class="alert alert-warning m-3">
+            Bulk connection-on form is not implemented yet.
+        </div>
+    `);
 }
 
 
 async function bulkConnectionOn(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkConnectionOn({
-        user: req.session,
+
+    const autoStatus =
+        firstValue(
+            req.body,
+            [
+                "auto_connection",
+                "auto_status",
+                "autoStatus"
+            ],
+            1
+        );
+
+    const nextMonthStatus =
+        firstValue(
+            req.body,
+            [
+                "continue_next_month",
+                "next_month_status",
+                "nextMonthStatus"
+            ],
+            1
+        );
+
+
+    return customerService.bulkConnectionOn(
+        req.session,
         ids,
-        body: req.body
-    });
+        autoStatus,
+        nextMonthStatus
+    );
 }
 
 
@@ -798,9 +1209,11 @@ async function bulkConnectionOn(req, res) {
 
 async function bulkConnectionOffForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -808,31 +1221,44 @@ async function bulkConnectionOffForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkConnectionOffForm({
-        req,
-        res,
-        ids
-    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current customer.service.js does not export
+    | bulkConnectionOffForm.
+    |--------------------------------------------------------------------------
+    */
+
+    return res.status(501).send(`
+        <div class="alert alert-warning m-3">
+            Bulk connection-off form is not implemented yet.
+        </div>
+    `);
 }
 
 
 async function bulkConnectionOff(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkConnectionOff({
-        user: req.session,
-        ids,
-        body: req.body
-    });
+
+    return customerService.bulkConnectionOff(
+        req.session,
+        ids
+    );
 }
 
 
@@ -844,9 +1270,11 @@ async function bulkConnectionOff(req, res) {
 
 async function bulkMikrotikForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -854,32 +1282,48 @@ async function bulkMikrotikForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkMikrotikForm({
-        user: req.session,
-        req,
-        res,
+
+    return customerService.bulkMikrotikForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkMikrotik(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkMikrotik({
-        user: req.session,
+
+    const routerId =
+        firstValue(
+            req.body,
+            [
+                "router_id",
+                "routerId"
+            ],
+            null
+        );
+
+
+    return customerService.bulkMikrotik(
+        req.session,
         ids,
-        body: req.body
-    });
+        routerId
+    );
 }
 
 
@@ -891,9 +1335,11 @@ async function bulkMikrotik(req, res) {
 
 async function bulkDeleteForm(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).send(`
             <div class="alert alert-danger m-3">
                 No customers selected.
@@ -901,32 +1347,48 @@ async function bulkDeleteForm(req, res) {
         `);
     }
 
-    return customerService.renderBulkDeleteForm({
-        user: req.session,
-        req,
-        res,
+
+    return customerService.bulkDeleteForm(
+        req.session,
         ids
-    });
+    );
 }
 
 
 async function bulkDelete(req, res) {
 
-    const ids = getBulkIds(req);
+    const ids =
+        getBulkIds(req);
 
     if (!ids.length) {
+
         return res.status(400).json({
+
             success: false,
+
             message:
                 "No customers selected."
+
         });
     }
 
-    return customerService.bulkDelete({
-        user: req.session,
+
+    const deleteMikrotik =
+        firstValue(
+            req.body,
+            [
+                "delete_mikrotik",
+                "deleteMikrotik"
+            ],
+            0
+        );
+
+
+    return customerService.bulkDelete(
+        req.session,
         ids,
-        body: req.body
-    });
+        deleteMikrotik
+    );
 }
 
 
