@@ -1,16 +1,37 @@
+
 /*
 |--------------------------------------------------------------------------
-| CUSTOMER ACTIONS (recharge popup)
+| CUSTOMER ACTIONS
 |--------------------------------------------------------------------------
-| .recharge-single-btn  -> GET /api/customers/recharge?id=  (HTML fragment)
-| form inside the popup -> POST via fetch, JSON {success, message}
+| Handles:
+| - Profile popup
+| - Edit popup
+| - Update customer
+| - Delete customer
+| - Single recharge popup
+| - CSV template
+| - CSV import
+|--------------------------------------------------------------------------
+|
+| Bulk actions are NOT handled here.
 |--------------------------------------------------------------------------
 */
+
 (function () {
+
     "use strict";
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
     function notify(type, message) {
+
         if (window.Swal) {
+
             window.Swal.fire({
                 toast: true,
                 position: "top-end",
@@ -19,156 +40,1317 @@
                 showConfirmButton: false,
                 timer: 3500
             });
+
         } else {
+
             alert(message);
         }
     }
 
-    /* ?msg= / ?error= after a native-form redirect (e.g. single delete) */
+
+    function escapeHtml(value) {
+
+        return String(value ?? "").replace(
+            /[&<>"']/g,
+            function (char) {
+
+                return {
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;"
+                }[char];
+            }
+        );
+    }
+
+
+    function getCsrfToken() {
+
+        const meta =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            );
+
+        if (meta && meta.content) {
+            return meta.content;
+        }
+
+
+        const input =
+            document.getElementById(
+                "csrfTokenInput"
+            );
+
+        if (input && input.value) {
+            return input.value;
+        }
+
+
+        return "";
+    }
+
+
+    function getActionModal() {
+
+        const modalEl =
+            document.getElementById(
+                "customerActionModal"
+            );
+
+        if (
+            !modalEl ||
+            !window.bootstrap
+        ) {
+            return null;
+        }
+
+
+        return {
+            element: modalEl,
+
+            modal:
+                window.bootstrap.Modal
+                    .getOrCreateInstance(
+                        modalEl
+                    ),
+
+            title:
+                document.getElementById(
+                    "customerActionModalLabel"
+                ),
+
+            body:
+                document.getElementById(
+                    "customerActionModalBody"
+                )
+        };
+    }
+
+
+    function showActionLoading(title) {
+
+        const modal =
+            getActionModal();
+
+        if (!modal) {
+            return null;
+        }
+
+
+        if (modal.title) {
+            modal.title.textContent =
+                title || "Customer Action";
+        }
+
+
+        if (modal.body) {
+
+            modal.body.innerHTML = `
+                <div class="text-center py-5">
+                    <div
+                        class="spinner-border text-primary"
+                        role="status"
+                    ></div>
+
+                    <div class="mt-3 text-muted">
+                        Loading...
+                    </div>
+                </div>
+            `;
+        }
+
+
+        modal.modal.show();
+
+        return modal;
+    }
+
+
+    async function loadActionFragment(
+        url,
+        title
+    ) {
+
+        const modal =
+            showActionLoading(title);
+
+        if (!modal) {
+            return;
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        method: "GET",
+
+                        credentials:
+                            "same-origin",
+
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest",
+
+                            "Accept":
+                                "text/html"
+                        }
+                    }
+                );
+
+
+            const html =
+                await response.text();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    stripHtml(html) ||
+                    "Failed to load customer action."
+                );
+            }
+
+
+            if (modal.body) {
+                modal.body.innerHTML =
+                    html;
+            }
+
+
+        } catch (error) {
+
+            if (modal.body) {
+
+                modal.body.innerHTML = `
+                    <div class="alert alert-danger">
+                        ${escapeHtml(
+                            error.message ||
+                            "Failed to load."
+                        )}
+                    </div>
+                `;
+            }
+        }
+    }
+
+
+    function stripHtml(html) {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.innerHTML =
+            String(html || "");
+
+        return (
+            div.textContent ||
+            div.innerText ||
+            ""
+        ).trim();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | URL FLASH
+    |--------------------------------------------------------------------------
+    */
+
     (function flashFromUrl() {
-        const params = new URLSearchParams(window.location.search);
-        const msg = params.get("msg");
-        const err = params.get("error");
 
-        if (!msg && !err) return;
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
 
-        window.addEventListener("load", () => notify(err ? "error" : "success", err || msg));
+
+        const msg =
+            params.get("msg");
+
+        const err =
+            params.get("error");
+
+
+        if (!msg && !err) {
+            return;
+        }
+
+
+        window.addEventListener(
+            "load",
+            function () {
+
+                notify(
+                    err
+                        ? "error"
+                        : "success",
+
+                    err || msg
+                );
+            }
+        );
+
 
         params.delete("msg");
         params.delete("error");
 
-        const qs = params.toString();
-        window.history.replaceState({}, "", window.location.pathname + (qs ? "?" + qs : ""));
+
+        const qs =
+            params.toString();
+
+
+        window.history.replaceState(
+            {},
+            "",
+            window.location.pathname +
+            (
+                qs
+                    ? "?" + qs
+                    : ""
+            )
+        );
+
     })();
 
-    document.addEventListener("click", async function (event) {
 
-        const button = event.target.closest(".recharge-single-btn");
+    /*
+    |--------------------------------------------------------------------------
+    | PROFILE
+    |--------------------------------------------------------------------------
+    */
 
-        if (!button) return;
+    document.addEventListener(
+        "click",
+        function (event) {
 
-        event.preventDefault();
+            const button =
+                event.target.closest(
+                    ".customer-profile-btn"
+                );
 
-        const modalEl = document.getElementById("rechargeModal");
-        const body = document.getElementById("rechargeModalBody");
 
-        if (!modalEl || !body || !window.bootstrap) return;
+            if (!button) {
+                return;
+            }
 
-        const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
 
-        body.innerHTML = '<div class="text-center py-4">Loading...</div>';
-        modal.show();
+            event.preventDefault();
 
-        try {
-            const response = await fetch(
-                "/api/customers/recharge?id=" +
-                encodeURIComponent(button.dataset.id),
-                { credentials: "same-origin" }
+
+            const id =
+                Number(button.dataset.id);
+
+
+            if (!id) {
+
+                notify(
+                    "error",
+                    "Invalid customer ID."
+                );
+
+                return;
+            }
+
+
+            loadActionFragment(
+                "/api/customers/profile?id=" +
+                encodeURIComponent(id),
+
+                "Customer Profile"
             );
+        }
+    );
 
-            body.innerHTML = await response.text();
 
-        } catch (error) {
+    /*
+    |--------------------------------------------------------------------------
+    | EDIT
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            const button =
+                event.target.closest(
+                    ".customer-edit-btn"
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            event.preventDefault();
+
+
+            const id =
+                Number(button.dataset.id);
+
+
+            if (!id) {
+
+                notify(
+                    "error",
+                    "Invalid customer ID."
+                );
+
+                return;
+            }
+
+
+            loadActionFragment(
+                "/api/customers/edit?id=" +
+                encodeURIComponent(id),
+
+                "Edit Customer"
+            );
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE CUSTOMER
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "submit",
+        async function (event) {
+
+            const form =
+                event.target.closest(
+                    "#customerActionModalBody form.customer-edit-form"
+                );
+
+
+            if (!form) {
+                return;
+            }
+
+
+            event.preventDefault();
+
+
+            const submit =
+                form.querySelector(
+                    '[type="submit"]'
+                );
+
+
+            if (submit) {
+                submit.disabled = true;
+            }
+
+
+            try {
+
+                const formData =
+                    new FormData(form);
+
+
+                const csrf =
+                    getCsrfToken();
+
+
+                if (
+                    csrf &&
+                    !formData.has("csrf_token")
+                ) {
+
+                    formData.append(
+                        "csrf_token",
+                        csrf
+                    );
+                }
+
+
+                const response =
+                    await fetch(
+                        form.action ||
+                        "/api/customers/update",
+                        {
+                            method: "POST",
+
+                            body: formData,
+
+                            credentials:
+                                "same-origin",
+
+                            headers: {
+                                "X-Requested-With":
+                                    "XMLHttpRequest",
+
+                                "Accept":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Failed to update customer."
+                    );
+                }
+
+
+                notify(
+                    "success",
+                    result.message ||
+                    "Customer updated successfully."
+                );
+
+
+                const modal =
+                    getActionModal();
+
+
+                if (modal) {
+                    modal.modal.hide();
+                }
+
+
+                if (
+                    window.CustomerList &&
+                    typeof window.CustomerList.refresh ===
+                        "function"
+                ) {
+
+                    setTimeout(
+                        function () {
+                            window.CustomerList.refresh();
+                        },
+                        500
+                    );
+
+                } else {
+
+                    setTimeout(
+                        function () {
+                            window.location.reload();
+                        },
+                        700
+                    );
+                }
+
+
+            } catch (error) {
+
+                notify(
+                    "error",
+                    error.message ||
+                    "Failed to update customer."
+                );
+
+
+                if (submit) {
+                    submit.disabled = false;
+                }
+            }
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE CUSTOMER
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        async function (event) {
+
+            const button =
+                event.target.closest(
+                    ".delete-customer-btn"
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            event.preventDefault();
+
+
+            const id =
+                Number(button.dataset.id);
+
+
+            const name =
+                button.dataset.name ||
+                "this customer";
+
+
+            if (!id) {
+
+                notify(
+                    "error",
+                    "Invalid customer ID."
+                );
+
+                return;
+            }
+
+
+            let confirmed = false;
+
+
+            if (window.Swal) {
+
+                const result =
+                    await window.Swal.fire({
+
+                        title:
+                            "Delete Customer?",
+
+                        html:
+                            `
+                                <div class="text-center">
+                                    <div class="mb-2">
+                                        Are you sure you want to delete
+                                        <strong>
+                                            ${escapeHtml(name)}
+                                        </strong>?
+                                    </div>
+
+                                    <div class="small text-danger">
+                                        This action cannot be undone.
+                                    </div>
+                                </div>
+                            `,
+
+                        icon: "warning",
+
+                        showCancelButton: true,
+
+                        confirmButtonText:
+                            "Yes, Delete",
+
+                        cancelButtonText:
+                            "Cancel",
+
+                        reverseButtons: true
+                    });
+
+
+                confirmed =
+                    result.isConfirmed;
+
+            } else {
+
+                confirmed =
+                    window.confirm(
+                        "Delete " +
+                        name +
+                        "?"
+                    );
+            }
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            button.disabled = true;
+
+
+            try {
+
+                const formData =
+                    new FormData();
+
+
+                formData.append(
+                    "id",
+                    String(id)
+                );
+
+
+                const csrf =
+                    getCsrfToken();
+
+
+                if (csrf) {
+
+                    formData.append(
+                        "csrf_token",
+                        csrf
+                    );
+                }
+
+
+                const response =
+                    await fetch(
+                        "/api/customers/delete",
+                        {
+                            method: "POST",
+
+                            body: formData,
+
+                            credentials:
+                                "same-origin",
+
+                            headers: {
+                                "X-Requested-With":
+                                    "XMLHttpRequest",
+
+                                "Accept":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Failed to delete customer."
+                    );
+                }
+
+
+                notify(
+                    "success",
+                    result.message ||
+                    "Customer deleted successfully."
+                );
+
+
+                if (
+                    window.CustomerList &&
+                    typeof window.CustomerList.refresh ===
+                        "function"
+                ) {
+
+                    setTimeout(
+                        function () {
+                            window.CustomerList.refresh();
+                        },
+                        500
+                    );
+
+                } else {
+
+                    setTimeout(
+                        function () {
+                            window.location.reload();
+                        },
+                        700
+                    );
+                }
+
+
+            } catch (error) {
+
+                notify(
+                    "error",
+                    error.message ||
+                    "Failed to delete customer."
+                );
+
+
+                button.disabled = false;
+            }
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SINGLE RECHARGE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        async function (event) {
+
+            const button =
+                event.target.closest(
+                    ".recharge-single-btn"
+                );
+
+
+            if (!button) {
+                return;
+            }
+
+
+            event.preventDefault();
+
+
+            const modalEl =
+                document.getElementById(
+                    "rechargeModal"
+                );
+
+
+            const body =
+                document.getElementById(
+                    "rechargeModalBody"
+                );
+
+
+            if (
+                !modalEl ||
+                !body ||
+                !window.bootstrap
+            ) {
+                return;
+            }
+
+
+            const modal =
+                window.bootstrap.Modal
+                    .getOrCreateInstance(
+                        modalEl
+                    );
+
+
             body.innerHTML =
-                '<div class="alert alert-danger">Failed to load recharge form.</div>';
+                `
+                    <div class="text-center py-4">
+                        <div
+                            class="spinner-border spinner-border-sm"
+                        ></div>
+
+                        <div class="mt-2 text-muted">
+                            Loading...
+                        </div>
+                    </div>
+                `;
+
+
+            modal.show();
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/customers/recharge?id=" +
+                        encodeURIComponent(
+                            button.dataset.id
+                        ),
+                        {
+                            credentials:
+                                "same-origin",
+
+                            headers: {
+                                "X-Requested-With":
+                                    "XMLHttpRequest"
+                            }
+                        }
+                    );
+
+
+                const html =
+                    await response.text();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        stripHtml(html) ||
+                        "Failed to load recharge form."
+                    );
+                }
+
+
+                body.innerHTML =
+                    html;
+
+
+            } catch (error) {
+
+                body.innerHTML =
+                    `
+                        <div class="alert alert-danger">
+                            ${escapeHtml(
+                                error.message ||
+                                "Failed to load recharge form."
+                            )}
+                        </div>
+                    `;
+            }
         }
-    });
+    );
 
-    document.addEventListener("submit", async function (event) {
 
-        const form = event.target.closest("#rechargeModalBody form");
+    /*
+    |--------------------------------------------------------------------------
+    | RECHARGE SUBMIT
+    |--------------------------------------------------------------------------
+    */
 
-        if (!form) return;
+    document.addEventListener(
+        "submit",
+        async function (event) {
 
-        event.preventDefault();
+            const form =
+                event.target.closest(
+                    "#rechargeModalBody form"
+                );
 
-        const submit = form.querySelector('[type="submit"]');
 
-        if (submit) submit.disabled = true;
-
-        try {
-            const response = await fetch(form.action, {
-                method: "POST",
-                body: new FormData(form),
-                credentials: "same-origin",
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            });
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || "Recharge failed.");
+            if (!form) {
+                return;
             }
 
-            notify(result.mikrotik_ok === false ? "warning" : "success", result.message);
 
-            const modalEl = document.getElementById("rechargeModal");
+            event.preventDefault();
 
-            if (modalEl && window.bootstrap) {
-                window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+
+            const submit =
+                form.querySelector(
+                    '[type="submit"]'
+                );
+
+
+            if (submit) {
+                submit.disabled = true;
             }
 
-            setTimeout(() => window.location.reload(), 900);
 
-        } catch (error) {
-            notify("error", error.message);
-            if (submit) submit.disabled = false;
+            try {
+
+                const formData =
+                    new FormData(form);
+
+
+                const csrf =
+                    getCsrfToken();
+
+
+                if (
+                    csrf &&
+                    !formData.has("csrf_token")
+                ) {
+
+                    formData.append(
+                        "csrf_token",
+                        csrf
+                    );
+                }
+
+
+                const response =
+                    await fetch(
+                        form.action,
+                        {
+                            method: "POST",
+
+                            body: formData,
+
+                            credentials:
+                                "same-origin",
+
+                            headers: {
+                                "X-Requested-With":
+                                    "XMLHttpRequest",
+
+                                "Accept":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok ||
+                    !result.success
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Recharge failed."
+                    );
+                }
+
+
+                notify(
+                    result.mikrotik_ok === false
+                        ? "warning"
+                        : "success",
+
+                    result.message ||
+                    "Recharge successful."
+                );
+
+
+                const modalEl =
+                    document.getElementById(
+                        "rechargeModal"
+                    );
+
+
+                if (
+                    modalEl &&
+                    window.bootstrap
+                ) {
+
+                    window.bootstrap.Modal
+                        .getOrCreateInstance(
+                            modalEl
+                        )
+                        .hide();
+                }
+
+
+                if (
+                    window.CustomerList &&
+                    typeof window.CustomerList.refresh ===
+                        "function"
+                ) {
+
+                    setTimeout(
+                        function () {
+                            window.CustomerList.refresh();
+                        },
+                        900
+                    );
+
+                } else {
+
+                    setTimeout(
+                        function () {
+                            window.location.reload();
+                        },
+                        900
+                    );
+                }
+
+
+            } catch (error) {
+
+                notify(
+                    "error",
+                    error.message ||
+                    "Recharge failed."
+                );
+
+
+                if (submit) {
+                    submit.disabled = false;
+                }
+            }
         }
-    });
+    );
 
-    /* ---------- CSV template + import ---------- */
-    document.addEventListener("click", function (event) {
-        if (event.target.closest("#csvTemplateModalBtn")) {
-            window.location.href = "/api/customers/csv/template";
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSV TEMPLATE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                event.target.closest(
+                    "#csvTemplateModalBtn"
+                )
+            ) {
+
+                window.location.href =
+                    "/api/customers/csv/template";
+            }
         }
-    });
+    );
 
-    document.addEventListener("submit", async function (event) {
 
-        const form = event.target.closest("#csvImportForm");
+    /*
+    |--------------------------------------------------------------------------
+    | CSV IMPORT
+    |--------------------------------------------------------------------------
+    */
 
-        if (!form) return;
+    document.addEventListener(
+        "submit",
+        async function (event) {
 
-        event.preventDefault();
+            const form =
+                event.target.closest(
+                    "#csvImportForm"
+                );
 
-        const box = document.getElementById("csvImportMessage");
-        const submit = document.getElementById("csvImportSubmit");
 
-        if (submit) submit.disabled = true;
-        if (box) box.innerHTML = '<div class="text-muted">Importing...</div>';
+            if (!form) {
+                return;
+            }
 
-        const esc = v => String(v).replace(/[&<>"']/g, c => (
-            { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-        try {
-            const response = await fetch("/api/customers/csv/import", {
-                method: "POST",
-                body: new FormData(form),
-                credentials: "same-origin",
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            });
+            event.preventDefault();
 
-            const result = await response.json();
 
-            if (!response.ok && !result.report) throw new Error(result.message || "Import failed.");
+            const box =
+                document.getElementById(
+                    "csvImportMessage"
+                );
 
-            const lines = ((result.report && result.report.messages) || [])
-                .filter(m => !/imported successfully/.test(m)).slice(0, 20);
+
+            const submit =
+                document.getElementById(
+                    "csvImportSubmit"
+                );
+
+
+            if (submit) {
+                submit.disabled = true;
+            }
+
 
             if (box) {
+
                 box.innerHTML =
-                    `<div class="alert alert-${result.success ? "success" : "danger"} py-2 mb-2">${esc(result.message)}</div>` +
-                    (lines.length ? `<ul class="small mb-0">${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : "");
+                    `
+                        <div class="text-muted">
+                            Importing...
+                        </div>
+                    `;
             }
 
-            if (result.report && result.report.inserted > 0) {
-                setTimeout(() => window.location.reload(), 2500);
-            }
 
-        } catch (error) {
-            if (box) box.innerHTML = `<div class="alert alert-danger py-2">${esc(error.message)}</div>`;
-        } finally {
-            if (submit) submit.disabled = false;
+            try {
+
+                const formData =
+                    new FormData(form);
+
+
+                const csrf =
+                    getCsrfToken();
+
+
+                if (
+                    csrf &&
+                    !formData.has("csrf_token")
+                ) {
+
+                    formData.append(
+                        "csrf_token",
+                        csrf
+                    );
+                }
+
+
+                const response =
+                    await fetch(
+                        "/api/customers/csv/import",
+                        {
+                            method: "POST",
+
+                            body: formData,
+
+                            credentials:
+                                "same-origin",
+
+                            headers: {
+                                "X-Requested-With":
+                                    "XMLHttpRequest",
+
+                                "Accept":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !response.ok &&
+                    !result.report
+                ) {
+
+                    throw new Error(
+                        result.message ||
+                        "Import failed."
+                    );
+                }
+
+
+                const lines =
+                    (
+                        result.report &&
+                        result.report.messages
+                            ? result.report.messages
+                            : []
+                    )
+                    .filter(
+                        message =>
+                            !/imported successfully/i
+                                .test(message)
+                    )
+                    .slice(0, 20);
+
+
+                if (box) {
+
+                    box.innerHTML =
+                        `
+                            <div class="alert alert-${
+                                result.success
+                                    ? "success"
+                                    : "danger"
+                            } py-2 mb-2">
+                                ${escapeHtml(
+                                    result.message ||
+                                    "Import completed."
+                                )}
+                            </div>
+                        ` +
+
+                        (
+                            lines.length
+                                ? `
+                                    <ul class="small mb-0">
+                                        ${
+                                            lines
+                                                .map(
+                                                    line =>
+                                                        `<li>${escapeHtml(line)}</li>`
+                                                )
+                                                .join("")
+                                        }
+                                    </ul>
+                                  `
+                                : ""
+                        );
+                }
+
+
+                if (
+                    result.report &&
+                    result.report.inserted > 0
+                ) {
+
+                    setTimeout(
+                        function () {
+
+                            if (
+                                window.CustomerList &&
+                                typeof window.CustomerList.refresh ===
+                                    "function"
+                            ) {
+
+                                window.CustomerList.refresh();
+
+                            } else {
+
+                                window.location.reload();
+                            }
+
+                        },
+                        1200
+                    );
+                }
+
+
+            } catch (error) {
+
+                if (box) {
+
+                    box.innerHTML =
+                        `
+                            <div class="alert alert-danger py-2">
+                                ${escapeHtml(
+                                    error.message ||
+                                    "Import failed."
+                                )}
+                            </div>
+                        `;
+                }
+
+            } finally {
+
+                if (submit) {
+                    submit.disabled = false;
+                }
+            }
         }
-    });
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MODAL CLEANUP
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "hidden.bs.modal",
+        function (event) {
+
+            if (
+                event.target.id !==
+                "customerActionModal"
+            ) {
+                return;
+            }
+
+
+            const title =
+                document.getElementById(
+                    "customerActionModalLabel"
+                );
+
+
+            const body =
+                document.getElementById(
+                    "customerActionModalBody"
+                );
+
+
+            if (title) {
+                title.textContent =
+                    "Customer Action";
+            }
+
+
+            if (body) {
+                body.innerHTML = "";
+            }
+        }
+    );
+
 })();

@@ -1,6 +1,27 @@
+
 "use strict";
 
 const db = require("../config/database");
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER SERVICE
+|--------------------------------------------------------------------------
+| Source of truth:
+| PHP customers/list.php
+|
+| Handles:
+| - Customer list
+| - Search
+| - Status filter
+| - Company isolation
+| - Pagination
+| - All customers
+| - Summary
+| - Single customer
+|--------------------------------------------------------------------------
+*/
+
 
 /*
 |--------------------------------------------------------------------------
@@ -15,43 +36,74 @@ async function query(sql, params = []) {
 
 /*
 |--------------------------------------------------------------------------
+| ROLE
+|--------------------------------------------------------------------------
+*/
+
+function isSuperAdmin(user) {
+
+    const role = String(
+        user?.role ||
+        ""
+    )
+        .toLowerCase()
+        .replace(/[\s_-]/g, "");
+
+    return role === "superadmin";
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | COMPANY SCOPE
 |--------------------------------------------------------------------------
 */
 
 function buildCompanyScope(user, alias = "c") {
-    const role =
-        String(
-            user?.role || ""
-        ).toLowerCase();
 
-    const companyId =
-        Number(
-            user?.company_id || 0
-        );
+    /*
+     * PHP behavior:
+     *
+     * super_admin:
+     *     WHERE 1=1
+     *
+     * normal user:
+     *     company_id required
+     *
+     * missing company_id:
+     *     WHERE 1=0
+     */
 
-    if (role === "super_admin") {
+    if (isSuperAdmin(user)) {
+
         return {
             sql: "",
             params: []
         };
+
     }
 
-    if (companyId <= 0) {
+    const companyId = Number(
+        user?.company_id ??
+        user?.companyId ??
+        0
+    );
+
+    if (!Number.isInteger(companyId) || companyId <= 0) {
+
         return {
-            sql: " AND 1=0",
+            sql: " AND 1=0 ",
             params: []
         };
+
     }
 
     return {
-        sql:
-            ` AND ${alias}.company_id = ?`,
-        params: [
-            companyId
-        ]
+        sql: ` AND ${alias}.company_id = ? `,
+        params: [companyId]
     };
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -60,17 +112,17 @@ function buildCompanyScope(user, alias = "c") {
 */
 
 function buildDeletedScope(alias = "c") {
-    return {
-        sql: `
-            AND (
-                ${alias}.deleted_at IS NULL
-                OR ${alias}.deleted_at = ''
-                OR ${alias}.deleted_at = '0000-00-00 00:00:00'
-            )
-        `,
-        params: []
-    };
+
+    return `
+        AND (
+            ${alias}.deleted_at IS NULL
+            OR ${alias}.deleted_at = ''
+            OR ${alias}.deleted_at = '0000-00-00 00:00:00'
+        )
+    `;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -78,24 +130,20 @@ function buildDeletedScope(alias = "c") {
 |--------------------------------------------------------------------------
 */
 
-function buildSearchScope(
-    search,
-    alias = "c"
-) {
-    search =
-        String(
-            search || ""
-        ).trim();
+function buildSearchScope(search, alias = "c") {
 
-    if (!search) {
+    const value = String(search || "").trim();
+
+    if (!value) {
+
         return {
             sql: "",
             params: []
         };
+
     }
 
-    const like =
-        `%${search}%`;
+    const like = `%${value}%`;
 
     return {
         sql: `
@@ -113,7 +161,9 @@ function buildSearchScope(
             like
         ]
     };
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -121,33 +171,91 @@ function buildSearchScope(
 |--------------------------------------------------------------------------
 */
 
-function buildStatusScope(
-    status,
-    alias = "c"
-) {
-    status =
-        String(
-            status || ""
-        ).trim();
+function buildStatusScope(status, alias = "c") {
 
-    if (
-        !status ||
-        status.toLowerCase() === "all"
-    ) {
+    const value = String(status || "").trim();
+
+    if (!value) {
+
         return {
             sql: "",
             params: []
         };
+
     }
 
     return {
-        sql:
-            ` AND LOWER(${alias}.status) = LOWER(?)`,
-        params: [
-            status
-        ]
+        sql: ` AND LOWER(${alias}.status) = LOWER(?) `,
+        params: [value]
     };
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| LIMIT
+|--------------------------------------------------------------------------
+|
+| PHP supports:
+| 100
+| 200
+| 500
+| 5000
+| all
+|
+| Node also accepts 0 and 100000 for compatibility.
+|--------------------------------------------------------------------------
+*/
+
+function normalizeLimit(value) {
+
+    const raw = String(
+        value ?? ""
+    )
+        .trim()
+        .toLowerCase();
+
+    if (
+        raw === "all" ||
+        raw === "0" ||
+        raw === "100000"
+    ) {
+        return 0;
+    }
+
+    const number = Number(raw);
+
+    if (
+        number === 100 ||
+        number === 200 ||
+        number === 500 ||
+        number === 5000
+    ) {
+        return number;
+    }
+
+    return 100;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| PAGE
+|--------------------------------------------------------------------------
+*/
+
+function normalizePage(value) {
+
+    const page = Number(value);
+
+    if (!Number.isInteger(page) || page < 1) {
+        return 1;
+    }
+
+    return page;
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -156,391 +264,182 @@ function buildStatusScope(
 */
 
 function normalizeDate(value) {
+
     if (
         value === null ||
         value === undefined ||
-        value === "" ||
-        value === "0000-00-00 00:00:00"
+        value === ""
     ) {
         return null;
     }
 
-    return value;
+    if (value instanceof Date) {
+        return value;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
 | DAY LEFT
 |--------------------------------------------------------------------------
-| Same logic as original PHP list.php:
-| Day Left is calculated from billing_cycle.
+|
+| PHP list.php calculates day left from billing_cycle.
 |--------------------------------------------------------------------------
 */
 
-function calculateDayLeft(
-    billingCycle
-) {
-    if (!billingCycle) {
-        return null;
-    }
-
-    const target =
-        new Date(
-            String(
-                billingCycle
-            ).replace(
-                " ",
-                "T"
-            )
-        );
+function calculateDayLeft(billingCycle) {
 
     if (
-        Number.isNaN(
-            target.getTime()
-        )
+        billingCycle === null ||
+        billingCycle === undefined ||
+        billingCycle === ""
     ) {
         return null;
     }
 
-    const now =
-        new Date();
+    const date = normalizeDate(billingCycle);
+
+    if (!date) {
+        return null;
+    }
+
+    const now = new Date();
+
+    const start = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const end = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+    );
+
+    const difference =
+        end.getTime() -
+        start.getTime();
 
     return Math.ceil(
-        (
-            target.getTime() -
-            now.getTime()
-        ) /
-        (
-            1000 *
-            60 *
-            60 *
-            24
-        )
+        difference /
+        (1000 * 60 * 60 * 24)
     );
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| NORMALIZE CUSTOMER
+| CUSTOMER NORMALIZER
 |--------------------------------------------------------------------------
 */
 
 function normalizeCustomer(row) {
 
-    const billingCycle =
-        normalizeDate(
+    /*
+     * Keep every column from c.*
+     * This is important because PHP uses SELECT c.*
+     */
+
+    const customer = {
+        ...row
+    };
+
+
+    /*
+     * Display fields
+     */
+
+    customer.display_bill =
+        Number(row.display_bill || 0);
+
+    customer.display_package =
+        row.display_package ||
+        row.package_name ||
+        "";
+
+
+    /*
+     * Balance
+     */
+
+    customer.balance =
+        Number(row.balance || 0);
+
+
+    /*
+     * Day left
+     */
+
+    customer.day_left =
+        calculateDayLeft(
             row.billing_cycle
         );
 
-    const promiseDate =
-        normalizeDate(
-            row.promise_date
-        );
 
-    const dayLeft =
-        calculateDayLeft(
-            billingCycle
-        );
+    /*
+     * Frontend-friendly aliases
+     */
 
-    return {
-        ...row,
+    customer.customerId =
+        row.customer_id;
 
-        id:
-            Number(
-                row.id
-            ),
+    customer.customer_id =
+        row.customer_id;
 
-        company_id:
-            row.company_id === null
-                ? null
-                : Number(
-                    row.company_id
-                ),
+    customer.name =
+        row.name || "";
 
-        customer_id:
-            row.customer_id ?? "",
+    customer.phone =
+        row.phone || "";
 
-        name:
-            row.name ?? "",
+    customer.address =
+        row.address || "";
 
-        phone:
-            row.phone ?? "",
+    customer.pppoe_username =
+        row.pppoe_username || "";
 
-        address:
-            row.address ?? "",
+    customer.pppoe_password =
+        row.pppoe_password || "";
 
-        pppoe_username:
-            row.pppoe_username ?? "",
+    customer.package_name =
+        row.package_name ||
+        row.display_package ||
+        "";
 
-        pppoe_password:
-            row.pppoe_password ?? "",
+    customer.monthly_bill =
+        Number(row.monthly_bill || 0);
 
-        package_id:
-            row.package_id === null
-                ? null
-                : Number(
-                    row.package_id
-                ),
+    customer.status =
+        row.status || "";
 
-        mikrotik_id:
-            row.mikrotik_id === null
-                ? null
-                : Number(
-                    row.mikrotik_id
-                ),
+    customer.payment_status =
+        row.payment_status || "";
 
-        router_id:
-            row.router_id === null
-                ? null
-                : Number(
-                    row.router_id
-                ),
-
-        monthly_bill:
-            Number(
-                row.monthly_bill || 0
-            ),
-
-        balance:
-            Number(
-                row.balance || 0
-            ),
-
-        display_bill:
-            Number(
-                row.display_bill || 0
-            ),
-
-        display_package:
-            row.display_package ?? "",
-
-        billing_cycle:
-            billingCycle,
-
-        promise_date:
-            promiseDate,
-
-        day_left:
-            dayLeft,
-
-        payment_status:
-            String(
-                row.payment_status ||
-                "paid"
-            ).toLowerCase(),
-
-        status:
-            String(
-                row.status ||
-                "inactive"
-            ).toLowerCase(),
-
-        area_name:
-            row.area_name ?? "",
-
-        sub_area_name:
-            row.sub_area_name ?? "",
-
-        package_price:
-            row.package_price === null
-                ? null
-                : Number(
-                    row.package_price
-                ),
-
-        package_profile:
-            row.package_profile ?? ""
-    };
+    return customer;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| GET CUSTOMERS
+| BASE QUERY
 |--------------------------------------------------------------------------
 */
 
-async function getCustomers({
-    user,
-    page = 1,
-    limit = 100,
-    search = "",
-    status = ""
-}) {
+function baseFrom() {
 
-    page =
-        Math.max(
-            1,
-            Number(page) || 1
-        );
-
-    limit =
-        Number(limit);
-
-    const allowedLimits = [
-        100,
-        200,
-        500,
-        5000,
-        0
-    ];
-
-    if (
-        !allowedLimits.includes(
-            limit
-        )
-    ) {
-        limit = 100;
-    }
-
-    const companyScope =
-        buildCompanyScope(
-            user,
-            "c"
-        );
-
-    const deletedScope =
-        buildDeletedScope(
-            "c"
-        );
-
-    const searchScope =
-        buildSearchScope(
-            search,
-            "c"
-        );
-
-    const statusScope =
-        buildStatusScope(
-            status,
-            "c"
-        );
-
-    /*
-    |--------------------------------------------------------------------------
-    | COUNT
-    |--------------------------------------------------------------------------
-    */
-
-    const countSql = `
-        SELECT
-            COUNT(*) AS total
-
-        FROM customers c
-
-        WHERE 1=1
-
-        ${companyScope.sql}
-        ${deletedScope.sql}
-        ${searchScope.sql}
-        ${statusScope.sql}
-    `;
-
-    const countRows =
-        await query(
-            countSql,
-            [
-                ...companyScope.params,
-                ...deletedScope.params,
-                ...searchScope.params,
-                ...statusScope.params
-            ]
-        );
-
-    const total =
-        Number(
-            countRows[0]?.total || 0
-        );
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAGINATION
-    |--------------------------------------------------------------------------
-    */
-
-    let totalPages = 1;
-    let offset = 0;
-
-    if (limit > 0) {
-
-        totalPages =
-            Math.max(
-                1,
-                Math.ceil(
-                    total / limit
-                )
-            );
-
-        if (
-            page > totalPages
-        ) {
-            page =
-                totalPages;
-        }
-
-        offset =
-            (page - 1) *
-            limit;
-
-    } else {
-
-        page = 1;
-        totalPages = 1;
-        offset = 0;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAGINATION SQL
-    |--------------------------------------------------------------------------
-    */
-
-    let paginationSql = "";
-
-    if (limit > 0) {
-
-        paginationSql = `
-            LIMIT ${Number(limit)}
-            OFFSET ${Number(offset)}
-        `;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | CUSTOMER QUERY
-    |--------------------------------------------------------------------------
-    */
-
-    const customerSql = `
-        SELECT
-
-            c.*,
-
-            COALESCE(
-                NULLIF(
-                    c.monthly_bill,
-                    0
-                ),
-                mp.price,
-                0
-            ) AS display_bill,
-
-            COALESCE(
-                NULLIF(
-                    c.package_name,
-                    ''
-                ),
-                mp.package_name,
-                ''
-            ) AS display_package,
-
-            mp.price AS package_price,
-
-           
-
-            a.name AS area_name,
-
-            sa.name AS sub_area_name
-
+    return `
         FROM customers c
 
         LEFT JOIN mikrotik_packages mp
@@ -554,72 +453,227 @@ async function getCustomers({
         LEFT JOIN sub_areas sa
             ON sa.id = c.sub_area_id
             AND sa.company_id = c.company_id
+    `;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER LIST
+|--------------------------------------------------------------------------
+*/
+
+async function getCustomers({
+    user,
+    page = 1,
+    limit = 100,
+    search = "",
+    status = ""
+}) {
+
+    const currentPage =
+        normalizePage(page);
+
+    const currentLimit =
+        normalizeLimit(limit);
+
+
+    const company =
+        buildCompanyScope(user, "c");
+
+    const deleted =
+        buildDeletedScope("c");
+
+    const searchScope =
+        buildSearchScope(search, "c");
+
+    const statusScope =
+        buildStatusScope(status, "c");
+
+
+    const whereSql =
+        company.sql +
+        deleted +
+        searchScope.sql +
+        statusScope.sql;
+
+
+    const whereParams = [
+        ...company.params,
+        ...searchScope.params,
+        ...statusScope.params
+    ];
+
+
+    /*
+     |--------------------------------------------------------------------------
+     | COUNT
+     |--------------------------------------------------------------------------
+     */
+
+    const countSql = `
+        SELECT COUNT(*) AS total
+        ${baseFrom()}
+        WHERE 1=1
+        ${whereSql}
+    `;
+
+
+    const countRows =
+        await query(
+            countSql,
+            whereParams
+        );
+
+
+    const total =
+        Number(
+            countRows?.[0]?.total || 0
+        );
+
+
+    /*
+     |--------------------------------------------------------------------------
+     | PAGINATION
+     |--------------------------------------------------------------------------
+     */
+
+    let totalPages = 1;
+    let offset = 0;
+
+    if (currentLimit > 0) {
+
+        totalPages =
+            Math.max(
+                1,
+                Math.ceil(
+                    total / currentLimit
+                )
+            );
+
+        const safePage =
+            Math.min(
+                currentPage,
+                totalPages
+            );
+
+        offset =
+            (safePage - 1) *
+            currentLimit;
+
+    }
+
+
+    /*
+     |--------------------------------------------------------------------------
+     | DATA
+     |--------------------------------------------------------------------------
+     |
+     | IMPORTANT:
+     | PHP uses c.*
+     |
+     */
+
+    let dataSql = `
+        SELECT
+            c.*,
+
+            COALESCE(
+                NULLIF(c.monthly_bill, 0),
+                mp.price,
+                0
+            ) AS display_bill,
+
+            COALESCE(
+                NULLIF(c.package_name, ''),
+                mp.package_name,
+                ''
+            ) AS display_package
+
+        ${baseFrom()}
 
         WHERE 1=1
+        ${whereSql}
 
-        ${companyScope.sql}
-        ${deletedScope.sql}
-        ${searchScope.sql}
-        ${statusScope.sql}
+        GROUP BY c.id
 
         ORDER BY c.id ASC
-
-        ${paginationSql}
     `;
+
+
+    const dataParams = [
+        ...whereParams
+    ];
+
+
+    if (currentLimit > 0) {
+
+        dataSql += `
+            LIMIT ? OFFSET ?
+        `;
+
+        dataParams.push(
+            currentLimit,
+            offset
+        );
+
+    }
+
 
     const rows =
         await query(
-            customerSql,
-            [
-                ...companyScope.params,
-                ...deletedScope.params,
-                ...searchScope.params,
-                ...statusScope.params
-            ]
+            dataSql,
+            dataParams
         );
+
 
     const customers =
         rows.map(
             normalizeCustomer
         );
 
-    /*
-    |--------------------------------------------------------------------------
-    | RESULT
-    |--------------------------------------------------------------------------
-    */
 
     return {
+
         customers,
 
         pagination: {
-            page,
-            limit,
+
+            page:
+                currentLimit > 0
+                    ? currentPage
+                    : 1,
+
+            limit:
+                currentLimit,
+
             total,
+
             totalPages,
+
+            pages:
+                totalPages,
+
             offset,
 
-            from:
-                total === 0
-                    ? 0
-                    : offset + 1,
+            hasNext:
+                currentLimit > 0 &&
+                currentPage < totalPages,
 
-            to:
-                total === 0
-                    ? 0
-                    : limit === 0
-                        ? total
-                        : Math.min(
-                            offset + limit,
-                            total
-                        )
+            hasPrev:
+                currentLimit > 0 &&
+                currentPage > 1
         }
+
     };
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| CUSTOMER SUMMARY
+| SUMMARY
 |--------------------------------------------------------------------------
 */
 
@@ -629,41 +683,43 @@ async function getSummary({
     status = ""
 }) {
 
-    const companyScope =
-        buildCompanyScope(
-            user,
-            "c"
-        );
+    const company =
+        buildCompanyScope(user, "c");
 
-    const deletedScope =
-        buildDeletedScope(
-            "c"
-        );
+    const deleted =
+        buildDeletedScope("c");
 
     const searchScope =
-        buildSearchScope(
-            search,
-            "c"
-        );
+        buildSearchScope(search, "c");
 
     const statusScope =
-        buildStatusScope(
-            status,
-            "c"
-        );
+        buildStatusScope(status, "c");
+
+
+    const whereSql =
+        company.sql +
+        deleted +
+        searchScope.sql +
+        statusScope.sql;
+
+
+    const params = [
+        ...company.params,
+        ...searchScope.params,
+        ...statusScope.params
+    ];
+
 
     const sql = `
         SELECT
 
-            COUNT(*) AS total_customer,
+            COUNT(DISTINCT c.id)
+                AS total_customer,
 
             COALESCE(
                 SUM(
                     COALESCE(
-                        NULLIF(
-                            c.monthly_bill,
-                            0
-                        ),
+                        NULLIF(c.monthly_bill, 0),
                         mp.price,
                         0
                     )
@@ -672,41 +728,30 @@ async function getSummary({
             ) AS total_bill,
 
             COALESCE(
-                SUM(
-                    c.balance
-                ),
+                SUM(c.balance),
                 0
             ) AS total_balance
 
-        FROM customers c
-
-        LEFT JOIN mikrotik_packages mp
-            ON mp.id = c.package_id
-            AND mp.company_id = c.company_id
+        ${baseFrom()}
 
         WHERE 1=1
-
-        ${companyScope.sql}
-        ${deletedScope.sql}
-        ${searchScope.sql}
-        ${statusScope.sql}
+        ${whereSql}
     `;
+
 
     const rows =
         await query(
             sql,
-            [
-                ...companyScope.params,
-                ...deletedScope.params,
-                ...searchScope.params,
-                ...statusScope.params
-            ]
+            params
         );
 
+
     const row =
-        rows[0] || {};
+        rows?.[0] || {};
+
 
     return {
+
         total_customer:
             Number(
                 row.total_customer || 0
@@ -720,13 +765,35 @@ async function getSummary({
         total_balance:
             Number(
                 row.total_balance || 0
+            ),
+
+        /*
+         * Compatibility aliases
+         */
+
+        total_customers:
+            Number(
+                row.total_customer || 0
+            ),
+
+        bill:
+            Number(
+                row.total_bill || 0
+            ),
+
+        balance:
+            Number(
+                row.total_balance || 0
             )
+
     };
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| GET CUSTOMER BY ID
+| SINGLE CUSTOMER
 |--------------------------------------------------------------------------
 */
 
@@ -735,100 +802,74 @@ async function getCustomerById({
     id
 }) {
 
-    id =
+    const customerId =
         Number(id);
 
     if (
-        !Number.isInteger(id) ||
-        id <= 0
+        !Number.isInteger(customerId) ||
+        customerId <= 0
     ) {
         return null;
     }
 
-    const companyScope =
-        buildCompanyScope(
-            user,
-            "c"
-        );
 
-    const deletedScope =
-        buildDeletedScope(
-            "c"
-        );
+    const company =
+        buildCompanyScope(user, "c");
+
+    const deleted =
+        buildDeletedScope("c");
+
 
     const sql = `
         SELECT
-
             c.*,
 
             COALESCE(
-                NULLIF(
-                    c.monthly_bill,
-                    0
-                ),
+                NULLIF(c.monthly_bill, 0),
                 mp.price,
                 0
             ) AS display_bill,
 
             COALESCE(
-                NULLIF(
-                    c.package_name,
-                    ''
-                ),
+                NULLIF(c.package_name, ''),
                 mp.package_name,
                 ''
-            ) AS display_package,
+            ) AS display_package
 
-            mp.price AS package_price,
-
-           
-
-            a.name AS area_name,
-
-            sa.name AS sub_area_name
-
-        FROM customers c
-
-        LEFT JOIN mikrotik_packages mp
-            ON mp.id = c.package_id
-            AND mp.company_id = c.company_id
-
-        LEFT JOIN areas a
-            ON a.id = c.area_id
-            AND a.company_id = c.company_id
-
-        LEFT JOIN sub_areas sa
-            ON sa.id = c.sub_area_id
-            AND sa.company_id = c.company_id
+        ${baseFrom()}
 
         WHERE c.id = ?
-
-        ${companyScope.sql}
-        ${deletedScope.sql}
+        ${company.sql}
+        ${deleted}
 
         LIMIT 1
     `;
 
+
+    const params = [
+        customerId,
+        ...company.params
+    ];
+
+
     const rows =
         await query(
             sql,
-            [
-                id,
-                ...companyScope.params,
-                ...deletedScope.params
-            ]
+            params
         );
 
-    if (
-        !rows.length
-    ) {
+
+    if (!rows.length) {
         return null;
     }
+
 
     return normalizeCustomer(
         rows[0]
     );
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -837,7 +878,9 @@ async function getCustomerById({
 */
 
 module.exports = {
+
     getCustomers,
     getSummary,
     getCustomerById
+
 };

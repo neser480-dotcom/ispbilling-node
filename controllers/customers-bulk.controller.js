@@ -1,69 +1,342 @@
 "use strict";
 
-const service = require("../services/customer-bulk.service");
+const service =
+    require("../services/customer-bulk.service");
 
-function known(error) {
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+function isKnownError(error) {
+
     return error instanceof service.BulkError;
 }
 
-function action(name) {
-    return Object.prototype.hasOwnProperty.call(service.actions, name)
-        ? service.actions[name]
-        : null;
+function getAction(name) {
+
+    if (
+        !name ||
+        !Object.prototype.hasOwnProperty.call(
+            service.actions,
+            name
+        )
+    ) {
+        return null;
+    }
+
+    return service.actions[name];
 }
 
-async function context(req) {
+function errorMessage(
+    error,
+    fallback
+) {
 
-    const requested = service.getIds(req);
+    return isKnownError(error)
+        ? error.message
+        : fallback;
+}
+
+function errorStatus(error) {
+
+    return isKnownError(error)
+        ? error.httpCode
+        : 500;
+}
+
+/*
+|--------------------------------------------------------------------------
+| REQUEST CONTEXT
+|--------------------------------------------------------------------------
+*/
+
+async function buildContext(req) {
+
+    const ids =
+        service.getIds(req);
+
+    const allowedIds =
+        await service.getAllowedIds(
+            req.session,
+            ids
+        );
 
     return {
         user: req.session,
         body: req.body || {},
-        ids: await service.getAllowedIds(req.session, requested)
+        ids: allowedIds
     };
 }
 
-/* GET /api/customers/bulk/:name?ids=1,2,3  -> popup HTML */
-async function form(req, res) {
+/*
+|--------------------------------------------------------------------------
+| GET BULK FORM
+|--------------------------------------------------------------------------
+|
+| GET
+| /api/customers/bulk/:name?ids=1,2,3
+|
+*/
 
-    const handler = action(req.params.name);
+async function form(
+    req,
+    res
+) {
+
+    const name =
+        String(
+            req.params.name || ""
+        )
+        .trim()
+        .toLowerCase();
+
+    const handler =
+        getAction(name);
 
     if (!handler) {
-        return res.status(404).type("html")
-            .send('<div class="alert alert-danger">Unknown bulk action.</div>');
+
+        return res
+            .status(404)
+            .type("html")
+            .send(`
+                <div class="alert alert-danger m-3">
+                    Unknown bulk action.
+                </div>
+            `);
     }
 
     try {
-        return res.type("html").send(await handler.fragment(await context(req)));
+
+        const context =
+            await buildContext(req);
+
+        /*
+        |--------------------------------------------------------------------------
+        | No selected customer
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !Array.isArray(context.ids) ||
+            context.ids.length === 0
+        ) {
+
+            return res
+                .status(400)
+                .type("html")
+                .send(`
+                    <div class="alert alert-warning m-3">
+                        No customers selected.
+                    </div>
+                `);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Render popup
+        |--------------------------------------------------------------------------
+        */
+
+        const html =
+            await handler.fragment(
+                context
+            );
+
+        return res
+            .type("html")
+            .send(html);
+
     } catch (error) {
-        if (!known(error)) console.error("BULK FORM ERROR:", error);
-        return res.status(known(error) ? error.httpCode : 500).type("html").send(
-            `<div class="alert alert-danger m-3">${service.esc(
-                known(error) ? error.message : "Failed to load form."
-            )}</div>`
+
+        if (!isKnownError(error)) {
+
+            console.error(
+                "BULK FORM ERROR:",
+                error
+            );
+        }
+
+        return res
+            .status(
+                errorStatus(error)
+            )
+            .type("html")
+            .send(`
+                <div class="alert alert-danger m-3">
+                    ${service.esc(
+                        errorMessage(
+                            error,
+                            "Failed to load bulk action form."
+                        )
+                    )}
+                </div>
+            `);
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| APPLY BULK ACTION
+|--------------------------------------------------------------------------
+|
+| POST
+| /api/customers/bulk/:name
+|
+*/
+
+async function apply(
+    req,
+    res
+) {
+
+    const name =
+        String(
+            req.params.name || ""
+        )
+        .trim()
+        .toLowerCase();
+
+    const handler =
+        getAction(name);
+
+    if (!handler) {
+
+        return res
+            .status(404)
+            .json({
+                success: false,
+                message:
+                    "Unknown bulk action."
+            });
+    }
+
+    try {
+
+        /*
+        |--------------------------------------------------------------------------
+        | CSRF
+        |--------------------------------------------------------------------------
+        */
+
+        service.checkCsrf(
+            req.session,
+            req.body || {}
         );
-    }
-}
 
-/* POST /api/customers/bulk/:name -> JSON */
-async function apply(req, res) {
+        /*
+        |--------------------------------------------------------------------------
+        | Build context
+        |--------------------------------------------------------------------------
+        */
 
-    const handler = action(req.params.name);
+        const context =
+            await buildContext(req);
 
-    if (!handler) {
-        return res.status(404).json({ success: false, message: "Unknown bulk action." });
-    }
+        /*
+        |--------------------------------------------------------------------------
+        | Selected customer validation
+        |--------------------------------------------------------------------------
+        */
 
-    try {
-        const message = await handler.apply(await context(req));
-        return res.json({ success: true, message });
-    } catch (error) {
-        if (!known(error)) console.error("BULK ACTION ERROR:", error);
-        return res.status(known(error) ? error.httpCode : 500).json({
-            success: false,
-            message: known(error) ? error.message : "Bulk action failed."
+        if (
+            !Array.isArray(context.ids) ||
+            context.ids.length === 0
+        ) {
+
+            throw new service.BulkError(
+                "No customers selected."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Execute action
+        |--------------------------------------------------------------------------
+        */
+
+        const result =
+            await handler.apply(
+                context
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Normalize result
+        |--------------------------------------------------------------------------
+        |
+        | Some actions return:
+        |
+        | {
+        |     success: true,
+        |     message: "..."
+        | }
+        |
+        | Others may return a string.
+        |
+        */
+
+        if (
+            result &&
+            typeof result === "object"
+        ) {
+
+            return res.json({
+                success:
+                    result.success !== false,
+
+                message:
+                    String(
+                        result.message ||
+                        "Bulk action completed successfully."
+                    ),
+
+                ...result
+            });
+        }
+
+        return res.json({
+            success: true,
+            message:
+                String(
+                    result ||
+                    "Bulk action completed successfully."
+                )
         });
+
+    } catch (error) {
+
+        if (!isKnownError(error)) {
+
+            console.error(
+                "BULK ACTION ERROR:",
+                error
+            );
+        }
+
+        return res
+            .status(
+                errorStatus(error)
+            )
+            .json({
+                success: false,
+                message:
+                    errorMessage(
+                        error,
+                        "Bulk action failed."
+                    )
+            });
     }
 }
 
-module.exports = { form, apply };
+/*
+|--------------------------------------------------------------------------
+| EXPORTS
+|--------------------------------------------------------------------------
+*/
+
+module.exports = {
+    form,
+    apply
+};

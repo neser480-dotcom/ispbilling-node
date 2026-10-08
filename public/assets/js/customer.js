@@ -1,30 +1,16 @@
+
 "use strict";
 
-document.addEventListener("DOMContentLoaded", () => {
+(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | CUSTOMER MODULE
-    |--------------------------------------------------------------------------
-    | Handles:
-    | - Customer list
-    | - Summary
-    | - Search
-    | - Status filter
-    | - Pagination
-    | - Select all
-    | - Bulk actions
-    | - Add/Edit popup
-    | - Recharge
-    | - Delete
-    | - Connection ON/OFF
-    | - MikroTik
-    | - Package loading
-    | - Router loading
-    | - CSV export/template/import
-    | - Toast / SweetAlert
-    |--------------------------------------------------------------------------
-    */
+    let currentPage = 1;
+    let currentSearch = "";
+    let currentStatus = "";
+    let currentLimit = 100;
+
+    let loadingCustomers = false;
+    let searchTimer = null;
+    let initialized = false;
 
 
     /*
@@ -33,32 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
     |--------------------------------------------------------------------------
     */
 
-    const $ = (selector, root = document) =>
-        root.querySelector(selector);
-
-
-    const $$ = (selector, root = document) =>
-        [...root.querySelectorAll(selector)];
-
-
-    function escapeHtml(value) {
-
-        return String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
-
     function number(value) {
 
         const n = Number(value);
 
-        return Number.isFinite(n)
-            ? n
-            : 0;
+        return Number.isFinite(n) ? n : 0;
     }
 
 
@@ -74,824 +39,287 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function unique(values) {
+    function escapeHtml(value) {
 
-        return [
-            ...new Set(
-                values
-                    .map(value =>
-                        String(value).trim()
-                    )
-                    .filter(Boolean)
-            )
-        ];
-    }
+        return String(value ?? "").replace(
+            /[&<>"']/g,
+            function (char) {
 
+                return {
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;"
+                }[char];
 
-    function selectedIds() {
-
-        return unique(
-            $$(
-                ".customer-checkbox:checked, input[name='customer_ids[]']:checked"
-            ).map(input => input.value)
+            }
         );
     }
 
 
-    function csrfToken() {
+    function normalizeCustomerLimit(value) {
+
+        const raw =
+            String(value ?? "").trim();
+
+        if (
+            raw === "all" ||
+            raw === "0" ||
+            raw === "100000"
+        ) {
+            return 0;
+        }
+
+        const allowed = [
+            100,
+            200,
+            500,
+            5000
+        ];
+
+        const parsed = Number(raw);
+
+        return allowed.includes(parsed)
+            ? parsed
+            : 100;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSRF
+    |--------------------------------------------------------------------------
+    */
+
+    function getCsrfToken() {
+
+        const meta =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            );
+
+        if (
+            meta &&
+            meta.content
+        ) {
+            return meta.content.trim();
+        }
+
+
+        const input =
+            document.getElementById(
+                "csrfTokenInput"
+            );
+
+        if (
+            input &&
+            input.value
+        ) {
+            return input.value.trim();
+        }
+
+
+        if (
+            window.CSRF_TOKEN &&
+            typeof window.CSRF_TOKEN === "string"
+        ) {
+            return window.CSRF_TOKEN.trim();
+        }
+
+
+        return "";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER FIELD HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    function databaseId(customer) {
+
+        return number(
+            customer.id ??
+            customer.customer_db_id ??
+            customer.customerIdDb
+        );
+    }
+
+
+    function customerId(customer) {
 
         return (
-            $("meta[name='csrf-token']")?.content ||
-            $("#csrfTokenInput")?.value ||
-            $("input[name='csrf_token']")?.value ||
-            window.csrfToken ||
+            customer.customer_id ??
+            customer.customerId ??
             ""
         );
     }
 
 
-    function showAlert(
-        icon,
-        title,
-        text = ""
-    ) {
+    function customerName(customer) {
 
-        if (
-            typeof Swal !== "undefined"
-        ) {
-
-            return Swal.fire({
-                icon,
-                title,
-                text
-            });
-        }
+        return String(
+            customer.name ??
+            customer.full_name ??
+            customer.customer_name ??
+            ""
+        ).trim();
+    }
 
 
-        window.alert(
-            text || title
+    function pppoeUsername(customer) {
+
+        return String(
+            customer.pppoe_username ??
+            customer.pppoe_name ??
+            customer.username ??
+            ""
+        ).trim();
+    }
+
+
+    function phone(customer) {
+
+        return String(
+            customer.phone ??
+            customer.mobile ??
+            customer.mobile_no ??
+            ""
+        ).trim();
+    }
+
+
+    function address(customer) {
+
+        return String(
+            customer.address ??
+            ""
+        ).trim();
+    }
+
+
+    function packageDisplay(customer) {
+
+        return String(
+            customer.display_package ??
+            customer.package_name ??
+            customer.package ??
+            ""
+        ).trim();
+    }
+
+
+    function monthlyBill(customer) {
+
+        return number(
+            customer.display_bill ??
+            customer.monthly_bill ??
+            customer.monthlyBill ??
+            0
         );
     }
 
 
-    function toast(
-        title,
-        message,
-        type = "success"
-    ) {
+    function balance(customer) {
 
-        const toastElement =
-            $("#customerToast");
-
-
-        if (
-            toastElement &&
-            typeof bootstrap !== "undefined"
-        ) {
-
-            const titleElement =
-                $("#customerToastTitle");
-
-
-            const bodyElement =
-                $("#customerToastBody");
-
-
-            if (titleElement) {
-
-                titleElement.textContent =
-                    title || "Customer";
-            }
-
-
-            if (bodyElement) {
-
-                bodyElement.textContent =
-                    message || "";
-            }
-
-
-            toastElement.classList.remove(
-                "text-bg-success",
-                "text-bg-danger",
-                "text-bg-warning",
-                "text-bg-info"
-            );
-
-
-            toastElement.classList.add(
-                type === "error"
-                    ? "text-bg-danger"
-                    : type === "warning"
-                        ? "text-bg-warning"
-                        : type === "info"
-                            ? "text-bg-info"
-                            : "text-bg-success"
-            );
-
-
-            bootstrap.Toast
-                .getOrCreateInstance(
-                    toastElement
-                )
-                .show();
-
-
-            return;
-        }
-
-
-        showAlert(
-            type === "error"
-                ? "error"
-                : type,
-            title,
-            message
+        return number(
+            customer.balance ??
+            0
         );
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | REQUEST
-    |--------------------------------------------------------------------------
-    */
-
-    async function request(
-        url,
-        options = {}
-    ) {
-
-        const method =
-            String(
-                options.method || "GET"
-            ).toUpperCase();
-
-
-        const headers = {
-            "X-Requested-With":
-                "XMLHttpRequest",
-
-            ...(options.headers || {})
-        };
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | GET / HEAD
-        |--------------------------------------------------------------------------
-        | NEVER send a body.
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            method === "GET" ||
-            method === "HEAD"
-        ) {
-
-            const response =
-                await fetch(
-                    url,
-                    {
-                        method,
-                        credentials:
-                            "same-origin",
-                        headers,
-                        cache:
-                            "no-store"
-                    }
-                );
-
-
-            const text =
-                await response.text();
-
-
-            let data;
-
-
-            try {
-
-                data =
-                    JSON.parse(text);
-
-            } catch (_) {
-
-                throw new Error(
-                    text ||
-                    `HTTP ${response.status}`
-                );
-            }
-
-
-            if (
-                !response.ok ||
-                data.success === false
-            ) {
-
-                throw new Error(
-                    data.message ||
-                    `HTTP ${response.status}`
-                );
-            }
-
-
-            return data;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | POST / PUT / PATCH / DELETE
-        |--------------------------------------------------------------------------
-        */
-
-        const fetchOptions = {
-
-            method,
-
-            credentials:
-                "same-origin",
-
-            headers
-        };
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | FORMDATA
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            options.body instanceof FormData
-        ) {
-
-            const formData =
-                options.body;
-
-
-            if (
-                csrfToken() &&
-                !formData.has(
-                    "csrf_token"
-                )
-            ) {
-
-                formData.append(
-                    "csrf_token",
-                    csrfToken()
-                );
-            }
-
-
-            fetchOptions.body =
-                formData;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | JSON
-        |--------------------------------------------------------------------------
-        */
-
-        else {
-
-            headers["Content-Type"] =
-                "application/json";
-
-
-            let body =
-                options.body;
-
-
-            if (
-                body === undefined ||
-                body === null ||
-                body === ""
-            ) {
-
-                body = {};
-            }
-
-            else if (
-                typeof body === "string"
-            ) {
-
-                try {
-
-                    body =
-                        JSON.parse(body);
-
-                } catch (_) {
-
-                    body = {};
-                }
-            }
-
-
-            if (
-                csrfToken() &&
-                body.csrf_token === undefined
-            ) {
-
-                body.csrf_token =
-                    csrfToken();
-            }
-
-
-            fetchOptions.body =
-                JSON.stringify(body);
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SEND REQUEST
-        |--------------------------------------------------------------------------
-        */
-
-        const response =
-            await fetch(
-                url,
-                fetchOptions
-            );
-
-
-        const text =
-            await response.text();
-
-
-        let data;
-
-
-        try {
-
-            data =
-                JSON.parse(text);
-
-        } catch (_) {
-
-            throw new Error(
-                text ||
-                `HTTP ${response.status}`
-            );
-        }
-
-
-        if (
-            !response.ok ||
-            data.success === false
-        ) {
-
-            throw new Error(
-                data.message ||
-                `HTTP ${response.status}`
-            );
-        }
-
-
-        return data;
+    function customerStatus(customer) {
+
+        return String(
+            customer.status ??
+            "Inactive"
+        ).trim();
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | STATE
-    |--------------------------------------------------------------------------
-    */
+    function paymentStatus(customer) {
 
-    let currentPage = 1;
-
-    let currentLimit = 100;
-
-    let currentSearch = "";
-
-    let currentStatus = "";
-
-    let loadingCustomers = false;
-
-    let currentCustomers = [];
-
-    let searchTimer = null;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SELECTION
-    |--------------------------------------------------------------------------
-    */
-
-    function updateSelectAllState() {
-
-        const master =
-            $("#selectAll");
-
-
-        if (!master) {
-            return;
-        }
-
-
-        const boxes =
-            $$('.customer-checkbox, input[name="customer_ids[]"]');
-
-
-        if (!boxes.length) {
-
-            master.checked = false;
-
-            master.indeterminate = false;
-
-            return;
-        }
-
-
-        const checked =
-            boxes.filter(
-                box => box.checked
-            ).length;
-
-
-        master.checked =
-            checked === boxes.length;
-
-
-        master.indeterminate =
-            checked > 0 &&
-            checked < boxes.length;
-    }
-
-
-    function refreshSelectionCount() {
-
-        const count =
-            selectedIds().length;
-
-
-        [
-            "#selectedCountBadge",
-            "#selectedCount",
-            ".selected-count",
-            "[data-selected-count]"
-        ].forEach(selector => {
-
-            $$(selector).forEach(
-                element => {
-
-                    element.textContent =
-                        count;
-                }
-            );
-        });
-
-
-        const toggle =
-            $("#bulkFloatingToggle");
-
-
-        if (toggle) {
-
-            toggle.classList.toggle(
-                "active",
-                count > 0
-            );
-        }
-
-
-        updateSelectAllState();
-    }
-
-
-    $("#selectAll")?.addEventListener(
-        "change",
-        event => {
-
-            const checked =
-                event.target.checked;
-
-
-            $$('.customer-checkbox, input[name="customer_ids[]"]')
-                .forEach(
-                    box => {
-                        box.checked =
-                            checked;
-                    }
-                );
-
-
-            refreshSelectionCount();
-        }
-    );
-
-
-    document.addEventListener(
-        "change",
-        event => {
-
-            if (
-                event.target.matches(
-                    '.customer-checkbox, input[name="customer_ids[]"]'
-                )
-            ) {
-
-                refreshSelectionCount();
-            }
-        }
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATE HELPERS
-    |--------------------------------------------------------------------------
-    */
-
-    function parseDate(value) {
-
-        if (!value) {
-            return null;
-        }
-
-
-        const date =
-            new Date(
-                String(value)
-                    .replace(" ", "T")
-            );
-
-
-        return Number.isNaN(
-            date.getTime()
+        return String(
+            customer.payment_status ??
+            customer.paymentStatus ??
+            "unpaid"
         )
-            ? null
-            : date;
-    }
-
-
-    function formatDate(value) {
-
-        const date =
-            parseDate(value);
-
-
-        if (!date) {
-            return "-";
-        }
-
-
-        return date.toLocaleString(
-            undefined,
-            {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-    }
-
-
-    function toDateTimeLocal(value) {
-
-        const date =
-            parseDate(value);
-
-
-        if (!date) {
-            return "";
-        }
-
-
-        const pad =
-            value =>
-                String(value)
-                    .padStart(2, "0");
-
-
-        return [
-            date.getFullYear(),
-            "-",
-            pad(date.getMonth() + 1),
-            "-",
-            pad(date.getDate()),
-            "T",
-            pad(date.getHours()),
-            ":",
-            pad(date.getMinutes())
-        ].join("");
-    }
-
-
-    function daysLeft(customer) {
-
-        const billing =
-            parseDate(
-                customer.billing_cycle
-            );
-
-
-        const promise =
-            parseDate(
-                customer.promise_date
-            );
-
-
-        let expiry =
-            billing;
-
-
-        if (
-            promise &&
-            (!expiry || promise > expiry)
-        ) {
-
-            expiry =
-                promise;
-        }
-
-
-        if (!expiry) {
-            return null;
-        }
-
-
-        const now =
-            new Date();
-
-
-        const diff =
-            expiry.getTime() -
-            now.getTime();
-
-
-        return Math.ceil(
-            diff /
-            86400000
-        );
-    }
-
-
-    function dayLeftHtml(customer) {
-
-        const days =
-            daysLeft(customer);
-
-
-        if (days === null) {
-
-            return `
-                <span class="text-muted">
-                    -
-                </span>
-            `;
-        }
-
-
-        if (days < 0) {
-
-            return `
-                <span class="text-danger fw-semibold">
-                    ${Math.abs(days)} day ago
-                </span>
-            `;
-        }
-
-
-        if (days === 0) {
-
-            return `
-                <span class="text-warning fw-semibold">
-                    Today
-                </span>
-            `;
-        }
-
-
-        return `
-            <span class="fw-semibold">
-                ${days}
-                day${days === 1 ? "" : "s"}
-            </span>
-        `;
+            .trim()
+            .toLowerCase();
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | STATUS
+    | STATUS BADGES
     |--------------------------------------------------------------------------
     */
 
-    function statusHtml(status) {
+    function statusBadge(customer) {
 
-        const value =
-            String(
-                status ||
-                "Pending"
-            );
+        const payment =
+            paymentStatus(customer);
 
+        const status =
+            customerStatus(customer);
 
-        let cls =
+        const paymentClass =
+            payment === "paid"
+                ? "bg-success"
+                : "bg-danger";
+
+        const paymentText =
+            payment === "paid"
+                ? "Paid"
+                : "Unpaid";
+
+        let statusClass =
             "bg-secondary";
 
 
-        switch (value) {
+        switch (
+            status.toLowerCase()
+        ) {
 
-            case "Active":
-                cls =
-                    "bg-success";
+            case "active":
+                statusClass = "bg-primary";
                 break;
 
-            case "Expired":
-                cls =
-                    "bg-danger";
+            case "expired":
+                statusClass = "bg-danger";
                 break;
 
-            case "Inactive":
-                cls =
-                    "bg-secondary";
+            case "inactive":
+                statusClass = "bg-secondary";
                 break;
 
-            case "Suspended":
-                cls =
-                    "bg-warning text-dark";
+            case "suspended":
+                statusClass = "bg-warning text-dark";
                 break;
 
-            case "Disabled":
-                cls =
-                    "bg-dark";
+            case "disabled":
+                statusClass = "bg-secondary";
                 break;
 
-            case "Pending":
-                cls =
-                    "bg-info text-dark";
+            case "pending":
+                statusClass = "bg-warning text-dark";
                 break;
         }
 
 
         return `
-            <span class="badge ${cls}">
-                ${escapeHtml(value)}
-            </span>
-        `;
-    }
+            <div class="d-flex flex-column gap-1 align-items-start">
 
+                <span class="badge ${paymentClass}">
+                    ${paymentText}
+                </span>
 
-    /*
-    |--------------------------------------------------------------------------
-    | ROW ACTIONS
-    |--------------------------------------------------------------------------
-    */
-
-    function actionHtml(customer) {
-
-        const id =
-            Number(customer.id);
-
-
-        return `
-            <div class="btn-group btn-group-sm">
-
-                <button
-                    type="button"
-                    class="btn btn-outline-primary customer-edit-btn"
-                    data-id="${id}"
-                    title="Edit"
-                >
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-
-
-                <button
-                    type="button"
-                    class="btn btn-outline-success customer-recharge-btn"
-                    data-id="${id}"
-                    title="Recharge"
-                >
-                    <i class="fa-solid fa-wallet"></i>
-                </button>
-
-
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary customer-connection-btn"
-                    data-id="${id}"
-                    title="Connection"
-                >
-                    <i class="fa-solid fa-power-off"></i>
-                </button>
-
-
-                <button
-                    type="button"
-                    class="btn btn-outline-danger customer-delete-btn"
-                    data-id="${id}"
-                    title="Delete"
-                >
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <span class="badge ${statusClass}">
+                    ${escapeHtml(status || "Unknown")}
+                </span>
 
             </div>
         `;
@@ -900,306 +328,881 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
     |--------------------------------------------------------------------------
-    | RENDER CUSTOMERS
+    | DAY LEFT
     |--------------------------------------------------------------------------
     */
 
-    function renderCustomers(customers) {
+    function dayLeftDisplay(customer) {
 
-        const body =
-            $("#customerTableBody");
+        const raw =
+            customer.day_left ??
+            customer.dayLeft ??
+            "";
 
+        if (
+            raw === "" ||
+            raw === null ||
+            raw === undefined
+        ) {
 
-        if (!body) {
-            return;
-        }
-
-
-        currentCustomers =
-            Array.isArray(customers)
-                ? customers
-                : [];
-
-
-        if (!currentCustomers.length) {
-
-            body.innerHTML = `
-                <tr>
-                    <td
-                        colspan="10"
-                        class="text-center py-5 text-muted"
-                    >
-                        No customers found.
-                    </td>
-                </tr>
+            return `
+                <span class="cm-dayleft-na">
+                    N/A
+                </span>
             `;
-
-
-            refreshSelectionCount();
-
-            return;
         }
 
 
-        body.innerHTML =
-            currentCustomers
-                .map(customer => {
-
-                    const id =
-                        Number(customer.id);
+        const value =
+            number(raw);
 
 
-                    const bill =
-                        number(
-                            customer.display_bill ??
-                            customer.monthly_bill
-                        );
+        if (value < 0) {
+
+            return `
+                <span class="cm-dayleft cm-dayleft-over">
+                    ${Math.abs(value)} days overdue
+                </span>
+            `;
+        }
 
 
-                    const balance =
-                        number(
-                            customer.balance
-                        );
-
-
-                    const packageName =
-                        customer.display_package ||
-                        customer.package_name ||
-                        "-";
-
-
-                    const billDate =
-                        formatDate(
-                            customer.billing_cycle
-                        );
-
-
-                    const promiseDate =
-                        formatDate(
-                            customer.promise_date
-                        );
-
-
-                    return `
-                        <tr>
-
-                            <td>
-                                <input
-                                    class="form-check-input customer-checkbox"
-                                    type="checkbox"
-                                    name="customer_ids[]"
-                                    value="${id}"
-                                >
-                            </td>
-
-
-                            <td>
-                                ${escapeHtml(
-                                    customer.customer_id ||
-                                    customer.id ||
-                                    "-"
-                                )}
-                            </td>
-
-
-                            <td>
-
-                                <div class="fw-semibold">
-                                    ${escapeHtml(
-                                        customer.name ||
-                                        "-"
-                                    )}
-                                </div>
-
-                                <div class="small text-muted">
-                                    ${escapeHtml(
-                                        customer.pppoe_username ||
-                                        "-"
-                                    )}
-                                </div>
-
-                            </td>
-
-
-                            <td>
-
-                                <div>
-                                    ${escapeHtml(
-                                        customer.phone ||
-                                        "-"
-                                    )}
-                                </div>
-
-                                <div class="small text-muted">
-                                    ${escapeHtml(
-                                        customer.address ||
-                                        ""
-                                    )}
-                                </div>
-
-                            </td>
-
-
-                            <td>
-
-                                <div class="fw-semibold">
-                                    ${escapeHtml(
-                                        packageName
-                                    )}
-                                </div>
-
-                                ${
-                                    customer.mikrotik_id
-                                        ? `
-                                            <div class="small text-muted">
-                                                MT #
-                                                ${escapeHtml(
-                                                    customer.mikrotik_id
-                                                )}
-                                            </div>
-                                        `
-                                        : ""
-                                }
-
-                            </td>
-
-
-                            <td>
-
-                                <div class="fw-semibold">
-                                    ${money(bill)}
-                                </div>
-
-                                <div class="small ${
-                                    balance > 0
-                                        ? "text-danger"
-                                        : balance < 0
-                                            ? "text-success"
-                                            : "text-muted"
-                                }">
-
-                                    Balance:
-                                    ${money(balance)}
-
-                                </div>
-
-                            </td>
-
-
-                            <td>
-
-                                <div class="small">
-
-                                    <span class="fw-semibold">
-                                        Bill:
-                                    </span>
-
-                                    ${escapeHtml(
-                                        billDate
-                                    )}
-
-                                </div>
-
-
-                                <div class="small text-muted">
-
-                                    <span class="fw-semibold">
-                                        Promise:
-                                    </span>
-
-                                    ${escapeHtml(
-                                        promiseDate
-                                    )}
-
-                                </div>
-
-                            </td>
-
-
-                            <td>
-                                ${dayLeftHtml(
-                                    customer
-                                )}
-                            </td>
-
-
-                            <td>
-                                ${statusHtml(
-                                    customer.status
-                                )}
-                            </td>
-
-
-                            <td class="text-nowrap">
-                                ${actionHtml(
-                                    customer
-                                )}
-                            </td>
-
-                        </tr>
-                    `;
-                })
-                .join("");
-
-
-        refreshSelectionCount();
+        return `
+            <span class="cm-dayleft">
+                ${value}
+                day${value === 1 ? "" : "s"}
+            </span>
+        `;
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | RANGE
+    | DATE
     |--------------------------------------------------------------------------
     */
 
-    function updateRangeText(
-        pagination
-    ) {
+    function dateDisplay(value) {
 
-        const rangeText =
-            $("#customerRangeText");
+        if (!value) {
+            return "—";
+        }
 
 
-        const paginationInfo =
-            $("#paginationInfo");
+        const date =
+            new Date(value);
+
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return escapeHtml(value);
+        }
+
+
+        return date.toLocaleDateString();
+    }
+
+
+    function billingDateDisplay(customer) {
+
+        const billing =
+            customer.billing_cycle ??
+            customer.billing_date ??
+            null;
+
+        const promise =
+            customer.promise_date ??
+            customer.promiseDate ??
+            null;
+
+        const parts = [];
+
+
+        if (billing) {
+
+            parts.push(`
+                <div>
+                    <i class="fa-regular fa-calendar"></i>
+                    ${dateDisplay(billing)}
+                </div>
+            `);
+        }
+
+
+        if (promise) {
+
+            parts.push(`
+                <div class="small text-warning">
+                    <i class="fa-regular fa-clock"></i>
+                    Promise: ${dateDisplay(promise)}
+                </div>
+            `);
+        }
+
+
+        return parts.length
+            ? parts.join("")
+            : "—";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONTACT
+    |--------------------------------------------------------------------------
+    */
+
+    function contactDisplay(customer) {
+
+        const mobile =
+            phone(customer);
+
+        const customerAddress =
+            address(customer);
+
+
+        return `
+            <div class="small">
+
+                ${
+                    mobile
+                        ? `
+                            <div>
+                                <i class="fa-solid fa-phone cm-ico-phone"></i>
+                                ${escapeHtml(mobile)}
+                            </div>
+                        `
+                        : ""
+                }
+
+                ${
+                    customerAddress
+                        ? `
+                            <div class="text-muted">
+                                <i class="fa-solid fa-location-dot cm-ico-pin"></i>
+                                ${escapeHtml(customerAddress)}
+                            </div>
+                        `
+                        : ""
+                }
+
+                ${
+                    !mobile && !customerAddress
+                        ? "—"
+                        : ""
+                }
+
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BILL / BALANCE
+    |--------------------------------------------------------------------------
+    */
+
+    function billBalanceDisplay(customer) {
+
+        return `
+            <div>
+
+                <div>
+                    <strong>
+                        ${money(
+                            monthlyBill(customer)
+                        )}
+                    </strong>
+                </div>
+
+                <div class="small text-muted">
+                    Balance:
+                    ${money(
+                        balance(customer)
+                    )}
+                </div>
+
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | WHATSAPP
+    |--------------------------------------------------------------------------
+    */
+
+    function whatsappUrl(customer) {
+
+        let mobile =
+            phone(customer)
+                .replace(/\D/g, "");
+
+
+        if (!mobile) {
+            return "";
+        }
+
+
+        if (
+            mobile.startsWith("0")
+        ) {
+
+            mobile =
+                "88" + mobile;
+
+        } else if (
+            !mobile.startsWith("88")
+        ) {
+
+            mobile =
+                "88" + mobile;
+        }
+
+
+        return (
+            "https://wa.me/" +
+            mobile
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SINGLE ACTION MENU
+    |--------------------------------------------------------------------------
+    */
+
+    function actionMenu(customer) {
+
+        const id =
+            databaseId(customer);
+
+
+        if (!id) {
+            return "—";
+        }
+
+
+        const name =
+            customerName(customer) ||
+            pppoeUsername(customer) ||
+            customerId(customer) ||
+            "Customer";
+
+
+        const displayId =
+            customerId(customer);
+
+        const mobile =
+            phone(customer);
+
+        const pppoe =
+            pppoeUsername(customer);
+
+        const packageName =
+            packageDisplay(customer);
+
+        const monthly =
+            monthlyBill(customer);
+
+        const customerBalance =
+            balance(customer);
+
+        const whatsapp =
+            whatsappUrl(customer);
+
+
+        return `
+            <div class="dropdown">
+
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    data-bs-auto-close="outside"
+                    aria-expanded="false"
+                >
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                    Action
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+
+                    <li>
+                        <a
+                            href="#"
+                            class="dropdown-item customer-profile-btn"
+                            data-id="${id}"
+                            data-name="${escapeHtml(name)}"
+                        >
+                            <i class="fa-regular fa-user me-2"></i>
+                            Profile
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="#"
+                            class="dropdown-item recharge-single-btn"
+                            data-id="${id}"
+                            data-customer-id="${escapeHtml(displayId)}"
+                            data-name="${escapeHtml(customerName(customer))}"
+                            data-pppoe="${escapeHtml(pppoe)}"
+                            data-mobile="${escapeHtml(mobile)}"
+                            data-monthly="${monthly}"
+                            data-package="${escapeHtml(packageName)}"
+                            data-balance="${customerBalance}"
+                        >
+                            <i class="fa-solid fa-money-bill-wave me-2"></i>
+                            Recharge
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="#"
+                            class="dropdown-item customer-edit-btn"
+                            data-id="${id}"
+                            data-name="${escapeHtml(name)}"
+                        >
+                            <i class="fa-regular fa-pen-to-square me-2"></i>
+                            Edit
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/report?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-report-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-chart-column me-2"></i>
+                            Report
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/note?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-note-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-regular fa-note-sticky me-2"></i>
+                            Note
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/message?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-message-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-regular fa-comment-dots me-2"></i>
+                            Message
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/transfer?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-transfer-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-right-left me-2"></i>
+                            Transfer
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/reseller?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-reseller-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-user-tag me-2"></i>
+                            Reseller
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/ticket_add?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-ticket-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-ticket me-2"></i>
+                            Support Ticket
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/reset_password?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-reset-password-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-key me-2"></i>
+                            Reset Password
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <a
+                            href="/customers/activity_log?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-activity-log-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-clock-rotate-left me-2"></i>
+                            Activity Log
+                        </a>
+                    </li>
+
+
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+
+
+                    ${
+                        whatsapp
+                            ? `
+                                <li>
+                                    <a
+                                        href="${escapeHtml(whatsapp)}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="dropdown-item"
+                                    >
+                                        <i class="fa-brands fa-whatsapp me-2 text-success"></i>
+                                        WhatsApp
+                                    </a>
+                                </li>
+                            `
+                            : `
+                                <li>
+                                    <span class="dropdown-item text-muted disabled">
+                                        <i class="fa-brands fa-whatsapp me-2"></i>
+                                        WhatsApp
+                                    </span>
+                                </li>
+                            `
+                    }
+
+
+                    <li>
+                        <a
+                            href="#"
+                            class="dropdown-item text-danger delete-customer-btn"
+                            data-id="${id}"
+                            data-name="${escapeHtml(name)}"
+                        >
+                            <i class="fa-regular fa-trash-can me-2"></i>
+                            Delete
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER ROW
+    |--------------------------------------------------------------------------
+    */
+
+    function renderCustomerRow(customer) {
+
+        const id =
+            databaseId(customer);
+
+
+        return `
+            <tr>
+
+                <td>
+                    <input
+                        type="checkbox"
+                        class="form-check-input customer-checkbox"
+                        name="customer_ids[]"
+                        value="${id}"
+                        data-name="${escapeHtml(
+                            customerName(customer)
+                        )}"
+                        data-pppoe="${escapeHtml(
+                            pppoeUsername(customer)
+                        )}"
+                        data-package="${escapeHtml(
+                            packageDisplay(customer)
+                        )}"
+                        data-monthly="${monthlyBill(customer)}"
+                    >
+                </td>
+
+
+                <td class="cm-id">
+                    ${escapeHtml(
+                        customerId(customer)
+                    )}
+                </td>
+
+
+                <td>
+
+                    <div class="fw-semibold">
+                        ${escapeHtml(
+                            customerName(customer) ||
+                            "—"
+                        )}
+                    </div>
+
+                    <div class="small text-muted">
+                        ${escapeHtml(
+                            pppoeUsername(customer) ||
+                            customerId(customer) ||
+                            "—"
+                        )}
+                    </div>
+
+                </td>
+
+
+                <td>
+                    ${contactDisplay(customer)}
+                </td>
+
+
+                <td class="cm-package">
+                    ${escapeHtml(
+                        packageDisplay(customer) ||
+                        "—"
+                    )}
+                </td>
+
+
+                <td>
+                    ${billBalanceDisplay(customer)}
+                </td>
+
+
+                <td>
+                    ${billingDateDisplay(customer)}
+                </td>
+
+
+                <td>
+                    ${dayLeftDisplay(customer)}
+                </td>
+
+
+                <td>
+                    ${statusBadge(customer)}
+                </td>
+
+
+                <td>
+                    ${actionMenu(customer)}
+                </td>
+
+            </tr>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLE HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    function getTableBody() {
+
+        return (
+            document.getElementById(
+                "customerTableBody"
+            ) ||
+
+            document.querySelector(
+                "#customerTable tbody"
+            ) ||
+
+            document.querySelector(
+                ".cm-table tbody"
+            )
+        );
+    }
+
+
+    function showLoading() {
+
+        const tbody =
+            getTableBody();
+
+
+        if (!tbody) {
+            return;
+        }
+
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="10"
+                    class="text-center py-5"
+                >
+                    <div
+                        class="spinner-border spinner-border-sm me-2"
+                    ></div>
+                    Loading customers...
+                </td>
+            </tr>
+        `;
+    }
+
+
+    function showEmpty() {
+
+        const tbody =
+            getTableBody();
+
+
+        if (!tbody) {
+            return;
+        }
+
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="10"
+                    class="text-center py-5 text-muted"
+                >
+                    No customers found.
+                </td>
+            </tr>
+        `;
+    }
+
+
+    function showError(message) {
+
+        const tbody =
+            getTableBody();
+
+
+        if (!tbody) {
+            return;
+        }
+
+
+        tbody.innerHTML = `
+            <tr>
+                <td
+                    colspan="10"
+                    class="text-center py-5 text-danger"
+                >
+                    ${escapeHtml(message)}
+                </td>
+            </tr>
+        `;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    function updateSummary(summary) {
+
+        const totalCustomers =
+            document.getElementById(
+                "totalCustomers"
+            );
+
+        const totalBill =
+            document.getElementById(
+                "totalBill"
+            );
+
+        const totalBalance =
+            document.getElementById(
+                "totalBalance"
+            );
+
+
+        if (totalCustomers) {
+
+            totalCustomers.textContent =
+                number(
+                    summary.total_customer ??
+                    summary.totalCustomers ??
+                    0
+                ).toLocaleString();
+        }
+
+
+        if (totalBill) {
+
+            totalBill.textContent =
+                money(
+                    summary.monthly_fee ??
+                    summary.total_bill ??
+                    summary.totalBill ??
+                    0
+                );
+        }
+
+
+        if (totalBalance) {
+
+            totalBalance.textContent =
+                money(
+                    summary.balance ??
+                    summary.total_balance ??
+                    summary.totalBalance ??
+                    0
+                );
+        }
+    }
+
+
+    async function loadSummary() {
+
+        const params =
+            new URLSearchParams();
+
+
+        if (currentSearch) {
+            params.set(
+                "search",
+                currentSearch
+            );
+        }
+
+
+        if (currentStatus) {
+            params.set(
+                "status",
+                currentStatus
+            );
+        }
+
+
+        const response =
+            await fetch(
+                "/api/customers/summary?" +
+                params.toString(),
+                {
+                    credentials:
+                        "same-origin",
+
+                    headers: {
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+                    }
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !result.success
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Failed to load customer summary."
+            );
+        }
+
+
+        updateSummary(
+            result.summary ||
+            result.data ||
+            {}
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SHOWING
+    |--------------------------------------------------------------------------
+    */
+
+    function updateShowing(pagination) {
+
+        const info =
+            document.getElementById(
+                "paginationInfo"
+            );
+
+
+        if (!info) {
+            return;
+        }
 
 
         const total =
             number(
-                pagination?.total
+                pagination.total
             );
-
 
         const page =
-            Math.max(
-                1,
-                number(
-                    pagination?.page
-                ) || 1
-            );
-
+            number(
+                pagination.page
+            ) || 1;
 
         const limit =
             number(
-                pagination?.limit
-            ) || currentLimit;
+                pagination.limit
+            );
 
 
         if (!total) {
 
-            if (rangeText) {
+            info.textContent =
+                "Showing 0 customers";
 
-                rangeText.textContent =
-                    "Showing 0 customers";
-            }
+            return;
+        }
 
 
-            if (paginationInfo) {
+        if (!limit) {
 
-                paginationInfo.textContent =
-                    "Showing 0 - 0 of 0";
-            }
-
+            info.textContent =
+                `Showing ${total.toLocaleString()} customers`;
 
             return;
         }
@@ -1216,18 +1219,8 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
-        if (rangeText) {
-
-            rangeText.textContent =
-                `Showing ${start} - ${end} of ${total} customers`;
-        }
-
-
-        if (paginationInfo) {
-
-            paginationInfo.textContent =
-                `Showing ${start} - ${end} of ${total}`;
-        }
+        info.textContent =
+            `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()} customers`;
     }
 
 
@@ -1237,12 +1230,12 @@ document.addEventListener("DOMContentLoaded", () => {
     |--------------------------------------------------------------------------
     */
 
-    function renderPagination(
-        pagination
-    ) {
+    function renderPagination(pagination) {
 
         const container =
-            $("#customerPagination");
+            document.getElementById(
+                "customerPagination"
+            );
 
 
         if (!container) {
@@ -1250,50 +1243,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        const total =
+        container.innerHTML = "";
+
+
+        const totalPages =
             number(
-                pagination?.total
+                pagination.totalPages
             );
 
 
-        const pages =
-            number(
-                pagination?.pages
-            );
-
-
-        const page =
-            number(
-                pagination?.page
-            ) || 1;
-
-
-        container.innerHTML =
-            "";
-
-
-        if (
-            !total ||
-            pages <= 1
-        ) {
-
-            updateRangeText(
-                pagination
-            );
-
+        if (totalPages <= 1) {
             return;
         }
 
 
-        const fragment =
-            document.createDocumentFragment();
+        const current =
+            number(
+                pagination.page
+            ) || 1;
 
 
-        function addItem(
+        function addPage(
+            page,
             label,
-            targetPage,
-            disabled = false,
-            active = false
+            disabled,
+            active
         ) {
 
             const li =
@@ -1303,15 +1277,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             li.className =
-                `page-item${
+                "page-item" +
+                (
                     disabled
                         ? " disabled"
                         : ""
-                }${
+                ) +
+                (
                     active
                         ? " active"
                         : ""
-                }`;
+                );
 
 
             const button =
@@ -1323,30 +1299,21 @@ document.addEventListener("DOMContentLoaded", () => {
             button.type =
                 "button";
 
-
             button.className =
                 "page-link";
 
-
             button.textContent =
                 label;
-
-
-            if (disabled) {
-
-                button.disabled =
-                    true;
-            }
 
 
             if (!disabled) {
 
                 button.addEventListener(
                     "click",
-                    () => {
+                    function () {
 
                         currentPage =
-                            targetPage;
+                            page;
 
                         loadCustomers();
                     }
@@ -1359,185 +1326,264 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
-            fragment.appendChild(
+            container.appendChild(
                 li
             );
         }
 
 
-        addItem(
-            "‹",
-            Math.max(
-                1,
-                page - 1
-            ),
-            page <= 1
+        addPage(
+            current - 1,
+            "Previous",
+            current <= 1,
+            false
         );
 
 
-        const maxVisible =
-            7;
-
-
-        let start =
+        const start =
             Math.max(
                 1,
-                page - 3
+                current - 2
             );
 
 
-        let end =
+        const end =
             Math.min(
-                pages,
-                start + maxVisible - 1
+                totalPages,
+                current + 2
             );
-
-
-        if (
-            end - start + 1 <
-            maxVisible
-        ) {
-
-            start =
-                Math.max(
-                    1,
-                    end - maxVisible + 1
-                );
-        }
-
-
-        if (start > 1) {
-
-            addItem(
-                "1",
-                1,
-                false,
-                page === 1
-            );
-
-
-            if (start > 2) {
-
-                const li =
-                    document.createElement(
-                        "li"
-                    );
-
-
-                li.className =
-                    "page-item disabled";
-
-
-                const span =
-                    document.createElement(
-                        "span"
-                    );
-
-
-                span.className =
-                    "page-link";
-
-
-                span.textContent =
-                    "...";
-
-
-                li.appendChild(
-                    span
-                );
-
-
-                fragment.appendChild(
-                    li
-                );
-            }
-        }
 
 
         for (
-            let p = start;
-            p <= end;
-            p++
+            let page = start;
+            page <= end;
+            page++
         ) {
 
-            addItem(
-                String(p),
-                p,
+            addPage(
+                page,
+                String(page),
                 false,
-                p === page
+                page === current
             );
         }
 
 
-        if (end < pages) {
+        addPage(
+            current + 1,
+            "Next",
+            current >= totalPages,
+            false
+        );
+    }
 
-            if (
-                end <
-                pages - 1
-            ) {
 
-                const li =
-                    document.createElement(
-                        "li"
+    /*
+    |--------------------------------------------------------------------------
+    | SELECTED CUSTOMERS
+    |--------------------------------------------------------------------------
+    */
+
+    function getCustomerCheckboxes() {
+
+        return Array.from(
+            document.querySelectorAll(
+                "#customerTableBody .customer-checkbox, " +
+                "#customerTableBody input[name='customer_ids[]']"
+            )
+        );
+    }
+
+
+    function getSelectedCustomerIds() {
+
+        return getCustomerCheckboxes()
+            .filter(
+                function (checkbox) {
+                    return checkbox.checked;
+                }
+            )
+            .map(
+                function (checkbox) {
+                    return Number(
+                        checkbox.value
                     );
-
-
-                li.className =
-                    "page-item disabled";
-
-
-                const span =
-                    document.createElement(
-                        "span"
+                }
+            )
+            .filter(
+                function (id) {
+                    return (
+                        Number.isInteger(id) &&
+                        id > 0
                     );
+                }
+            );
+    }
 
 
-                span.className =
-                    "page-link";
+    /*
+    |--------------------------------------------------------------------------
+    | BULK COUNT
+    |--------------------------------------------------------------------------
+    */
+
+    function updateSelectedCount() {
+
+        const ids =
+            getSelectedCustomerIds();
+
+        const count =
+            ids.length;
 
 
-                span.textContent =
-                    "...";
+        document
+            .querySelectorAll(
+                "#selectedCount, " +
+                ".selected-count, " +
+                "[data-selected-count]"
+            )
+            .forEach(
+                function (element) {
+
+                    element.textContent =
+                        String(count);
+                }
+            );
 
 
-                li.appendChild(
-                    span
+        const toggle =
+            document.getElementById(
+                "bulkFloatingToggle"
+            ) ||
+            document.querySelector(
+                ".bulk-floating-toggle"
+            );
+
+
+        if (toggle) {
+
+            if (count > 0) {
+
+                toggle.classList.add(
+                    "active"
+                );
+
+                toggle.style.display =
+                    "flex";
+
+                toggle.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+
+            } else {
+
+                toggle.classList.remove(
+                    "active"
+                );
+
+                toggle.style.display =
+                    "none";
+
+                toggle.setAttribute(
+                    "aria-hidden",
+                    "true"
                 );
 
 
-                fragment.appendChild(
-                    li
-                );
+                const panel =
+                    document.getElementById(
+                        "bulkFloatingPanel"
+                    );
+
+
+                if (panel) {
+
+                    panel.classList.remove(
+                        "show"
+                    );
+                }
             }
-
-
-            addItem(
-                String(pages),
-                pages,
-                false,
-                page === pages
-            );
         }
 
 
-        addItem(
-            "›",
-            Math.min(
-                pages,
-                page + 1
-            ),
-            page >= pages
-        );
+        document
+            .querySelectorAll(
+                "#bulkFloatingPanel .selected-count, " +
+                ".bulk-floating-panel .selected-count"
+            )
+            .forEach(
+                function (element) {
+
+                    element.textContent =
+                        String(count);
+                }
+            );
+    }
 
 
-        container.appendChild(
-            fragment
-        );
+    /*
+    |--------------------------------------------------------------------------
+    | SELECT ALL
+    |--------------------------------------------------------------------------
+    */
+
+    function updateSelectAllState() {
+
+        const selectAll =
+            document.getElementById(
+                "selectAll"
+            );
 
 
-        updateRangeText(
-            pagination
-        );
+        if (!selectAll) {
+            return;
+        }
+
+
+        const checkboxes =
+            getCustomerCheckboxes();
+
+
+        const checked =
+            checkboxes.filter(
+                function (checkbox) {
+                    return checkbox.checked;
+                }
+            );
+
+
+        selectAll.checked =
+            checkboxes.length > 0 &&
+            checked.length ===
+                checkboxes.length;
+
+
+        selectAll.indeterminate =
+            checked.length > 0 &&
+            checked.length <
+                checkboxes.length;
+    }
+
+
+    function resetSelectAll() {
+
+        const selectAll =
+            document.getElementById(
+                "selectAll"
+            );
+
+
+        if (!selectAll) {
+            return;
+        }
+
+
+        selectAll.checked =
+            false;
+
+        selectAll.indeterminate =
+            false;
     }
 
 
@@ -1558,28 +1604,37 @@ document.addEventListener("DOMContentLoaded", () => {
             true;
 
 
-        const body =
-            $("#customerTableBody");
+        showLoading();
 
 
-        if (body) {
+        const toggle =
+            document.getElementById(
+                "bulkFloatingToggle"
+            );
 
-            body.innerHTML = `
-                <tr>
-                    <td
-                        colspan="10"
-                        class="text-center py-5"
-                    >
 
-                        <div class="spinner-border"></div>
+        if (toggle) {
 
-                        <div class="mt-2 text-muted">
-                            Loading customers...
-                        </div>
+            toggle.classList.remove(
+                "active"
+            );
 
-                    </td>
-                </tr>
-            `;
+            toggle.style.display =
+                "none";
+        }
+
+
+        const panel =
+            document.getElementById(
+                "bulkFloatingPanel"
+            );
+
+
+        if (panel) {
+
+            panel.classList.remove(
+                "show"
+            );
         }
 
 
@@ -1591,17 +1646,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             params.set(
                 "page",
-                String(
-                    currentPage
-                )
+                String(currentPage)
             );
 
 
             params.set(
                 "limit",
-                String(
-                    currentLimit
-                )
+                String(currentLimit)
             );
 
 
@@ -1623,43 +1674,108 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            const data =
-                await request(
-                    `/api/customers?${params.toString()}`,
+            const response =
+                await fetch(
+                    "/api/customers?" +
+                    params.toString(),
                     {
-                        method:
-                            "GET",
+                        credentials:
+                            "same-origin",
 
                         headers: {
-                            Accept:
-                                "application/json"
+                            "X-Requested-With":
+                                "XMLHttpRequest"
                         }
                     }
                 );
 
 
-            renderCustomers(
-                data.customers ||
-                []
+            const result =
+                await response.json();
+
+
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+
+                throw new Error(
+                    result.message ||
+                    "Failed to load customers."
+                );
+            }
+
+
+            const customers =
+                Array.isArray(
+                    result.data
+                )
+                    ? result.data
+                    : Array.isArray(
+                        result.customers
+                    )
+                        ? result.customers
+                        : [];
+
+
+            const tbody =
+                getTableBody();
+
+
+            if (!tbody) {
+
+                throw new Error(
+                    "Customer table body not found."
+                );
+            }
+
+
+            if (!customers.length) {
+
+                showEmpty();
+
+            } else {
+
+                tbody.innerHTML =
+                    customers
+                        .map(
+                            renderCustomerRow
+                        )
+                        .join("");
+            }
+
+
+            const pagination =
+                result.pagination ||
+                {};
+
+
+            updateShowing(
+                pagination
             );
 
 
             renderPagination(
-                data.pagination ||
-                {
-                    page:
-                        currentPage,
-
-                    limit:
-                        currentLimit,
-
-                    total:
-                        0,
-
-                    pages:
-                        0
-                }
+                pagination
             );
+
+
+            try {
+
+                await loadSummary();
+
+            } catch (error) {
+
+                console.warn(
+                    "CUSTOMER SUMMARY:",
+                    error
+                );
+            }
+
+
+            resetSelectAll();
+
+            updateSelectedCount();
 
         } catch (error) {
 
@@ -1669,57 +1785,13 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
-            if (body) {
-
-                body.innerHTML = `
-                    <tr>
-
-                        <td
-                            colspan="10"
-                            class="text-center py-5"
-                        >
-
-                            <div class="text-danger">
-                                ${escapeHtml(
-                                    error.message
-                                )}
-                            </div>
+            showError(
+                error.message ||
+                "Failed to load customers."
+            );
 
 
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-primary mt-3"
-                                id="customerRetryBtn"
-                            >
-                                Retry
-                            </button>
-
-                        </td>
-
-                    </tr>
-                `;
-
-
-                $("#customerRetryBtn")
-                    ?.addEventListener(
-                        "click",
-                        () => {
-
-                            loadCustomers();
-                        }
-                    );
-            }
-
-
-            const rangeText =
-                $("#customerRangeText");
-
-
-            if (rangeText) {
-
-                rangeText.textContent =
-                    "Unable to load customers";
-            }
+            updateSelectedCount();
 
         } finally {
 
@@ -1731,501 +1803,443 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
     |--------------------------------------------------------------------------
-    | LOAD SUMMARY
+    | MODAL HELPERS
     |--------------------------------------------------------------------------
     */
 
-    async function loadSummary() {
+    function getActionModalElement() {
+
+        return document.getElementById(
+            "customerActionModal"
+        );
+    }
+
+
+    function getActionModalBody() {
+
+        return document.getElementById(
+            "customerActionModalBody"
+        );
+    }
+
+
+    function getActionModalTitle() {
+
+        return document.getElementById(
+            "customerActionModalLabel"
+        );
+    }
+
+
+    function showActionModal(
+        html,
+        title
+    ) {
+
+        const modalElement =
+            getActionModalElement();
+
+        const body =
+            getActionModalBody();
+
+        const titleElement =
+            getActionModalTitle();
+
+
+        if (!modalElement || !body) {
+
+            throw new Error(
+                "Customer action modal not found."
+            );
+        }
+
+
+        if (titleElement) {
+
+            titleElement.textContent =
+                title ||
+                "Customer Action";
+        }
+
+
+        body.innerHTML =
+            html;
+
+
+        if (
+            window.bootstrap &&
+            window.bootstrap.Modal
+        ) {
+
+            const modal =
+                window.bootstrap.Modal.getOrCreateInstance(
+                    modalElement
+                );
+
+            modal.show();
+
+            return modal;
+        }
+
+
+        modalElement.classList.add(
+            "show"
+        );
+
+        modalElement.style.display =
+            "block";
+
+        modalElement.removeAttribute(
+            "aria-hidden"
+        );
+
+        return null;
+    }
+
+
+    function closeActionModal() {
+
+        const modalElement =
+            getActionModalElement();
+
+
+        if (!modalElement) {
+            return;
+        }
+
+
+        if (
+            window.bootstrap &&
+            window.bootstrap.Modal
+        ) {
+
+            const modal =
+                window.bootstrap.Modal.getInstance(
+                    modalElement
+                );
+
+            if (modal) {
+                modal.hide();
+            }
+
+            return;
+        }
+
+
+        modalElement.classList.remove(
+            "show"
+        );
+
+        modalElement.style.display =
+            "none";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD ACTION HTML
+    |--------------------------------------------------------------------------
+    */
+
+    async function loadActionHtml(
+        url,
+        title
+    ) {
+
+        if (!url) {
+
+            throw new Error(
+                "Action URL is missing."
+            );
+        }
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+
+                    credentials:
+                        "same-origin",
+
+                    headers: {
+                        "X-Requested-With":
+                            "XMLHttpRequest",
+
+                        "Accept":
+                            "text/html"
+                    }
+                }
+            );
+
+
+        const html =
+            await response.text();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                html ||
+                "Failed to load action form."
+            );
+        }
+
+
+        showActionModal(
+            html,
+            title
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SINGLE ACTION POPUP
+    |--------------------------------------------------------------------------
+    */
+
+    async function handleSingleActionPopup(
+        element
+    ) {
+
+        const url =
+            element.getAttribute(
+                "data-url"
+            ) ||
+            element.getAttribute(
+                "href"
+            );
+
+
+        if (
+            !url ||
+            url === "#"
+        ) {
+
+            return;
+        }
+
 
         try {
 
-            const params =
-                new URLSearchParams();
-
-
-            if (currentSearch) {
-
-                params.set(
-                    "search",
-                    currentSearch
-                );
-            }
-
-
-            if (currentStatus) {
-
-                params.set(
-                    "status",
-                    currentStatus
-                );
-            }
-
-
-            const data =
-                await request(
-                    `/api/customers/summary?${params.toString()}`,
-                    {
-                        method:
-                            "GET",
-
-                        headers: {
-                            Accept:
-                                "application/json"
-                        }
-                    }
-                );
-
-
-            const summary =
-                data.summary ||
-                {};
-
-
-            const total =
-                number(
-                    summary.total_customers
-                );
-
-
-            const totalBill =
-                number(
-                    summary.total_bill
-                );
-
-
-            const totalBalance =
-                number(
-                    summary.total_balance
-                );
-
-
-            if (
-                $("#totalCustomers")
-            ) {
-
-                $("#totalCustomers")
-                    .textContent =
-                    total.toLocaleString();
-            }
-
-
-            if (
-                $("#totalBill")
-            ) {
-
-                $("#totalBill")
-                    .textContent =
-                    money(totalBill);
-            }
-
-
-            if (
-                $("#totalBalance")
-            ) {
-
-                $("#totalBalance")
-                    .textContent =
-                    money(totalBalance);
-            }
+            await loadActionHtml(
+                url,
+                element.getAttribute(
+                    "data-title"
+                ) ||
+                element.getAttribute(
+                    "data-action-title"
+                ) ||
+                "Customer Action"
+            );
 
         } catch (error) {
 
             console.error(
-                "CUSTOMER SUMMARY:",
+                "ACTION POPUP:",
                 error
             );
 
 
             if (
-                $("#totalCustomers")
+                window.Swal
             ) {
 
-                $("#totalCustomers")
-                    .textContent =
-                    "0";
-            }
-
-
-            if (
-                $("#totalBill")
-            ) {
-
-                $("#totalBill")
-                    .textContent =
-                    "0.00";
-            }
-
-
-            if (
-                $("#totalBalance")
-            ) {
-
-                $("#totalBalance")
-                    .textContent =
-                    "0.00";
-            }
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REFRESH ALL
-    |--------------------------------------------------------------------------
-    */
-
-    async function refreshAll() {
-
-        await Promise.all([
-            loadCustomers(),
-            loadSummary()
-        ]);
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SEARCH
-    |--------------------------------------------------------------------------
-    */
-
-    const searchInput =
-        $("#customerSearch");
-
-
-    searchInput?.addEventListener(
-        "input",
-        () => {
-
-            clearTimeout(
-                searchTimer
-            );
-
-
-            searchTimer =
-                setTimeout(
-                    () => {
-
-                        currentSearch =
-                            searchInput.value.trim();
-
-
-                        currentPage =
-                            1;
-
-
-                        refreshAll();
-
-                    },
-                    300
+                Swal.fire(
+                    "Error",
+                    error.message ||
+                    "Failed to load action.",
+                    "error"
                 );
+            }
         }
-    );
-
-
-    $("#clearSearchBtn")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                if (searchInput) {
-
-                    searchInput.value =
-                        "";
-                }
-
-
-                currentSearch =
-                    "";
-
-
-                currentPage =
-                    1;
-
-
-                refreshAll();
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS FILTER
-    |--------------------------------------------------------------------------
-    */
-
-    $("#customerStatus")
-        ?.addEventListener(
-            "change",
-            event => {
-
-                currentStatus =
-                    String(
-                        event.target.value ||
-                        ""
-                    ).trim();
-
-
-                currentPage =
-                    1;
-
-
-                refreshAll();
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LIMIT FILTER
-    |--------------------------------------------------------------------------
-    */
-
-    $("#customerLimit")
-        ?.addEventListener(
-            "change",
-            event => {
-
-                const value =
-                    String(
-                        event.target.value ||
-                        "100"
-                    );
-
-
-                currentLimit =
-                    value.toLowerCase() === "all"
-                        ? 100000
-                        : Math.max(
-                            1,
-                            number(value) ||
-                            100
-                        );
-
-
-                currentPage =
-                    1;
-
-
-                refreshAll();
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | APPLY FILTER
-    |--------------------------------------------------------------------------
-    */
-
-    $("#applyCustomerFilter")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                currentSearch =
-                    searchInput?.value.trim() ||
-                    "";
-
-
-                currentStatus =
-                    $("#customerStatus")?.value ||
-                    "";
-
-
-                const selectedLimit =
-                    $("#customerLimit")?.value ||
-                    "100";
-
-
-                currentLimit =
-                    selectedLimit.toLowerCase() === "all"
-                        ? 100000
-                        : Math.max(
-                            1,
-                            number(
-                                selectedLimit
-                            ) || 100
-                        );
-
-
-                currentPage =
-                    1;
-
-
-                refreshAll();
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REFRESH BUTTON
-    |--------------------------------------------------------------------------
-    */
-
-    $("#refreshCustomersBtn")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-                refreshAll();
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ACTION MODAL
-    |--------------------------------------------------------------------------
-    */
-
-    function getActionModal() {
-
-        const modal =
-            $("#customerActionModal");
-
-
-        const body =
-            $("#customerActionModalBody") ||
-            $("#actionModalBody");
-
-
-        if (
-            !modal ||
-            !body
-        ) {
-
-            return null;
-        }
-
-
-        return {
-            modal,
-            body
-        };
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | OPEN POPUP
+    | BULK ACTION POPUP
     |--------------------------------------------------------------------------
     */
 
-    async function openPopup(
-        url,
-        title = "Customer Action",
-        bulk = false
+    async function handleBulkActionPopup(
+        element
     ) {
 
-        const idsNow =
-            selectedIds();
+        const selectedIds =
+            getSelectedCustomerIds();
+
+
+        if (!selectedIds.length) {
+
+            if (window.Swal) {
+
+                Swal.fire(
+                    "No Customer Selected",
+                    "Please select at least one customer.",
+                    "warning"
+                );
+            }
+
+            return;
+        }
+
+
+        let url =
+            element.getAttribute(
+                "data-url"
+            );
 
 
         if (
-            bulk &&
-            !idsNow.length
+            !url ||
+            url === "#"
         ) {
 
-            showAlert(
-                "warning",
-                "No Customer Selected",
-                "Please select at least one customer."
+            const href =
+                element.getAttribute(
+                    "href"
+                );
+
+            if (
+                href &&
+                href !== "#"
+            ) {
+                url = href;
+            }
+        }
+
+
+        if (
+            !url ||
+            url === "#"
+        ) {
+
+            throw new Error(
+                "Bulk action URL is missing."
             );
-
-            return;
         }
 
 
-        const actionModal =
-            getActionModal();
-
-
-        if (!actionModal) {
-
-            location.href =
-                url;
-
-            return;
-        }
-
-
-        const targetUrl =
+        const urlObject =
             new URL(
                 url,
-                location.origin
+                window.location.origin
             );
 
 
-        if (bulk) {
+        urlObject.searchParams.set(
+            "ids",
+            selectedIds.join(",")
+        );
 
-            targetUrl.searchParams.set(
-                "ids",
-                idsNow.join(",")
-            );
+
+        await loadActionHtml(
+            urlObject.toString(),
+            element.getAttribute(
+                "data-title"
+            ) ||
+            element.getAttribute(
+                "data-action-title"
+            ) ||
+            "Bulk Action"
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BULK FORM SUBMIT
+    |--------------------------------------------------------------------------
+    */
+
+    async function submitBulkForm(
+        form
+    ) {
+
+        const selectedIds =
+            getSelectedCustomerIds();
+
+
+        if (!selectedIds.length) {
+
+            if (window.Swal) {
+
+                Swal.fire(
+                    "No Customer Selected",
+                    "Please select at least one customer.",
+                    "warning"
+                );
+            }
+
+            return;
         }
 
 
-        const {
-            modal,
-            body
-        } =
-            actionModal;
+        const formData =
+            new FormData(form);
 
 
-        body.innerHTML = `
-            <div class="text-center p-4">
+        /*
+        | Add selected customer IDs.
+        */
 
-                <div class="spinner-border"></div>
+        selectedIds.forEach(
+            function (id) {
 
-                <div class="mt-2 text-muted">
-                    Loading...
-                </div>
-
-            </div>
-        `;
-
-
-        const label =
-            $("#customerActionModalLabel");
+                formData.append(
+                    "customer_ids[]",
+                    String(id)
+                );
+            }
+        );
 
 
-        if (label) {
-
-            label.textContent =
-                title;
-        }
+        const csrf =
+            getCsrfToken();
 
 
-        const modalTitle =
-            $(".modal-title", modal);
+        if (csrf) {
 
-
-        if (modalTitle) {
-
-            modalTitle.textContent =
-                title;
-        }
-
-
-        if (
-            typeof bootstrap !== "undefined"
-        ) {
-
-            bootstrap.Modal
-                .getOrCreateInstance(
-                    modal
+            if (
+                !formData.has(
+                    "csrf_token"
                 )
-                .show();
+            ) {
+
+                formData.append(
+                    "csrf_token",
+                    csrf
+                );
+            }
+        }
+
+
+        let url =
+            form.getAttribute(
+                "action"
+            );
+
+
+        if (!url) {
+
+            url =
+                window.location.href;
+        }
+
+
+        const submitButton =
+            form.querySelector(
+                '[type="submit"]'
+            );
+
+
+        if (submitButton) {
+
+            submitButton.disabled =
+                true;
         }
 
 
@@ -2233,1362 +2247,504 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const response =
                 await fetch(
-                    targetUrl.toString(),
+                    url,
                     {
-                        method:
-                            "GET",
+                        method: "POST",
+
+                        body: formData,
 
                         credentials:
                             "same-origin",
 
                         headers: {
-                            Accept:
-                                "text/html",
-
                             "X-Requested-With":
-                                "XMLHttpRequest"
-                        },
+                                "XMLHttpRequest",
 
-                        cache:
-                            "no-store"
-                    }
-                );
-
-
-            const html =
-                await response.text();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    html ||
-                    `HTTP ${response.status}`
-                );
-            }
-
-
-            body.innerHTML =
-                html;
-
-
-            bindForms(
-                body,
-                idsNow
-            );
-
-        } catch (error) {
-
-            body.innerHTML = `
-                <div class="alert alert-danger m-3">
-                    ${escapeHtml(
-                        error.message
-                    )}
-                </div>
-            `;
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | FORM BINDING
-    |--------------------------------------------------------------------------
-    */
-
-    function bindForms(
-        root,
-        idsNow = []
-    ) {
-
-        if (!root) {
-            return;
-        }
-
-
-        root.querySelectorAll("form")
-            .forEach(
-                form => {
-
-                    if (
-                        form.dataset.customerBound ===
-                        "1"
-                    ) {
-
-                        return;
-                    }
-
-
-                    form.dataset.customerBound =
-                        "1";
-
-
-                    form.addEventListener(
-                        "submit",
-                        async event => {
-
-                            event.preventDefault();
-
-
-                            const formData =
-                                new FormData(
-                                    form
-                                );
-
-
-                            const chosen =
-                                idsNow.length
-                                    ? idsNow
-                                    : selectedIds();
-
-
-                            if (
-                                chosen.length
-                            ) {
-
-                                formData.delete(
-                                    "customer_ids[]"
-                                );
-
-
-                                chosen.forEach(
-                                    id => {
-
-                                        formData.append(
-                                            "customer_ids[]",
-                                            id
-                                        );
-                                    }
-                                );
-                            }
-
-
-                            const submitButton =
-                                form.querySelector(
-                                    "[type='submit']"
-                                );
-
-
-                            if (
-                                submitButton
-                            ) {
-
-                                submitButton.disabled =
-                                    true;
-
-
-                                submitButton.dataset.oldText =
-                                    submitButton.innerHTML;
-
-
-                                submitButton.innerHTML =
-                                    `
-                                    <span
-                                        class="spinner-border spinner-border-sm me-1"
-                                    ></span>
-                                    Saving...
-                                    `;
-                            }
-
-
-                            try {
-
-                                const data =
-                                    await request(
-                                        form.action ||
-                                        location.href,
-                                        {
-                                            method:
-                                                String(
-                                                    form.method ||
-                                                    "POST"
-                                                ).toUpperCase(),
-
-                                            body:
-                                                formData
-                                        }
-                                    );
-
-
-                                showAlert(
-                                    "success",
-                                    "Success",
-                                    data.message ||
-                                    "Customer updated successfully."
-                                );
-
-
-                                const modal =
-                                    $("#customerActionModal");
-
-
-                                if (
-                                    modal &&
-                                    typeof bootstrap !==
-                                    "undefined"
-                                ) {
-
-                                    bootstrap.Modal
-                                        .getOrCreateInstance(
-                                            modal
-                                        )
-                                        .hide();
-                                }
-
-
-                                await refreshAll();
-
-                                refreshSelectionCount();
-
-                            } catch (error) {
-
-                                showAlert(
-                                    "error",
-                                    "Error",
-                                    error.message
-                                );
-
-                            } finally {
-
-                                if (
-                                    submitButton
-                                ) {
-
-                                    submitButton.disabled =
-                                        false;
-
-
-                                    submitButton.innerHTML =
-                                        submitButton.dataset.oldText ||
-                                        "Save";
-                                }
-                            }
-                        }
-                    );
-                }
-            );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | BULK ACTION POPUPS
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            const button =
-                event.target.closest(
-                    ".bulk-action-popup"
-                );
-
-
-            if (!button) {
-                return;
-            }
-
-
-            event.preventDefault();
-
-
-            const url =
-                button.dataset.url;
-
-
-            if (!url) {
-                return;
-            }
-
-
-            openPopup(
-                url,
-                button.dataset.title ||
-                "Bulk Customer Action",
-                true
-            );
-        }
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | BULK RECHARGE
-    |--------------------------------------------------------------------------
-    */
-
-    $("#bulkRechargeBtn")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                openPopup(
-                    "/api/customers/bulk/recharge",
-                    "Bulk Recharge",
-                    true
-                );
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | BULK FLOATING PANEL
-    |--------------------------------------------------------------------------
-    */
-
-    $("#bulkFloatingToggle")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                if (
-                    !selectedIds().length
-                ) {
-
-                    showAlert(
-                        "warning",
-                        "No Customer Selected",
-                        "Please select at least one customer."
-                    );
-
-                    return;
-                }
-
-
-                $("#bulkFloatingPanel")
-                    ?.classList.toggle(
-                        "show"
-                    );
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADD CUSTOMER
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            const button =
-                event.target.closest(
-                    ".action-popup[data-url]"
-                );
-
-
-            if (!button) {
-                return;
-            }
-
-
-            if (
-                button.classList.contains(
-                    "bulk-action-popup"
-                )
-            ) {
-
-                return;
-            }
-
-
-            event.preventDefault();
-
-
-            openPopup(
-                button.dataset.url,
-                button.dataset.title ||
-                "Customer Action",
-                false
-            );
-        }
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SINGLE EDIT
-    |--------------------------------------------------------------------------
-    */
-
-    async function editCustomer(id) {
-
-        try {
-
-            const data =
-                await request(
-                    `/api/customers/${id}`,
-                    {
-                        method:
-                            "GET",
-
-                        headers: {
-                            Accept:
+                            "Accept":
                                 "application/json"
                         }
                     }
                 );
 
 
-            const customer =
-                data.customer ||
-                data;
+            const contentType =
+                response.headers.get(
+                    "content-type"
+                ) || "";
 
 
-            const actionModal =
-                getActionModal();
+            let result;
 
 
-            if (!actionModal) {
+            if (
+                contentType.includes(
+                    "application/json"
+                )
+            ) {
 
-                return;
+                result =
+                    await response.json();
+
+            } else {
+
+                const text =
+                    await response.text();
+
+                result = {
+                    success:
+                        response.ok,
+
+                    message:
+                        text ||
+                        (
+                            response.ok
+                                ? "Action completed."
+                                : "Action failed."
+                        )
+                };
             }
 
 
-            const {
-                modal,
-                body
-            } =
-                actionModal;
+            if (
+                !response.ok ||
+                !result.success
+            ) {
 
-
-            const label =
-                $("#customerActionModalLabel");
-
-
-            if (label) {
-
-                label.textContent =
-                    "Edit Customer";
+                throw new Error(
+                    result.message ||
+                    "Bulk action failed."
+                );
             }
 
 
-            const modalTitle =
-                $(".modal-title", modal);
+            closeActionModal();
 
 
-            if (modalTitle) {
-
-                modalTitle.textContent =
-                    "Edit Customer";
-            }
-
-
-            body.innerHTML = `
-
-                <form
-                    method="post"
-                    action="/api/customers/${id}"
-                >
-
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="${escapeHtml(
-                            csrfToken()
-                        )}"
-                    >
-
-
-                    <div class="modal-body">
-
-                        <div class="row g-3">
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Customer ID
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    name="customer_id"
-                                    value="${escapeHtml(
-                                        customer.customer_id
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Name
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    name="name"
-                                    required
-                                    value="${escapeHtml(
-                                        customer.name
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Phone
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    name="phone"
-                                    value="${escapeHtml(
-                                        customer.phone
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    PPPoE Username
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    name="pppoe_username"
-                                    value="${escapeHtml(
-                                        customer.pppoe_username
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    PPPoE Password
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    name="pppoe_password"
-                                    value="${escapeHtml(
-                                        customer.pppoe_password
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Monthly Bill
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    type="number"
-                                    step="0.01"
-                                    name="monthly_bill"
-                                    value="${escapeHtml(
-                                        customer.monthly_bill
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Balance
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    type="number"
-                                    step="0.01"
-                                    name="balance"
-                                    value="${escapeHtml(
-                                        customer.balance
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Status
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="status"
-                                >
-
-                                    ${
-                                        [
-                                            "Active",
-                                            "Expired",
-                                            "Inactive",
-                                            "Suspended",
-                                            "Disabled",
-                                            "Pending"
-                                        ]
-                                            .map(
-                                                status =>
-                                                    `
-                                                    <option
-                                                        value="${status}"
-                                                        ${
-                                                            String(
-                                                                customer.status
-                                                            ) ===
-                                                            status
-                                                                ? "selected"
-                                                                : ""
-                                                        }
-                                                    >
-                                                        ${status}
-                                                    </option>
-                                                    `
-                                            )
-                                            .join("")
-                                    }
-
-                                </select>
-
-                            </div>
-
-
-                            <div class="col-12">
-
-                                <label class="form-label">
-                                    Address
-                                </label>
-
-                                <textarea
-                                    class="form-control"
-                                    name="address"
-                                    rows="2"
-                                >${escapeHtml(
-                                    customer.address
-                                )}</textarea>
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Billing Cycle
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    type="datetime-local"
-                                    name="billing_cycle"
-                                    value="${toDateTimeLocal(
-                                        customer.billing_cycle
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Promise Date
-                                </label>
-
-                                <input
-                                    class="form-control"
-                                    type="datetime-local"
-                                    name="promise_date"
-                                    value="${toDateTimeLocal(
-                                        customer.promise_date
-                                    )}"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Payment Status
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="payment_status"
-                                >
-
-                                    <option
-                                        value="paid"
-                                        ${
-                                            customer.payment_status ===
-                                            "paid"
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        Paid
-                                    </option>
-
-
-                                    <option
-                                        value="unpaid"
-                                        ${
-                                            customer.payment_status !==
-                                            "paid"
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        Unpaid
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Auto Connection
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    name="auto_connection"
-                                >
-
-                                    <option
-                                        value="1"
-                                        ${
-                                            number(
-                                                customer.auto_connection
-                                            ) !== 0
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        ON
-                                    </option>
-
-
-                                    <option
-                                        value="0"
-                                        ${
-                                            number(
-                                                customer.auto_connection
-                                            ) === 0
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        OFF
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal"
-                        >
-                            Cancel
-                        </button>
-
-
-                        <button
-                            type="submit"
-                            class="btn btn-primary"
-                        >
-                            Save Changes
-                        </button>
-
-                    </div>
-
-                </form>
-            `;
-
-
-            const form =
-                body.querySelector(
-                    "form"
+            const panel =
+                document.getElementById(
+                    "bulkFloatingPanel"
                 );
 
 
-            if (form) {
+            if (panel) {
 
-                form.addEventListener(
-                    "submit",
-                    async event => {
-
-                        event.preventDefault();
-
-
-                        const formData =
-                            new FormData(
-                                form
-                            );
+                panel.classList.remove(
+                    "show"
+                );
+            }
 
 
-                        const data =
-                            {};
+            if (window.Swal) {
+
+                await Swal.fire(
+                    "Success",
+                    result.message ||
+                    "Bulk action completed successfully.",
+                    "success"
+                );
+
+            } else {
+
+                alert(
+                    result.message ||
+                    "Bulk action completed successfully."
+                );
+            }
 
 
-                        formData.forEach(
-                            (value, key) => {
+            await loadCustomers();
 
-                                if (
-                                    key ===
-                                    "csrf_token"
-                                ) {
+        } catch (error) {
 
-                                    return;
-                                }
+            console.error(
+                "BULK FORM:",
+                error
+            );
 
 
-                                data[key] =
-                                    value;
+            if (window.Swal) {
+
+                Swal.fire(
+                    "Error",
+                    error.message ||
+                    "Bulk action failed.",
+                    "error"
+                );
+
+            } else {
+
+                alert(
+                    error.message ||
+                    "Bulk action failed."
+                );
+            }
+
+        } finally {
+
+            if (submitButton) {
+
+                submitButton.disabled =
+                    false;
+            }
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | EVENT INITIALIZATION
+    |--------------------------------------------------------------------------
+    */
+
+    function initEvents() {
+
+        if (initialized) {
+            return;
+        }
+
+
+        initialized =
+            true;
+
+
+        /*
+        |----------------------------------------------------------------------
+        | SELECT ALL / CUSTOMER CHECKBOX
+        |----------------------------------------------------------------------
+        */
+
+        document.addEventListener(
+            "change",
+            function (event) {
+
+                const target =
+                    event.target;
+
+
+                if (
+                    target.matches(
+                        "#selectAll"
+                    )
+                ) {
+
+                    getCustomerCheckboxes()
+                        .forEach(
+                            function (checkbox) {
+
+                                checkbox.checked =
+                                    target.checked;
                             }
                         );
 
 
-                        try {
+                    updateSelectAllState();
+                    updateSelectedCount();
 
-                            const result =
-                                await request(
-                                    `/api/customers/${id}`,
-                                    {
-                                        method:
-                                            "PUT",
-
-                                        body:
-                                            data
-                                    }
-                                );
-
-
-                            showAlert(
-                                "success",
-                                "Success",
-                                result.message ||
-                                "Customer updated successfully."
-                            );
-
-
-                            if (
-                                typeof bootstrap !==
-                                "undefined"
-                            ) {
-
-                                bootstrap.Modal
-                                    .getOrCreateInstance(
-                                        modal
-                                    )
-                                    .hide();
-                            }
-
-
-                            await refreshAll();
-
-                        } catch (error) {
-
-                            showAlert(
-                                "error",
-                                "Error",
-                                error.message
-                            );
-                        }
-                    }
-                );
-            }
-
-
-            if (
-                typeof bootstrap !==
-                "undefined"
-            ) {
-
-                bootstrap.Modal
-                    .getOrCreateInstance(
-                        modal
-                    )
-                    .show();
-            }
-
-        } catch (error) {
-
-            showAlert(
-                "error",
-                "Unable to Open Customer",
-                error.message
-            );
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SINGLE RECHARGE
-    |--------------------------------------------------------------------------
-    */
-
-    function openRecharge(id) {
-
-        openPopup(
-            `/api/customers/${id}/recharge`,
-            "Recharge Customer",
-            false
-        );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SINGLE CONNECTION
-    |--------------------------------------------------------------------------
-    */
-
-    async function toggleConnection(
-        id,
-        button
-    ) {
-
-        const customer =
-            currentCustomers.find(
-                item =>
-                    Number(item.id) ===
-                    Number(id)
-            );
-
-
-        if (!customer) {
-
-            return;
-        }
-
-
-        const enabled =
-            number(
-                customer.auto_connection
-            ) !== 0;
-
-
-        const endpoint =
-            enabled
-                ? `/api/customers/${id}/connection_off`
-                : `/api/customers/${id}/connection_on`;
-
-
-        try {
-
-            button.disabled =
-                true;
-
-
-            const data =
-                await request(
-                    endpoint,
-                    {
-                        method:
-                            "POST",
-
-                        body:
-                            {}
-                    }
-                );
-
-
-            showAlert(
-                "success",
-                "Success",
-                data.message ||
-                (
-                    enabled
-                        ? "Connection disabled."
-                        : "Connection enabled."
-                )
-            );
-
-
-            await refreshAll();
-
-        } catch (error) {
-
-            showAlert(
-                "error",
-                "Connection Error",
-                error.message
-            );
-
-        } finally {
-
-            button.disabled =
-                false;
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SINGLE DELETE
-    |--------------------------------------------------------------------------
-    */
-
-    async function deleteCustomer(id) {
-
-        let confirmed =
-            false;
-
-
-        if (
-            typeof Swal !== "undefined"
-        ) {
-
-            const result =
-                await Swal.fire({
-
-                    icon:
-                        "warning",
-
-                    title:
-                        "Delete Customer?",
-
-                    text:
-                        "Customers with payment history cannot be deleted.",
-
-                    showCancelButton:
-                        true,
-
-                    confirmButtonText:
-                        "Delete",
-
-                    cancelButtonText:
-                        "Cancel"
-                });
-
-
-            confirmed =
-                result.isConfirmed;
-
-        } else {
-
-            confirmed =
-                window.confirm(
-                    "Delete this customer?"
-                );
-        }
-
-
-        if (!confirmed) {
-
-            return;
-        }
-
-
-        let deleteMikrotik =
-            false;
-
-
-        if (
-            typeof Swal !== "undefined"
-        ) {
-
-            const result =
-                await Swal.fire({
-
-                    icon:
-                        "question",
-
-                    title:
-                        "MikroTik Secret",
-
-                    text:
-                        "Remove PPPoE secret from MikroTik too?",
-
-                    showCancelButton:
-                        true,
-
-                    confirmButtonText:
-                        "Remove Secret",
-
-                    cancelButtonText:
-                        "Keep Secret"
-                });
-
-
-            if (
-                result.isDismissed
-            ) {
-
-                return;
-            }
-
-
-            deleteMikrotik =
-                result.isConfirmed;
-        }
-
-
-        try {
-
-            const data =
-                await request(
-                    `/api/customers/${id}`,
-                    {
-                        method:
-                            "DELETE",
-
-                        body: {
-                            delete_mikrotik:
-                                deleteMikrotik
-                                    ? 1
-                                    : 0
-                        }
-                    }
-                );
-
-
-            showAlert(
-                "success",
-                "Deleted",
-                data.message ||
-                "Customer deleted successfully."
-            );
-
-
-            await refreshAll();
-
-        } catch (error) {
-
-            showAlert(
-                "error",
-                "Delete Failed",
-                error.message
-            );
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ROW ACTION EVENTS
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            const editButton =
-                event.target.closest(
-                    ".customer-edit-btn"
-                );
-
-
-            if (editButton) {
-
-                event.preventDefault();
-
-
-                editCustomer(
-                    editButton.dataset.id
-                );
-
-
-                return;
-            }
-
-
-            const rechargeButton =
-                event.target.closest(
-                    ".customer-recharge-btn"
-                );
-
-
-            if (rechargeButton) {
-
-                event.preventDefault();
-
-
-                openRecharge(
-                    rechargeButton.dataset.id
-                );
-
-
-                return;
-            }
-
-
-            const connectionButton =
-                event.target.closest(
-                    ".customer-connection-btn"
-                );
-
-
-            if (connectionButton) {
-
-                event.preventDefault();
-
-
-                toggleConnection(
-                    connectionButton.dataset.id,
-                    connectionButton
-                );
-
-
-                return;
-            }
-
-
-            const deleteButton =
-                event.target.closest(
-                    ".customer-delete-btn"
-                );
-
-
-            if (deleteButton) {
-
-                event.preventDefault();
-
-
-                deleteCustomer(
-                    deleteButton.dataset.id
-                );
-            }
-        }
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CSV EXPORT
-    |--------------------------------------------------------------------------
-    */
-
-    $("#exportCustomersBtn")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                const params =
-                    new URLSearchParams();
-
-
-                if (currentSearch) {
-
-                    params.set(
-                        "search",
-                        currentSearch
-                    );
+                    return;
                 }
-
-
-                if (currentStatus) {
-
-                    params.set(
-                        "status",
-                        currentStatus
-                    );
-                }
-
-
-                window.location.href =
-                    `/api/customers/export/csv?${params.toString()}`;
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CSV TEMPLATE
-    |--------------------------------------------------------------------------
-    */
-
-    $("#csvTemplateBtn")
-        ?.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-
-                window.location.href =
-                    "/api/customers/import/template";
-            }
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CSV IMPORT
-    |--------------------------------------------------------------------------
-    */
-
-    $("#csvImportForm")
-        ?.addEventListener(
-            "submit",
-            async event => {
-
-                event.preventDefault();
-
-
-                const form =
-                    event.currentTarget;
-
-
-                const file =
-                    $("#csv_file");
-
-
-                const message =
-                    $("#csvImportMessage");
 
 
                 if (
-                    !file?.files?.length
+                    target.matches(
+                        "#customerTableBody .customer-checkbox, " +
+                        "#customerTableBody input[name='customer_ids[]']"
+                    )
                 ) {
 
-                    if (message) {
+                    updateSelectAllState();
+                    updateSelectedCount();
+                }
+            }
+        );
 
-                        message.innerHTML = `
-                            <div class="alert alert-warning">
-                                Please select a CSV file.
-                            </div>
-                        `;
+
+        /*
+        |----------------------------------------------------------------------
+        | SEARCH
+        |----------------------------------------------------------------------
+        */
+
+        const searchInput =
+            document.getElementById(
+                "customerSearch"
+            );
+
+
+        if (searchInput) {
+
+            searchInput.addEventListener(
+                "input",
+                function () {
+
+                    clearTimeout(
+                        searchTimer
+                    );
+
+
+                    searchTimer =
+                        setTimeout(
+                            function () {
+
+                                currentSearch =
+                                    searchInput.value.trim();
+
+                                currentPage =
+                                    1;
+
+                                loadCustomers();
+
+                            },
+                            350
+                        );
+                }
+            );
+        }
+
+
+        /*
+        |----------------------------------------------------------------------
+        | CLEAR SEARCH
+        |----------------------------------------------------------------------
+        */
+
+        const clearSearch =
+            document.getElementById(
+                "clearSearchBtn"
+            );
+
+
+        if (clearSearch) {
+
+            clearSearch.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+
+                    if (searchInput) {
+
+                        searchInput.value =
+                            "";
+                    }
+
+
+                    currentSearch =
+                        "";
+
+                    currentPage =
+                        1;
+
+
+                    loadCustomers();
+                }
+            );
+        }
+
+
+        /*
+        |----------------------------------------------------------------------
+        | STATUS FILTER
+        |----------------------------------------------------------------------
+        */
+
+        const statusSelect =
+            document.getElementById(
+                "customerStatus"
+            );
+
+
+        if (statusSelect) {
+
+            statusSelect.addEventListener(
+                "change",
+                function () {
+
+                    currentStatus =
+                        statusSelect.value.trim();
+
+                    currentPage =
+                        1;
+
+
+                    loadCustomers();
+                }
+            );
+        }
+
+
+        /*
+        |----------------------------------------------------------------------
+        | LIMIT
+        |----------------------------------------------------------------------
+        */
+
+        const limitSelect =
+            document.getElementById(
+                "customerLimit"
+            );
+
+
+        if (limitSelect) {
+
+            currentLimit =
+                normalizeCustomerLimit(
+                    limitSelect.value
+                );
+
+
+            limitSelect.addEventListener(
+                "change",
+                function () {
+
+                    currentLimit =
+                        normalizeCustomerLimit(
+                            limitSelect.value
+                        );
+
+                    currentPage =
+                        1;
+
+
+                    loadCustomers();
+                }
+            );
+        }
+
+
+        /*
+        |----------------------------------------------------------------------
+        | APPLY FILTER
+        |----------------------------------------------------------------------
+        */
+
+        const applyFilter =
+            document.getElementById(
+                "applyCustomerFilter"
+            );
+
+
+        if (applyFilter) {
+
+            applyFilter.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+
+                    currentSearch =
+                        searchInput
+                            ? searchInput.value.trim()
+                            : "";
+
+
+                    currentStatus =
+                        statusSelect
+                            ? statusSelect.value.trim()
+                            : "";
+
+
+                    currentLimit =
+                        normalizeCustomerLimit(
+                            limitSelect
+                                ? limitSelect.value
+                                : 100
+                        );
+
+
+                    currentPage =
+                        1;
+
+
+                    loadCustomers();
+                }
+            );
+        }
+
+
+        /*
+        |----------------------------------------------------------------------
+        | REFRESH
+        |----------------------------------------------------------------------
+        */
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                const button =
+                    event.target.closest(
+                        "#refreshCustomersBtn, " +
+                        "#refreshCustomerBtn, " +
+                        ".customer-refresh-btn"
+                    );
+
+
+                if (!button) {
+                    return;
+                }
+
+
+                event.preventDefault();
+
+
+                loadCustomers();
+            }
+        );
+
+
+        /*
+        |----------------------------------------------------------------------
+        | BULK GEAR
+        |----------------------------------------------------------------------
+        */
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                const toggle =
+                    event.target.closest(
+                        "#bulkFloatingToggle, " +
+                        ".bulk-floating-toggle"
+                    );
+
+
+                const panel =
+                    document.getElementById(
+                        "bulkFloatingPanel"
+                    );
+
+
+                if (toggle) {
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+
+                    const selectedIds =
+                        getSelectedCustomerIds();
+
+
+                    if (!selectedIds.length) {
+
+                        if (panel) {
+
+                            panel.classList.remove(
+                                "show"
+                            );
+                        }
+
+                        return;
+                    }
+
+
+                    if (panel) {
+
+                        panel.classList.toggle(
+                            "show"
+                        );
                     }
 
 
@@ -3596,434 +2752,441 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
 
-                const formData =
-                    new FormData(
-                        form
-                    );
-
-
                 if (
-                    csrfToken() &&
-                    !formData.has(
-                        "csrf_token"
+                    panel &&
+                    !event.target.closest(
+                        "#bulkFloatingPanel"
                     )
                 ) {
 
-                    formData.append(
-                        "csrf_token",
-                        csrfToken()
+                    panel.classList.remove(
+                        "show"
                     );
+                }
+            }
+        );
+
+
+        /*
+        |----------------------------------------------------------------------
+        | BULK RECHARGE BUTTON
+        |----------------------------------------------------------------------
+        */
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                const button =
+                    event.target.closest(
+                        "#bulkRechargeBtn, .bulk-recharge-btn"
+                    );
+
+
+                if (!button) {
+                    return;
                 }
 
 
-                const submit =
-                    $("#csvImportSubmit");
+                event.preventDefault();
+                event.stopPropagation();
 
 
-                if (submit) {
-
-                    submit.disabled =
-                        true;
+                const selectedIds =
+                    getSelectedCustomerIds();
 
 
-                    submit.dataset.oldText =
-                        submit.innerHTML;
+                if (!selectedIds.length) {
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "No Customer Selected",
+                            "Please select at least one customer.",
+                            "warning"
+                        );
+
+                    } else {
+
+                        alert(
+                            "Please select at least one customer."
+                        );
+                    }
 
 
-                    submit.innerHTML =
-                        `
-                        <span
-                            class="spinner-border spinner-border-sm me-1"
-                        ></span>
-                        Importing...
-                        `;
+                    return;
+                }
+
+
+                /*
+                | Make sure Bulk Recharge JS is loaded.
+                */
+
+                if (
+                    typeof window.openBulkRecharge !==
+                    "function"
+                ) {
+
+                    console.error(
+                        "BULK RECHARGE: openBulkRecharge() not found."
+                    );
+
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "Error",
+                            "Bulk Recharge module is not loaded.",
+                            "error"
+                        );
+
+                    } else {
+
+                        alert(
+                            "Bulk Recharge module is not loaded."
+                        );
+                    }
+
+
+                    return;
                 }
 
 
                 try {
 
-                    const data =
-                        await request(
-                            form.action ||
-                            "/api/customers/import",
-                            {
-                                method:
-                                    "POST",
-
-                                body:
-                                    formData
-                            }
-                        );
-
-
-                    if (message) {
-
-                        message.innerHTML = `
-                            <div class="alert alert-success">
-                                ${escapeHtml(
-                                    data.message ||
-                                    "CSV imported successfully."
-                                )}
-                            </div>
-                        `;
-                    }
-
-
-                    await refreshAll();
+                    window.openBulkRecharge(
+                        selectedIds
+                    );
 
                 } catch (error) {
 
-                    if (message) {
+                    console.error(
+                        "BULK RECHARGE:",
+                        error
+                    );
 
-                        message.innerHTML = `
-                            <div class="alert alert-danger">
-                                ${escapeHtml(
-                                    error.message
-                                )}
-                            </div>
-                        `;
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "Error",
+                            error.message ||
+                            "Failed to open Bulk Recharge.",
+                            "error"
+                        );
+
+                    } else {
+
+                        alert(
+                            error.message ||
+                            "Failed to open Bulk Recharge."
+                        );
                     }
+                }
+            }
+        );
 
-                } finally {
+        /*
+        |----------------------------------------------------------------------
+        | BULK ACTION BUTTONS
+        |----------------------------------------------------------------------
+        */
 
-                    if (submit) {
+        document.addEventListener(
+            "click",
+            async function (event) {
 
-                        submit.disabled =
-                            false;
+                const button =
+                    event.target.closest(
+                        ".bulk-action-popup"
+                    );
 
 
-                        submit.innerHTML =
-                            submit.dataset.oldText ||
-                            "Import";
+                if (!button) {
+                    return;
+                }
+
+
+                event.preventDefault();
+                event.stopPropagation();
+
+
+                try {
+
+                    await handleBulkActionPopup(
+                        button
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "BULK ACTION:",
+                        error
+                    );
+
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "Error",
+                            error.message ||
+                            "Failed to load bulk action.",
+                            "error"
+                        );
                     }
                 }
             }
         );
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD ROUTERS
-    |--------------------------------------------------------------------------
-    */
+        /*
+        |----------------------------------------------------------------------
+        | BULK DELETE
+        |----------------------------------------------------------------------
+        */
 
-    async function loadRouters(select) {
+        document.addEventListener(
+            "click",
+            async function (event) {
 
-        if (!select) {
-            return;
-        }
+                const button =
+                    event.target.closest(
+                        ".bulk-delete-btn"
+                    );
 
 
-        try {
+                if (!button) {
+                    return;
+                }
 
-            const data =
-                await request(
-                    "/api/customers/routers",
-                    {
-                        method:
-                            "GET",
 
-                        headers: {
-                            Accept:
-                                "application/json"
-                        }
+                event.preventDefault();
+                event.stopPropagation();
+
+
+                try {
+
+                    let url =
+                        button.getAttribute(
+                            "data-url"
+                        );
+
+
+                    if (!url) {
+
+                        url =
+                            button.getAttribute(
+                                "href"
+                            );
                     }
-                );
 
 
-            const routers =
-                Array.isArray(
-                    data.routers
-                )
-                    ? data.routers
-                    : [];
+                    if (
+                        !url ||
+                        url === "#"
+                    ) {
 
-
-            select.innerHTML =
-                `
-                <option value="">
-                    Select MikroTik
-                </option>
-                ` +
-                routers
-                    .map(
-                        router =>
-                            `
-                            <option
-                                value="${escapeHtml(
-                                    router.id
-                                )}"
-                            >
-                                ${escapeHtml(
-                                    router.name ||
-                                    `Router #${router.id}`
-                                )}
-                            </option>
-                            `
-                    )
-                    .join("");
-
-        } catch (error) {
-
-            console.error(
-                "ROUTER LOAD:",
-                error
-            );
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD PACKAGES
-    |--------------------------------------------------------------------------
-    */
-
-    async function loadPackages(
-        select,
-        routerId = ""
-    ) {
-
-        if (!select) {
-            return;
-        }
-
-
-        select.innerHTML = `
-            <option value="">
-                Loading packages...
-            </option>
-        `;
-
-
-        try {
-
-            const query =
-                routerId
-                    ? `?router_id=${encodeURIComponent(
-                        routerId
-                    )}`
-                    : "";
-
-
-            const data =
-                await request(
-                    `/api/customers/packages${query}`,
-                    {
-                        method:
-                            "GET",
-
-                        headers: {
-                            Accept:
-                                "application/json"
-                        }
+                        url =
+                            "/api/customers/bulk/delete";
                     }
-                );
 
 
-            const packages =
-                Array.isArray(
-                    data.packages
-                )
-                    ? data.packages
-                    : [];
+                    const selectedIds =
+                        getSelectedCustomerIds();
 
 
-            select.innerHTML =
-                `
-                <option value="">
-                    Select Package
-                </option>
-                ` +
-                packages
-                    .map(
-                        pkg =>
-                            `
-                            <option
-                                value="${escapeHtml(
-                                    pkg.id
-                                )}"
-                                data-price="${escapeHtml(
-                                    pkg.price
-                                )}"
-                            >
-                                ${escapeHtml(
-                                    pkg.package_name
-                                )}
-                                ${
-                                    pkg.price !==
-                                    undefined &&
-                                    pkg.price !==
-                                    null
-                                        ? ` - ${money(
-                                            pkg.price
-                                        )}`
-                                        : ""
-                                }
-                            </option>
-                            `
-                    )
-                    .join("");
+                    if (!selectedIds.length) {
 
-        } catch (error) {
+                        if (window.Swal) {
 
-            console.error(
-                "PACKAGE LOAD:",
-                error
-            );
+                            Swal.fire(
+                                "No Customer Selected",
+                                "Please select at least one customer.",
+                                "warning"
+                            );
+                        }
 
-
-            select.innerHTML = `
-                <option value="">
-                    Unable to load packages
-                </option>
-            `;
-        }
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ROUTER -> PACKAGE
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "change",
-        event => {
-
-            const routerSelect =
-                event.target.closest(
-                    "[name='mikrotik_id'], #router_id"
-                );
-
-
-            if (!routerSelect) {
-                return;
-            }
-
-
-            const root =
-                event.target.closest(
-                    "form, .modal-body, .customer-action-form"
-                ) ||
-                document;
-
-
-            const packageSelect =
-                root.querySelector(
-                    "[name='package_id'], #package_id"
-                );
-
-
-            if (packageSelect) {
-
-                loadPackages(
-                    packageSelect,
-                    routerSelect.value
-                );
-            }
-        }
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | INITIAL POPUP SELECT LOADING
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "click",
-        event => {
-
-            const button =
-                event.target.closest(
-                    ".action-popup"
-                );
-
-
-            if (!button) {
-                return;
-            }
-
-
-            setTimeout(
-                async () => {
-
-                    const root =
-                        $("#customerActionModal");
-
-
-                    if (!root) {
                         return;
                     }
 
 
-                    const routerSelect =
-                        root.querySelector(
-                            "[name='mikrotik_id'], #router_id"
+                    const urlObject =
+                        new URL(
+                            url,
+                            window.location.origin
                         );
 
 
-                    if (routerSelect) {
+                    urlObject.searchParams.set(
+                        "ids",
+                        selectedIds.join(",")
+                    );
 
-                        await loadRouters(
-                            routerSelect
+
+                    await loadActionHtml(
+                        urlObject.toString(),
+                        "Bulk Delete Customers"
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "BULK DELETE:",
+                        error
+                    );
+
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "Error",
+                            error.message ||
+                            "Failed to load bulk delete.",
+                            "error"
                         );
                     }
+                }
+            }
+        );
 
 
-                    const packageSelect =
-                        root.querySelector(
-                            "[name='package_id'], #package_id"
+        /*
+        |----------------------------------------------------------------------
+        | UNIVERSAL ACTION POPUP
+        |----------------------------------------------------------------------
+        */
+
+        document.addEventListener(
+            "click",
+            async function (event) {
+
+                const button =
+                    event.target.closest(
+                        ".action-popup"
+                    );
+
+
+                if (!button) {
+                    return;
+                }
+
+
+                /*
+                | Do not intercept Bootstrap dropdown items.
+                */
+
+                if (
+                    button.closest(
+                        ".dropdown-menu"
+                    )
+                ) {
+                    return;
+                }
+
+
+                event.preventDefault();
+
+
+                try {
+
+                    await handleSingleActionPopup(
+                        button
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "ACTION POPUP:",
+                        error
+                    );
+
+
+                    if (window.Swal) {
+
+                        Swal.fire(
+                            "Error",
+                            error.message ||
+                            "Failed to load action.",
+                            "error"
                         );
+                    }
+                }
+            }
+        );
 
 
-                    if (packageSelect) {
+        /*
+        |----------------------------------------------------------------------
+        | BULK FORM SUBMIT
+        |----------------------------------------------------------------------
+        */
 
-                        const routerValue =
-                            routerSelect?.value ||
+        document.addEventListener(
+            "submit",
+            async function (event) {
+
+                const form =
+                    event.target.closest(
+                        "#customerActionModalBody form.customer-bulk-form, " +
+                        "#customerActionModalBody form.bulk-action-form"
+                    );
+
+
+                if (!form) {
+                    return;
+                }
+
+
+                event.preventDefault();
+
+
+                await submitBulkForm(
+                    form
+                );
+            }
+        );
+
+
+        /*
+        |----------------------------------------------------------------------
+        | MODAL CLEANUP
+        |----------------------------------------------------------------------
+        */
+
+        const modalElement =
+            document.getElementById(
+                "customerActionModal"
+            );
+
+
+        if (modalElement) {
+
+            modalElement.addEventListener(
+                "hidden.bs.modal",
+                function () {
+
+                    const body =
+                        getActionModalBody();
+
+
+                    if (body) {
+
+                        body.innerHTML =
                             "";
-
-
-                        await loadPackages(
-                            packageSelect,
-                            routerValue
-                        );
                     }
-
-                },
-                100
+                }
             );
         }
-    );
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | PUBLIC API
-    |--------------------------------------------------------------------------
-    */
+        /*
+        |----------------------------------------------------------------------
+        | INITIAL STATE
+        |----------------------------------------------------------------------
+        */
 
-    window.CustomerModule = {
-
-        request,
-
-        selected:
-            selectedIds,
-
-        loadCustomers,
-
-        loadSummary,
-
-        refresh:
-            refreshAll,
-
-        openPopup,
-
-        bindForms
-    };
+        updateSelectedCount();
+    }
 
 
     /*
@@ -4032,8 +3195,67 @@ document.addEventListener("DOMContentLoaded", () => {
     |--------------------------------------------------------------------------
     */
 
-    refreshSelectionCount();
+    function init() {
 
-    refreshAll();
+        initEvents();
 
-});
+        updateSelectedCount();
+
+        loadCustomers();
+    }
+
+
+    if (
+        document.readyState ===
+        "loading"
+    ) {
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            init
+        );
+
+    } else {
+
+        init();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PUBLIC API
+    |--------------------------------------------------------------------------
+    */
+
+    window.CustomerList = {
+
+        load:
+            loadCustomers,
+
+        refresh:
+            loadCustomers,
+
+        search:
+            function (value) {
+
+                currentSearch =
+                    String(
+                        value || ""
+                    ).trim();
+
+
+                currentPage =
+                    1;
+
+
+                loadCustomers();
+            },
+
+        selectedIds:
+            getSelectedCustomerIds,
+
+        updateSelectedCount:
+            updateSelectedCount
+    };
+
+})();

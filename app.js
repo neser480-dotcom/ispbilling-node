@@ -272,6 +272,78 @@ app.use(
     })
 );
 
+/*
+|--------------------------------------------------------------------------
+| CSRF TOKEN API
+|--------------------------------------------------------------------------
+|
+| Logged-in user-এর current session CSRF token browser-কে দেওয়া হবে।
+|
+|--------------------------------------------------------------------------
+*/
+
+app.get(
+    "/api/csrf-token",
+    (req, res) => {
+
+        if (
+            !req.session ||
+            !req.session.user_id
+        ) {
+
+            return res.status(401).json({
+
+                success:
+                    false,
+
+                message:
+                    "Not logged in."
+
+            });
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREATE TOKEN IF MISSING
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !req.session.csrf_token
+        ) {
+
+            const crypto =
+                require("crypto");
+
+            req.session.csrf_token =
+                crypto
+                    .randomBytes(32)
+                    .toString("hex");
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RETURN TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        return res.json({
+
+            success:
+                true,
+
+            csrf_token:
+                req.session.csrf_token
+
+        });
+
+    }
+);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -543,7 +615,10 @@ app.use(
     customerAddRoutes
 );
 
-
+app.use(
+    "/api/customers",
+    require("./routes/customers-bulk-recharge")
+);
 /*
 |--------------------------------------------------------------------------
 | ACTIVE CUSTOMER

@@ -1,11 +1,14 @@
 "use strict";
 
-
 const db =
     require("../config/database");
 
 const mt =
     require("../services/mikrotik.service");
+
+const {
+    RouterOSAPI
+} = require("node-routeros");
 
 
 /*
@@ -162,6 +165,7 @@ async function getRouter(
         params.push(
             user.company_id
         );
+
     }
 
 
@@ -233,6 +237,7 @@ async function list(
                         "Company access is not configured for this account."
 
                 });
+
             }
 
 
@@ -243,6 +248,7 @@ async function list(
             params.push(
                 user.company_id
             );
+
         }
 
 
@@ -289,7 +295,9 @@ async function list(
                 "Failed to load routers."
 
         });
+
     }
+
 }
 
 
@@ -315,7 +323,9 @@ async function create(
                 "super_admin",
                 "admin",
                 "manager"
-            ].includes(user.role)
+            ].includes(
+                user.role
+            )
         ) {
 
             return res.status(403).json({
@@ -328,6 +338,7 @@ async function create(
                     "You do not have permission to add routers."
 
             });
+
         }
 
 
@@ -368,6 +379,7 @@ async function create(
                     "Router name, IP, username and password are required."
 
             });
+
         }
 
 
@@ -395,6 +407,7 @@ async function create(
                     "Company access is not configured."
 
             });
+
         }
 
 
@@ -413,6 +426,7 @@ async function create(
                     "Company ID is required for Super Admin."
 
             });
+
         }
 
 
@@ -486,7 +500,9 @@ async function create(
                 "Failed to add router."
 
         });
+
     }
+
 }
 
 
@@ -512,7 +528,9 @@ async function update(
                 "super_admin",
                 "admin",
                 "manager"
-            ].includes(user.role)
+            ].includes(
+                user.role
+            )
         ) {
 
             return res.status(403).json({
@@ -525,11 +543,14 @@ async function update(
                     "You do not have permission to edit routers."
 
             });
+
         }
 
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -547,6 +568,7 @@ async function update(
                     "Invalid router ID."
 
             });
+
         }
 
 
@@ -569,6 +591,7 @@ async function update(
                     "Router not found or access denied."
 
             });
+
         }
 
 
@@ -608,6 +631,7 @@ async function update(
                     "Router name, IP and username are required."
 
             });
+
         }
 
 
@@ -681,6 +705,7 @@ async function update(
 
                 ]
             );
+
         }
 
 
@@ -713,7 +738,9 @@ async function update(
                 "Failed to update router."
 
         });
+
     }
+
 }
 
 
@@ -738,7 +765,9 @@ async function remove(
             ![
                 "super_admin",
                 "admin"
-            ].includes(user.role)
+            ].includes(
+                user.role
+            )
         ) {
 
             return res.status(403).json({
@@ -751,11 +780,14 @@ async function remove(
                     "You do not have permission to delete routers."
 
             });
+
         }
 
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -773,6 +805,7 @@ async function remove(
                     "Invalid router ID."
 
             });
+
         }
 
 
@@ -795,6 +828,7 @@ async function remove(
                     "Router not found or access denied."
 
             });
+
         }
 
 
@@ -803,7 +837,9 @@ async function remove(
             DELETE FROM mikrotik_servers
             WHERE id = ?
             `,
-            [id]
+            [
+                id
+            ]
         );
 
 
@@ -836,7 +872,9 @@ async function remove(
                 "Failed to delete router."
 
         });
+
     }
+
 }
 
 
@@ -854,7 +892,9 @@ async function check(
     try {
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -872,6 +912,7 @@ async function check(
                     "Invalid router ID."
 
             });
+
         }
 
 
@@ -894,6 +935,7 @@ async function check(
                     "Router not found or access denied."
 
             });
+
         }
 
 
@@ -967,7 +1009,9 @@ async function check(
                 "MikroTik connection failed."
 
         });
+
     }
+
 }
 
 
@@ -985,7 +1029,9 @@ async function history(
     try {
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         const router =
@@ -1007,6 +1053,7 @@ async function history(
                     "Router not found or access denied."
 
             });
+
         }
 
 
@@ -1074,7 +1121,9 @@ async function history(
                 "Unable to load router details."
 
         });
+
     }
+
 }
 
 
@@ -1092,7 +1141,9 @@ async function packages(
     try {
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -1110,6 +1161,7 @@ async function packages(
                     "Invalid router ID."
 
             });
+
         }
 
 
@@ -1132,28 +1184,9 @@ async function packages(
                     "Router not found."
 
             });
+
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT
-        |--------------------------------------------------------------------------
-        | mikrotik_packages table DOES NOT have mikrotik_id.
-        |
-        | Existing schema:
-        |
-        | id
-        | company_id
-        | router_id
-        | profile_id
-        | package_name
-        | price
-        | alias_name
-        | created_at
-        | updated_at
-        |
-        */
 
         const rows =
             await query(
@@ -1209,27 +1242,15 @@ async function packages(
                 "Failed to load packages."
 
         });
+
     }
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
 | PACKAGE SYNC
-|--------------------------------------------------------------------------
-|
-| MikroTik PPP Profile
-|          ↓
-| profile_id
-|          ↓
-| mikrotik_packages
-|
-| IMPORTANT:
-| - No mikrotik_id column
-| - MikroTik profile/rate-limit is NOT changed
-| - Existing DB price is preserved
-| - New package price = 0
-|
 |--------------------------------------------------------------------------
 */
 
@@ -1241,7 +1262,9 @@ async function packageSync(
     try {
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -1259,6 +1282,7 @@ async function packageSync(
                     "Invalid router ID."
 
             });
+
         }
 
 
@@ -1281,6 +1305,7 @@ async function packageSync(
                     "Router not found."
 
             });
+
         }
 
 
@@ -1291,7 +1316,9 @@ async function packageSync(
 
 
         if (
-            !Array.isArray(profiles)
+            !Array.isArray(
+                profiles
+            )
         ) {
 
             return res.status(500).json({
@@ -1304,6 +1331,7 @@ async function packageSync(
                     "MikroTik did not return valid PPP profiles."
 
             });
+
         }
 
 
@@ -1317,16 +1345,6 @@ async function packageSync(
         for (
             const profile of profiles
         ) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | MikroTik profile ID
-            |--------------------------------------------------------------------------
-            |
-            | RouterOS normally returns:
-            | .id = *C / *9 / *A etc.
-            |
-            */
 
             const profileId =
                 String(
@@ -1343,24 +1361,18 @@ async function packageSync(
 
 
             if (!profileId) {
+
                 continue;
+
             }
 
 
             if (!packageName) {
+
                 continue;
+
             }
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | Find existing package
-            |--------------------------------------------------------------------------
-            |
-            | Since mikrotik_id does not exist,
-            | profile_id is the MikroTik identity.
-            |
-            */
 
             const existing =
                 await query(
@@ -1386,18 +1398,6 @@ async function packageSync(
             if (
                 existing.length
             ) {
-
-                /*
-                |--------------------------------------------------------------------------
-                | UPDATE ONLY MIKROTIK DATA
-                |--------------------------------------------------------------------------
-                |
-                | package_name/profile_id come from MikroTik.
-                |
-                | price is deliberately NOT updated.
-                | alias_name is deliberately NOT updated.
-                |
-                */
 
                 await query(
                     `
@@ -1428,17 +1428,6 @@ async function packageSync(
                 updated++;
 
             } else {
-
-                /*
-                |--------------------------------------------------------------------------
-                | CREATE NEW PACKAGE
-                |--------------------------------------------------------------------------
-                |
-                | New MikroTik profile gets price 0.
-                |
-                | No mikrotik_id.
-                |
-                */
 
                 await query(
                     `
@@ -1472,10 +1461,12 @@ async function packageSync(
 
 
                 created++;
+
             }
 
 
             synced++;
+
         }
 
 
@@ -1515,7 +1506,9 @@ async function packageSync(
                 "Package sync failed."
 
         });
+
     }
+
 }
 
 
@@ -1537,7 +1530,9 @@ async function packageUpdate(
 
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -1555,21 +1550,18 @@ async function packageUpdate(
                     "Invalid package ID."
 
             });
+
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Permission
-        |--------------------------------------------------------------------------
-        */
 
         if (
             ![
                 "super_admin",
                 "admin",
                 "manager"
-            ].includes(user.role)
+            ].includes(
+                user.role
+            )
         ) {
 
             return res.status(403).json({
@@ -1582,6 +1574,7 @@ async function packageUpdate(
                     "You do not have permission to edit packages."
 
             });
+
         }
 
 
@@ -1613,14 +1606,9 @@ async function packageUpdate(
                     "Package name is required."
 
             });
+
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Find package with company scope
-        |--------------------------------------------------------------------------
-        */
 
         let findSql = `
             SELECT
@@ -1652,6 +1640,7 @@ async function packageUpdate(
             findParams.push(
                 user.company_id
             );
+
         }
 
 
@@ -1681,23 +1670,13 @@ async function packageUpdate(
                     "Package not found or access denied."
 
             });
+
         }
 
 
         const packageRow =
             packageRows[0];
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | DB ONLY
-        |--------------------------------------------------------------------------
-        |
-        | This changes ISP Billing package information only.
-        |
-        | It does NOT modify MikroTik PPP Profile.
-        |
-        */
 
         await query(
             `
@@ -1757,7 +1736,9 @@ async function packageUpdate(
                 "Failed to update package."
 
         });
+
     }
+
 }
 
 
@@ -1779,7 +1760,9 @@ async function packageDelete(
 
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -1797,6 +1780,7 @@ async function packageDelete(
                     "Invalid package ID."
 
             });
+
         }
 
 
@@ -1804,7 +1788,9 @@ async function packageDelete(
             ![
                 "super_admin",
                 "admin"
-            ].includes(user.role)
+            ].includes(
+                user.role
+            )
         ) {
 
             return res.status(403).json({
@@ -1817,14 +1803,9 @@ async function packageDelete(
                     "You do not have permission to delete packages."
 
             });
+
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Company scoped delete
-        |--------------------------------------------------------------------------
-        */
 
         let sql = `
             DELETE FROM mikrotik_packages
@@ -1848,6 +1829,7 @@ async function packageDelete(
             params.push(
                 user.company_id
             );
+
         }
 
 
@@ -1872,6 +1854,7 @@ async function packageDelete(
                     "Package not found or access denied."
 
             });
+
         }
 
 
@@ -1904,13 +1887,30 @@ async function packageDelete(
                 "Failed to delete package."
 
         });
+
     }
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER SYNC
+|--------------------------------------------------------------------------
+|
+| MikroTik:
+| /ppp/secret/print
+|
+|        ↓
+|
+| customers
+|
+| New customer:
+| INSERT
+|
+| Existing customer:
+| UPDATE
+|
 |--------------------------------------------------------------------------
 */
 
@@ -1919,10 +1919,21 @@ async function customerSync(
     res
 ) {
 
+    let api = null;
+
+
     try {
 
+        /*
+        |--------------------------------------------------------------------------
+        | ROUTER ID
+        |--------------------------------------------------------------------------
+        */
+
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         if (
@@ -1940,8 +1951,25 @@ async function customerSync(
                     "Invalid router ID."
 
             });
+
         }
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | AUTH USER
+        |--------------------------------------------------------------------------
+        */
+
+        const user =
+            getAuthUser(req);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GET ROUTER
+        |--------------------------------------------------------------------------
+        */
 
         const router =
             await getRouter(
@@ -1962,16 +1990,909 @@ async function customerSync(
                     "Router not found."
 
             });
+
         }
 
 
         /*
         |--------------------------------------------------------------------------
-        | Customer sync implementation will be connected here.
+        | ROUTER COMPANY
         |--------------------------------------------------------------------------
-        |
-        | Endpoint intentionally stays on the same Config page.
-        |
+        */
+
+        const routerCompanyId =
+            Number(
+                router.company_id ||
+                user.company_id ||
+                0
+            );
+
+
+        if (
+            routerCompanyId <= 0
+        ) {
+
+            return res.status(403).json({
+
+                status: false,
+
+                success: false,
+
+                message:
+                    "Router company is not configured."
+
+            });
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MIKROTIK CONNECTION
+        |--------------------------------------------------------------------------
+        */
+
+        api =
+            new RouterOSAPI({
+
+                host:
+                    String(
+                        router.ip
+                    ),
+
+                user:
+                    String(
+                        router.username
+                    ),
+
+                password:
+                    String(
+                        router.password
+                    ),
+
+                port:
+                    Number(
+                        router.port ||
+                        8728
+                    ),
+
+                timeout:
+                    Number(
+                        router.timeout ||
+                        3
+                    ),
+
+                tls:
+                    Boolean(
+                        Number(
+                            router.use_ssl ||
+                            0
+                        )
+                    )
+
+            });
+
+
+        await api.connect();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | GET PPP SECRETS
+        |--------------------------------------------------------------------------
+        */
+
+        const secrets =
+            await api.write(
+                "/ppp/secret/print"
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CLOSE CONNECTION
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+
+            await api.close();
+
+        } catch (_) {}
+
+        api = null;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATE RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !Array.isArray(
+                secrets
+            )
+        ) {
+
+            return res.status(500).json({
+
+                status: false,
+
+                success: false,
+
+                message:
+                    "No PPP Customer Found."
+
+            });
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | READ CUSTOMERS TABLE
+        |--------------------------------------------------------------------------
+        */
+
+        const columns =
+            await query(
+                `
+                SHOW COLUMNS FROM customers
+                `
+            );
+
+
+        const columnMap = {};
+
+
+        for (
+            const column of columns
+        ) {
+
+            if (
+                column &&
+                column.Field
+            ) {
+
+                columnMap[
+                    column.Field
+                ] = true;
+
+            }
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REQUIRED COLUMNS
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !columnMap.pppoe_username ||
+            !columnMap.mikrotik_id
+        ) {
+
+            return res.status(500).json({
+
+                status: false,
+
+                success: false,
+
+                message:
+                    "customers table must contain pppoe_username and mikrotik_id."
+
+            });
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | COUNTERS
+        |--------------------------------------------------------------------------
+        */
+
+        const total =
+            secrets.length;
+
+
+        let inserted = 0;
+
+        let updated = 0;
+
+        let failed = 0;
+
+        let skipped = 0;
+
+        let inactive = 0;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LOOP PPP SECRET
+        |--------------------------------------------------------------------------
+        */
+
+        for (
+            const secret of secrets
+        ) {
+
+            try {
+
+                /*
+                |--------------------------------------------------------------------------
+                | USERNAME
+                |--------------------------------------------------------------------------
+                */
+
+                const username =
+                    String(
+                        secret?.name ||
+                        ""
+                    ).trim();
+
+
+                if (
+                    !username
+                ) {
+
+                    skipped++;
+
+                    continue;
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | PASSWORD
+                |--------------------------------------------------------------------------
+                */
+
+                const password =
+                    String(
+                        secret?.password ||
+                        ""
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | PROFILE
+                |--------------------------------------------------------------------------
+                */
+
+                const profile =
+                    String(
+                        secret?.profile ||
+                        ""
+                    ).trim();
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | DISABLED
+                |--------------------------------------------------------------------------
+                */
+
+                const disabled =
+                    String(
+                        secret?.disabled ??
+                        "false"
+                    )
+                    .trim()
+                    .toLowerCase();
+
+
+                const isInactive =
+                    [
+                        "true",
+                        "yes",
+                        "1"
+                    ].includes(
+                        disabled
+                    );
+
+
+                if (
+                    isInactive
+                ) {
+
+                    inactive++;
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | FIND PACKAGE
+                |--------------------------------------------------------------------------
+                */
+
+                let packageId = 0;
+
+
+                if (
+                    profile
+                ) {
+
+                    const packageRows =
+                        await query(
+                            `
+                            SELECT
+                                id
+                            FROM mikrotik_packages
+                            WHERE router_id = ?
+                            AND company_id = ?
+                            AND package_name = ?
+                            LIMIT 1
+                            `,
+                            [
+
+                                id,
+
+                                routerCompanyId,
+
+                                profile
+
+                            ]
+                        );
+
+
+                    if (
+                        packageRows.length
+                    ) {
+
+                        packageId =
+                            Number(
+                                packageRows[0].id ||
+                                0
+                            );
+
+                    }
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | FIND EXISTING CUSTOMER
+                |--------------------------------------------------------------------------
+                */
+
+                let existingSql = `
+                    SELECT
+                        id
+                    FROM customers
+                    WHERE pppoe_username = ?
+                    AND mikrotik_id = ?
+                `;
+
+
+                const existingParams = [
+
+                    username,
+
+                    id
+
+                ];
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | COMPANY SCOPE
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.company_id
+                ) {
+
+                    existingSql += `
+                        AND company_id = ?
+                    `;
+
+                    existingParams.push(
+                        routerCompanyId
+                    );
+
+                }
+
+
+                existingSql += `
+                    LIMIT 1
+                `;
+
+
+                const existingRows =
+                    await query(
+                        existingSql,
+                        existingParams
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | UPDATE EXISTING CUSTOMER
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    existingRows.length
+                ) {
+
+                    const customerId =
+                        Number(
+                            existingRows[0].id
+                        );
+
+
+                    const fields = [];
+
+                    const values = [];
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | PASSWORD
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.password
+                    ) {
+
+                        fields.push(
+                            "password = ?"
+                        );
+
+                        values.push(
+                            password
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | PACKAGE ID
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.package_id
+                    ) {
+
+                        fields.push(
+                            "package_id = ?"
+                        );
+
+                        values.push(
+                            packageId
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | PACKAGE
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.package
+                    ) {
+
+                        fields.push(
+                            "`package` = ?"
+                        );
+
+                        values.push(
+                            profile
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | PROFILE
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.profile
+                    ) {
+
+                        fields.push(
+                            "profile = ?"
+                        );
+
+                        values.push(
+                            profile
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | STATUS
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.status
+                    ) {
+
+                        fields.push(
+                            "status = ?"
+                        );
+
+                        values.push(
+                            isInactive
+                                ? "inactive"
+                                : "active"
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | COMPANY ID
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.company_id
+                    ) {
+
+                        fields.push(
+                            "company_id = ?"
+                        );
+
+                        values.push(
+                            routerCompanyId
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | UPDATED AT
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        columnMap.updated_at
+                    ) {
+
+                        fields.push(
+                            "updated_at = NOW()"
+                        );
+
+                    }
+
+
+                    /*
+                    |------------------------------------------------------------------
+                    | UPDATE
+                    |------------------------------------------------------------------
+                    */
+
+                    if (
+                        fields.length
+                    ) {
+
+                        values.push(
+                            customerId
+                        );
+
+
+                        let updateSql = `
+                            UPDATE customers
+                            SET
+                                ${fields.join(", ")}
+                            WHERE id = ?
+                        `;
+
+
+                        if (
+                            columnMap.company_id
+                        ) {
+
+                            updateSql += `
+                                AND company_id = ?
+                            `;
+
+                            values.push(
+                                routerCompanyId
+                            );
+
+                        }
+
+
+                        updateSql += `
+                            LIMIT 1
+                        `;
+
+
+                        await query(
+                            updateSql,
+                            values
+                        );
+
+                    }
+
+
+                    updated++;
+
+                    continue;
+
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | INSERT NEW CUSTOMER
+                |--------------------------------------------------------------------------
+                */
+
+                const insertColumns = [
+
+                    "pppoe_username"
+
+                ];
+
+
+                const insertValues = [
+
+                    username
+
+                ];
+
+
+                /*
+                |------------------------------------------------------------------
+                | PASSWORD
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.password
+                ) {
+
+                    insertColumns.push(
+                        "password"
+                    );
+
+                    insertValues.push(
+                        password
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | MIKROTIK ID
+                |------------------------------------------------------------------
+                */
+
+                insertColumns.push(
+                    "mikrotik_id"
+                );
+
+                insertValues.push(
+                    id
+                );
+
+
+                /*
+                |------------------------------------------------------------------
+                | COMPANY ID
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.company_id
+                ) {
+
+                    insertColumns.push(
+                        "company_id"
+                    );
+
+                    insertValues.push(
+                        routerCompanyId
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | PACKAGE ID
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.package_id
+                ) {
+
+                    insertColumns.push(
+                        "package_id"
+                    );
+
+                    insertValues.push(
+                        packageId
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | PACKAGE
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.package
+                ) {
+
+                    insertColumns.push(
+                        "`package`"
+                    );
+
+                    insertValues.push(
+                        profile
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | PROFILE
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.profile
+                ) {
+
+                    insertColumns.push(
+                        "profile"
+                    );
+
+                    insertValues.push(
+                        profile
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | STATUS
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.status
+                ) {
+
+                    insertColumns.push(
+                        "status"
+                    );
+
+                    insertValues.push(
+                        isInactive
+                            ? "inactive"
+                            : "active"
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | CREATED BY
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.created_by
+                ) {
+
+                    insertColumns.push(
+                        "created_by"
+                    );
+
+                    insertValues.push(
+                        user.id
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | CREATED AT
+                |------------------------------------------------------------------
+                */
+
+                if (
+                    columnMap.created_at
+                ) {
+
+                    insertColumns.push(
+                        "created_at"
+                    );
+
+                    insertValues.push(
+                        new Date()
+                    );
+
+                }
+
+
+                /*
+                |------------------------------------------------------------------
+                | INSERT QUERY
+                |------------------------------------------------------------------
+                */
+
+                const placeholders =
+                    insertColumns
+                        .map(
+                            () => "?"
+                        )
+                        .join(", ");
+
+
+                await query(
+                    `
+                    INSERT INTO customers
+                    (
+                        ${insertColumns.join(", ")}
+                    )
+                    VALUES
+                    (
+                        ${placeholders}
+                    )
+                    `,
+                    insertValues
+                );
+
+
+                inserted++;
+
+            } catch (customerError) {
+
+                console.error(
+                    "Customer sync item error:",
+                    customerError
+                );
+
+
+                failed++;
+
+            }
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | FINAL RESPONSE
+        |--------------------------------------------------------------------------
         */
 
         return res.json({
@@ -1981,17 +2902,47 @@ async function customerSync(
             success: true,
 
             message:
-                "Customer sync endpoint is ready.",
+                "Customer Sync Completed",
 
-            router_id:
-                router.id,
+            router:
+                router.name || "",
 
-            company_id:
-                router.company_id
+            total_customer:
+                total,
+
+            inserted,
+
+            updated,
+
+            failed,
+
+            skipped,
+
+            inactive,
+
+            time:
+                new Date().toISOString()
 
         });
 
     } catch (error) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | CLOSE MIKROTIK ON ERROR
+        |--------------------------------------------------------------------------
+        */
+
+        if (api) {
+
+            try {
+
+                await api.close();
+
+            } catch (_) {}
+
+        }
+
 
         console.error(
             "Customer sync error:",
@@ -2006,10 +2957,13 @@ async function customerSync(
             success: false,
 
             message:
+                error.message ||
                 "Customer sync failed."
 
         });
+
     }
+
 }
 
 
@@ -2027,7 +2981,9 @@ async function activeCustomers(
     try {
 
         const id =
-            Number(req.params.id);
+            Number(
+                req.params.id
+            );
 
 
         const router =
@@ -2049,6 +3005,7 @@ async function activeCustomers(
                     "Router not found."
 
             });
+
         }
 
 
@@ -2088,7 +3045,9 @@ async function activeCustomers(
                 "Failed to load active customers."
 
         });
+
     }
+
 }
 
 

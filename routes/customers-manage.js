@@ -1,18 +1,66 @@
 "use strict";
 
 const express = require("express");
-const controller = require("../controllers/customers-manage.controller");
-const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
+const controller =
+    require("../controllers/customer-manage.controller");
+
+const {
+    requireAuth
+} = require("../middleware/auth");
+
+
 router.use(requireAuth);
 
-router.get("/edit", controller.editForm);
-router.post("/update", controller.update);
 
-router.post("/delete", controller.remove);
+/*
+|--------------------------------------------------------------------------
+| PROFILE
+|--------------------------------------------------------------------------
+*/
 
-router.get("/profile", controller.profile);
+router.get(
+    "/profile",
+    controller.profile
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| EDIT
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/edit",
+    controller.editForm
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/update",
+    controller.update
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| DELETE
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/delete",
+    controller.remove
+);
+
 
 module.exports = router;

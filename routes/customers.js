@@ -1,12 +1,12 @@
+
 "use strict";
 
 const express = require("express");
 
-const router =
-    express.Router();
+const router = express.Router();
 
-const controller =
-    require("../controllers/customers.controller");
+const controller = require("../controllers/customers.controller");
+const manageController = require("../controllers/customer-manage.controller");
 
 const {
     requireAuth
@@ -19,6 +19,51 @@ const {
 */
 
 router.use(requireAuth);
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER MANAGE
+|--------------------------------------------------------------------------
+| IMPORTANT:
+| These routes must come before /:id
+|--------------------------------------------------------------------------
+*/
+
+/*
+| Profile popup
+| GET /api/customers/profile?id=21729
+*/
+router.get(
+    "/profile",
+    manageController.profile
+);
+
+/*
+| Edit popup
+| GET /api/customers/edit?id=21729
+*/
+router.get(
+    "/edit",
+    manageController.editForm
+);
+
+/*
+| Update customer
+| POST /api/customers/update
+*/
+router.post(
+    "/update",
+    manageController.update
+);
+
+/*
+| Delete customer
+| POST /api/customers/delete
+*/
+router.post(
+    "/delete",
+    manageController.remove
+);
 
 /*
 |--------------------------------------------------------------------------
