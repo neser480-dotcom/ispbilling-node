@@ -1,4 +1,3 @@
-
 "use strict";
 
 (function () {
@@ -11,6 +10,15 @@
     let loadingCustomers = false;
     let searchTimer = null;
     let initialized = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELECTED CUSTOMER IDS
+    |--------------------------------------------------------------------------
+    | Keeps selected customers even when the table is re-rendered.
+    */
+
+    let selectedCustomerIds = new Set();
 
 
     /*
@@ -544,15 +552,12 @@
             phone(customer)
                 .replace(/\D/g, "");
 
-
         if (!mobile) {
             return "";
         }
 
 
-        if (
-            mobile.startsWith("0")
-        ) {
+        if (mobile.startsWith("0")) {
 
             mobile =
                 "88" + mobile;
@@ -595,7 +600,6 @@
             pppoeUsername(customer) ||
             customerId(customer) ||
             "Customer";
-
 
         const displayId =
             customerId(customer);
@@ -647,7 +651,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="#"
@@ -666,7 +669,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="#"
@@ -679,11 +681,9 @@
                         </a>
                     </li>
 
-
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-
 
                     <li>
                         <a
@@ -696,7 +696,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="/customers/note?id=${encodeURIComponent(id)}"
@@ -707,7 +706,6 @@
                             Note
                         </a>
                     </li>
-
 
                     <li>
                         <a
@@ -720,7 +718,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="/customers/transfer?id=${encodeURIComponent(id)}"
@@ -731,7 +728,6 @@
                             Transfer
                         </a>
                     </li>
-
 
                     <li>
                         <a
@@ -744,7 +740,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="/customers/ticket_add?id=${encodeURIComponent(id)}"
@@ -755,7 +750,6 @@
                             Support Ticket
                         </a>
                     </li>
-
 
                     <li>
                         <a
@@ -768,7 +762,6 @@
                         </a>
                     </li>
 
-
                     <li>
                         <a
                             href="/customers/activity_log?id=${encodeURIComponent(id)}"
@@ -780,11 +773,9 @@
                         </a>
                     </li>
 
-
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-
 
                     ${
                         whatsapp
@@ -810,7 +801,6 @@
                                 </li>
                             `
                     }
-
 
                     <li>
                         <a
@@ -841,6 +831,9 @@
         const id =
             databaseId(customer);
 
+        const idString =
+            String(id);
+
 
         return `
             <tr>
@@ -861,9 +854,9 @@
                             packageDisplay(customer)
                         )}"
                         data-monthly="${monthlyBill(customer)}"
+                        ${selectedCustomerIds.has(idString) ? "checked" : ""}
                     >
                 </td>
-
 
                 <td class="cm-id">
                     ${escapeHtml(
@@ -871,9 +864,7 @@
                     )}
                 </td>
 
-
                 <td>
-
                     <div class="fw-semibold">
                         ${escapeHtml(
                             customerName(customer) ||
@@ -888,14 +879,11 @@
                             "—"
                         )}
                     </div>
-
                 </td>
-
 
                 <td>
                     ${contactDisplay(customer)}
                 </td>
-
 
                 <td class="cm-package">
                     ${escapeHtml(
@@ -904,26 +892,21 @@
                     )}
                 </td>
 
-
                 <td>
                     ${billBalanceDisplay(customer)}
                 </td>
-
 
                 <td>
                     ${billingDateDisplay(customer)}
                 </td>
 
-
                 <td>
                     ${dayLeftDisplay(customer)}
                 </td>
 
-
                 <td>
                     ${statusBadge(customer)}
                 </td>
-
 
                 <td>
                     ${actionMenu(customer)}
@@ -946,11 +929,9 @@
             document.getElementById(
                 "customerTableBody"
             ) ||
-
             document.querySelector(
                 "#customerTable tbody"
             ) ||
-
             document.querySelector(
                 ".cm-table tbody"
             )
@@ -962,7 +943,6 @@
 
         const tbody =
             getTableBody();
-
 
         if (!tbody) {
             return;
@@ -990,7 +970,6 @@
         const tbody =
             getTableBody();
 
-
         if (!tbody) {
             return;
         }
@@ -1013,7 +992,6 @@
 
         const tbody =
             getTableBody();
-
 
         if (!tbody) {
             return;
@@ -1100,6 +1078,7 @@
 
 
         if (currentSearch) {
+
             params.set(
                 "search",
                 currentSearch
@@ -1108,6 +1087,7 @@
 
 
         if (currentStatus) {
+
             params.set(
                 "status",
                 currentStatus
@@ -1210,7 +1190,6 @@
 
         const start =
             ((page - 1) * limit) + 1;
-
 
         const end =
             Math.min(
@@ -1325,7 +1304,6 @@
                 button
             );
 
-
             container.appendChild(
                 li
             );
@@ -1386,38 +1364,101 @@
 
     function getCustomerCheckboxes() {
 
-        return Array.from(
-            document.querySelectorAll(
-                "#customerTableBody .customer-checkbox, " +
-                "#customerTableBody input[name='customer_ids[]']"
-            )
+        const selectors = [
+            "#customerTableBody .customer-checkbox",
+            "#customerTableBody input[name='customer_ids[]']",
+            "#customerTable .customer-checkbox",
+            "#customerTable input[name='customer_ids[]']",
+            ".cm-table .customer-checkbox",
+            ".cm-table input[name='customer_ids[]']"
+        ];
+
+
+        const checkboxes = [];
+        const seen = new Set();
+
+
+        selectors.forEach(
+            function (selector) {
+
+                document
+                    .querySelectorAll(selector)
+                    .forEach(
+                        function (checkbox) {
+
+                            if (
+                                !seen.has(checkbox)
+                            ) {
+
+                                seen.add(
+                                    checkbox
+                                );
+
+                                checkboxes.push(
+                                    checkbox
+                                );
+                            }
+                        }
+                    );
+            }
         );
+
+
+        return checkboxes;
     }
 
 
-    function getSelectedCustomerIds() {
+    /*
+    |--------------------------------------------------------------------------
+    | SYNC VISIBLE CHECKBOXES
+    |--------------------------------------------------------------------------
+    */
 
-        return getCustomerCheckboxes()
-            .filter(
+    function syncVisibleSelectionsFromDom() {
+
+        getCustomerCheckboxes()
+            .forEach(
                 function (checkbox) {
-                    return checkbox.checked;
-                }
-            )
-            .map(
-                function (checkbox) {
-                    return Number(
-                        checkbox.value
-                    );
-                }
-            )
-            .filter(
-                function (id) {
-                    return (
-                        Number.isInteger(id) &&
-                        id > 0
-                    );
+
+                    const id =
+                        String(
+                            checkbox.value || ""
+                        ).trim();
+
+
+                    if (!id) {
+                        return;
+                    }
+
+
+                    if (checkbox.checked) {
+
+                        selectedCustomerIds.add(
+                            id
+                        );
+
+                    } else {
+
+                        selectedCustomerIds.delete(
+                            id
+                        );
+                    }
                 }
             );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SELECTED CUSTOMER IDS
+    |--------------------------------------------------------------------------
+    */
+
+    function getSelectedCustomerIds() {
+
+        return Array.from(
+            selectedCustomerIds
+        );
     }
 
 
@@ -1548,6 +1589,7 @@
         const checked =
             checkboxes.filter(
                 function (checkbox) {
+
                     return checkbox.checked;
                 }
             );
@@ -1584,6 +1626,37 @@
 
         selectAll.indeterminate =
             false;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESTORE VISIBLE SELECTIONS
+    |--------------------------------------------------------------------------
+    */
+
+    function restoreVisibleSelections() {
+
+        getCustomerCheckboxes()
+            .forEach(
+                function (checkbox) {
+
+                    const id =
+                        String(
+                            checkbox.value || ""
+                        ).trim();
+
+
+                    checkbox.checked =
+                        id !== "" &&
+                        selectedCustomerIds.has(
+                            id
+                        );
+                }
+            );
+
+
+        updateSelectAllState();
     }
 
 
@@ -1773,7 +1846,13 @@
             }
 
 
-            resetSelectAll();
+            /*
+            |------------------------------------------------------------------
+            | RESTORE SELECTION AFTER TABLE RENDER
+            |------------------------------------------------------------------
+            */
+
+            restoreVisibleSelections();
 
             updateSelectedCount();
 
@@ -1846,7 +1925,10 @@
             getActionModalTitle();
 
 
-        if (!modalElement || !body) {
+        if (
+            !modalElement ||
+            !body
+        ) {
 
             throw new Error(
                 "Customer action modal not found."
@@ -2103,11 +2185,14 @@
                     "href"
                 );
 
+
             if (
                 href &&
                 href !== "#"
             ) {
-                url = href;
+
+                url =
+                    href;
             }
         }
 
@@ -2172,6 +2257,7 @@
                     "Please select at least one customer.",
                     "warning"
                 );
+
             }
 
             return;
@@ -2181,10 +2267,6 @@
         const formData =
             new FormData(form);
 
-
-        /*
-        | Add selected customer IDs.
-        */
 
         selectedIds.forEach(
             function (id) {
@@ -2290,6 +2372,7 @@
                 const text =
                     await response.text();
 
+
                 result = {
                     success:
                         response.ok,
@@ -2352,6 +2435,14 @@
             }
 
 
+            /*
+            |------------------------------------------------------------------
+            | Successful bulk action clears selected customers.
+            |------------------------------------------------------------------
+            */
+
+            selectedCustomerIds.clear();
+
             await loadCustomers();
 
         } catch (error) {
@@ -2408,9 +2499,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | SELECT ALL / CUSTOMER CHECKBOX
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -2420,6 +2511,12 @@
                 const target =
                     event.target;
 
+
+                /*
+                |------------------------------------------------------------------
+                | SELECT ALL
+                |------------------------------------------------------------------
+                */
 
                 if (
                     target.matches(
@@ -2431,8 +2528,33 @@
                         .forEach(
                             function (checkbox) {
 
+                                const id =
+                                    String(
+                                        checkbox.value || ""
+                                    ).trim();
+
+
                                 checkbox.checked =
                                     target.checked;
+
+
+                                if (!id) {
+                                    return;
+                                }
+
+
+                                if (target.checked) {
+
+                                    selectedCustomerIds.add(
+                                        id
+                                    );
+
+                                } else {
+
+                                    selectedCustomerIds.delete(
+                                        id
+                                    );
+                                }
                             }
                         );
 
@@ -2444,12 +2566,45 @@
                 }
 
 
+                /*
+                |------------------------------------------------------------------
+                | INDIVIDUAL CUSTOMER CHECKBOX
+                |------------------------------------------------------------------
+                */
+
                 if (
                     target.matches(
                         "#customerTableBody .customer-checkbox, " +
-                        "#customerTableBody input[name='customer_ids[]']"
+                        "#customerTableBody input[name='customer_ids[]'], " +
+                        "#customerTable .customer-checkbox, " +
+                        "#customerTable input[name='customer_ids[]'], " +
+                        ".cm-table .customer-checkbox, " +
+                        ".cm-table input[name='customer_ids[]']"
                     )
                 ) {
+
+                    const id =
+                        String(
+                            target.value || ""
+                        ).trim();
+
+
+                    if (id) {
+
+                        if (target.checked) {
+
+                            selectedCustomerIds.add(
+                                id
+                            );
+
+                        } else {
+
+                            selectedCustomerIds.delete(
+                                id
+                            );
+                        }
+                    }
+
 
                     updateSelectAllState();
                     updateSelectedCount();
@@ -2459,9 +2614,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | SEARCH
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const searchInput =
@@ -2502,9 +2657,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | CLEAR SEARCH
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const clearSearch =
@@ -2543,9 +2698,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | STATUS FILTER
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const statusSelect =
@@ -2574,9 +2729,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | LIMIT
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const limitSelect =
@@ -2613,9 +2768,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | APPLY FILTER
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const applyFilter =
@@ -2664,9 +2819,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | REFRESH
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -2695,9 +2850,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | BULK GEAR
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -2768,9 +2923,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
-        | BULK RECHARGE BUTTON
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
+        | BULK RECHARGE
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -2817,10 +2972,6 @@
                     return;
                 }
 
-
-                /*
-                | Make sure Bulk Recharge JS is loaded.
-                */
 
                 if (
                     typeof window.openBulkRecharge !==
@@ -2886,10 +3037,11 @@
             }
         );
 
+
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | BULK ACTION BUTTONS
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -2940,9 +3092,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | BULK DELETE
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -3051,9 +3203,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | UNIVERSAL ACTION POPUP
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -3071,15 +3223,12 @@
                 }
 
 
-                /*
-                | Do not intercept Bootstrap dropdown items.
-                */
-
                 if (
                     button.closest(
                         ".dropdown-menu"
                     )
                 ) {
+
                     return;
                 }
 
@@ -3116,9 +3265,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | BULK FORM SUBMIT
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -3148,9 +3297,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | MODAL CLEANUP
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         const modalElement =
@@ -3180,9 +3329,9 @@
 
 
         /*
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | INITIAL STATE
-        |----------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         */
 
         updateSelectedCount();

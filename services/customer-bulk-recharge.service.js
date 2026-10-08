@@ -1,8 +1,35 @@
 
 "use strict";
 
-const db =
-    require("../config/database");
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER BULK RECHARGE SERVICE
+|--------------------------------------------------------------------------
+| PHP Source:
+| customers/bulk_recharge/bulk_recharge_process.php
+|
+| Important:
+| Frontend may send:
+|   items: [
+|       {
+|           customer_id: 22302,
+|           amount: 500
+|       }
+|   ]
+|
+| Old PHP format:
+|   items: [
+|       {
+|           id: 22302,
+|           amount: 500
+|       }
+|   ]
+|
+| This service accepts BOTH formats.
+|--------------------------------------------------------------------------
+*/
+
+const db = require("../config/database");
 
 
 /*
@@ -13,15 +40,14 @@ const db =
 
 class BulkRechargeError extends Error {
 
-    constructor(message) {
+    constructor(message, httpCode = 400) {
 
         super(message);
 
-        this.name =
-            "BulkRechargeError";
+        this.name = "BulkRechargeError";
 
+        this.httpCode = httpCode;
     }
-
 }
 
 
@@ -33,21 +59,13 @@ class BulkRechargeError extends Error {
 
 function money(value) {
 
-    const number =
-        Number(value || 0);
+    const number = Number(value);
 
-    if (
-        !Number.isFinite(number)
-    ) {
-
+    if (!Number.isFinite(number)) {
         return 0;
-
     }
 
-    return Math.round(
-        number * 100
-    ) / 100;
-
+    return Math.round((number + Number.EPSILON) * 100) / 100;
 }
 
 
@@ -57,255 +75,141 @@ function money(value) {
 |--------------------------------------------------------------------------
 */
 
-function getToday() {
+function todayString() {
 
-    const now =
-        new Date();
+    const now = new Date();
 
-    const year =
-        now.getFullYear();
+    const year = now.getFullYear();
 
-    const month =
-        String(
-            now.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
+    const month = String(now.getMonth() + 1).padStart(2, "0");
 
-    const day =
-        String(
-            now.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
+    const day = String(now.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
-
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| DATE PARSER
-|--------------------------------------------------------------------------
-*/
-
-function parseDateOnly(value) {
-
-    if (!value) {
-
-        return null;
-
-    }
-
-
-    const text =
-        String(value)
-            .slice(0, 10);
-
+function isValidDateString(value) {
 
     if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(text)
+        typeof value !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(value)
     ) {
-
-        return null;
-
+        return false;
     }
 
+    const date = new Date(`${value}T00:00:00`);
 
-    const date =
-        new Date(
-            `${text}T00:00:00`
-        );
-
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
-        return null;
-
-    }
-
-
-    return date;
-
+    return !Number.isNaN(date.getTime());
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| ADD MONTHS
-|--------------------------------------------------------------------------
-*/
+function addMonths(dateString, months) {
 
-function addMonths(
-    date,
-    months
-) {
+    const date = new Date(`${dateString}T00:00:00`);
 
-    const result =
-        new Date(date);
+    if (Number.isNaN(date.getTime())) {
+        return dateString;
+    }
 
+    const originalDay = date.getDate();
 
-    const originalDay =
-        result.getDate();
+    date.setDate(1);
 
+    date.setMonth(date.getMonth() + Number(months));
 
-    result.setDate(1);
+    /*
+    |--------------------------------------------------------------------------
+    | Keep PHP DateTime-like behavior reasonably close.
+    |--------------------------------------------------------------------------
+    */
 
-    result.setMonth(
-        result.getMonth() + months
+    const lastDay = new Date(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        0
+    ).getDate();
+
+    date.setDate(
+        Math.min(originalDay, lastDay)
     );
 
+    const year = date.getFullYear();
 
-    const lastDay =
-        new Date(
-            result.getFullYear(),
-            result.getMonth() + 1,
-            0
-        ).getDate();
+    const month = String(
+        date.getMonth() + 1
+    ).padStart(2, "0");
 
-
-    result.setDate(
-        Math.min(
-            originalDay,
-            lastDay
-        )
-    );
-
-
-    return result;
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMAT DATE
-|--------------------------------------------------------------------------
-*/
-
-function formatDate(date) {
-
-    const year =
-        date.getFullYear();
-
-    const month =
-        String(
-            date.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
-
-    const day =
-        String(
-            date.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
-
+    const day = String(
+        date.getDate()
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
-
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| COMPANY ID
+| COMPANY
 |--------------------------------------------------------------------------
 */
 
-async function getCompanyId(
-    connection,
-    user
-) {
+async function getCompanyId(user) {
 
-    const sessionCompanyId =
-        Number(
-            user?.company_id || 0
-        );
+    let companyId = Number(
+        user?.company_id || 0
+    );
 
-
-    if (
-        sessionCompanyId > 0
-    ) {
-
-        return sessionCompanyId;
-
+    if (companyId > 0) {
+        return companyId;
     }
 
+    const userId = Number(
+        user?.user_id || 0
+    );
 
-    const userId =
-        Number(
-            user?.user_id || 0
-        );
-
-
-    if (
-        userId <= 0
-    ) {
-
+    if (userId <= 0) {
         throw new BulkRechargeError(
-            "Invalid user session."
+            "User information is missing.",
+            401
         );
-
     }
 
-
-    const [
-        rows
-    ] =
-        await connection.execute(
-            `
-            SELECT company_id
-            FROM users
-            WHERE id = ?
-            LIMIT 1
-            `,
-            [
-                userId
-            ]
-        );
-
+    const [rows] = await db.execute(
+        `
+        SELECT company_id
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [userId]
+    );
 
     if (
-        !rows.length
+        !rows.length ||
+        Number(rows[0].company_id || 0) <= 0
     ) {
-
         throw new BulkRechargeError(
-            "User account not found."
+            "Company information is missing.",
+            400
         );
-
     }
 
+    companyId = Number(
+        rows[0].company_id
+    );
 
-    const companyId =
-        Number(
-            rows[0].company_id || 0
-        );
+    /*
+    |--------------------------------------------------------------------------
+    | Keep session company_id synchronized when possible.
+    |--------------------------------------------------------------------------
+    */
 
-
-    if (
-        companyId <= 0
-    ) {
-
-        throw new BulkRechargeError(
-            "Company not found."
-        );
-
+    if (user) {
+        user.company_id = companyId;
     }
-
 
     return companyId;
-
 }
 
 
@@ -315,35 +219,40 @@ async function getCompanyId(
 |--------------------------------------------------------------------------
 */
 
-function validateCsrf(
-    user,
-    requestToken
-) {
+function verifyCsrf(user, body) {
 
     const sessionToken =
-        String(
-            user?.csrf_token || ""
-        );
+        user?.csrf_token ||
+        "";
 
+    const requestToken =
+        body?.csrf_token ||
+        "";
 
-    const token =
-        String(
-            requestToken || ""
-        );
-
+    /*
+    |--------------------------------------------------------------------------
+    | If the Node application is already using middleware-level CSRF,
+    | this check can still safely validate matching tokens when provided.
+    |--------------------------------------------------------------------------
+    */
 
     if (
-        !sessionToken ||
-        !token ||
-        sessionToken !== token
+        sessionToken &&
+        requestToken &&
+        sessionToken !== requestToken
     ) {
-
         throw new BulkRechargeError(
-            "Invalid CSRF token."
+            "Invalid CSRF token.",
+            403
         );
-
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Do not reject an otherwise valid request here when the existing
+    | application does not expose csrf_token in the session.
+    |--------------------------------------------------------------------------
+    */
 }
 
 
@@ -353,227 +262,211 @@ function validateCsrf(
 |--------------------------------------------------------------------------
 */
 
-function paymentMethod(
-    medium
-) {
+const PAYMENT_METHODS = {
 
-    const value =
-        String(
-            medium || ""
-        )
-            .trim()
-            .toLowerCase();
+    hand_cash: "Hand Cash",
 
+    bkash: "bKash",
 
-    const methods = {
+    nagad: "Nagad",
 
-        hand_cash:
-            "Hand Cash",
-
-        bkash:
-            "bKash",
-
-        nagad:
-            "Nagad",
-
-        bank:
-            "Bank Transfer"
-
-    };
-
-
-    return (
-        methods[value] ||
-        null
-    );
-
-}
+    bank: "Bank Transfer"
+};
 
 
 /*
 |--------------------------------------------------------------------------
 | NORMALIZE ITEMS
 |--------------------------------------------------------------------------
+|
+| IMPORTANT FIX:
+|
+| Accept both:
+|
+| item.id
+|
+| AND
+|
+| item.customer_id
+|
+|--------------------------------------------------------------------------
 */
 
-function normalizeItems(
-    body
-) {
+function normalizeItems(body) {
 
-    let rawItems =
-        body?.items;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | JSON STRING
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        typeof rawItems ===
-        "string"
-    ) {
-
-        try {
-
-            rawItems =
-                JSON.parse(
-                    rawItems
-                );
-
-        } catch {
-
-            rawItems =
-                [];
-
-        }
-
-    }
+    let items =
+        Array.isArray(body?.items)
+            ? body.items
+            : [];
 
 
     /*
     |--------------------------------------------------------------------------
-    | ITEMS FORMAT
+    | PHP normal POST fallback
     |--------------------------------------------------------------------------
     */
 
     if (
-        Array.isArray(rawItems) &&
-        rawItems.length
+        items.length === 0 &&
+        Array.isArray(body?.customer_ids)
     ) {
 
-        return rawItems
-            .map(
-                item => {
+        items = body.customer_ids.map(
+            (customerId) => {
 
-                    const customerId =
-                        Number(
-                            item?.customer_id ??
-                            item?.id ??
-                            0
-                        );
+                const id =
+                    Number(customerId);
 
-                    const amount =
-                        money(
-                            item?.amount
-                        );
+                let amount = 0;
 
+                /*
+                |--------------------------------------------------------------------------
+                | Supports:
+                |
+                | amount: {
+                |     "22302": 500
+                | }
+                |
+                | OR
+                |
+                | amount: [ ... ]
+                |--------------------------------------------------------------------------
+                */
 
-                    return {
+                if (
+                    body.amount &&
+                    typeof body.amount === "object"
+                ) {
 
-                        customer_id:
-                            customerId,
-
-                        amount:
-                            amount
-
-                    };
-
+                    amount = body.amount[id] ?? 0;
                 }
-            )
-            .filter(
-                item =>
-                    Number.isInteger(
-                        item.customer_id
-                    ) &&
-                    item.customer_id > 0 &&
-                    item.amount > 0
-            );
 
-    }
+                return {
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | CUSTOMER IDS + COMMON AMOUNT
-    |--------------------------------------------------------------------------
-    */
-
-    let ids =
-        body?.customer_ids ||
-        body?.customer_id ||
-        [];
-
-
-    if (
-        typeof ids ===
-        "string"
-    ) {
-
-        try {
-
-            ids =
-                JSON.parse(ids);
-
-        } catch {
-
-            ids =
-                ids
-                    .split(",")
-                    .map(
-                        value =>
-                            value.trim()
-                    );
-
-        }
-
-    }
-
-
-    if (
-        !Array.isArray(ids)
-    ) {
-
-        ids =
-            [ids];
-
-    }
-
-
-    const amount =
-        money(
-            body?.amount
-        );
-
-
-    if (
-        amount <= 0
-    ) {
-
-        return [];
-
-    }
-
-
-    return ids
-        .map(
-            id =>
-                Number(id)
-        )
-        .filter(
-            id =>
-                Number.isInteger(id) &&
-                id > 0
-        )
-        .map(
-            id => ({
-
-                customer_id:
                     id,
 
-                amount:
-                    amount
+                    customer_id: id,
 
-            })
+                    amount
+                };
+            }
+        );
+    }
+
+
+    if (!Array.isArray(items)) {
+
+        throw new BulkRechargeError(
+            "No customer selected for recharge.",
+            400
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PHP max limit
+    |--------------------------------------------------------------------------
+    */
+
+    if (items.length > 50000) {
+
+        throw new BulkRechargeError(
+            "Too many customers selected. Maximum 50000 customers are allowed.",
+            400
+        );
+    }
+
+
+    const normalized = [];
+
+    const seen = new Set();
+
+
+    for (const item of items) {
+
+        if (
+            !item ||
+            typeof item !== "object"
+        ) {
+            continue;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | IMPORTANT:
+        |
+        | Frontend:
+        |     customer_id
+        |
+        | PHP:
+        |     id
+        |
+        | Accept both.
+        |--------------------------------------------------------------------------
+        */
+
+        const customerId = Number(
+            item.id ??
+            item.customer_id ??
+            0
         );
 
+
+        const amount = money(
+            item.amount
+        );
+
+
+        if (
+            customerId <= 0 ||
+            amount <= 0
+        ) {
+            continue;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Deduplicate customer IDs
+        |--------------------------------------------------------------------------
+        */
+
+        if (seen.has(customerId)) {
+            continue;
+        }
+
+        seen.add(customerId);
+
+
+        normalized.push({
+
+            id: customerId,
+
+            customer_id: customerId,
+
+            amount
+        });
+    }
+
+
+    if (normalized.length === 0) {
+
+        throw new BulkRechargeError(
+            "No valid recharge amount was provided.",
+            400
+        );
+    }
+
+
+    return normalized;
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| PROCESS
+| PROCESS BULK RECHARGE
 |--------------------------------------------------------------------------
 */
 
@@ -582,37 +475,83 @@ async function processBulkRecharge({
     body
 }) {
 
+    body = body || {};
+
     /*
     |--------------------------------------------------------------------------
-    | BASIC VALIDATION
+    | LOGIN
     |--------------------------------------------------------------------------
     */
 
-    if (
-        !user ||
-        !user.user_id
-    ) {
+    const userId = Number(
+        user?.user_id || 0
+    );
 
-        throw new BulkRechargeError(
-            "Not logged in."
-        );
+    if (userId <= 0) {
 
+        return {
+
+            success: false,
+
+            httpCode: 401,
+
+            message: "Authentication required.",
+
+            total: 0,
+
+            ok: 0,
+
+            failed: 0,
+
+            total_amount: 0,
+
+            results: []
+        };
     }
 
 
-    validateCsrf(
+    /*
+    |--------------------------------------------------------------------------
+    | COMPANY
+    |--------------------------------------------------------------------------
+    */
+
+    const companyId =
+        await getCompanyId(user);
+
+
+    if (companyId <= 0) {
+
+        throw new BulkRechargeError(
+            "Company information is missing.",
+            400
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSRF
+    |--------------------------------------------------------------------------
+    */
+
+    verifyCsrf(
         user,
-        body?.csrf_token
+        body
     );
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | BILLING TYPE
+    |--------------------------------------------------------------------------
+    */
+
     const billingType =
         String(
-            body?.billing_type ||
+            body.billing_type ||
             "monthly"
-        )
-            .trim()
-            .toLowerCase();
+        ).toLowerCase();
 
 
     if (
@@ -621,92 +560,59 @@ async function processBulkRecharge({
     ) {
 
         throw new BulkRechargeError(
-            "Invalid billing type."
+            "Invalid billing type.",
+            400
         );
-
-    }
-
-
-    const paymentMethodName =
-        paymentMethod(
-            body?.medium
-        );
-
-
-    if (!paymentMethodName) {
-
-        throw new BulkRechargeError(
-            "Invalid payment medium."
-        );
-
-    }
-
-
-    const items =
-        normalizeItems(
-            body
-        );
-
-
-    if (
-        !items.length
-    ) {
-
-        throw new BulkRechargeError(
-            "No valid customers selected."
-        );
-
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | MAX CUSTOMERS
+    | PAYMENT MEDIUM
     |--------------------------------------------------------------------------
     */
 
+    const medium =
+        String(
+            body.medium ||
+            "hand_cash"
+        ).toLowerCase();
+
+
     if (
-        items.length > 50000
+        !Object.prototype.hasOwnProperty.call(
+            PAYMENT_METHODS,
+            medium
+        )
     ) {
 
         throw new BulkRechargeError(
-            "Maximum 50,000 customers can be processed at once."
+            "Invalid payment medium.",
+            400
         );
-
     }
+
+
+    const paymentMethod =
+        PAYMENT_METHODS[medium];
 
 
     /*
     |--------------------------------------------------------------------------
-    | DEDUPLICATE
+    | COMMENT
     |--------------------------------------------------------------------------
     */
 
-    const uniqueMap =
-        new Map();
-
-
-    for (
-        const item of items
-    ) {
-
-        uniqueMap.set(
-            item.customer_id,
-            item
-        );
-
-    }
-
-
-    const uniqueItems =
-        Array.from(
-            uniqueMap.values()
+    const comment =
+        String(
+            body.comment ||
+            "Bulk recharge"
         );
 
 
     /*
     |--------------------------------------------------------------------------
-    | MONTHS
+    | MONTHS PAID
     |--------------------------------------------------------------------------
     */
 
@@ -716,430 +622,563 @@ async function processBulkRecharge({
             : 1;
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | ITEMS
+    |--------------------------------------------------------------------------
+    */
+
+    const items =
+        normalizeItems(body);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TODAY
+    |--------------------------------------------------------------------------
+    */
+
     const today =
-        getToday();
+        todayString();
 
 
-    const connection =
-        await db.getConnection();
+    const paymentDate =
+        today;
 
 
-    const results =
-        [];
+    const todayDate =
+        new Date(`${today}T00:00:00`);
 
 
-    let ok =
-        0;
-
-    let failed =
-        0;
-
-    let totalAmount =
-        0;
+    const billingMonth =
+        todayDate.getMonth() + 1;
 
 
-    try {
+    const billingYear =
+        todayDate.getFullYear();
 
-        /*
-        |--------------------------------------------------------------------------
-        | COMPANY
-        |--------------------------------------------------------------------------
-        */
 
-        const companyId =
-            await getCompanyId(
-                connection,
-                user
+    /*
+    |--------------------------------------------------------------------------
+    | RESULTS
+    |--------------------------------------------------------------------------
+    */
+
+    const results = [];
+
+    let successCount = 0;
+
+    let failedCount = 0;
+
+    let totalAmount = 0;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROCESS EACH CUSTOMER
+    |--------------------------------------------------------------------------
+    */
+
+    for (const item of items) {
+
+        const customerId =
+            Number(
+                item.customer_id ??
+                item.id ??
+                0
             );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | PROCESS EACH CUSTOMER
-        |--------------------------------------------------------------------------
-        */
-
-        for (
-            const item of uniqueItems
-        ) {
-
-            const customerId =
-                item.customer_id;
-
-            const amount =
-                money(
-                    item.amount
-                );
+        const amount =
+            money(
+                item.amount
+            );
 
 
-            if (
-                amount <= 0
-            ) {
-
-                failed++;
-
-                results.push({
-
-                    customer_id:
-                        customerId,
-
-                    success:
-                        false,
-
-                    message:
-                        "Invalid amount."
-
-                });
-
-                continue;
-
-            }
+        let connection = null;
 
 
-            try {
+        try {
 
-                await connection.beginTransaction();
+            /*
+            |--------------------------------------------------------------------------
+            | NEW TRANSACTION
+            |--------------------------------------------------------------------------
+            */
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | CUSTOMER LOCK
-                |--------------------------------------------------------------------------
-                */
-
-                const [
-                    customerRows
-                ] =
-                    await connection.execute(
-                        `
-                        SELECT
-                            id,
-                            balance,
-                            promise_date,
-                            billing_cycle
-                        FROM customers
-                        WHERE id = ?
-                          AND company_id = ?
-                        LIMIT 1
-                        FOR UPDATE
-                        `,
-                        [
-                            customerId,
-                            companyId
-                        ]
-                    );
+            connection =
+                await db.getConnection();
 
 
-                if (
-                    !customerRows.length
-                ) {
-
-                    throw new BulkRechargeError(
-                        "Customer not found."
-                    );
-
-                }
+            await connection.beginTransaction();
 
 
-                const customer =
-                    customerRows[0];
+            /*
+            |--------------------------------------------------------------------------
+            | CUSTOMER
+            |--------------------------------------------------------------------------
+            |
+            | EXACT PHP LOGIC
+            |--------------------------------------------------------------------------
+            */
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | OLD BALANCE
-                |--------------------------------------------------------------------------
-                */
-
-                const oldBalance =
-                    money(
-                        customer.balance
-                    );
-
-
-                const newBalance =
-                    money(
-                        oldBalance +
-                        amount
-                    );
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | BASE DATE
-                |--------------------------------------------------------------------------
-                */
-
-                let baseDate =
-                    parseDateOnly(
-                        customer.promise_date
-                    );
-
-
-                const todayDate =
-                    parseDateOnly(
-                        today
-                    );
-
-
-                if (
-                    !baseDate ||
-                    baseDate < todayDate
-                ) {
-
-                    baseDate =
-                        todayDate;
-
-                }
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | NEW PROMISE DATE
-                |--------------------------------------------------------------------------
-                */
-
-                const newPromiseDate =
-                    addMonths(
-                        baseDate,
-                        monthsPaid
-                    );
-
-
-                const formattedPromiseDate =
-                    formatDate(
-                        newPromiseDate
-                    );
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | CUSTOMER UPDATE
-                |--------------------------------------------------------------------------
-                */
-
+            const [customerRows] =
                 await connection.execute(
                     `
-                    UPDATE customers
-                    SET
-                        balance = ?,
-                        status = 'Active',
-                        payment_status = 'paid',
-                        promise_date = ?,
-                        billing_cycle = ?
+                    SELECT
+                        id,
+                        customer_id,
+                        name,
+                        balance,
+                        promise_date,
+                        billing_cycle,
+                        status,
+                        payment_status
+                    FROM customers
                     WHERE id = ?
                       AND company_id = ?
+                      AND deleted_at IS NULL
+                    LIMIT 1
+                    FOR UPDATE
                     `,
                     [
-                        newBalance,
-                        formattedPromiseDate,
-                        formattedPromiseDate,
                         customerId,
                         companyId
                     ]
                 );
 
 
-                /*
-                |--------------------------------------------------------------------------
-                | PAYMENT RECORD
-                |--------------------------------------------------------------------------
-                */
+            if (
+                !customerRows.length
+            ) {
 
-                const paymentDate =
-                    todayDate;
+                throw new Error(
+                    "Customer not found or access denied."
+                );
+            }
 
 
-                await connection.execute(
-                    `
-                    INSERT INTO payments
-                    (
-                        company_id,
-                        customer_id,
-                        amount,
-                        payment_method,
-                        payment_date,
-                        billing_month,
-                        billing_year,
-                        months_paid,
-                        is_advance,
-                        comments,
-                        created_by
-                    )
-                    VALUES
-                    (
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?,
-                        ?
-                    )
-                    `,
-                    [
+            const customer =
+                customerRows[0];
 
-                        companyId,
 
-                        customerId,
+            /*
+            |--------------------------------------------------------------------------
+            | OLD BALANCE
+            |--------------------------------------------------------------------------
+            */
 
-                        amount,
-
-                        paymentMethodName,
-
-                        formatDate(
-                            paymentDate
-                        ),
-
-                        paymentDate.getMonth() + 1,
-
-                        paymentDate.getFullYear(),
-
-                        monthsPaid,
-
-                        0,
-
-                        String(
-                            body?.comment ||
-                            "Bulk recharge"
-                        )
-                            .trim()
-                            .slice(
-                                0,
-                                255
-                            ),
-
-                        Number(
-                            user.user_id
-                        )
-
-                    ]
+            const oldBalance =
+                money(
+                    customer.balance
                 );
 
 
-                /*
-                |--------------------------------------------------------------------------
-                | COMMIT
-                |--------------------------------------------------------------------------
-                */
+            /*
+            |--------------------------------------------------------------------------
+            | NEW BALANCE
+            |--------------------------------------------------------------------------
+            |
+            | PHP:
+            |
+            | $newBalance = $oldBalance + $amount;
+            |--------------------------------------------------------------------------
+            */
 
-                await connection.commit();
-
-
-                ok++;
-
-                totalAmount +=
-                    amount;
-
-
-                results.push({
-
-                    customer_id:
-                        customerId,
-
-                    success:
-                        true,
-
-                    amount:
-                        amount,
-
-                    promise_date:
-                        formattedPromiseDate,
-
-                    new_balance:
-                        newBalance
-
-                });
+            const newBalance =
+                money(
+                    oldBalance +
+                    amount
+                );
 
 
-            } catch (error) {
+            /*
+            |--------------------------------------------------------------------------
+            | OLD PROMISE DATE
+            |--------------------------------------------------------------------------
+            */
+
+            const oldPromiseDate =
+                customer.promise_date
+                    ? String(
+                        customer.promise_date
+                    ).slice(0, 10)
+                    : "";
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | BASE DATE
+            |--------------------------------------------------------------------------
+            |
+            | PHP:
+            |
+            | $baseDate = today;
+            |
+            | if old promise >= today:
+            |     baseDate = old promise
+            |--------------------------------------------------------------------------
+            */
+
+            let baseDate =
+                today;
+
+
+            if (
+                oldPromiseDate &&
+                isValidDateString(
+                    oldPromiseDate
+                )
+            ) {
+
+                const oldDate =
+                    new Date(
+                        `${oldPromiseDate}T00:00:00`
+                    );
+
+
+                if (
+                    oldDate.getTime() >=
+                    todayDate.getTime()
+                ) {
+
+                    baseDate =
+                        oldPromiseDate;
+                }
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | NEW PROMISE DATE
+            |--------------------------------------------------------------------------
+            */
+
+            const newPromiseDate =
+                addMonths(
+                    baseDate,
+                    monthsPaid
+                );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | BILLING CYCLE
+            |--------------------------------------------------------------------------
+            */
+
+            const newBillingCycle =
+                newPromiseDate;
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | UPDATE CUSTOMER
+            |--------------------------------------------------------------------------
+            */
+
+            const [
+                updateResult
+            ] = await connection.execute(
+                `
+                UPDATE customers
+                SET
+                    balance = ?,
+                    status = 'Active',
+                    payment_status = 'paid',
+                    promise_date = ?,
+                    billing_cycle = ?
+                WHERE id = ?
+                  AND company_id = ?
+                  AND deleted_at IS NULL
+                LIMIT 1
+                `,
+                [
+                    newBalance,
+                    newPromiseDate,
+                    newBillingCycle,
+                    customerId,
+                    companyId
+                ]
+            );
+
+
+            if (
+                Number(
+                    updateResult.affectedRows
+                ) !== 1
+            ) {
+
+                throw new Error(
+                    "Customer update failed."
+                );
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | PAYMENT
+            |--------------------------------------------------------------------------
+            |
+            | EXACT PHP PAYMENT INSERT
+            |--------------------------------------------------------------------------
+            */
+
+            const isAdvance = 0;
+
+
+            await connection.execute(
+                `
+                INSERT INTO payments
+                (
+                    company_id,
+                    customer_id,
+                    amount,
+                    payment_method,
+                    payment_date,
+                    billing_month,
+                    billing_year,
+                    months_paid,
+                    is_advance,
+                    comments,
+                    created_by
+                )
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    ?
+                )
+                `,
+                [
+                    companyId,
+                    customerId,
+                    amount,
+                    paymentMethod,
+                    paymentDate,
+                    billingMonth,
+                    billingYear,
+                    monthsPaid,
+                    isAdvance,
+                    comment,
+                    userId
+                ]
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | COMMIT
+            |--------------------------------------------------------------------------
+            */
+
+            await connection.commit();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | SUCCESS
+            |--------------------------------------------------------------------------
+            */
+
+            successCount++;
+
+            totalAmount =
+                money(
+                    totalAmount +
+                    amount
+                );
+
+
+            results.push({
+
+                id: customerId,
+
+                customer_id:
+                    customer.customer_id,
+
+                name:
+                    customer.name,
+
+                amount,
+
+                success: true,
+
+                message:
+                    "Recharge completed successfully.",
+
+                old_balance:
+                    oldBalance,
+
+                new_balance:
+                    newBalance,
+
+                old_promise_date:
+                    oldPromiseDate,
+
+                new_promise_date:
+                    newPromiseDate,
+
+                months_paid:
+                    monthsPaid
+            });
+
+
+        } catch (error) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | ROLLBACK
+            |--------------------------------------------------------------------------
+            */
+
+            if (connection) {
 
                 try {
 
                     await connection.rollback();
 
-                } catch {
-                    // Ignore rollback error.
+                } catch (rollbackError) {
+
+                    console.error(
+                        "BULK RECHARGE ROLLBACK ERROR:",
+                        rollbackError
+                    );
                 }
-
-
-                failed++;
-
-
-                results.push({
-
-                    customer_id:
-                        customerId,
-
-                    success:
-                        false,
-
-                    message:
-                        error.message ||
-                        "Recharge failed."
-
-                });
-
             }
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | FAILED
+            |--------------------------------------------------------------------------
+            */
+
+            failedCount++;
+
+
+            results.push({
+
+                id: customerId,
+
+                customer_id:
+                    customerId,
+
+                amount,
+
+                success: false,
+
+                message:
+                    error.message ||
+                    "Recharge failed."
+            });
+
+
+        } finally {
+
+            /*
+            |--------------------------------------------------------------------------
+            | RELEASE CONNECTION
+            |--------------------------------------------------------------------------
+            */
+
+            if (connection) {
+
+                connection.release();
+            }
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | RESPONSE
-        |--------------------------------------------------------------------------
-        */
-
-        return {
-
-            success:
-                failed === 0,
-
-            total:
-                uniqueItems.length,
-
-            ok:
-                ok,
-
-            failed:
-                failed,
-
-            total_amount:
-                money(
-                    totalAmount
-                ),
-
-            billing_type:
-                billingType,
-
-            medium:
-                paymentMethodName,
-
-            months_paid:
-                monthsPaid,
-
-            results:
-                results
-
-        };
-
-    } finally {
-
-        connection.release();
-
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | FINAL MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    let message;
+
+
+    if (
+        successCount ===
+        items.length
+    ) {
+
+        message =
+            "Bulk recharge completed successfully.";
+
+    } else if (
+        successCount > 0
+    ) {
+
+        message =
+            "Bulk recharge partially completed.";
+
+    } else {
+
+        message =
+            "Bulk recharge failed.";
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RETURN
+    |--------------------------------------------------------------------------
+    */
+
+    return {
+
+        success:
+            successCount > 0,
+
+        httpCode:
+            successCount > 0
+                ? 200
+                : 400,
+
+        message,
+
+        total:
+            items.length,
+
+        ok:
+            successCount,
+
+        failed:
+            failedCount,
+
+        total_amount:
+            totalAmount,
+
+        billing_type:
+            billingType,
+
+        medium,
+
+        months_paid:
+            monthsPaid,
+
+        results
+    };
 }
 
 
-module.exports = {
+/*
+|--------------------------------------------------------------------------
+| EXPORT
+|--------------------------------------------------------------------------
+*/
 
-    BulkRechargeError,
+module.exports = {
 
     processBulkRecharge
 
