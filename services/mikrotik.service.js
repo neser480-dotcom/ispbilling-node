@@ -1,78 +1,100 @@
 "use strict";
 
-const {
-    RouterOSAPI
-} = require("node-routeros");
+let RouterOSAPI = null;
+
+try {
+    RouterOSAPI =
+        require("node-routeros").RouterOSAPI;
+} catch (_) {
+    RouterOSAPI = null;
+}
+
+
+const db =
+    require("../config/database");
 
 
 /*
 |--------------------------------------------------------------------------
-| FIRST ITEM
+| DATABASE ROUTER
 |--------------------------------------------------------------------------
 */
 
-function first(value) {
+async function router(id) {
+    const [rows] =
+        await db.query(
+            `
+            SELECT *
+            FROM mikrotik_servers
 
-    if (Array.isArray(value)) {
-        return value[0] || {};
+            WHERE id = ?
+
+              AND deleted_at IS NULL
+
+            LIMIT 1
+            `,
+            [id]
+        );
+
+    if (!rows.length) {
+        throw new Error(
+            "MikroTik router not found."
+        );
     }
 
-    return value || {};
+    return rows[0];
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| ROUTER CONNECTION
+| CONNECT
 |--------------------------------------------------------------------------
 */
 
-async function withRouter(
-    router,
-    callback
-) {
+async function connect(r) {
+    if (!RouterOSAPI) {
+        throw new Error(
+            "node-routeros is not installed."
+        );
+    }
 
     const api =
         new RouterOSAPI({
-
-            host: router.ip,
-
-            user: router.username,
-
-            password: router.password,
-
+            host: r.ip,
+            user: r.username,
+            password: r.password,
             port: Number(
-                router.port || 8728
+                r.port || 8728
             ),
-
-            timeout:
-                Number(
-                    router.timeout || 5
-                ) * 1000,
-
-            tls:
-                Boolean(
-                    Number(
-                        router.use_ssl || 0
-                    )
-                )
-
+            timeout: Number(
+                r.timeout || 3
+            ),
+            tls: !!Number(
+                r.use_ssl || 0
+            )
         });
-
 
     await api.connect();
 
+    return api;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CLOSE
+|--------------------------------------------------------------------------
+*/
+
+async function close(api) {
+    if (!api) {
+        return;
+    }
 
     try {
-
-        return await callback(api);
-
-    } finally {
-
-        try {
-            api.close();
-        } catch (_) {}
-    }
+        await api.close();
+    } catch (_) {}
 }
 
 
@@ -82,71 +104,80 @@ async function withRouter(
 |--------------------------------------------------------------------------
 */
 
-async function status(router) {
+async function status(r) {
+    const api =
+        await connect(r);
 
-    return withRouter(
-        router,
-        async api => {
+    try {
+        const identityRows =
+            await api.write(
+                "/system/identity/print"
+            );
 
-            const [
-                identity,
-                resource,
-                secrets,
-                active,
-                profiles
-            ] =
-                await Promise.all([
+        const identity =
+            identityRows?.length
+                ? identityRows[0]
+                : {};
 
-                    api.write(
-                        "/system/identity/print"
-                    ),
+        const resourceRows =
+            await api.write(
+                "/system/resource/print"
+            );
 
-                    api.write(
-                        "/system/resource/print"
-                    ),
+        const resource =
+            resourceRows?.length
+                ? resourceRows[0]
+                : {};
 
-                    api.write(
-                        "/ppp/secret/print"
-                    ),
+        const secretRows =
+            await api.write(
+                "/ppp/secret/print"
+            );
 
-                    api.write(
-                        "/ppp/active/print"
-                    ),
+        const secrets =
+            Array.isArray(secretRows)
+                ? secretRows
+                : [];
 
-                    api.write(
-                        "/ppp/profile/print"
-                    )
+        const activeRows =
+            await api.write(
+                "/ppp/active/print"
+            );
 
-                ]);
+        const active =
+            Array.isArray(activeRows)
+                ? activeRows
+                : [];
 
+        const profileRows =
+            await api.write(
+                "/ppp/profile/print"
+            );
 
-            return {
+        const profiles =
+            Array.isArray(profileRows)
+                ? profileRows
+                : [];
 
-                identity:
-                    first(identity).name || "",
+        return {
+            identity:
+                identity.name || "",
 
-                resource:
-                    first(resource),
+            resource,
 
-                pppoe_total:
-                    Array.isArray(secrets)
-                        ? secrets.length
-                        : 0,
+            pppoe_total:
+                secrets.length,
 
-                active_total:
-                    Array.isArray(active)
-                        ? active.length
-                        : 0,
+            active_total:
+                active.length,
 
-                profile_total:
-                    Array.isArray(profiles)
-                        ? profiles.length
-                        : 0
+            profile_total:
+                profiles.length
+        };
 
-            };
-
-        }
-    );
+    } finally {
+        await close(api);
+    }
 }
 
 
@@ -156,51 +187,49 @@ async function status(router) {
 |--------------------------------------------------------------------------
 */
 
-async function profiles(router) {
+async function profiles(r) {
+    const api =
+        await connect(r);
 
-    return withRouter(
-        router,
-        api =>
-            api.write(
+    try {
+        const rows =
+            await api.write(
                 "/ppp/profile/print"
-            )
-    );
+            );
+
+        return Array.isArray(rows)
+            ? rows
+            : [];
+
+    } finally {
+        await close(api);
+    }
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| PPP SECRETS
+| ACTIVE PPP
 |--------------------------------------------------------------------------
 */
 
-async function secrets(router) {
+async function active(r) {
+    const api =
+        await connect(r);
 
-    return withRouter(
-        router,
-        api =>
-            api.write(
-                "/ppp/secret/print"
-            )
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| PPP ACTIVE
-|--------------------------------------------------------------------------
-*/
-
-async function active(router) {
-
-    return withRouter(
-        router,
-        api =>
-            api.write(
+    try {
+        const rows =
+            await api.write(
                 "/ppp/active/print"
-            )
-    );
+            );
+
+        return Array.isArray(rows)
+            ? rows
+            : [];
+
+    } finally {
+        await close(api);
+    }
 }
 
 
@@ -211,174 +240,320 @@ async function active(router) {
 */
 
 async function findSecret(
-    router,
+    api,
     username
 ) {
+    const name =
+        String(
+            username || ""
+        ).trim();
 
-    if (!username) {
-
+    if (!name) {
         throw new Error(
             "PPPoE username is required."
         );
-
     }
 
+    const rows =
+        await api.write(
+            "/ppp/secret/print",
+            [
+                "?name=" + name
+            ]
+        );
 
-    return withRouter(
-        router,
-        async api => {
+    if (
+        !Array.isArray(rows) ||
+        !rows.length
+    ) {
+        throw new Error(
+            "PPPoE secret not found on MikroTik: " +
+            name
+        );
+    }
 
-            const result =
-                await api.write(
-                    "/ppp/secret/print",
-                    [
-                        `?name=${username}`
-                    ]
-                );
-
-
-            return first(result);
-
-        }
-    );
-
+    return rows[0];
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| CREATE PPP SECRET
+| RESOLVE PPP PROFILE NAME
+|--------------------------------------------------------------------------
+|
+| mikrotik_packages.profile_id stores
+| RouterOS profile .id such as:
+|
+|     *C
+|     *9
+|
+| PPP secret profile expects the
+| actual profile NAME.
 |--------------------------------------------------------------------------
 */
 
-async function createSecret(
-    router,
-    {
-        username,
-        password,
-        profile,
-        service = "pppoe",
-        comment = ""
-    }
+async function resolveProfileName(
+    api,
+    profileIdOrName
 ) {
+    const requested =
+        String(
+            profileIdOrName || ""
+        ).trim();
 
-    if (!username) {
-
+    if (!requested) {
         throw new Error(
-            "PPPoE username is required."
+            "MikroTik PPP profile is required."
         );
-
     }
 
-
-    if (!password) {
-
-        throw new Error(
-            "PPPoE password is required."
+    const rows =
+        await api.write(
+            "/ppp/profile/print"
         );
 
+    if (!Array.isArray(rows)) {
+        throw new Error(
+            "Unable to read MikroTik PPP profiles."
+        );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Exact .id match
+    |--------------------------------------------------------------------------
+    */
 
-    return withRouter(
-        router,
-        async api => {
+    const byId =
+        rows.find(
+            profile =>
+                String(
+                    profile[".id"] || ""
+                ).trim() ===
+                requested
+        );
 
-            /*
-            |------------------------------------------------------------------
-            | CHECK EXISTING USER
-            |------------------------------------------------------------------
-            */
+    if (byId) {
+        const name =
+            String(
+                byId.name || ""
+            ).trim();
 
-            const existing =
-                await api.write(
-                    "/ppp/secret/print",
-                    [
-                        `?name=${username}`
-                    ]
-                );
-
-
-            if (
-                Array.isArray(existing) &&
-                existing.length > 0
-            ) {
-
-                throw new Error(
-                    `PPPoE username "${username}" already exists on MikroTik.`
-                );
-
-            }
-
-
-            /*
-            |------------------------------------------------------------------
-            | CREATE PPP SECRET
-            |------------------------------------------------------------------
-            */
-
-            const command = [
-
-                "/ppp/secret/add",
-
-                `=name=${username}`,
-
-                `=password=${password}`,
-
-                `=service=${service}`
-
-            ];
-
-
-            if (profile) {
-
-                command.push(
-                    `=profile=${profile}`
-                );
-
-            }
-
-
-            if (comment) {
-
-                command.push(
-                    `=comment=${comment}`
-                );
-
-            }
-
-
-            const result =
-                await api.write(
-                    command
-                );
-
-
-            /*
-            |------------------------------------------------------------------
-            | RETURN CREATION RESULT
-            |------------------------------------------------------------------
-            |
-            | RouterOS normally returns the newly-created
-            | item ID in the "ret" field.
-            |
-            */
-
-            const created =
-                first(result);
-
-            return {
-                result,
-                id:
-                    created.ret ||
-                    created[".id"] ||
-                    null,
-                username
-            };
-
+        if (!name) {
+            throw new Error(
+                "MikroTik profile name is empty for profile ID: " +
+                requested
+            );
         }
-    );
 
+        return name;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Name already supplied
+    |--------------------------------------------------------------------------
+    */
+
+    const byName =
+        rows.find(
+            profile =>
+                String(
+                    profile.name || ""
+                ).trim() ===
+                requested
+        );
+
+    if (byName) {
+        return String(
+            byName.name
+        ).trim();
+    }
+
+    throw new Error(
+        "MikroTik PPP profile not found: " +
+        requested
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SET CUSTOMER CONNECTION
+|--------------------------------------------------------------------------
+*/
+
+async function setCustomerConnection(
+    customer,
+    on
+) {
+    const r =
+        await router(
+            customer.mikrotik_id
+        );
+
+    const api =
+        await connect(r);
+
+    try {
+        const secret =
+            await findSecret(
+                api,
+                customer.pppoe_username
+            );
+
+        const secretId =
+            secret[".id"];
+
+        if (!secretId) {
+            throw new Error(
+                "MikroTik PPP secret ID was not found."
+            );
+        }
+
+        await api.write(
+            "/ppp/secret/set",
+            [
+                "=.id=" +
+                    secretId,
+
+                "=disabled=" +
+                    (
+                        on
+                            ? "no"
+                            : "yes"
+                    )
+            ]
+        );
+
+        return true;
+
+    } finally {
+        await close(api);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SYNC CUSTOMER
+|--------------------------------------------------------------------------
+*/
+
+async function syncCustomer(
+    customer,
+    body = {}
+) {
+    const r =
+        await router(
+            customer.mikrotik_id
+        );
+
+    const api =
+        await connect(r);
+
+    try {
+        const username =
+            String(
+                body.pppoe_username ||
+                customer.pppoe_username ||
+                ""
+            ).trim();
+
+        const secret =
+            await findSecret(
+                api,
+                username
+            );
+
+        const secretId =
+            secret[".id"];
+
+        if (!secretId) {
+            throw new Error(
+                "MikroTik PPP secret ID was not found."
+            );
+        }
+
+        const commands = [
+            "=.id=" +
+                secretId
+        ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | PASSWORD
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            body.pppoe_password !== undefined &&
+            body.pppoe_password !== null &&
+            String(
+                body.pppoe_password
+            ) !== ""
+        ) {
+            commands.push(
+                "=password=" +
+                String(
+                    body.pppoe_password
+                )
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | COMMENT
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            body.comment !== undefined &&
+            body.comment !== null
+        ) {
+            commands.push(
+                "=comment=" +
+                String(
+                    body.comment
+                )
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROFILE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            body.profile_id !== undefined &&
+            body.profile_id !== null &&
+            String(
+                body.profile_id
+            ).trim()
+        ) {
+            const profileName =
+                await resolveProfileName(
+                    api,
+                    body.profile_id
+                );
+
+            commands.push(
+                "=profile=" +
+                profileName
+            );
+        }
+
+        await api.write(
+            "/ppp/secret/set",
+            commands
+        );
+
+        return true;
+
+    } finally {
+        await close(api);
+    }
 }
 
 
@@ -386,261 +561,48 @@ async function createSecret(
 |--------------------------------------------------------------------------
 | DELETE PPP SECRET
 |--------------------------------------------------------------------------
-|
-| Deletes only the requested PPP secret.
-|
-| Prefer passing the exact RouterOS ".id" / "ret" returned
-| by createSecret().
-|
-| If an ID is not available, username can be used as fallback.
-|--------------------------------------------------------------------------
 */
 
-async function deleteSecret(
-    router,
-    {
-        id = "",
-        username = ""
-    } = {}
+async function deleteCustomer(
+    customer
 ) {
-
-    if (!id && !username) {
-
-        throw new Error(
-            "MikroTik PPP secret ID or username is required for deletion."
+    const r =
+        await router(
+            customer.mikrotik_id
         );
 
-    }
-
-
-    return withRouter(
-        router,
-        async api => {
-
-            let secretId =
-                String(id || "").trim();
-
-
-            /*
-            |------------------------------------------------------------------
-            | FIND BY USERNAME WHEN ID IS NOT AVAILABLE
-            |------------------------------------------------------------------
-            */
-
-            if (!secretId && username) {
-
-                const result =
-                    await api.write(
-                        "/ppp/secret/print",
-                        [
-                            `?name=${username}`
-                        ]
-                    );
-
-
-                const secret =
-                    first(result);
-
-
-                if (
-                    !secret ||
-                    !secret[".id"]
-                ) {
-
-                    /*
-                    |----------------------------------------------------------
-                    | Already absent = nothing to delete
-                    |----------------------------------------------------------
-                    */
-
-                    return {
-                        success: true,
-                        deleted: false,
-                        alreadyAbsent: true,
-                        username
-                    };
-
-                }
-
-
-                secretId =
-                    secret[".id"];
-
-            }
-
-
-            /*
-            |------------------------------------------------------------------
-            | DELETE EXACT SECRET
-            |------------------------------------------------------------------
-            */
-
-            if (!secretId) {
-
-                throw new Error(
-                    `Unable to determine MikroTik PPP secret ID for "${username}".`
-                );
-
-            }
-
-
-            const result =
-                await api.write(
-                    "/ppp/secret/remove",
-                    [
-                        `=.id=${secretId}`
-                    ]
-                );
-
-
-            return {
-                success: true,
-                deleted: true,
-                id: secretId,
-                username,
-                result
-            };
-
-        }
-    );
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| UPDATE PPP SECRET
-|--------------------------------------------------------------------------
-*/
-
-async function updateSecret(
-    router,
-    {
-        username,
-        oldUsername = "",
-        password = "",
-        profile = "",
-        service = "pppoe",
-        comment = ""
-    }
-) {
-
-    if (!username) {
-
-        throw new Error(
-            "PPPoE username is required."
-        );
-
-    }
-
-
-    return withRouter(
-        router,
-        async api => {
-
-            /*
-            |------------------------------------------------------------------
-            | FIND EXISTING SECRET
-            |------------------------------------------------------------------
-            */
-
-            const searchName =
-                oldUsername ||
-                username;
-
-
-            const result =
-                await api.write(
-                    "/ppp/secret/print",
-                    [
-                        `?name=${searchName}`
-                    ]
-                );
-
-
-            const secret =
-                first(result);
-
-
-            if (
-                !secret ||
-                !secret[".id"]
-            ) {
-
-                throw new Error(
-                    `PPPoE username "${searchName}" was not found on MikroTik.`
-                );
-
-            }
-
-
-            /*
-            |------------------------------------------------------------------
-            | UPDATE
-            |------------------------------------------------------------------
-            */
-
-            const command = [
-
-                "/ppp/secret/set",
-
-                `=.id=${secret[".id"]}`
-
-            ];
-
-
-            if (username) {
-
-                command.push(
-                    `=name=${username}`
-                );
-
-            }
-
-
-            if (password) {
-
-                command.push(
-                    `=password=${password}`
-                );
-
-            }
-
-
-            if (profile) {
-
-                command.push(
-                    `=profile=${profile}`
-                );
-
-            }
-
-
-            if (service) {
-
-                command.push(
-                    `=service=${service}`
-                );
-
-            }
-
-
-            if (comment !== undefined) {
-
-                command.push(
-                    `=comment=${comment}`
-                );
-
-            }
-
-
-            return api.write(
-                command
+    const api =
+        await connect(r);
+
+    try {
+        const secret =
+            await findSecret(
+                api,
+                customer.pppoe_username
             );
 
-        }
-    );
+        const secretId =
+            secret[".id"];
 
+        if (!secretId) {
+            throw new Error(
+                "MikroTik PPP secret ID was not found."
+            );
+        }
+
+        await api.write(
+            "/ppp/secret/remove",
+            [
+                "=.id=" +
+                    secretId
+            ]
+        );
+
+        return true;
+
+    } finally {
+        await close(api);
+    }
 }
 
 
@@ -651,23 +613,12 @@ async function updateSecret(
 */
 
 module.exports = {
-
-    withRouter,
-
+    router,
+    connect,
     status,
-
     profiles,
-
-    secrets,
-
     active,
-
-    findSecret,
-
-    createSecret,
-
-    deleteSecret,
-
-    updateSecret
-
+    setCustomerConnection,
+    syncCustomer,
+    deleteCustomer
 };

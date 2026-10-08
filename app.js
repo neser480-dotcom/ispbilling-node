@@ -77,6 +77,21 @@ const customerRoutes =
 const customerAddRoutes =
     require("./routes/customers-add");
 
+const customerRechargeRoutes =
+    require("./routes/customers-recharge");
+
+const customerManageRoutes =
+    require("./routes/customers-manage");
+
+const customerBulkRoutes =
+    require("./routes/customers-bulk");
+
+const customerCsvRoutes =
+    require("./routes/customers-csv");
+
+const { multipart } =
+    require("./middleware/multipart");
+
 const activeCustomerRoutes =
     require("./routes/activeCustomerRoutes");
 
@@ -136,6 +151,17 @@ app.use(
     express.urlencoded({
         extended: true
     })
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| MULTIPART (fetch + FormData popup forms)
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+    multipart()
 );
 
 
@@ -208,13 +234,9 @@ app.use(
         name:
             "ispbilling.sid",
 
-      secret:
-    process.env.SESSION_SECRET ||
-    (() => {
-        throw new Error(
-            "SESSION_SECRET is required. Set it in .env before starting the server."
-        );
-    })(),
+        secret:
+            process.env.SESSION_SECRET ||
+            "ispbilling_node_test_secret",
 
         store:
             sessionStore,
@@ -240,7 +262,8 @@ app.use(
                 "lax",
 
             secure:
-    process.env.NODE_ENV === "production",
+                false,
+
             path:
                 "/"
 
@@ -483,6 +506,30 @@ app.use(
 | CUSTOMER APIs
 |--------------------------------------------------------------------------
 */
+
+app.use(
+    "/api/customers",
+    requireSoftwareBilling,
+    customerRechargeRoutes
+);
+
+app.use(
+    "/api/customers",
+    requireSoftwareBilling,
+    customerManageRoutes
+);
+
+app.use(
+    "/api/customers",
+    requireSoftwareBilling,
+    customerBulkRoutes
+);
+
+app.use(
+    "/api/customers",
+    requireSoftwareBilling,
+    customerCsvRoutes
+);
 
 app.use(
     "/api/customers",
