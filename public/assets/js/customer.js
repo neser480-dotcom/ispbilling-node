@@ -2279,24 +2279,51 @@
         );
 
 
-        const csrf =
-            getCsrfToken();
 
-
-        if (csrf) {
-
-            if (
-                !formData.has(
-                    "csrf_token"
-                )
-            ) {
-
-                formData.append(
-                    "csrf_token",
-                    csrf
-                );
-            }
+const csrfResponse = await fetch(
+    "/api/csrf-token",
+    {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
         }
+    }
+);
+
+let csrfData = {};
+
+try {
+    csrfData = await csrfResponse.json();
+} catch (error) {
+    throw new Error(
+        "Unable to read CSRF token response. Please refresh the page."
+    );
+}
+
+const csrfToken = String(
+    csrfData?.csrf_token || ""
+).trim();
+
+if (!csrfResponse.ok || !csrfToken) {
+    throw new Error(
+        csrfData?.message ||
+        "Unable to load CSRF token. Please refresh the page."
+    );
+}
+
+const csrfInput = document.getElementById(
+    "csrfTokenInput"
+);
+
+if (csrfInput) {
+    csrfInput.value = csrfToken;
+}
+
+// Replace any stale or empty token in FormData.
+formData.set("csrf_token", csrfToken);
+
 
 
         let url =
