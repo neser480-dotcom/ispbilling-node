@@ -1,0 +1,301 @@
+/*
+|--------------------------------------------------------------------------
+| SOFTWARE BILLING
+|--------------------------------------------------------------------------
+*/
+
+.billing-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .06);
+    box-sizing: border-box;
+}
+.billing-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.billing-head h2 {
+    margin: 0 0 5px;
+}
+
+.billing-head h3 {
+    margin: 0 0 5px;
+}
+
+.billing-head p {
+    color: #6b7280;
+    margin: 0;
+}
+
+.badge-unpaid {
+    background: #fff3cd;
+    color: #856404;
+    padding: 7px 11px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.badge-paid {
+    background: #d1e7dd;
+    color: #0f5132;
+    padding: 7px 11px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.summary > div {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.summary small {
+    display: block;
+    color: #6b7280;
+    margin-bottom: 5px;
+}
+
+.summary strong {
+    display: block;
+    font-size: 16px;
+    color: #111827;
+}
+
+.gateways {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin: 15px 0;
+}
+
+.gateway,
+.manual {
+    display: inline-block;
+    background: #2563eb;
+    color: #fff !important;
+    text-decoration: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 16px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.gateway:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.manual {
+    background: #198754;
+}
+
+.notice {
+    background: #fff3cd;
+    color: #664d03;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.notice.success {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.notice.error {
+    background: #f8d7da;
+    color: #842029;
+}
+
+form label {
+    display: block;
+    margin: 14px 0 6px;
+    font-weight: 600;
+}
+
+form input,
+form select,
+form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font: inherit;
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+form button {
+    font: inherit;
+}
+
+.back {
+    display: inline-block;
+    margin-top: 18px;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.back:hover {
+    text-decoration: underline;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| BILLING TABLE
+|--------------------------------------------------------------------------
+*/
+
+.billing-history-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.billing-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.billing-history-table th,
+.billing-history-table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.billing-history-table th {
+    background: #f9fafb;
+    font-weight: 700;
+}
+
+.billing-history-table .status-paid {
+    color: #198754;
+    font-weight: 700;
+}
+
+.billing-history-table .status-unpaid {
+    color: #856404;
+    font-weight: 700;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| BOOTSTRAP TABLE SUPPORT
+|--------------------------------------------------------------------------
+*/
+
+.billing-card .table {
+    margin-top: 12px;
+    margin-bottom: 0;
+}
+
+.billing-card .table th {
+    white-space: nowrap;
+    background: #f9fafb;
+}
+
+.billing-card .table td {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| RECEIPT BUTTON
+|--------------------------------------------------------------------------
+*/
+
+.receipt-btn {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 7px;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.receipt-btn:hover {
+    opacity: .9;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| LOADING
+|--------------------------------------------------------------------------
+*/
+
+.billing-loading {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| RESPONSIVE
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 700px) {
+
+    .billing-card {
+        margin: 0;
+        padding: 16px;
+    }
+
+    .summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .billing-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .gateways {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 450px) {
+
+    .summary {
+        grid-template-columns: 1fr;
+    }
+
+    .billing-card {
+        border-radius: 12px;
+    }
+}

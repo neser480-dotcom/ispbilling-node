@@ -1,0 +1,326 @@
+/* ==========================================
+NETWORK FAULT MONITORING
+========================================== */
+
+.main-content {
+margin-left: 260px;
+margin-top: 75px;
+padding: 20px;
+background: #f5f7fb;
+min-height: 100vh;
+}
+
+/* ==========================================
+HEADER
+========================================== */
+
+.monitor-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 18px;
+}
+
+.monitor-header h3 {
+font-size: 24px;
+font-weight: 700;
+color: #1f2937;
+margin: 0;
+}
+
+.monitor-header small {
+color: #6b7280;
+}
+
+/* ==========================================
+MONITOR CARDS
+========================================== */
+
+.monitor-card {
+border: none;
+border-radius: 10px;
+overflow: hidden;
+box-shadow: 0 3px 10px rgba(0, 0, 0, .07);
+transition: .2s;
+}
+
+.monitor-card:hover {
+transform: translateY(-2px);
+}
+
+.monitor-card .card-body {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 14px 18px;
+}
+
+.monitor-card h6 {
+margin: 0;
+font-size: 13px;
+font-weight: 600;
+opacity: .9;
+}
+
+.monitor-card h2 {
+margin: 5px 0 0;
+font-size: 25px;
+line-height: 1.1;
+font-weight: 700;
+}
+
+.monitor-card i {
+font-size: 30px;
+opacity: .25;
+}
+
+/* ==========================================
+SUMMARY CARDS
+3 CARDS IN ONE ROW
+========================================== */
+
+.main-content > .row.g-3.mb-4:first-of-type {
+display: grid;
+grid-template-columns: repeat(3, minmax(0, 1fr));
+gap: 14px;
+margin-left: 0;
+margin-right: 0;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type > .col-md-3 {
+width: 100%;
+max-width: 100%;
+padding-left: 0;
+padding-right: 0;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type .monitor-card {
+min-height: 78px;
+margin-bottom: 0;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type .monitor-card .card-body {
+min-height: 78px;
+padding: 12px 16px;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type .monitor-card h6 {
+font-size: 13px;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type .monitor-card h2 {
+font-size: 24px;
+margin-top: 4px;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type .monitor-card i {
+font-size: 28px;
+}
+
+/* ==========================================
+COLORS
+========================================== */
+
+.bg-blue {
+background: linear-gradient(
+135deg,
+#2563eb,
+#1d4ed8
+);
+color: #fff;
+}
+
+.bg-green {
+background: linear-gradient(
+135deg,
+#16a34a,
+#15803d
+);
+color: #fff;
+}
+
+.bg-red {
+background: linear-gradient(
+135deg,
+#dc2626,
+#b91c1c
+);
+color: #fff;
+}
+
+.bg-orange {
+background: linear-gradient(
+135deg,
+#ea580c,
+#c2410c
+);
+color: #fff;
+}
+
+/* ==========================================
+SYSTEM CARD
+========================================== */
+
+.system-card {
+border: none;
+border-radius: 10px;
+background: #fff;
+box-shadow: 0 3px 10px rgba(0, 0, 0, .07);
+overflow: hidden;
+}
+
+.system-card .card-header {
+background: #2563eb;
+color: #fff;
+font-weight: 600;
+padding: 11px 15px;
+}
+
+.system-card .card-header small {
+font-size: 12px;
+opacity: .9;
+}
+
+.system-card table {
+margin: 0;
+}
+
+/* ==========================================
+FAULT TABLE
+========================================== */
+
+.system-card thead {
+background: #1e293b;
+color: #fff;
+}
+
+.system-card th {
+font-size: 13px;
+white-space: nowrap;
+padding: 10px 12px;
+}
+
+.system-card td {
+font-size: 13px;
+padding: 10px 12px;
+}
+
+.system-card tbody tr:hover {
+background: #eef5ff;
+}
+
+/* ==========================================
+FILTER CARD
+========================================== */
+
+.monitor-card .form-label {
+font-size: 13px;
+font-weight: 600;
+margin-bottom: 5px;
+}
+
+.monitor-card .form-control,
+.monitor-card .form-select {
+font-size: 13px;
+min-height: 38px;
+}
+
+.monitor-card .input-group-text {
+font-size: 13px;
+min-height: 38px;
+}
+
+/* ==========================================
+BUTTONS
+========================================== */
+
+.btn-monitor {
+border-radius: 7px;
+font-size: 13px;
+padding: 7px 13px;
+}
+
+.system-card .btn-sm {
+font-size: 12px;
+padding: 5px 9px;
+}
+
+/* ==========================================
+PAGINATION
+========================================== */
+
+.monitor-pagination {
+display: flex;
+justify-content: flex-end;
+}
+
+.monitor-pagination .pagination {
+margin-bottom: 0;
+}
+
+.monitor-pagination .page-link {
+min-width: 34px;
+font-size: 12px;
+text-align: center;
+padding: 6px 9px;
+}
+
+/* ==========================================
+CARD FOOTER
+========================================== */
+
+.system-card .card-footer {
+background: #fff;
+border-top: 1px solid #e5e7eb;
+padding: 10px 14px;
+}
+
+/* ==========================================
+RESPONSIVE
+========================================== */
+
+@media (max-width: 768px) {
+
+
+.main-content {
+    margin-left: 0;
+    padding: 15px;
+}
+
+.monitor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.main-content > .row.g-3.mb-4:first-of-type {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+}
+
+@media (max-width: 480px) {
+
+.main-content > .row.g-3.mb-4:first-of-type {
+    grid-template-columns: 1fr;
+}
+
+.monitor-card .card-body {
+    padding: 12px 14px;
+}
+
+.monitor-card h2 {
+    font-size: 22px;
+}
+
+.monitor-card i {
+    font-size: 26px;
+}
+
+.system-card table {
+    min-width: 1100px;
+}
+
+
+}

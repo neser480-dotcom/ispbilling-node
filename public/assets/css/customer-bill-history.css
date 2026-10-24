@@ -1,0 +1,449 @@
+
+/* =========================================================
+   CUSTOMER BILL HISTORY POPUP
+   File: public/assets/css/customer-bill-history.css
+========================================================= */
+
+#customerBillHistoryModal,
+#customerBillHistoryModal * {
+    box-sizing: border-box;
+}
+
+#customerBillHistoryModal {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(15, 23, 42, 0.58);
+
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* JavaScript uses .open */
+#customerBillHistoryModal.open {
+    display: flex;
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Modal dialog */
+#customerBillHistoryModal .cbh-dialog {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    max-width: 1050px;
+    max-height: 90vh;
+
+    overflow: hidden;
+
+    background: #fff;
+
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+
+    animation: cbhPopupIn 0.2s ease-out;
+}
+
+/* Header */
+#customerBillHistoryModal .cbh-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+    padding: 18px 22px;
+
+    color: #fff;
+
+    background: linear-gradient(135deg, #164e9b, #2563eb);
+}
+
+#customerBillHistoryModal .cbh-header h2,
+#customerBillHistoryModal .cbh-header h5 {
+    margin: 0;
+
+    color: #fff;
+
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+#customerBillHistoryModal #cbhCustomerInfo {
+    margin-top: 5px;
+
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 13px;
+
+    overflow-wrap: anywhere;
+}
+
+/* Close button */
+#customerBillHistoryModal .cbh-close {
+    flex: 0 0 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 36px;
+    height: 36px;
+    padding: 0;
+
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 9px;
+
+    font-size: 24px;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+#customerBillHistoryModal .cbh-close:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+/* Summary */
+#customerBillHistoryModal .cbh-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 12px;
+    padding: 16px 20px 0;
+}
+
+#customerBillHistoryModal .cbh-summary > div,
+#customerBillHistoryModal .cbh-summary-item {
+    min-width: 0;
+    padding: 15px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+#customerBillHistoryModal .cbh-summary span {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #64748b;
+    font-size: 12px;
+}
+
+#customerBillHistoryModal .cbh-summary strong {
+    display: block;
+
+    color: #0f172a;
+
+    font-size: 20px;
+    font-weight: 750;
+
+    overflow-wrap: anywhere;
+}
+
+/* Scrollable body */
+#customerBillHistoryModal .cbh-body {
+    flex: 1 1 auto;
+
+    min-height: 120px;
+    padding: 20px;
+
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+#customerBillHistoryModal .cbh-message,
+#customerBillHistoryModal .cbh-empty,
+#customerBillHistoryModal .cbh-loading,
+#customerBillHistoryModal .cbh-error {
+    padding: 35px 15px;
+
+    text-align: center;
+    color: #64748b;
+}
+
+#customerBillHistoryModal .cbh-error {
+    color: #dc2626;
+}
+
+#customerBillHistoryModal .cbh-muted {
+    margin-top: 4px;
+
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+#customerBillHistoryModal .cbh-note {
+    min-width: 120px;
+    max-width: 240px;
+
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* Table wrapper */
+#customerBillHistoryModal .cbh-table-wrap {
+    width: 100%;
+
+    overflow: auto;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+/* Payment table */
+#customerBillHistoryModal .cbh-table {
+    width: 100%;
+    min-width: 1050px;
+
+    margin: 0;
+
+    border-collapse: collapse;
+    border-spacing: 0;
+
+    background: #fff;
+
+    font-size: 13px;
+}
+
+#customerBillHistoryModal .cbh-table th {
+    padding: 12px 14px;
+
+    color: #334155;
+    background: #f1f5f9;
+
+    border-bottom: 1px solid #e2e8f0;
+
+    text-align: left;
+    white-space: nowrap;
+
+    font-weight: 700;
+}
+
+#customerBillHistoryModal .cbh-table td {
+    padding: 12px 14px;
+
+    color: #334155;
+
+    border-bottom: 1px solid #edf2f7;
+
+    text-align: left;
+    vertical-align: middle;
+}
+
+#customerBillHistoryModal .cbh-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+#customerBillHistoryModal .cbh-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Delete / cancel payment */
+#customerBillHistoryModal .cbh-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+    padding: 6px 10px;
+
+    color: #dc2626;
+    background: #fff;
+
+    border: 1px solid #fecaca;
+    border-radius: 7px;
+
+    font-size: 12px;
+    white-space: nowrap;
+
+    cursor: pointer;
+}
+
+#customerBillHistoryModal .cbh-delete:hover {
+    color: #fff;
+    background: #dc2626;
+
+    border-color: #dc2626;
+}
+
+#customerBillHistoryModal .cbh-delete:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Footer */
+#customerBillHistoryModal .cbh-footer {
+    flex: 0 0 auto;
+
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+    padding: 14px 20px;
+
+    background: #f8fafc;
+
+    border-top: 1px solid #e2e8f0;
+}
+
+#customerBillHistoryModal .cbh-button {
+    padding: 9px 18px;
+
+    color: #334155;
+    background: #fff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+#customerBillHistoryModal .cbh-button:hover {
+    background: #f1f5f9;
+}
+
+/* Focus accessibility */
+#customerBillHistoryModal button:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.45);
+    outline-offset: 2px;
+}
+
+/* Animation */
+@keyframes cbhPopupIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.99);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    #customerBillHistoryModal {
+        padding: 8px;
+    }
+
+    #customerBillHistoryModal .cbh-dialog {
+        max-height: 94vh;
+        border-radius: 12px;
+    }
+
+    #customerBillHistoryModal .cbh-header {
+        padding: 14px;
+    }
+
+    #customerBillHistoryModal .cbh-header h2,
+    #customerBillHistoryModal .cbh-header h5 {
+        font-size: 16px;
+    }
+
+    #customerBillHistoryModal .cbh-body {
+        padding: 12px;
+    }
+
+    #customerBillHistoryModal .cbh-summary {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px 12px 0;
+    }
+
+    #customerBillHistoryModal .cbh-summary > div,
+    #customerBillHistoryModal .cbh-summary-item {
+        padding: 12px;
+    }
+
+    #customerBillHistoryModal .cbh-summary strong {
+        font-size: 17px;
+    }
+
+    #customerBillHistoryModal .cbh-footer {
+        padding: 12px;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    #customerBillHistoryModal .cbh-dialog {
+        animation: none;
+    }
+}
+
+
+/* =========================================================
+   CUSTOMER BILL HISTORY - SHOW ABOVE SIDEBAR / TOPBAR
+========================================================= */
+
+body > #customerBillHistoryModal,
+#customerBillHistoryModal {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+
+    z-index: 2147483647 !important;
+
+    isolation: isolate;
+
+    align-items: center;
+    justify-content: center;
+}
+
+/* Show popup only when JavaScript adds .open */
+body > #customerBillHistoryModal.open,
+#customerBillHistoryModal.open {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Keep dialog above the overlay background */
+#customerBillHistoryModal .cbh-dialog {
+    position: relative;
+    z-index: 1;
+
+    max-height: calc(100dvh - 40px);
+}
+
+/* Prevent background page scrolling while popup is open */
+body.cbh-modal-open {
+    overflow: hidden !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    #customerBillHistoryModal {
+        padding: 8px !important;
+    }
+
+    #customerBillHistoryModal .cbh-dialog {
+        max-height: calc(100dvh - 16px);
+    }
+}

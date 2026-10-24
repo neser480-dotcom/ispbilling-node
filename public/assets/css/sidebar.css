@@ -1,0 +1,392 @@
+/* =========================================================
+   NETFEE SIDEBAR
+   Fixed 260px Desktop
+   Overlay Mobile
+========================================================= */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 260px;
+    height: 100vh;
+
+    margin: 0;
+    padding: 0;
+
+    background: #fff;
+
+    border-right: 1px solid #e5e7eb;
+
+    z-index: 100000;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    -webkit-overflow-scrolling: touch;
+
+    box-shadow: 2px 0 10px rgba(0, 0, 0, .04);
+}
+
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+.sidebar-profile {
+    padding: 25px 15px;
+
+    text-align: center;
+
+    border-bottom: 1px solid #eee;
+
+    background: #fff;
+}
+
+.sidebar-profile h5 {
+    margin: 0;
+
+    color: #2563eb;
+
+    font-size: 18px;
+
+    font-weight: 700;
+}
+
+.sidebar-profile p {
+    margin: 4px 0 0;
+
+    color: #6b7280;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   SIDEBAR LIST
+========================================================= */
+
+.sidebar ul {
+    padding: 15px 12px;
+
+    margin: 0;
+
+    width: 100%;
+}
+
+.sidebar ul li {
+    list-style: none;
+
+    margin: 0 0 6px;
+
+    padding: 0;
+}
+
+
+/* =========================================================
+   SIDEBAR LINKS
+========================================================= */
+
+.sidebar ul li a {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    width: 100%;
+
+    min-height: 48px;
+
+    height: 48px;
+
+    padding: 0 15px;
+
+    background: #fff;
+
+    color: #2563eb;
+
+    text-decoration: none;
+
+    border-radius: 10px;
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    transition:
+        background .2s ease,
+        color .2s ease;
+}
+
+.sidebar ul li a i {
+    width: 22px;
+
+    min-width: 22px;
+
+    color: #2563eb;
+
+    font-size: 18px;
+
+    text-align: center;
+}
+
+.sidebar ul li a span {
+    margin-left: auto;
+
+    color: #2563eb;
+}
+
+.sidebar ul li a:hover {
+    background: #eff6ff;
+}
+
+
+/* =========================================================
+   SUBMENU
+========================================================= */
+
+.submenu {
+    display: flex !important;
+
+    align-items: center;
+
+    width: 100%;
+
+    height: 40px !important;
+
+    min-height: 40px;
+
+    margin: 3px 0 !important;
+
+    padding-left: 45px !important;
+
+    color: #2563eb !important;
+
+    background: #fafafa !important;
+
+    border-radius: 8px !important;
+
+    font-size: 13px !important;
+}
+
+
+/* =========================================================
+   BOOTSTRAP COLLAPSE
+========================================================= */
+
+.sidebar .collapse {
+    display: none;
+}
+
+.sidebar .collapse.show {
+    display: block;
+}
+
+
+/* =========================================================
+   MAIN CONTENT COMPATIBILITY
+========================================================= */
+
+.main-content {
+    position: relative;
+
+    margin-left: 260px;
+
+    width: calc(100% - 260px);
+
+    min-height: 100vh;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MOBILE SIDEBAR
+========================================================= */
+
+@media (max-width: 850px) {
+
+    .sidebar {
+        position: fixed;
+
+        top: 0;
+        left: -260px;
+
+        width: 260px;
+        height: 100vh;
+
+        z-index: 100000;
+
+        transition:
+            left .3s ease;
+
+        box-shadow:
+            5px 0 25px rgba(0, 0, 0, .15);
+    }
+
+    .sidebar.active {
+        left: 0;
+
+        z-index: 100000;
+    }
+
+    .main-content {
+        margin-left: 0;
+
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================================
+   MENU BUTTON
+========================================================= */
+
+.menu-btn {
+    width: 40px;
+    height: 40px;
+
+    min-width: 40px;
+
+    border: none;
+
+    background:
+        var(--theme-primary, #2563eb);
+
+    color: #fff;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    font-size: 20px;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+}
+
+.menu-btn:hover {
+    background:
+        var(--theme-primary-hover, #1d4ed8);
+}
+
+
+/* =========================================================
+   MOBILE MENU BUTTON
+========================================================= */
+
+@media (max-width: 850px) {
+
+    .menu-btn {
+        display: flex;
+    }
+
+}
+
+
+/* =========================================================
+   DESKTOP
+========================================================= */
+
+@media (min-width: 851px) {
+
+    .menu-btn {
+        display: none;
+    }
+
+}
+
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark-mode .sidebar {
+    background: #111827;
+
+    border-color: #374151;
+
+    box-shadow:
+        2px 0 10px rgba(0, 0, 0, .25);
+}
+
+body.dark-mode .sidebar-profile {
+    background: #111827;
+
+    border-color: #374151;
+}
+
+body.dark-mode .sidebar-profile h5 {
+    color: #60a5fa;
+}
+
+body.dark-mode .sidebar-profile p {
+    color: #9ca3af;
+}
+
+body.dark-mode .sidebar ul li a {
+    background: #111827;
+
+    color: #60a5fa;
+}
+
+body.dark-mode .sidebar ul li a i,
+body.dark-mode .sidebar ul li a span {
+    color: #60a5fa;
+}
+
+body.dark-mode .sidebar ul li a:hover {
+    background: #1f2937;
+}
+
+body.dark-mode .submenu {
+    background: #1f2937 !important;
+
+    color: #60a5fa !important;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+body.dark-mode .sidebar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+}

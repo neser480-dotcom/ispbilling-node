@@ -1,0 +1,1291 @@
+/* =========================================================
+   ISP BILLING LOGIN
+   RESPONSIVE GLASSMORPHISM DESIGN
+========================================================= */
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    min-height: 100%;
+    font-size: 16px;
+}
+
+body {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(37, 99, 235, 0.30),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at 85% 80%,
+            rgba(124, 58, 237, 0.30),
+            transparent 35%
+        ),
+        linear-gradient(
+            135deg,
+            #071426 0%,
+            #0b1d36 45%,
+            #111827 100%
+        );
+
+    color: #ffffff;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+.background-shape {
+    position: fixed;
+
+    border-radius: 50%;
+
+    pointer-events: none;
+
+    filter: blur(2px);
+
+    z-index: 0;
+}
+
+.shape-one {
+    width: 320px;
+    height: 320px;
+
+    top: -100px;
+    left: -80px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(59, 130, 246, 0.75),
+            rgba(59, 130, 246, 0.05) 70%,
+            transparent 100%
+        );
+}
+
+.shape-two {
+    width: 380px;
+    height: 380px;
+
+    right: -130px;
+    bottom: -130px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(139, 92, 246, 0.70),
+            rgba(139, 92, 246, 0.05) 70%,
+            transparent 100%
+        );
+}
+
+.shape-three {
+    width: 180px;
+    height: 180px;
+
+    top: 42%;
+    left: 8%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(6, 182, 212, 0.35),
+            transparent 70%
+        );
+}
+
+
+/* =========================================================
+   MAIN CONTAINER
+========================================================= */
+
+.glass-container {
+    position: relative;
+
+    z-index: 2;
+
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 40px 20px;
+}
+
+
+/* =========================================================
+   GLASS CARD
+========================================================= */
+
+.glass-card {
+    position: relative;
+
+    width: 100%;
+    max-width: 430px;
+
+    padding: 42px 38px 28px;
+
+    border: 1px solid rgba(255, 255, 255, 0.20);
+
+    border-radius: 26px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.16),
+            rgba(255, 255, 255, 0.055)
+        );
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.20);
+
+    overflow: hidden;
+}
+
+
+/* glass highlight */
+
+.glass-card::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.55),
+            transparent
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   LOGO
+========================================================= */
+
+.logo {
+    text-align: center;
+
+    margin-bottom: 30px;
+}
+
+.logo-icon {
+    width: 68px;
+    height: 68px;
+
+    margin: 0 auto 14px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #3b82f6,
+            #6366f1,
+            #8b5cf6
+        );
+
+    color: #ffffff;
+
+    font-size: 20px;
+    font-weight: 800;
+
+    letter-spacing: 1px;
+
+    box-shadow:
+        0 12px 30px rgba(59, 130, 246, 0.35);
+
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.logo h1 {
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 29px;
+    line-height: 1.2;
+
+    font-weight: 750;
+
+    letter-spacing: -0.5px;
+
+    text-transform: lowercase;
+}
+
+.logo p {
+    margin-top: 8px;
+
+    color: rgba(255, 255, 255, 0.68);
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.error {
+    width: 100%;
+
+    display: flex;
+
+    align-items: flex-start;
+    gap: 10px;
+
+    margin-bottom: 20px;
+
+    padding: 12px 14px;
+
+    border: 1px solid rgba(248, 113, 113, 0.30);
+
+    border-radius: 12px;
+
+    background:
+        rgba(127, 29, 29, 0.30);
+
+    color: #fecaca;
+
+    font-size: 13px;
+    line-height: 1.5;
+
+    word-break: break-word;
+}
+
+.error span {
+    flex: 0 0 auto;
+
+    font-size: 16px;
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+#loginForm {
+    width: 100%;
+}
+
+
+/* =========================================================
+   INPUT GROUP
+========================================================= */
+
+.input-group {
+    position: relative;
+
+    width: 100%;
+
+    margin-bottom: 16px;
+}
+
+.input-group input {
+    width: 100%;
+    height: 54px;
+
+    padding: 0 16px 0 48px;
+
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    border-radius: 14px;
+
+    outline: none;
+
+    background:
+        rgba(0, 0, 0, 0.18);
+
+    color: #ffffff;
+
+    font-size: 15px;
+
+    transition:
+        border-color 0.25s ease,
+        background 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+}
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.48);
+}
+
+.input-group input:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.input-group input:focus {
+    border-color: rgba(96, 165, 250, 0.75);
+
+    background:
+        rgba(0, 0, 0, 0.25);
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.13);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   INPUT ICON
+========================================================= */
+
+.input-icon {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 48px;
+    height: 54px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: rgba(147, 197, 253, 0.90);
+
+    font-size: 16px;
+
+    pointer-events: none;
+
+    z-index: 2;
+}
+
+
+/* =========================================================
+   PASSWORD
+========================================================= */
+
+.password-box {
+    position: relative;
+}
+
+.password-box input {
+    padding-right: 52px;
+}
+
+.show-pass {
+    position: absolute;
+
+    top: 0;
+    right: 0;
+
+    width: 50px;
+    height: 54px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+
+    outline: none;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 17px;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+
+    z-index: 3;
+}
+
+.show-pass:hover {
+    color: #ffffff;
+
+    transform: scale(1.08);
+}
+
+.show-pass:active {
+    transform: scale(0.95);
+}
+
+
+/* =========================================================
+   LOGIN OPTIONS
+========================================================= */
+
+.login-options {
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin: 4px 0 22px;
+}
+
+
+/* =========================================================
+   REMEMBER
+========================================================= */
+
+.remember {
+    position: relative;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    color: rgba(255, 255, 255, 0.70);
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    user-select: none;
+}
+
+.remember input {
+    position: absolute;
+
+    opacity: 0;
+
+    width: 1px;
+    height: 1px;
+}
+
+.checkmark {
+    width: 17px;
+    height: 17px;
+
+    flex: 0 0 17px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(255, 255, 255, 0.35);
+
+    border-radius: 5px;
+
+    background:
+        rgba(255, 255, 255, 0.06);
+
+    transition:
+        all 0.2s ease;
+}
+
+.remember input:checked + .checkmark {
+    border-color: #60a5fa;
+
+    background:
+        linear-gradient(
+            135deg,
+            #3b82f6,
+            #6366f1
+        );
+
+    box-shadow:
+        0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.remember input:checked + .checkmark::after {
+    content: "✓";
+
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   FORGOT
+========================================================= */
+
+.forgot-link {
+    color: #93c5fd;
+
+    font-size: 13px;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+
+    transition:
+        color 0.2s ease;
+}
+
+.forgot-link:hover {
+    color: #ffffff;
+
+    text-decoration: underline;
+}
+
+
+/* =========================================================
+   LOGIN BUTTON
+========================================================= */
+
+.login-btn {
+    width: 100%;
+    min-height: 54px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 12px;
+
+    border: 0;
+
+    border-radius: 14px;
+
+    outline: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #4f46e5,
+            #7c3aed
+        );
+
+    color: #ffffff;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    letter-spacing: 0.2px;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 12px 28px rgba(37, 99, 235, 0.28);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 16px 34px rgba(37, 99, 235, 0.38);
+
+    filter: brightness(1.08);
+}
+
+.login-btn:active:not(:disabled) {
+    transform: translateY(0);
+
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+.login-btn:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+
+    box-shadow: none;
+}
+
+.arrow {
+    font-size: 20px;
+
+    line-height: 1;
+
+    transition:
+        transform 0.2s ease;
+}
+
+.login-btn:hover:not(:disabled) .arrow {
+    transform: translateX(4px);
+}
+
+
+/* =========================================================
+   REGISTER
+========================================================= */
+
+.register-text {
+    margin-top: 22px;
+
+    text-align: center;
+
+    color: rgba(255, 255, 255, 0.58);
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+.register-text a {
+    color: #93c5fd;
+
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition:
+        color 0.2s ease;
+}
+
+.register-text a:hover {
+    color: #ffffff;
+
+    text-decoration: underline;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+    margin-top: 24px;
+
+    padding-top: 18px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+    text-align: center;
+
+    color: rgba(255, 255, 255, 0.38);
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   TABLET
+   601px - 900px
+========================================================= */
+
+@media (min-width: 601px) and (max-width: 900px) {
+
+    .glass-container {
+        padding: 35px 20px;
+    }
+
+    .glass-card {
+        max-width: 420px;
+
+        padding: 38px 34px 27px;
+    }
+
+    .logo {
+        margin-bottom: 27px;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   MAX 600px
+========================================================= */
+
+@media (max-width: 600px) {
+
+    html {
+        font-size: 15px;
+    }
+
+    body {
+        min-height: 100dvh;
+
+        background:
+            radial-gradient(
+                circle at 10% 10%,
+                rgba(37, 99, 235, 0.35),
+                transparent 38%
+            ),
+            radial-gradient(
+                circle at 90% 90%,
+                rgba(124, 58, 237, 0.30),
+                transparent 40%
+            ),
+            linear-gradient(
+                145deg,
+                #071426,
+                #0b1d36,
+                #111827
+            );
+    }
+
+    .glass-container {
+        min-height: 100dvh;
+
+        align-items: center;
+        justify-content: center;
+
+        padding: 22px 15px;
+    }
+
+    .glass-card {
+        width: 100%;
+        max-width: 430px;
+
+        padding: 30px 22px 23px;
+
+        border-radius: 22px;
+
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+
+        box-shadow:
+            0 22px 55px rgba(0, 0, 0, 0.42),
+            inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .shape-one {
+        width: 220px;
+        height: 220px;
+
+        top: -80px;
+        left: -100px;
+    }
+
+    .shape-two {
+        width: 250px;
+        height: 250px;
+
+        right: -120px;
+        bottom: -100px;
+    }
+
+    .shape-three {
+        width: 120px;
+        height: 120px;
+
+        left: -50px;
+        top: 48%;
+    }
+
+    .logo {
+        margin-bottom: 23px;
+    }
+
+    .logo-icon {
+        width: 58px;
+        height: 58px;
+
+        margin-bottom: 11px;
+
+        border-radius: 17px;
+
+        font-size: 17px;
+    }
+
+    .logo h1 {
+        font-size: 25px;
+    }
+
+    .logo p {
+        margin-top: 6px;
+
+        font-size: 11.5px;
+
+        line-height: 1.45;
+    }
+
+    .error {
+        margin-bottom: 16px;
+
+        padding: 10px 12px;
+
+        border-radius: 10px;
+
+        font-size: 12px;
+    }
+
+    .input-group {
+        margin-bottom: 13px;
+    }
+
+    .input-group input {
+        height: 52px;
+
+        padding-left: 45px;
+
+        font-size: 14px;
+
+        border-radius: 13px;
+    }
+
+    .input-icon {
+        width: 45px;
+        height: 52px;
+
+        font-size: 15px;
+    }
+
+    .password-box input {
+        padding-right: 49px;
+    }
+
+    .show-pass {
+        width: 48px;
+        height: 52px;
+
+        font-size: 16px;
+    }
+
+    .login-options {
+        margin-top: 2px;
+        margin-bottom: 19px;
+
+        gap: 8px;
+    }
+
+    .remember {
+        gap: 7px;
+
+        font-size: 12px;
+    }
+
+    .checkmark {
+        width: 16px;
+        height: 16px;
+
+        flex-basis: 16px;
+    }
+
+    .forgot-link {
+        font-size: 12px;
+    }
+
+    .login-btn {
+        min-height: 52px;
+
+        border-radius: 13px;
+
+        font-size: 14px;
+    }
+
+    .arrow {
+        font-size: 19px;
+    }
+
+    .register-text {
+        margin-top: 19px;
+
+        font-size: 12px;
+    }
+
+    .footer {
+        margin-top: 20px;
+
+        padding-top: 15px;
+
+        font-size: 10px;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   MAX 430px
+========================================================= */
+
+@media (max-width: 430px) {
+
+    .glass-container {
+        padding: 18px 12px;
+    }
+
+    .glass-card {
+        padding: 27px 19px 21px;
+
+        border-radius: 20px;
+    }
+
+    .logo-icon {
+        width: 55px;
+        height: 55px;
+
+        border-radius: 16px;
+    }
+
+    .logo h1 {
+        font-size: 23px;
+    }
+
+    .logo p {
+        font-size: 11px;
+    }
+
+    .login-options {
+        align-items: center;
+    }
+
+    .login-btn {
+        min-height: 50px;
+    }
+}
+
+
+/* =========================================================
+   SMALL PHONE
+   MAX 390px
+========================================================= */
+
+@media (max-width: 390px) {
+
+    .glass-container {
+        padding: 15px 10px;
+    }
+
+    .glass-card {
+        padding: 25px 17px 19px;
+
+        border-radius: 19px;
+    }
+
+    .logo {
+        margin-bottom: 20px;
+    }
+
+    .logo-icon {
+        width: 52px;
+        height: 52px;
+
+        margin-bottom: 9px;
+
+        font-size: 16px;
+    }
+
+    .logo h1 {
+        font-size: 22px;
+    }
+
+    .logo p {
+        font-size: 10.5px;
+    }
+
+    .input-group {
+        margin-bottom: 11px;
+    }
+
+    .input-group input {
+        height: 50px;
+
+        padding-left: 43px;
+
+        font-size: 13.5px;
+    }
+
+    .input-icon {
+        width: 43px;
+        height: 50px;
+    }
+
+    .show-pass {
+        width: 46px;
+        height: 50px;
+    }
+
+    .login-options {
+        margin-bottom: 17px;
+    }
+
+    .remember {
+        font-size: 11.5px;
+    }
+
+    .forgot-link {
+        font-size: 11.5px;
+    }
+
+    .login-btn {
+        min-height: 49px;
+
+        font-size: 13.5px;
+    }
+
+    .register-text {
+        font-size: 11.5px;
+    }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONE
+   MAX 360px
+========================================================= */
+
+@media (max-width: 360px) {
+
+    .glass-container {
+        padding: 12px 8px;
+    }
+
+    .glass-card {
+        padding: 22px 15px 17px;
+
+        border-radius: 17px;
+    }
+
+    .logo {
+        margin-bottom: 17px;
+    }
+
+    .logo-icon {
+        width: 48px;
+        height: 48px;
+
+        margin-bottom: 8px;
+
+        border-radius: 14px;
+
+        font-size: 14px;
+    }
+
+    .logo h1 {
+        font-size: 20px;
+    }
+
+    .logo p {
+        font-size: 9.5px;
+    }
+
+    .input-group input {
+        height: 48px;
+
+        padding-left: 40px;
+
+        font-size: 13px;
+
+        border-radius: 11px;
+    }
+
+    .input-icon {
+        width: 40px;
+        height: 48px;
+
+        font-size: 14px;
+    }
+
+    .password-box input {
+        padding-right: 44px;
+    }
+
+    .show-pass {
+        width: 44px;
+        height: 48px;
+
+        font-size: 15px;
+    }
+
+    .login-options {
+        gap: 5px;
+
+        margin-bottom: 15px;
+    }
+
+    .remember {
+        gap: 6px;
+
+        font-size: 10.5px;
+    }
+
+    .forgot-link {
+        font-size: 10.5px;
+    }
+
+    .checkmark {
+        width: 15px;
+        height: 15px;
+
+        flex-basis: 15px;
+    }
+
+    .login-btn {
+        min-height: 47px;
+
+        border-radius: 11px;
+
+        font-size: 13px;
+    }
+
+    .register-text {
+        margin-top: 16px;
+
+        font-size: 10.5px;
+    }
+
+    .footer {
+        margin-top: 17px;
+
+        padding-top: 13px;
+
+        font-size: 9px;
+    }
+}
+
+
+/* =========================================================
+   LANDSCAPE MOBILE
+========================================================= */
+
+@media (max-width: 900px) and (orientation: landscape) {
+
+    .glass-container {
+        align-items: flex-start;
+
+        padding-top: 18px;
+        padding-bottom: 18px;
+    }
+
+    .glass-card {
+        max-width: 430px;
+
+        padding-top: 22px;
+        padding-bottom: 18px;
+    }
+
+    .logo {
+        margin-bottom: 17px;
+    }
+
+    .logo-icon {
+        width: 48px;
+        height: 48px;
+
+        margin-bottom: 7px;
+    }
+
+    .logo h1 {
+        font-size: 21px;
+    }
+
+    .logo p {
+        font-size: 10px;
+    }
+
+    .input-group {
+        margin-bottom: 10px;
+    }
+
+    .input-group input {
+        height: 46px;
+    }
+
+    .input-icon {
+        height: 46px;
+    }
+
+    .show-pass {
+        height: 46px;
+    }
+
+    .login-options {
+        margin-bottom: 14px;
+    }
+
+    .login-btn {
+        min-height: 46px;
+    }
+
+    .register-text {
+        margin-top: 14px;
+    }
+
+    .footer {
+        margin-top: 14px;
+        padding-top: 11px;
+    }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+    outline: 2px solid rgba(147, 197, 253, 0.90);
+
+    outline-offset: 3px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+
+        transition: none !important;
+
+        animation: none !important;
+    }
+}

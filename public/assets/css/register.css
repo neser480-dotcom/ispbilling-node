@@ -1,0 +1,794 @@
+```css
+/* =========================================================
+   ISP BILLING REGISTER
+   File:
+   C:\xampp\htdocs\ispbilling-node\public\assets\css\register.css
+========================================================= */
+
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 30px 16px;
+
+    font-family:
+        Inter,
+        "Segoe UI",
+        Arial,
+        "Noto Sans Bengali",
+        sans-serif;
+
+    color: #ffffff;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(59, 130, 246, 0.30),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 85% 80%,
+            rgba(139, 92, 246, 0.30),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(6, 182, 212, 0.18),
+            transparent 35%
+        ),
+        linear-gradient(
+            135deg,
+            #07111f 0%,
+            #0b1730 45%,
+            #111827 100%
+        );
+
+    position: relative;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   BACKGROUND LIGHT EFFECTS
+========================================================= */
+
+body::before,
+body::after {
+    content: "";
+
+    position: fixed;
+
+    width: 280px;
+    height: 280px;
+
+    border-radius: 50%;
+
+    filter: blur(80px);
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+body::before {
+    top: -100px;
+    left: -80px;
+
+    background: rgba(37, 99, 235, 0.22);
+}
+
+body::after {
+    right: -100px;
+    bottom: -100px;
+
+    background: rgba(124, 58, 237, 0.22);
+}
+
+
+/* =========================================================
+   REGISTER CARD
+========================================================= */
+
+.register-box {
+    position: relative;
+
+    z-index: 1;
+
+    width: min(100%, 520px);
+
+    padding: 30px;
+
+    border-radius: 24px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.15),
+            rgba(255, 255, 255, 0.06)
+        );
+
+    border: 1px solid rgba(255, 255, 255, 0.22);
+
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   TOP GLASS SHINE
+========================================================= */
+
+.register-box::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 8%;
+
+    width: 84%;
+    height: 1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.65),
+            transparent
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.register-box h2 {
+    margin: 0 0 25px;
+
+    text-align: center;
+
+    font-size: 26px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.2px;
+
+    color: #ffffff;
+
+    text-shadow:
+        0 2px 20px rgba(96, 165, 250, 0.35);
+}
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+.msg {
+    min-height: 0;
+
+    margin-bottom: 14px;
+
+    padding: 0;
+
+    border-radius: 12px;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+
+    color: #ffffff;
+}
+
+.msg:empty {
+    display: none;
+}
+
+.msg:not(:empty) {
+    padding: 11px 13px;
+
+    background:
+        rgba(255, 255, 255, 0.075);
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.register-box form {
+    width: 100%;
+}
+
+
+/* =========================================================
+   INPUT + SELECT
+========================================================= */
+
+.register-box input[type="text"],
+.register-box input[type="email"],
+.register-box input[type="password"],
+.register-box input[type="number"],
+.register-box select {
+    width: 100%;
+
+    height: 50px;
+
+    margin: 0 0 12px;
+
+    padding: 0 15px;
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+
+    border-radius: 13px;
+
+    outline: none;
+
+    color: #ffffff;
+
+    background:
+        rgba(255, 255, 255, 0.075);
+
+    box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.05);
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    font-size: 14px;
+
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/* =========================================================
+   PLACEHOLDER
+========================================================= */
+
+.register-box input::placeholder {
+    color: rgba(255, 255, 255, 0.62);
+}
+
+
+/* =========================================================
+   INPUT FOCUS
+========================================================= */
+
+.register-box input:focus,
+.register-box select:focus {
+    border-color: rgba(96, 165, 250, 0.75);
+
+    background:
+        rgba(255, 255, 255, 0.11);
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.14),
+        0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+
+/* =========================================================
+   SELECT
+========================================================= */
+
+.register-box select {
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    padding-right: 40px;
+
+    background-image:
+        linear-gradient(
+            45deg,
+            transparent 50%,
+            #ffffff 50%
+        ),
+        linear-gradient(
+            135deg,
+            #ffffff 50%,
+            transparent 50%
+        );
+
+    background-position:
+        calc(100% - 18px) 21px,
+        calc(100% - 12px) 21px;
+
+    background-size:
+        6px 6px,
+        6px 6px;
+
+    background-repeat: no-repeat;
+}
+
+
+/* =========================================================
+   SELECT OPTION
+========================================================= */
+
+.register-box select option {
+    color: #111827;
+
+    background: #ffffff;
+}
+
+
+/* =========================================================
+   PASSWORD BOX
+========================================================= */
+
+.password-box {
+    position: relative;
+
+    width: 100%;
+}
+
+.password-box input {
+    padding-right: 52px !important;
+}
+
+
+/* =========================================================
+   PASSWORD SHOW BUTTON
+========================================================= */
+
+.password-box span {
+    position: absolute;
+
+    top: 0;
+    right: 0;
+
+    width: 50px;
+    height: 50px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: rgba(255, 255, 255, 0.75);
+
+    cursor: pointer;
+
+    user-select: none;
+
+    font-size: 18px;
+
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.password-box span:hover {
+    color: #ffffff;
+
+    transform: scale(1.08);
+}
+
+
+/* =========================================================
+   PACKAGE SELECT
+========================================================= */
+
+.package-select {
+    width: 100%;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   PACKAGE INFO
+========================================================= */
+
+.package-info {
+    width: 100%;
+
+    margin: -3px 0 12px;
+
+    padding: 11px 13px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.065);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+    color:
+        rgba(255, 255, 255, 0.82);
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+.package-info .old-price {
+    color: #fca5a5;
+
+    text-decoration: line-through;
+
+    text-decoration-thickness: 2px;
+}
+
+.package-info .new-price {
+    color: #86efac;
+
+    font-weight: 700;
+}
+
+.package-info .month-price {
+    color:
+        rgba(255, 255, 255, 0.82);
+
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   DISCOUNT NOTICE
+========================================================= */
+
+.discount-notice {
+    margin: 3px 0 12px;
+
+    padding: 11px 13px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(251, 146, 60, 0.10);
+
+    border:
+        1px solid rgba(251, 146, 60, 0.20);
+
+    color:
+        rgba(255, 237, 213, 0.90);
+
+    font-size: 12px;
+
+    line-height: 1.55;
+
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.discount-notice strong {
+    color: #fed7aa;
+}
+
+
+/* =========================================================
+   DISCOUNT ROW
+========================================================= */
+
+.discount-row {
+    display: flex;
+
+    gap: 8px;
+
+    width: 100%;
+
+    margin-bottom: 8px;
+}
+
+.discount-row select,
+.discount-row input {
+    box-sizing: border-box;
+
+    margin-bottom: 0 !important;
+}
+
+.discount-row select {
+    width: 42%;
+}
+
+.discount-row input {
+    width: 58%;
+}
+
+
+/* =========================================================
+   DISCOUNT SUMMARY
+========================================================= */
+
+.discount-summary {
+    margin: 5px 0 12px;
+
+    padding: 10px 13px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.055);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+    color:
+        rgba(255, 255, 255, 0.80);
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+.discount-summary .discount-value {
+    color: #fca5a5;
+
+    font-weight: 600;
+}
+
+.discount-summary .payable-value {
+    color: #86efac;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   CONNECTION TYPE
+========================================================= */
+
+.type-box {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    width: 100%;
+
+    margin: 2px 0 12px;
+
+    padding: 10px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(255, 255, 255, 0.055);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+    overflow-x: auto;
+}
+
+
+/* =========================================================
+   CONNECTION TYPE LABEL
+========================================================= */
+
+.type-box label {
+    flex: 1;
+
+    min-width: 85px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 9px 8px;
+
+    border-radius: 10px;
+
+    color:
+        rgba(255, 255, 255, 0.84);
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.type-box label:hover {
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   RADIO
+========================================================= */
+
+.type-box input[type="radio"] {
+    width: 16px;
+
+    height: 16px;
+
+    margin: 0;
+
+    accent-color: #60a5fa;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   REGISTER BUTTON
+========================================================= */
+
+.register-box button[type="submit"] {
+    width: 100%;
+
+    height: 52px;
+
+    margin-top: 5px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.20);
+
+    border-radius: 14px;
+
+    outline: none;
+
+    color: #ffffff;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.2px;
+
+    cursor: pointer;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(59, 130, 246, 0.90),
+            rgba(99, 102, 241, 0.90)
+        );
+
+    box-shadow:
+        0 12px 28px rgba(37, 99, 235, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.20);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+.register-box button[type="submit"]:hover {
+    transform: translateY(-2px);
+
+    filter: brightness(1.08);
+
+    box-shadow:
+        0 16px 34px rgba(37, 99, 235, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.register-box button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+.register-box button[type="submit"]:disabled {
+    opacity: 0.65;
+
+    cursor: not-allowed;
+
+    transform: none;
+
+    filter: none;
+}
+
+
+/* =========================================================
+   LOGIN LINK
+========================================================= */
+
+.login-link {
+    margin-top: 18px;
+
+    text-align: center;
+
+    color:
+        rgba(255, 255, 255, 0.65);
+
+    font-size: 13px;
+}
+
+.login-link a {
+    margin-left: 4px;
+
+    color: #93c5fd;
+
+    font-weight: 700;
+
+    text-decoration: none;
+
+    transition:
+        color 0.2s ease,
+        text-shadow 0.2s ease;
+}
+
+.login-link a:hover {
+    color: #bfdbfe;
+
+    text-shadow:
+        0 0 12px rgba(147, 197, 253, 0.45);
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    body {
+        align-items: flex-start;
+
+        padding:
+            18px 10px 24px;
+    }
+
+
+    .register-box {
+        width: 100%;
+
+        padding: 22px 16px;
+
+        border-radius: 20px;
+
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+
+    .register-box h2 {
+        margin-bottom: 20px;
+
+        font-size: 22px;
+    }
+
+
+    .register-box input[type="text"],
+    .register-box input[type="email"],
+    .register-box input[type="p]()
+```

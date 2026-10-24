@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Registration</title>
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/register.css"
+    >
+
+</head>
+
+<body>
+
+<div class="register-box">
+
+    <h2>
+        ISP Billing Registration
+    </h2>
+
+
+    <div
+        class="msg"
+        id="registerMessage"
+    ></div>
+
+
+    <form
+        id="registerForm"
+        method="post"
+    >
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            id="csrf_token"
+        >
+
+
+        <!-- NAME -->
+
+        <input
+            type="text"
+            name="name"
+            id="name"
+            placeholder="নাম"
+            required
+        >
+
+
+        <!-- COMPANY -->
+
+        <input
+            type="text"
+            name="company_name"
+            id="company_name"
+            placeholder="প্রতিষ্ঠানের নাম"
+            required
+        >
+
+
+        <!-- MOBILE -->
+
+        <input
+            type="text"
+            name="mobile"
+            id="mobile"
+            placeholder="মোবাইল"
+            inputmode="numeric"
+            required
+        >
+
+
+        <!-- EMAIL -->
+
+        <input
+            type="email"
+            name="email"
+            id="email"
+            placeholder="ই-মেইল"
+            required
+        >
+
+
+        <!-- USERNAME -->
+
+        <input
+            type="text"
+            name="username"
+            id="username"
+            placeholder="ইউজারনেম"
+            required
+        >
+
+
+        <!-- PASSWORD -->
+
+        <div class="password-box">
+
+            <input
+                type="password"
+                name="password"
+                id="reg_password"
+                placeholder="পাসওয়ার্ড"
+                minlength="8"
+                required
+            >
+
+            <span
+                id="showPasswordButton"
+                onclick="showRegPassword()"
+            >
+                👁
+            </span>
+
+        </div>
+
+
+        <!-- DISCOUNT NOTICE -->
+
+        <div class="discount-notice">
+
+            <strong>
+                Discount Notification
+            </strong>
+
+            <br>
+
+            Package-এর Sign-up Fee-এর উপর discount প্রযোজ্য।
+            Discount শুধু অনুমোদিত Admin/Super Admin ব্যবহার করতে পারবেন।
+
+        </div>
+
+
+        <!-- DISCOUNT -->
+
+        <div
+            class="discount-row"
+            id="discountArea"
+            style="display:none;"
+        >
+
+            <select
+                name="discount_type"
+                id="discount_type"
+            >
+
+                <option value="percent">
+                    Discount %
+                </option>
+
+                <option value="fixed">
+                    Discount ৳
+                </option>
+
+            </select>
+
+
+            <input
+                type="number"
+                name="discount_value"
+                id="discount_value"
+                value="0"
+                min="0"
+                step="0.01"
+                placeholder="Discount"
+            >
+
+        </div>
+
+
+        <!-- PACKAGE -->
+
+        <select
+            name="package_id"
+            id="package_id"
+            class="package-select"
+            required
+        >
+
+            <option value="">
+                প্যাকেজ নির্বাচন করুন
+            </option>
+
+        </select>
+
+
+        <!-- PACKAGE INFO -->
+
+        <div
+            class="package-info"
+            id="packageInfo"
+        >
+            প্যাকেজ নির্বাচন করলে এখানে package details দেখাবে।
+        </div>
+
+
+        <!-- DISCOUNT SUMMARY -->
+
+        <div
+            class="discount-summary"
+            id="discountSummary"
+            style="display:none;"
+        >
+            Payable amount দেখানো হবে.
+        </div>
+
+
+        <!-- CONNECTION TYPE -->
+
+        <div class="type-box">
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="customer_type"
+                    value="PPPoE"
+                    checked
+                >
+
+                PPPoE
+
+            </label>
+
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="customer_type"
+                    value="Static"
+                >
+
+                Static
+
+            </label>
+
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="customer_type"
+                    value="Hotspot"
+                >
+
+                Hotspot
+
+            </label>
+
+        </div>
+
+
+        <!-- ADDRESS -->
+
+        <input
+            type="text"
+            name="address"
+            id="address"
+            placeholder="এরিয়া / ঠিকানা"
+            required
+        >
+
+
+        <!-- NID -->
+
+        <input
+            type="text"
+            name="nid"
+            id="nid"
+            placeholder="NID"
+        >
+
+
+        <!-- REFERENCE -->
+
+        <input
+            type="text"
+            name="reference_name"
+            id="reference_name"
+            placeholder="রেফারেন্স নাম"
+        >
+
+
+        <input
+            type="text"
+            name="reference_mobile"
+            id="reference_mobile"
+            placeholder="রেফারেন্স মোবাইল"
+        >
+
+
+        <!-- REGISTER -->
+
+        <button
+            type="submit"
+            id="registerButton"
+        >
+            রেজিস্টার
+        </button>
+
+
+        <div class="login-link">
+
+            Already have account?
+
+            <a href="/">
+                Login
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script src="/assets/js/register.js"></script>
+
+</body>
+
+</html>

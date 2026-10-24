@@ -1,0 +1,174 @@
+
+<div class="cm-wrap">
+    <div class="cm-head">
+        <h5>
+            {{CUSTOMER_NAME}}'s Profile Edit
+            <span class="cm-badge {{STATUS_CLASS}}">{{STATUS}}</span>
+            <span class="cm-badge {{PAYMENT_CLASS}}">{{PAYMENT_STATUS}}</span>
+        </h5>
+        <button type="button" class="cm-close" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <form id="editCustomerForm"
+          class="customer-edit-form"
+          method="POST"
+          action="/api/customers/update">
+
+        <input type="hidden" name="id" value="{{ID}}">
+        <input type="hidden" name="csrf_token" value="{{CSRF_TOKEN}}">
+
+        <div class="cm-body">
+            <div class="row g-3">
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Customer ID *</label>
+                    <input class="cm-in" value="{{CUSTOMER_ID}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">MikroTik *</label>
+                    <input class="cm-in" value="{{MIKROTIK_NAME}}" readonly>
+                    <input type="hidden" name="mikrotik_id" value="{{MIKROTIK_ID}}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Package *</label>
+                    <select class="cm-sel" name="package_id" id="edit_package_id" required>
+                        {{PACKAGE_OPTIONS}}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Monthly Fee</label>
+                    <input class="cm-in" id="edit_monthly_fee" value="{{MONTHLY_FEE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Balance</label>
+                    <input class="cm-in" value="{{BALANCE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">PPPoE Name *</label>
+                    <input class="cm-in" name="pppoe_name" value="{{PPPOE_NAME}}" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">PPPoE Password *</label>
+                    <input class="cm-in" type="password" name="password"
+                           value="{{PPPOE_PASSWORD}}" autocomplete="new-password" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Area *</label>
+                    <select class="cm-sel" name="area_id" id="edit_area_id" required>
+                        {{AREA_OPTIONS}}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Sub-Area *</label>
+                    <select class="cm-sel" name="sub_area_id" id="edit_sub_area_id" required>
+                        {{SUB_AREA_OPTIONS}}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Name</label>
+                    <input class="cm-in" value="{{CUSTOMER_NAME}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Mobile</label>
+                    <input class="cm-in" value="{{PHONE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">NID No</label>
+                    <input class="cm-in" value="{{NID}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Birth Date</label>
+                    <input class="cm-in" value="{{BIRTH_DATE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Address</label>
+                    <input class="cm-in" value="{{ADDRESS}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">E-mail</label>
+                    <input class="cm-in" value="{{EMAIL}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Billing Cycle</label>
+                    <input class="cm-in" value="{{BILLING_CYCLE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Promise Date</label>
+                    <input class="cm-in" value="{{PROMISE_DATE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Connection Date</label>
+                    <input class="cm-in" value="{{CONNECTION_DATE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Connection Fee</label>
+                    <input class="cm-in" value="{{CONNECTION_FEE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Billing Type</label>
+                    <input class="cm-in" value="{{BILLING_TYPE}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Division</label>
+                    <input class="cm-in" value="{{DIVISION}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">District</label>
+                    <input class="cm-in" value="{{DISTRICT}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Upazila / Thana</label>
+                    <input class="cm-in" value="{{UPAZILA}}" readonly>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Comment</label>
+                    <input class="cm-in" name="comment" value="{{COMMENT}}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Status *</label>
+                    <select class="cm-sel" name="status" required>
+                        {{STATUS_OPTIONS}}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Automatic Connection</label>
+                    <input class="cm-in" value="{{AUTO_CONNECTION}}" readonly>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="cm-foot">
+            <button type="button" class="cm-btn cm-cancel"
+                    data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="cm-btn cm-save">Update Customer</button>
+        </div>
+    </form>
+</div>

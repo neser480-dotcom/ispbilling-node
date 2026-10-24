@@ -1,0 +1,186 @@
+<div class="cm-wrap">
+    <div class="cm-page">
+        <div class="cm-head">
+            <div>
+                <h4>Add Customer</h4>
+                <span class="cm-badge">MikroTik PPPoE</span>
+            </div>
+            <button type="button" class="cm-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+        </div>
+
+        <form id="addNewCustomerForm" autocomplete="off">
+            <input type="hidden" name="csrf_token" id="add_csrf_token" value="">
+
+            <div class="cm-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Customer ID <span class="req">*</span></label>
+                        <input class="cm-in" type="text" name="customer_id" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">MikroTik <span class="req">*</span></label>
+                        <select class="cm-sel" id="add_mikrotik" name="mikrotik_id" required>
+                            <option value="">Select MikroTik</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Package <span class="req">*</span></label>
+                        <select class="cm-sel" id="add_package" name="package_id" required disabled>
+                            <option value="">Select Package</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Monthly Fee <span class="req">*</span></label>
+                        <input class="cm-in" type="number" step="0.01" min="0" id="monthly_fee" name="monthly_fee" value="0" required readonly>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Balance</label>
+                        <input class="cm-in" type="number" step="0.01" id="add_balance" name="balance" value="0">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">PPPoE Name <span class="req">*</span></label>
+                        <input class="cm-in" type="text" name="pppoe_name" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Password <span class="req">*</span></label>
+                        <input class="cm-in" type="text" name="password" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Area <span class="req">*</span></label>
+                        <select class="cm-sel" id="add_area_id" name="area_id" required disabled>
+                            <option value="">Select Area</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Sub-Area <span class="req">*</span></label>
+                        <select class="cm-sel" id="add_sub_area_id" name="sub_area_id" required disabled>
+                            <option value="">Select Sub-Area</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Name <span class="req">*</span></label>
+                        <input class="cm-in" type="text" name="name" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Mobile</label>
+                        <input class="cm-in" type="text" name="mobile">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">NID</label>
+                        <input class="cm-in" type="text" name="nid">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Birth Date</label>
+                        <input class="cm-in" type="date" name="birth_date">
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="cm-lbl">Address</label>
+                        <input class="cm-in" type="text" name="address">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Email</label>
+                        <input class="cm-in" type="email" name="email">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Billing Cycle <span class="req">*</span></label>
+                        <input class="cm-in" type="datetime-local" id="billing_cycle" name="billing_cycle" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Connection Date</label>
+                        <input class="cm-in" type="datetime-local" id="connection_date" name="connection_date">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Connection Fee</label>
+                        <input class="cm-in" type="number" step="0.01" min="0" name="connection_fee" value="0">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Billing Type <span class="req">*</span></label>
+                        <select class="cm-sel" name="billing_type" required>
+                            <option value="Prepaid" selected>Prepaid</option>
+                            <option value="Postpaid">Postpaid</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Division</label>
+                        <select class="cm-sel" id="add_division_id" name="division_id">
+                            <option value="">Select Division</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">District</label>
+                        <select class="cm-sel" id="add_district_id" name="district_id" disabled>
+                            <option value="">Select District</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="cm-lbl">Upazila / Thana</label>
+                        <select class="cm-sel" id="add_upazila_id" name="upazila_id" disabled>
+                            <option value="">Select Upazila / Thana</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="cm-lbl">Comment</label>
+                        <textarea class="cm-in cm-textarea" name="comment" rows="2"></textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="cm-lbl">Status</label>
+                        <div class="cm-info cm-options">
+                            <label><input class="cm-chk" type="radio" name="status" value="Active" checked> Active</label>
+                            <label><input class="cm-chk" type="radio" name="status" value="Inactive"> Inactive</label>
+                            <label class="text-muted"><input class="cm-chk" type="radio" name="status" value="Expired" disabled> Expired</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="cm-lbl">Automatic Connection</label>
+                        <div class="cm-info cm-options">
+                            <label><input class="cm-chk" type="checkbox" name="auto_connection" value="Will continue" checked> Will continue</label>
+                            <label><input class="cm-chk" type="checkbox" name="auto_connection" value="Next Month"> Next Month</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="cm-lbl">Reference Name</label>
+                        <input class="cm-in" type="text" name="reference_name">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="cm-lbl">Reference Mobile</label>
+                        <input class="cm-in" type="text" name="reference_mobile">
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-foot">
+                <button type="button" class="cm-btn cm-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="cm-btn cm-save" id="addCustomerSubmit">Save Customer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<link rel="stylesheet" href="/assets/css/customer-add.css">
+<script src="/assets/js/customer-add.js"></script>
