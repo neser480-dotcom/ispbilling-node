@@ -447,3 +447,68 @@ body.cbh-modal-open {
         max-height: calc(100dvh - 16px);
     }
 }
+
+/* =========================================================
+   CUSTOMER BILL HISTORY — TABLE ALIGNMENT FIX
+   Append at the END of customer-bill-history.css
+========================================================= */
+
+#customerBillHistoryModal .cbh-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+#customerBillHistoryModal .cbh-table {
+    width: max-content;
+    min-width: 1050px;
+    table-layout: auto;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+#customerBillHistoryModal .cbh-table thead th,
+#customerBillHistoryModal .cbh-table tbody td {
+    box-sizing: border-box;
+    vertical-align: middle;
+    text-align: left;
+}
+
+#customerBillHistoryModal .cbh-table thead th {
+    white-space: nowrap;
+}
+
+#customerBillHistoryModal .cbh-table tbody td {
+    white-space: nowrap;
+}
+
+#customerBillHistoryModal .cbh-table tbody td.cbh-note,
+#customerBillHistoryModal .cbh-table .cbh-note {
+    min-width: 120px;
+    max-width: 240px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+#customerBillHistoryModal .cbh-table tbody tr > td:last-child {
+    white-space: nowrap;
+}
+
+/* Keep the popup body from creating page-level overflow */
+#customerBillHistoryModal .cbh-body {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 600px) {
+    #customerBillHistoryModal .cbh-table {
+        min-width: 1050px;
+    }
+
+    #customerBillHistoryModal .cbh-table thead th,
+    #customerBillHistoryModal .cbh-table tbody td {
+        padding: 10px 12px;
+    }
+}

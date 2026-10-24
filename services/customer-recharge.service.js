@@ -1,6 +1,4 @@
-
 "use strict";
-
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER RECHARGE SERVICE
@@ -15,7 +13,12 @@
 | Payment amount:
 |   Subscription amount - Discount + Previous Due
 |
-| Amount is always calculated and validated on the server.
+| Billing rules:
+|   - Existing billing_cycle remains the date anchor,
+|     even when that date has passed.
+|   - If billing_cycle is missing/invalid, use today.
+|   - promise_date is independent and is never overwritten.
+|   - Month-end dates are clamped (Jan 31 + 1 month = Feb 28/29).
 |--------------------------------------------------------------------------
 */
 
@@ -26,11 +29,16 @@ const BILL_TYPES = ["Bill", "Advance"];
 const BILLING_TYPES = ["Monthly", "Daily"];
 const PAYMENT_METHODS = ["Hand Cash", "Bkash", "Nagad", "Bank"];
 
-class RechargeError extends Error {}
+class RechargeError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "RechargeError";
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
-| HELPERS
+| DATE HELPERS
 |--------------------------------------------------------------------------
 */
 
@@ -38,30 +46,62 @@ function pad(n) {
     return String(n).padStart(2, "0");
 }
 
-function formatDate(d) {
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function formatDate(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        throw new RechargeError("Invalid date.");
+    }
+
+    return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate())
+    ].join("-");
+}
+
+/*
+ * Extract YYYY-MM-DD without allowing JavaScript to interpret a
+ * MySQL DATE string as a UTC timestamp.
+ */
+function dateString(value) {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) {
+            return "";
+        }
+
+        return formatDate(value);
+    }
+
+    const valueString = String(value ?? "").trim();
+
+    const match = /^(\d{4}-\d{2}-\d{2})(?:$|[ T])/.exec(valueString);
+
+    return match ? match[1] : "";
 }
 
 function parseDate(value) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ""));
+    const text = dateString(value);
 
-    if (!m) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
 
-    const year = Number(m[1]);
-    const month = Number(m[2]);
-    const day = Number(m[3]);
+    if (!match) {
+        return null;
+    }
 
-    const d = new Date(year, month - 1, day);
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+
+    const date = new Date(year, month - 1, day);
 
     if (
-        d.getFullYear() !== year ||
-        d.getMonth() !== month - 1 ||
-        d.getDate() !== day
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
     ) {
         return null;
     }
 
-    return d;
+    return date;
 }
 
 function daysInMonth(year, month1) {
@@ -69,27 +109,70 @@ function daysInMonth(year, month1) {
 }
 
 /*
- * Retains the original JavaScript/PHP-port month overflow behavior.
+ * Adds months while preserving the original day whenever possible.
+ *
+ * Examples:
+ *   Jan 31 + 1 month = Feb 28/29
+ *   Mar 31 + 1 month = Apr 30
+ *   Nov 03 + 1 month = Dec 03
  */
+function addMonthsClamped(date, months) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        throw new RechargeError("Invalid billing-cycle date.");
+    }
+
+    if (!Number.isInteger(months) || months < 1) {
+        throw new RechargeError("Invalid recharge month.");
+    }
+
+    const originalDay = date.getDate();
+
+    const target = new Date(
+        date.getFullYear(),
+        date.getMonth() + months,
+        1
+    );
+
+    target.setDate(
+        Math.min(
+            originalDay,
+            daysInMonth(
+                target.getFullYear(),
+                target.getMonth() + 1
+            )
+        )
+    );
+
+    return target;
+}
+
 function addMonths(date, months) {
-    const d = new Date(date.getTime());
-    d.setMonth(d.getMonth() + months);
-    return d;
+    return addMonthsClamped(date, months);
 }
 
 function addDays(date, days) {
-    const d = new Date(date.getTime());
-    d.setDate(d.getDate() + days);
-    return d;
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        throw new RechargeError("Invalid billing-cycle date.");
+    }
+
+    if (!Number.isInteger(days) || days < 1) {
+        throw new RechargeError("Invalid number of days.");
+    }
+
+    const result = new Date(date.getTime());
+    result.setDate(result.getDate() + days);
+
+    return result;
 }
 
-function money(n) {
-    const value = Number(n);
-    return (Number.isFinite(value) ? value : 0).toFixed(2);
+function money(value) {
+    const number = Number(value);
+
+    return (Number.isFinite(number) ? number : 0).toFixed(2);
 }
 
-function roundMoney(n) {
-    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+function roundMoney(value) {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
 function escapeHtml(value) {
@@ -114,9 +197,18 @@ async function resolveCompanyId(user) {
         return companyId;
     }
 
+    const userId = Number(user?.user_id || 0);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+        throw new RechargeError("Company information missing.");
+    }
+
     const [rows] = await db.query(
-        "SELECT company_id FROM users WHERE id = ? LIMIT 1",
-        [Number(user?.user_id || 0)]
+        `SELECT company_id
+         FROM users
+         WHERE id = ?
+         LIMIT 1`,
+        [userId]
     );
 
     companyId = Number(rows[0]?.company_id || 0);
@@ -145,13 +237,18 @@ function normalizeInput(body = {}) {
         throw new RechargeError("Invalid bill type.");
     }
 
-    const billingType = String(body.billing_type || "Monthly").trim();
+    const billingType = String(
+        body.billing_type || "Monthly"
+    ).trim();
 
     if (!BILLING_TYPES.includes(billingType)) {
         throw new RechargeError("Invalid billing type.");
     }
 
-    const rechargeMonth = Number.parseInt(body.recharge_month ?? 1, 10);
+    const rechargeMonth = Number.parseInt(
+        body.recharge_month ?? 1,
+        10
+    );
 
     if (
         !Number.isInteger(rechargeMonth) ||
@@ -161,7 +258,10 @@ function normalizeInput(body = {}) {
         throw new RechargeError("Invalid recharge month.");
     }
 
-    const selectedDays = Number.parseInt(body.selected_days ?? 30, 10);
+    const selectedDays = Number.parseInt(
+        body.selected_days ?? 30,
+        10
+    );
 
     if (
         !Number.isInteger(selectedDays) ||
@@ -171,7 +271,9 @@ function normalizeInput(body = {}) {
         throw new RechargeError("Invalid number of days.");
     }
 
-    let method = String(body.payment_method || "Hand Cash").trim();
+    let method = String(
+        body.payment_method || "Hand Cash"
+    ).trim();
 
     if (method.toLowerCase() === "bkash") {
         method = "Bkash";
@@ -190,7 +292,9 @@ function normalizeInput(body = {}) {
     const comment = String(body.comment || "").trim();
 
     if (comment.length > 255) {
-        throw new RechargeError("Note cannot exceed 255 characters.");
+        throw new RechargeError(
+            "Note cannot exceed 255 characters."
+        );
     }
 
     return {
@@ -208,14 +312,6 @@ function normalizeInput(body = {}) {
 |--------------------------------------------------------------------------
 | RECHARGE ONE CUSTOMER
 |--------------------------------------------------------------------------
-| 1. Lock the customer row.
-| 2. Calculate subscription + previous due.
-| 3. Insert payment and update customer.
-| 4. Commit database transaction.
-| 5. Restore PPPoE on MikroTik.
-|
-| MikroTik failure does not cancel a committed payment.
-|--------------------------------------------------------------------------
 */
 
 async function rechargeCustomer({
@@ -226,7 +322,10 @@ async function rechargeCustomer({
 }) {
     customerDbId = Number(customerDbId);
 
-    if (!Number.isInteger(customerDbId) || customerDbId <= 0) {
+    if (
+        !Number.isInteger(customerDbId) ||
+        customerDbId <= 0
+    ) {
         throw new RechargeError("No customer selected.");
     }
 
@@ -241,6 +340,9 @@ async function rechargeCustomer({
     try {
         await conn.beginTransaction();
 
+        /*
+         * Lock the customer row to avoid concurrent recharge updates.
+         */
         const [rows] = await conn.query(
             `SELECT
                 id,
@@ -271,46 +373,75 @@ async function rechargeCustomer({
             throw new RechargeError("Customer not found.");
         }
 
-        const softwareId = String(customer.customer_id || "").trim();
+        const softwareId = String(
+            customer.customer_id || ""
+        ).trim();
+
         const currentBalance = Number(customer.balance || 0);
         const monthlyBill = Number(customer.monthly_bill || 0);
-        const pppoe = String(customer.pppoe_username || "").trim();
+        const pppoe = String(
+            customer.pppoe_username || ""
+        ).trim();
+
         const mikrotikId = Number(customer.mikrotik_id || 0);
 
-        if (!Number.isFinite(monthlyBill) || monthlyBill <= 0) {
+        if (
+            !Number.isFinite(monthlyBill) ||
+            monthlyBill <= 0
+        ) {
             throw new RechargeError(
                 "Customer monthly bill is not configured."
             );
         }
 
+        if (!Number.isFinite(currentBalance)) {
+            throw new RechargeError(
+                "Customer balance is invalid."
+            );
+        }
+
+        /*
+         * Use a date-only value for billing calculations.
+         */
         const now = new Date();
         const today = formatDate(now);
+        const todayDate = parseDate(today);
+
+        if (!todayDate) {
+            throw new RechargeError(
+                "Unable to determine today's date."
+            );
+        }
 
         /*
-         * Negative balance represents previous due.
-         * Positive balance represents existing advance credit.
+         * Balance convention:
+         * Negative = due
+         * Positive = advance credit
          */
-        const previousDue = roundMoney(Math.max(0, -currentBalance));
+        const previousDue = roundMoney(
+            Math.max(0, -currentBalance)
+        );
 
         /*
-         * Calculate subscription amount.
+         * Calculate the subscription charge.
          */
         let subscriptionAmount;
 
         if (opts.billingType === "Daily") {
-            const dim = daysInMonth(
+            const daysThisMonth = daysInMonth(
                 now.getFullYear(),
                 now.getMonth() + 1
             );
 
-            if (opts.selectedDays > dim) {
+            if (opts.selectedDays > daysThisMonth) {
                 throw new RechargeError(
-                    `Selected days cannot exceed ${dim} days for the running month.`
+                    `Selected days cannot exceed ${daysThisMonth} days for the running month.`
                 );
             }
 
             subscriptionAmount =
-                (monthlyBill / dim) * opts.selectedDays;
+                (monthlyBill / daysThisMonth) *
+                opts.selectedDays;
         } else {
             subscriptionAmount =
                 monthlyBill * opts.rechargeMonth;
@@ -318,7 +449,10 @@ async function rechargeCustomer({
 
         subscriptionAmount = roundMoney(subscriptionAmount);
 
-        if (!Number.isFinite(subscriptionAmount) || subscriptionAmount <= 0) {
+        if (
+            !Number.isFinite(subscriptionAmount) ||
+            subscriptionAmount <= 0
+        ) {
             throw new RechargeError(
                 "Subscription amount must be greater than zero."
             );
@@ -326,7 +460,7 @@ async function rechargeCustomer({
 
         /*
          * Discount applies to the subscription charge only.
-         * It cannot cancel or reduce previous due.
+         * It cannot reduce the previous due.
          */
         if (opts.discount >= subscriptionAmount) {
             throw new RechargeError(
@@ -339,12 +473,7 @@ async function rechargeCustomer({
         );
 
         /*
-         * Total payment includes previous due.
-         *
-         * Example:
-         *   12 months subscription = 6000
-         *   previous due           = 1000
-         *   total payment           = 7000
+         * Total collected amount = discounted subscription + previous due.
          */
         const amount = roundMoney(
             subscriptionAmount + previousDue
@@ -357,56 +486,51 @@ async function rechargeCustomer({
         }
 
         /*
-         * Balance convention:
-         *   current balance = -1000
-         *   payment         = +7000
-         *   resulting credit = +6000
-         *
-         * This preserves the positive advance credit representing
-         * the subscription amount paid after clearing the previous due.
+         * Clear the old due through the collected payment.
          */
-        const newBalance = roundMoney(currentBalance + amount);
-
-/*
- * DATE-TO-DATE BILLING
- *
- * Future billing_cycle থাকলে সেখান থেকে বাড়বে।
- * Billing cycle শেষ হয়ে গেলে আজ থেকে নতুন cycle শুরু হবে।
- * Promise Date-কে billing calculation-এর base হিসেবে ব্যবহার করা হবে না।
- */
-const todayDate = parseDate(today);
-
-const oldBillingCycle = String(
-    customer.billing_cycle instanceof Date
-        ? formatDate(customer.billing_cycle)
-        : (customer.billing_cycle || "")
-).trim().slice(0, 10);
-
-let base = todayDate;
-
-if (
-    oldBillingCycle &&
-    oldBillingCycle !== "0000-00-00" &&
-    oldBillingCycle >= today
-) {
-    base = parseDate(oldBillingCycle) || todayDate;
-}
-
-const next = opts.billingType === "Daily"
-    ? addDays(base, opts.selectedDays)
-    : addMonthsClamped(base, opts.rechargeMonth);
-
-const newBillingCycle = formatDate(next);
-
-/*
- * Preserve the existing Promise Date behavior for now.
- * This line intentionally matches the current application logic.
- */
-const newPromiseDate = newBillingCycle;
-
+        const newBalance = roundMoney(
+            currentBalance + amount
+        );
 
         /*
-         * Record the total collected amount, including previous due.
+         * DATE-TO-DATE BILLING
+         *
+         * Preserve the old billing-cycle anchor even if it has expired.
+         *
+         * Example:
+         *   Old billing_cycle = 2026-11-03
+         *   Recharge          = 1 month
+         *   New billing_cycle = 2026-12-03
+         *
+         * If the old date is absent or invalid, start from today.
+         *
+         * Promise Date is deliberately NOT used as the billing base.
+         */
+        const oldBillingCycle = dateString(
+            customer.billing_cycle
+        );
+
+        const parsedOldCycle = parseDate(oldBillingCycle);
+
+        const base = parsedOldCycle || todayDate;
+
+        const next = opts.billingType === "Daily"
+            ? addDays(base, opts.selectedDays)
+            : addMonthsClamped(
+                base,
+                opts.rechargeMonth
+            );
+
+        const newBillingCycle = formatDate(next);
+
+        /*
+         * Preserve the existing promise_date exactly as stored.
+         * It is not changed by this recharge.
+         */
+        const existingPromiseDate =
+            customer.promise_date ?? null;
+        /*
+         * Insert payment record with balance/status snapshots.
          */
         const [pay] = await conn.query(
             `INSERT INTO payments
@@ -421,9 +545,19 @@ const newPromiseDate = newBillingCycle;
                     months_paid,
                     is_advance,
                     comments,
-                    created_by
+                    created_by,
+                    balance_before,
+                    balance_after,
+                    billing_cycle_before,
+                    promise_date_before,
+                    status_before,
+                    payment_status_before
                 )
-             VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
+             VALUES (
+                    ?, ?, ?, ?, NOW(),
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?
+             )`,
             [
                 companyId,
                 customerDbId,
@@ -431,33 +565,51 @@ const newPromiseDate = newBillingCycle;
                 opts.paymentMethod,
                 next.getMonth() + 1,
                 next.getFullYear(),
-                opts.billingType === "Monthly" ? opts.rechargeMonth : 0,
+                opts.billingType === "Monthly"
+                    ? opts.rechargeMonth
+                    : 0,
                 opts.billType === "Advance" ? 1 : 0,
                 opts.comment,
-                userId
+                userId,
+
+                // State before recharge
+                roundMoney(currentBalance),
+                // State after recharge
+                newBalance,
+                customer.billing_cycle ?? null,
+                customer.promise_date ?? null,
+                customer.status ?? null,
+                customer.payment_status ?? null
             ]
         );
 
+
+        /*
+         * Update billing/payment fields.
+         * Do not update promise_date here.
+         */
         await conn.query(
             `UPDATE customers
              SET balance = ?,
                  status = 'Active',
                  payment_status = 'paid',
-                 promise_date = ?,
                  billing_cycle = ?
              WHERE id = ?
                AND company_id = ?
              LIMIT 1`,
             [
                 newBalance,
-                newPromiseDate,
                 newBillingCycle,
                 customerDbId,
                 companyId
             ]
         );
 
-        const text =
+        /*
+         * Activity log.
+         * Logging failure must not cancel a valid recharge.
+         */
+        const description =
             `Customer recharge: ${customer.name || ""}` +
             ` | Customer ID: ${softwareId}` +
             ` | Subscription: ৳${money(subscriptionAmount)}` +
@@ -469,8 +621,7 @@ const newPromiseDate = newBillingCycle;
             ` | Days: ${opts.selectedDays}` +
             ` | Bill Type: ${opts.billType}` +
             ` | Discount: ৳${money(opts.discount)}` +
-            ` | New Promise Date: ${newPromiseDate}` +
-            ` | New Billing Cycle: ${newBillingCycle}`;
+            ` | Billing Cycle: ${newBillingCycle}`;
 
         try {
             await conn.query(
@@ -484,16 +635,21 @@ const newPromiseDate = newBillingCycle;
                         module,
                         created_at
                     )
-                 VALUES (?, ?, ?, 'customer_recharge', ?, 'customers', NOW())`,
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())`,
                 [
                     userId,
                     companyId,
                     customerDbId,
-                    text.slice(0, 500)
+                    "recharge",
+                    description.slice(0, 500),
+                    "customers"
                 ]
             );
-        } catch (_) {
-            // Activity logging must not cancel a recharge.
+        } catch (logError) {
+            console.error(
+                "Recharge activity log warning:",
+                logError.message
+            );
         }
 
         await conn.commit();
@@ -506,7 +662,7 @@ const newPromiseDate = newBillingCycle;
             previous_due: previousDue,
             amount,
             balance: newBalance,
-            promise_date: newPromiseDate,
+            promise_date: existingPromiseDate,
             billing_cycle: newBillingCycle,
             billing_type: opts.billingType,
             recharge_month: opts.rechargeMonth,
@@ -518,7 +674,9 @@ const newPromiseDate = newBillingCycle;
     } catch (error) {
         try {
             await conn.rollback();
-        } catch (_) {}
+        } catch (_) {
+            // Preserve the original error.
+        }
 
         throw error;
     } finally {
@@ -526,7 +684,9 @@ const newPromiseDate = newBillingCycle;
     }
 
     /*
-     * MikroTik restore happens only after the payment transaction commits.
+     * Restore PPPoE only after the payment transaction commits.
+     *
+     * A MikroTik error does not undo the committed payment.
      */
     const ownSession = !session;
     const sess = session || ppp.createSession({ companyId });
@@ -582,11 +742,15 @@ async function bulkRecharge({ user, ids, input }) {
     const clean = [...new Set(
         (ids || [])
             .map(Number)
-            .filter(n => Number.isInteger(n) && n > 0)
+            .filter(
+                n => Number.isInteger(n) && n > 0
+            )
     )];
 
     if (!clean.length) {
-        throw new RechargeError("Please select at least one customer.");
+        throw new RechargeError(
+            "Please select at least one customer."
+        );
     }
 
     normalizeInput(input);
@@ -598,7 +762,7 @@ async function bulkRecharge({ user, ids, input }) {
     try {
         for (const id of clean) {
             try {
-                const r = await rechargeCustomer({
+                const rechargeResult = await rechargeCustomer({
                     user,
                     customerDbId: id,
                     input,
@@ -608,7 +772,7 @@ async function bulkRecharge({ user, ids, input }) {
                 results.push({
                     id,
                     success: true,
-                    ...r
+                    ...rechargeResult
                 });
             } catch (error) {
                 results.push({
@@ -622,15 +786,18 @@ async function bulkRecharge({ user, ids, input }) {
         await session.closeAll();
     }
 
-    const ok = results.filter(r => r.success).length;
+    const successCount = results.filter(
+        item => item.success
+    ).length;
+
     const mikrotikIssues = results.filter(
-        r => r.success && !r.mikrotik_ok
+        item => item.success && !item.mikrotik_ok
     ).length;
 
     return {
         total: results.length,
-        success: ok,
-        failed: results.length - ok,
+        success: successCount,
+        failed: results.length - successCount,
         mikrotik_issues: mikrotikIssues,
         results
     };
@@ -640,21 +807,26 @@ async function bulkRecharge({ user, ids, input }) {
 |--------------------------------------------------------------------------
 | BULK FORM OPTIONS
 |--------------------------------------------------------------------------
-| Kept separate so the Single Recharge redesign does not change the
-| existing Bulk Recharge form layout.
+| Kept separate so the Single Recharge form remains unchanged.
 |--------------------------------------------------------------------------
 */
 
 function optionsHtml() {
-    const months = Array.from({ length: 12 }, (_, i) => i + 1)
-        .map(n =>
-            `<option value="${n}">${n} month${n > 1 ? "s" : ""}</option>`
+    const months = Array.from(
+        { length: 12 },
+        (_, index) => index + 1
+    )
+        .map(month =>
+            `<option value="${month}">${month} month${month > 1 ? "s" : ""}</option>`
         )
         .join("");
 
-    const days = Array.from({ length: 31 }, (_, i) => i + 1)
-        .map(n =>
-            `<option value="${n}">${n} day${n > 1 ? "s" : ""}</option>`
+    const days = Array.from(
+        { length: 31 },
+        (_, index) => index + 1
+    )
+        .map(day =>
+            `<option value="${day}">${day} day${day > 1 ? "s" : ""}</option>`
         )
         .join("");
 
@@ -733,6 +905,11 @@ function optionsHtml() {
 
 async function rechargeFragment({ user, id }) {
     const companyId = await resolveCompanyId(user);
+    const customerId = Number(id);
+
+    if (!Number.isInteger(customerId) || customerId <= 0) {
+        throw new RechargeError("Invalid customer.");
+    }
 
     const [rows] = await db.query(
         `SELECT
@@ -748,28 +925,34 @@ async function rechargeFragment({ user, id }) {
            AND company_id = ?
            AND deleted_at IS NULL
          LIMIT 1`,
-        [Number(id), companyId]
+        [customerId, companyId]
     );
 
-    const c = rows[0];
+    const customer = rows[0];
 
-    if (!c) {
+    if (!customer) {
         throw new RechargeError("Customer not found.");
     }
 
-    const monthlyBill = Number(c.monthly_bill || 0);
-    const balance = Number(c.balance || 0);
+    const monthlyBill = Number(customer.monthly_bill || 0);
+    const balance = Number(customer.balance || 0);
     const previousDue = Math.max(0, -balance);
 
-    const months = Array.from({ length: 12 }, (_, i) => i + 1)
-        .map(n =>
-            `<option value="${n}" ${n === 1 ? "selected" : ""}>${n} ${n === 1 ? "Month" : "Months"}</option>`
+    const months = Array.from(
+        { length: 12 },
+        (_, index) => index + 1
+    )
+        .map(month =>
+            `<option value="${month}" ${month === 1 ? "selected" : ""}>${month} ${month === 1 ? "Month" : "Months"}</option>`
         )
         .join("");
 
-    const days = Array.from({ length: 31 }, (_, i) => i + 1)
-        .map(n =>
-            `<option value="${n}" ${n === 30 ? "selected" : ""}>${n} ${n === 1 ? "Day" : "Days"}</option>`
+    const days = Array.from(
+        { length: 31 },
+        (_, index) => index + 1
+    )
+        .map(day =>
+            `<option value="${day}" ${day === 30 ? "selected" : ""}>${day} ${day === 1 ? "Day" : "Days"}</option>`
         )
         .join("");
 
@@ -782,7 +965,7 @@ async function rechargeFragment({ user, id }) {
 
     <input type="hidden"
            name="customer_id"
-           value="${Number(c.id)}">
+           value="${Number(customer.id)}">
 
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h5 class="mb-0 fw-bold">Recharge</h5>
@@ -794,15 +977,15 @@ async function rechargeFragment({ user, id }) {
             <tbody>
                 <tr>
                     <th class="table-light">ID</th>
-                    <td>${escapeHtml(c.customer_id)}</td>
+                    <td>${escapeHtml(customer.customer_id)}</td>
                     <th class="table-light">PPPoE</th>
-                    <td>${escapeHtml(c.pppoe_username || "-")}</td>
+                    <td>${escapeHtml(customer.pppoe_username || "-")}</td>
                 </tr>
                 <tr>
                     <th class="table-light">Name</th>
-                    <td>${escapeHtml(c.name || "-")}</td>
+                    <td>${escapeHtml(customer.name || "-")}</td>
                     <th class="table-light">Mobile</th>
-                    <td>${escapeHtml(c.phone || "-")}</td>
+                    <td>${escapeHtml(customer.phone || "-")}</td>
                 </tr>
                 <tr>
                     <th class="table-light">Monthly</th>
@@ -816,7 +999,7 @@ async function rechargeFragment({ user, id }) {
 
     <div class="border rounded p-3 mb-3">
         <div class="fw-semibold mb-3">
-            ${escapeHtml(c.name || "Customer")} — Recharge Details
+            ${escapeHtml(customer.name || "Customer")} — Recharge Details
         </div>
 
         <div class="row g-3">
@@ -945,7 +1128,9 @@ async function bulkRechargeFragment({ user, ids }) {
     const clean = [...new Set(
         (ids || [])
             .map(Number)
-            .filter(n => Number.isInteger(n) && n > 0)
+            .filter(
+                id => Number.isInteger(id) && id > 0
+            )
     )];
 
     if (!clean.length) {
@@ -965,6 +1150,11 @@ async function bulkRechargeFragment({ user, ids }) {
         [clean, companyId]
     );
 
+    const summary = rows[0] || {
+        total: 0,
+        bill: 0
+    };
+
     return `
 <form action="/api/customers/bulk-recharge"
       method="POST"
@@ -975,8 +1165,8 @@ async function bulkRechargeFragment({ user, ids }) {
            value="${clean.join(",")}">
 
     <div class="border rounded p-2 mb-3 small">
-        <strong>${Number(rows[0].total)}</strong> customer(s) selected
-        · Total monthly bill ৳${money(rows[0].bill)}
+        <strong>${Number(summary.total || 0)}</strong> customer(s) selected
+        · Total monthly bill ৳${money(summary.bill)}
     </div>
 
     ${optionsHtml()}
@@ -1002,10 +1192,14 @@ module.exports = {
     bulkRecharge,
     rechargeFragment,
     bulkRechargeFragment,
+
     _test: {
         addMonths,
+        addMonthsClamped,
         addDays,
+        daysInMonth,
         formatDate,
+        dateString,
         parseDate
     }
 };

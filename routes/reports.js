@@ -356,13 +356,15 @@ router.get(
 );
 
 
+
 /*
 |--------------------------------------------------------------------------
 | CANCEL CUSTOMER PAYMENT
 |--------------------------------------------------------------------------
-| Soft-delete only.
-| Reversal is allowed only for the latest payment when the current
-| customer balance still matches that payment's recorded balance_after.
+| Permanently deletes payment and related bill_reports.
+| Restores customer billing state from the payment snapshot.
+| Does NOT call MikroTik or PPP service.
+| Cancellation audit remains in activity_logs.
 |--------------------------------------------------------------------------
 */
 
@@ -371,20 +373,19 @@ router.post(
     requireLoginApi,
     async (req, res) => {
         let connection;
+        let transactionStarted = false;
 
         try {
             const paymentId = Number(req.params.paymentId);
 
-            if (
-                !Number.isSafeInteger(paymentId) ||
-                paymentId <= 0
-            ) {
+            if (!Number.isSafeInteger(paymentId) || paymentId <= 0) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid payment ID."
                 });
             }
 
+            // CSRF validation
             const sessionToken = clean(req.session?.csrf_token);
             const suppliedToken = clean(
                 req.get("X-CSRF-Token") ||
@@ -403,6 +404,7 @@ router.post(
                 });
             }
 
+            // Company access validation
             const role = String(req.session?.role || "")
                 .trim()
                 .toLowerCase();
@@ -420,11 +422,8 @@ router.post(
 
             connection = await pool.getConnection();
             await connection.beginTransaction();
+            transactionStarted = true;
 
-            /*
-             * Lock the payment and customer together.
-             * Tenant scope is checked before changing anything.
-             */
             const paymentScope = role === "super_admin"
                 ? "1=1"
                 : "c.company_id = ?";
@@ -433,6 +432,7 @@ router.post(
                 ? [paymentId]
                 : [paymentId, sessionCompanyId];
 
+            // Lock payment and customer rows
             const [paymentRows] = await connection.query(
                 `
                 SELECT
@@ -448,21 +448,16 @@ router.post(
                     p.status_before,
                     p.payment_status_before,
 
-                    c.balance AS customer_balance,
-                    c.company_id AS customer_company_id,
-                    c.billing_cycle AS customer_billing_cycle,
-                    c.promise_date AS customer_promise_date,
-                    c.status AS customer_status,
-                    c.payment_status AS customer_payment_status
+                    c.balance AS customer_balance
 
                 FROM payments p
 
                 INNER JOIN customers c
                     ON c.id = p.customer_id
+                   AND c.company_id = p.company_id
 
                 WHERE p.id = ?
                   AND p.deleted_at IS NULL
-                  AND p.company_id = c.company_id
                   AND ${paymentScope}
 
                 LIMIT 1
@@ -473,6 +468,7 @@ router.post(
 
             if (!paymentRows.length) {
                 await connection.rollback();
+                transactionStarted = false;
 
                 return res.status(404).json({
                     success: false,
@@ -482,9 +478,7 @@ router.post(
 
             const payment = paymentRows[0];
 
-            /*
-             * Do not cancel a payment if a newer active payment exists.
-             */
+            // Only the newest active payment can be cancelled
             const [latestRows] = await connection.query(
                 `
                 SELECT id
@@ -504,122 +498,192 @@ router.post(
                 Number(latestRows[0].id) !== paymentId
             ) {
                 await connection.rollback();
+                transactionStarted = false;
 
                 return res.status(409).json({
                     success: false,
                     message:
                         "এই পেমেন্টের পরে আরও পেমেন্ট আছে। " +
-                        "হিসাবের নিরাপত্তার জন্য আগে পরের পেমেন্টটি যাচাই করুন।"
+                        "সর্বশেষ পেমেন্ট ছাড়া এটি বাতিল করা যাবে না।"
                 });
             }
 
             /*
-             * Do not overwrite unrelated balance changes.
+             * NULL billing_cycle_before and promise_date_before
+             * are valid snapshots and must be restored as NULL.
              */
-            if (
+            const missingSnapshot =
                 payment.balance_before === null ||
+                payment.balance_before === undefined ||
                 payment.balance_after === null ||
-                Number(payment.customer_balance) !==
-                    Number(payment.balance_after)
-            ) {
+                payment.balance_after === undefined ||
+                payment.status_before === null ||
+                payment.status_before === undefined ||
+                payment.payment_status_before === null ||
+                payment.payment_status_before === undefined;
+
+            if (missingSnapshot) {
                 await connection.rollback();
+                transactionStarted = false;
 
                 return res.status(409).json({
                     success: false,
                     message:
-                        "বর্তমান ব্যালেন্স পেমেন্টের সংরক্ষিত ব্যালেন্সের " +
-                        "সঙ্গে মিলছে না। স্বয়ংক্রিয়ভাবে বাতিল করা হয়নি।"
+                        "এই পেমেন্টের প্রয়োজনীয় Snapshot অসম্পূর্ণ। " +
+                        "নিরাপত্তার জন্য Payment Cancel করা হয়নি।"
                 });
             }
 
-            /*
-             * Soft-delete the payment. The normal collection report
-             * already excludes payments whose deleted_at is not NULL.
-             */
+            // Do not overwrite subsequent balance changes
+            const currentBalance = Number(payment.customer_balance);
+            const recordedBalance = Number(payment.balance_after);
+
+            if (
+                !Number.isFinite(currentBalance) ||
+                !Number.isFinite(recordedBalance) ||
+                Math.abs(currentBalance - recordedBalance) > 0.0001
+            ) {
+                await connection.rollback();
+                transactionStarted = false;
+
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        "বর্তমান Balance পেমেন্টের সংরক্ষিত Balance-এর " +
+                        "সঙ্গে মিলছে না। স্বয়ংক্রিয়ভাবে বাতিল করা হয়নি।"
+                });
+            }
+
+            // Restore customer software state.
+            // NULL snapshot values are restored as NULL.
             await connection.query(
                 `
-                UPDATE payments
+                UPDATE customers
                 SET
-                    deleted_at = NOW(),
-                    deleted_by = ?,
-                    payment_cancelled_at = NOW(),
-                    payment_cancelled_by = ?,
-                    cancellation_reason = ?
+                    balance = ?,
+                    billing_cycle = ?,
+                    promise_date = ?,
+                    status = ?,
+                    payment_status = ?
                 WHERE id = ?
                   AND company_id = ?
-                  AND deleted_at IS NULL
                 `,
                 [
-                    Number(req.session.user_id),
-                    Number(req.session.user_id),
-                    "Cancelled from customer bill history",
-                    paymentId,
+                    payment.balance_before,
+                    payment.billing_cycle_before,
+                    payment.promise_date_before,
+                    payment.status_before,
+                    payment.payment_status_before,
+                    payment.customer_id,
                     payment.company_id
                 ]
             );
 
-            /*
-             * Restore the recorded pre-payment balance and only restore
-             * other snapshots when they were actually saved.
-             */
-            const updateFields = [
-                "`balance` = ?"
-            ];
-
-            const updateValues = [
-                Number(payment.balance_before)
-            ];
-
-            if (payment.billing_cycle_before !== null) {
-                updateFields.push("`billing_cycle` = ?");
-                updateValues.push(payment.billing_cycle_before);
-            }
-
-            if (payment.promise_date_before !== null) {
-                updateFields.push("`promise_date` = ?");
-                updateValues.push(payment.promise_date_before);
-            }
-
-            if (payment.status_before !== null) {
-                updateFields.push("`status` = ?");
-                updateValues.push(payment.status_before);
-            }
-
-            if (payment.payment_status_before !== null) {
-                updateFields.push("`payment_status` = ?");
-                updateValues.push(payment.payment_status_before);
-            }
-
-            updateValues.push(
-                payment.customer_id,
-                payment.company_id
+            // Keep an audit record before permanently deleting payment.
+            // The entire operation rolls back if logging fails.
+            const sessionUserId = Number(
+                req.session?.user_id || req.session?.id || 0
             );
+
+            const userId = sessionUserId > 0
+                ? sessionUserId
+                : null;
+
+            const userName =
+                req.session?.user_name ||
+                req.session?.username ||
+                null;
+
+            const roleName = req.session?.role || null;
+
+            const ipAddress = String(
+                req.ip || ""
+            ).slice(0, 45) || null;
+
+            const description =
+                `Payment #${paymentId} cancelled permanently. ` +
+                `Customer ID: ${payment.customer_id}. ` +
+                `Amount: ${payment.amount}. ` +
+                `Customer billing state restored from pre-payment snapshot. ` +
+                `Related bill_reports deleted. MikroTik changed: No.`;
 
             await connection.query(
                 `
-                UPDATE customers
-                SET ${updateFields.join(", ")}
-                WHERE id = ?
-                  AND company_id = ?
+                INSERT INTO activity_logs (
+                    company_id,
+                    user_id,
+                    customer_id,
+                    user_name,
+                    action,
+                    description,
+                    module,
+                    ip_address,
+                    role_name,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 `,
-                updateValues
+                [
+                    payment.company_id,
+                    userId,
+                    payment.customer_id,
+                    userName,
+                    "payment_cancelled",
+                    description,
+                    "payments",
+                    ipAddress,
+                    roleName
+                ]
             );
 
+            // Delete child records first because they reference payment_id
+            await connection.query(
+                `
+                DELETE FROM bill_reports
+                WHERE payment_id = ?
+                  AND company_id = ?
+                `,
+                [paymentId, payment.company_id]
+            );
+
+            // Permanently delete the payment; no soft-delete
+            const [deleteResult] = await connection.query(
+                `
+                DELETE FROM payments
+                WHERE id = ?
+                  AND company_id = ?
+                  AND deleted_at IS NULL
+                `,
+                [paymentId, payment.company_id]
+            );
+
+            if (deleteResult.affectedRows !== 1) {
+                throw new Error(
+                    "Payment was not deleted. Transaction cancelled."
+                );
+            }
+
             await connection.commit();
+            transactionStarted = false;
 
             return res.json({
                 success: true,
-                message: "Payment cancelled successfully."
+                message:
+                    "Payment cancelled. Payment and bill report deleted; " +
+                    "customer billing state restored. MikroTik unchanged."
             });
 
         } catch (error) {
-            if (connection) {
+            if (connection && transactionStarted) {
                 try {
                     await connection.rollback();
                 } catch (_) {}
             }
 
-            console.error("Customer payment cancellation error:", error);
+            console.error(
+                "Customer payment cancellation error:",
+                error
+            );
 
             return res.status(500).json({
                 success: false,
@@ -630,7 +694,9 @@ router.post(
             });
 
         } finally {
-            if (connection) connection.release();
+            if (connection) {
+                connection.release();
+            }
         }
     }
 );
@@ -764,11 +830,12 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
             params
         );
 
-        // Collection rows
+               // Collection rows
         const [rows] = await pool.query(
             `
             SELECT
-                b.id,
+                c.customer_id AS id,
+                b.id AS bill_report_id,
                 b.company_id,
                 b.user_id,
                 b.connection_type,
@@ -788,7 +855,10 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
                 b.created_at,
                 b.payment_id
             FROM bill_reports b
-            INNER JOIN payments p ON p.id = b.payment_id
+            INNER JOIN payments p
+                ON p.id = b.payment_id
+            INNER JOIN customers c
+                ON c.id = p.customer_id
             WHERE ${whereSql}
             ORDER BY b.id DESC
             LIMIT ${limit}
@@ -796,8 +866,7 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
             `,
             params
         );
-
-        const total = Number(countRow.total || 0);
+          const total = Number(countRow.total || 0);
 
         return res.json({
             status: true,
@@ -829,8 +898,7 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
                 : undefined
         });
     }
-});
-
+});      
 /*
 |--------------------------------------------------------------------------
 | RESELLER LIST

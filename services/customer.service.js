@@ -376,55 +376,6 @@ function calculateDayLeft(billingCycle) {
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| DAY LEFT
-|--------------------------------------------------------------------------
-|
-| PHP list.php calculates day left from billing_cycle.
-|--------------------------------------------------------------------------
-*/
-
-function calculateDayLeft(billingCycle) {
-
-    if (
-        billingCycle === null ||
-        billingCycle === undefined ||
-        billingCycle === ""
-    ) {
-        return null;
-    }
-
-    const date = normalizeDate(billingCycle);
-
-    if (!date) {
-        return null;
-    }
-
-    const now = new Date();
-
-    const start = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-    );
-
-    const end = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
-    );
-
-    const difference =
-        end.getTime() -
-        start.getTime();
-
-    return Math.ceil(
-        difference /
-        (1000 * 60 * 60 * 24)
-    );
-
-}
 
 
 /*
