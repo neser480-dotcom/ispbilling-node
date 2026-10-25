@@ -1,0 +1,1094 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLT Users</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+
+    <style>
+        :root {
+            --olt-blue: #3288df;
+            --olt-blue-dark: #2476cb;
+            --olt-text: #444;
+            --olt-muted: #718096;
+            --olt-border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .olt-page {
+            width: 100%;
+            min-width: 0;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 18px 22px;
+            color: var(--olt-text);
+            font-family: Arial, "Segoe UI", sans-serif;
+            font-size: 14px;
+        }
+
+        .olt-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            color: #fff;
+            background: linear-gradient(110deg, #388fe4, #287fd6);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px #00000012;
+        }
+
+        .olt-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 500;
+        }
+
+        .olt-icon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            border: 1px solid #ffffff80;
+            border-radius: 6px;
+            color: var(--olt-blue-dark);
+            background: #fff;
+            font-size: 18px;
+        }
+
+        .olt-icon-button:hover {
+            background: #eef6ff;
+        }
+
+        .olt-icon-button:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+        .olt-content {
+            min-width: 0;
+            margin-top: 10px;
+            padding: 18px;
+            background: #fff;
+            border-radius: 5px;
+        }
+
+        .olt-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 42px;
+            padding: 6px 10px;
+            color: #fff;
+            background: linear-gradient(110deg, #388fe4, #287fd6);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px #00000020;
+        }
+
+        .olt-summary-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+        }
+
+        .olt-summary-number {
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: #2675bf;
+            font-size: 12px;
+        }
+
+        .olt-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .olt-select,
+        .olt-search input {
+            height: 32px;
+            padding: 6px 10px;
+            color: #fff;
+            background: #267ed0;
+            border: 1px solid #ffffff60;
+            border-radius: 4px;
+        }
+
+        .olt-select {
+            width: min(240px, 45%);
+            min-width: 130px;
+        }
+
+        .olt-select option {
+            color: #333;
+            background: #fff;
+        }
+
+        .olt-search {
+            width: min(320px, 55%);
+        }
+
+        .olt-search input {
+            display: block;
+            width: 100%;
+        }
+
+        .olt-search input::placeholder {
+            color: #e7f1ff;
+        }
+
+        .olt-search input:focus,
+        .olt-select:focus {
+            color: #333;
+            background: #fff;
+            outline: 2px solid #164f91;
+            outline-offset: 1px;
+        }
+
+        .olt-table-scroll {
+            width: 100%;
+            min-width: 0;
+            margin-top: 14px;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .olt-table {
+            width: 100%;
+            min-width: 1150px;
+            margin-bottom: 0;
+            border-collapse: collapse;
+            table-layout: auto;
+            font-family: Arial, "Segoe UI", sans-serif;
+        }
+
+        .olt-table th {
+            padding: 12px;
+            color: #555;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            vertical-align: bottom;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--olt-border);
+        }
+
+        .olt-table td {
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            vertical-align: middle;
+            overflow-wrap: anywhere;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .olt-table tbody tr:nth-child(odd) {
+            background: #f1f1f1;
+        }
+
+        .olt-table tbody tr:nth-child(even) {
+            background: #fff;
+        }
+
+        .olt-table tbody tr:hover {
+            background: #eaf3fc;
+        }
+
+        .olt-sort-button {
+            padding: 0;
+            border: 0;
+            color: inherit;
+            background: transparent;
+            font-weight: inherit;
+            text-align: left;
+        }
+
+        .olt-sort-mark {
+            color: #6e9dc4;
+        }
+
+        .olt-sub-text {
+            display: block;
+            margin-top: 3px;
+            color: #666;
+        }
+
+        .olt-status {
+            display: inline-block;
+            padding: 3px 8px;
+            color: #fff;
+            background: #23875e;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .olt-status.offline {
+            background: #d9534f;
+        }
+
+        .olt-status.unknown {
+            background: #858585;
+        }
+
+        .olt-action-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 75px;
+            height: 32px;
+            padding: 0 10px;
+            color: #267bc2;
+            background: #fff;
+            border: 1px solid #78a8d1;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .olt-action-button:hover {
+            color: #fff;
+            background: #267bc2;
+        }
+
+        .olt-action-button:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+
+        .olt-empty {
+            padding: 35px 15px !important;
+            color: var(--olt-muted);
+            text-align: center;
+        }
+
+        .olt-footer {
+            padding: 14px 0 2px;
+            color: #777;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .olt-message {
+            display: none;
+            margin-top: 12px;
+            padding: 9px 12px;
+            border-radius: 4px;
+            overflow-wrap: anywhere;
+        }
+
+        .olt-message.error {
+            display: block;
+            color: #842029;
+            background: #f8d7da;
+        }
+
+        .olt-message.info {
+            display: block;
+            color: #084298;
+            background: #cfe2ff;
+        }
+
+        .olt-message.success {
+            display: block;
+            color: #0f5132;
+            background: #d1e7dd;
+        }
+
+        @media (max-width: 1199px) {
+            .olt-page {
+                padding: 14px;
+            }
+
+            .olt-content {
+                padding: 14px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .olt-page {
+                padding: 8px;
+            }
+
+            .olt-header {
+                padding: 12px;
+            }
+
+            .olt-header h1 {
+                font-size: 20px;
+            }
+
+            .olt-content {
+                padding: 10px;
+            }
+
+            .olt-summary {
+                align-items: stretch;
+            }
+
+            .olt-controls {
+                flex-basis: 100%;
+                min-width: 0;
+            }
+
+            .olt-select {
+                width: 45%;
+            }
+
+            .olt-search {
+                width: 55%;
+            }
+
+            .olt-table {
+                min-width: 1100px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .olt-page {
+                padding: 6px;
+            }
+
+            .olt-header {
+                padding: 10px;
+            }
+
+            .olt-header h1 {
+                font-size: 18px;
+            }
+
+            .olt-content {
+                padding: 8px;
+            }
+
+            .olt-summary {
+                padding: 7px;
+                font-size: 12px;
+            }
+
+            .olt-summary-number {
+                padding: 3px 7px;
+            }
+
+            .olt-select,
+            .olt-search input {
+                padding: 6px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="olt-page">
+
+            <header class="olt-header">
+                <h1>
+                    <i class="fa-solid fa-network-wired me-2"></i>
+                    OLT Users
+                </h1>
+
+                <button
+                    class="olt-icon-button"
+                    id="refreshTable"
+                    type="button"
+                    title="Refresh ONU data"
+                    aria-label="Refresh ONU data">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+            </header>
+
+            <section class="olt-content">
+                <div class="olt-summary">
+                    <div class="olt-summary-title">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <span>Total Data:</span>
+                        <span class="olt-summary-number" id="totalData">0</span>
+                    </div>
+
+                    <div class="olt-controls">
+                        <select
+                            id="oltSelect"
+                            class="olt-select"
+                            aria-label="Select OLT">
+                            <option value="">Loading OLTs...</option>
+                        </select>
+
+                        <label class="olt-search">
+                            <input
+                                id="tableSearch"
+                                type="search"
+                                placeholder="Search ONU"
+                                autocomplete="off"
+                                aria-label="Search OLT users">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="pageMessage" class="olt-message" role="status"></div>
+
+                <div class="olt-table-scroll">
+                    <table class="table table-hover olt-table">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="olt-footer">© AI IT</div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+
+    <script>
+    "use strict";
+
+    const columns = [
+        ["id", "ID"],
+        ["name", "Name"],
+        ["address", "Address / MAC"],
+        ["oltPort", "OLT & Ports"],
+        ["power", "Rx & Tx Power"],
+        ["distance", "Distance"],
+        ["environment", "Voltage & Temperature"],
+        ["onu", "ONU"],
+        ["lastUpdate", "Last update"],
+        ["action", "Action"]
+    ];
+
+    let users = [];
+    let sortColumn = "";
+    let sortAscending = true;
+    let selectedOltId = "";
+    let oltList = [];
+    let loading = false;
+    let syncing = false;
+
+    const head = document.getElementById("tableHead");
+    const body = document.getElementById("tableBody");
+    const search = document.getElementById("tableSearch");
+    const total = document.getElementById("totalData");
+    const oltSelect = document.getElementById("oltSelect");
+    const message = document.getElementById("pageMessage");
+    const refreshButton = document.getElementById("refreshTable");
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
+    }
+
+    function displayValue(value, suffix = "") {
+        if (value === null || value === undefined || value === "") {
+            return "—";
+        }
+
+        return `${value}${suffix}`;
+    }
+
+    function showMessage(text, type = "info") {
+        message.textContent = text;
+        message.className = `olt-message ${type}`;
+    }
+
+    function clearMessage() {
+        message.textContent = "";
+        message.className = "olt-message";
+    }
+
+    async function parseResponse(response) {
+        let result;
+
+        try {
+            result = await response.json();
+        } catch (_) {
+            throw new Error(
+                `Invalid server response (HTTP ${response.status}).`
+            );
+        }
+
+        if (!response.ok || result.success === false) {
+            throw new Error(
+                result.message || `Request failed (HTTP ${response.status}).`
+            );
+        }
+
+        return result;
+    }
+
+    async function apiGet(url) {
+        const response = await fetch(url, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        return parseResponse(response);
+    }
+
+    async function apiPost(url) {
+        const response = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({})
+        });
+
+        return parseResponse(response);
+    }
+
+    function normalizeOnu(row, olt) {
+        const rawStatus = String(row.status || "unknown")
+            .trim()
+            .toLowerCase();
+
+        let status = "Unknown";
+
+        if (
+            ["online", "up", "active", "working", "registered"].includes(rawStatus)
+        ) {
+            status = "Online";
+        } else if (
+            ["offline", "down", "los", "unregistered"].includes(rawStatus)
+        ) {
+            status = "Offline";
+        }
+
+        const rx = row.rx_power;
+        const tx = row.tx_power;
+
+        const lastUpdate =
+            row.last_update ||
+            row.updated_at ||
+            row.last_seen ||
+            "";
+
+        const mac =
+            row.mac ||
+            row.onu_mac ||
+            row.serial ||
+            row.onu_sn ||
+            "";
+
+        const distance = row.distance;
+
+        return {
+            id: row.id,
+
+            name:
+                row.name ||
+                row.onu_name ||
+                row.serial ||
+                row.onu_sn ||
+                `ONU ${row.id}`,
+
+            address: mac,
+
+            oltPort:
+                olt.name ||
+                olt.vendor ||
+                `OLT ${olt.id}`,
+
+            port: row.pon || "",
+
+            rx: rx === null || rx === undefined || rx === ""
+                ? "—"
+                : `${rx} dBm`,
+
+            tx: tx === null || tx === undefined || tx === ""
+                ? "—"
+                : `${tx} dBm`,
+
+            distance:
+                distance === null || distance === undefined || distance === ""
+                    ? "—"
+                    : `${distance}${/[a-z]/i.test(String(distance)) ? "" : " m"}`,
+
+            voltage: displayValue(row.voltage, " V"),
+
+            temperature: displayValue(row.temperature, " °C"),
+
+            onu: status,
+
+            lastUpdate: lastUpdate
+                ? formatDate(lastUpdate)
+                : "—",
+
+            searchText: [
+                row.id,
+                row.name,
+                row.onu_name,
+                mac,
+                row.serial,
+                row.onu_sn,
+                row.pon,
+                status,
+                olt.name,
+                olt.vendor
+            ].join(" ")
+        };
+    }
+
+    function formatDate(value) {
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return date.toLocaleString();
+    }
+
+    function renderHead() {
+        head.innerHTML = `
+            <tr>
+                ${columns.map(([key, label]) => `
+                    <th scope="col">
+                        <button
+                            type="button"
+                            class="olt-sort-button"
+                            data-sort="${key}">
+                            ${label}
+                            <span class="olt-sort-mark">↕</span>
+                        </button>
+                    </th>
+                `).join("")}
+            </tr>
+        `;
+    }
+
+    function getCell(user, key) {
+        switch (key) {
+            case "id":
+                return escapeHTML(user.id);
+
+            case "name":
+                return escapeHTML(user.name);
+
+            case "address":
+                return escapeHTML(user.address || "—");
+
+            case "oltPort":
+                return `
+                    ${escapeHTML(user.oltPort)}
+                    <span class="olt-sub-text">
+                        PON: ${escapeHTML(user.port || "—")}
+                    </span>
+                `;
+
+            case "power":
+                return `
+                    RX: ${escapeHTML(user.rx)}
+                    <span class="olt-sub-text">
+                        TX: ${escapeHTML(user.tx)}
+                    </span>
+                `;
+
+            case "distance":
+                return escapeHTML(user.distance);
+
+            case "environment":
+                return `
+                    Voltage: ${escapeHTML(user.voltage)}
+                    <span class="olt-sub-text">
+                        Temperature: ${escapeHTML(user.temperature)}
+                    </span>
+                `;
+
+            case "onu": {
+                const status = String(user.onu || "Unknown");
+                const normalized = status.toLowerCase();
+
+                const cssClass = normalized === "offline"
+                    ? "offline"
+                    : normalized === "online"
+                        ? ""
+                        : "unknown";
+
+                return `
+                    <span class="olt-status ${cssClass}">
+                        ${escapeHTML(status)}
+                    </span>
+                `;
+            }
+
+            case "lastUpdate":
+                return escapeHTML(user.lastUpdate);
+
+            case "action":
+                return `
+                    <button
+                        type="button"
+                        class="olt-action-button"
+                        data-sync-olt="${escapeHTML(selectedOltId)}"
+                        title="Sync selected OLT"
+                        aria-label="Sync selected OLT">
+                        <i class="fa-solid fa-rotate"></i>
+                        Sync
+                    </button>
+                `;
+
+            default:
+                return "";
+        }
+    }
+
+    function renderRows() {
+        const query = search.value.trim().toLowerCase();
+
+        let rows = users.filter(user => {
+            if (!query) {
+                return true;
+            }
+
+            return Object.values(user).some(value =>
+                String(value ?? "").toLowerCase().includes(query)
+            );
+        });
+
+        if (sortColumn) {
+            rows.sort((a, b) => {
+                const av = String(a[sortColumn] ?? "");
+                const bv = String(b[sortColumn] ?? "");
+
+                return av.localeCompare(
+                    bv,
+                    undefined,
+                    {
+                        numeric: true,
+                        sensitivity: "base"
+                    }
+                ) * (sortAscending ? 1 : -1);
+            });
+        }
+
+        total.textContent = String(rows.length);
+
+        if (!rows.length) {
+            body.innerHTML = `
+                <tr>
+                    <td class="olt-empty" colspan="${columns.length}">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        ${
+                            users.length
+                                ? "No matching ONU data."
+                                : "No ONU data available. Run Sync to update this OLT."
+                        }
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        body.innerHTML = rows.map(user => `
+            <tr>
+                ${columns.map(([key]) => `
+                    <td>${getCell(user, key)}</td>
+                `).join("")}
+            </tr>
+        `).join("");
+
+        if (syncing) {
+            body.querySelectorAll("[data-sync-olt]").forEach(button => {
+                button.disabled = true;
+                button.innerHTML =
+                    '<i class="fa-solid fa-spinner fa-spin"></i> Syncing';
+            });
+        }
+    }
+
+    async function loadOltList() {
+        const result = await apiGet("/api/olt");
+
+        oltList = Array.isArray(result.data)
+            ? result.data
+            : [];
+
+        const params = new URLSearchParams(window.location.search);
+        const requestedId =
+            params.get("olt_id") ||
+            params.get("id") ||
+            "";
+
+        oltSelect.innerHTML = "";
+
+        if (!oltList.length) {
+            oltSelect.innerHTML =
+                '<option value="">No OLT available</option>';
+
+            users = [];
+            renderRows();
+
+            showMessage(
+                "No OLT records were returned for your account.",
+                "info"
+            );
+
+            return;
+        }
+
+        oltSelect.innerHTML = oltList.map(olt => `
+            <option value="${escapeHTML(olt.id)}">
+                ${escapeHTML(olt.name || olt.vendor || "OLT")}
+                (#${escapeHTML(olt.id)})
+            </option>
+        `).join("");
+
+        const requestedOlt = oltList.find(
+            olt => String(olt.id) === String(requestedId)
+        );
+
+        const initialOlt = requestedOlt || oltList[0];
+
+        selectedOltId = String(initialOlt.id);
+        oltSelect.value = selectedOltId;
+
+        await loadOnus();
+    }
+
+    async function loadOnus() {
+        if (!selectedOltId || loading) {
+            return;
+        }
+
+        loading = true;
+        refreshButton.disabled = true;
+        refreshButton.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        clearMessage();
+
+        body.innerHTML = `
+            <tr>
+                <td class="olt-empty" colspan="${columns.length}">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                    Loading ONU data...
+                </td>
+            </tr>
+        `;
+
+        try {
+            const result = await apiGet(
+                `/api/olt/${encodeURIComponent(selectedOltId)}/onus`
+            );
+
+            const rawRows = Array.isArray(result.data)
+                ? result.data
+                : [];
+
+            const olt = oltList.find(
+                item => String(item.id) === String(selectedOltId)
+            ) || {};
+
+            users = rawRows.map(row => normalizeOnu(row, olt));
+
+            renderRows();
+        } catch (error) {
+            users = [];
+            renderRows();
+
+            showMessage(
+                error.message || "Failed to load ONU data.",
+                "error"
+            );
+        } finally {
+            loading = false;
+            refreshButton.disabled = false;
+            refreshButton.innerHTML =
+                '<i class="fa-solid fa-rotate"></i>';
+        }
+    }
+
+    async function syncSelectedOlt(button) {
+        if (!selectedOltId || syncing) {
+            return;
+        }
+
+        syncing = true;
+        clearMessage();
+
+        const originalHtml =
+            '<i class="fa-solid fa-rotate"></i> Sync';
+
+        if (button) {
+            button.disabled = true;
+            button.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin"></i> Syncing';
+        }
+
+        refreshButton.disabled = true;
+        oltSelect.disabled = true;
+
+        try {
+            const result = await apiPost(
+                `/api/olt/${encodeURIComponent(selectedOltId)}/sync`
+            );
+
+            const details = result.data || {};
+
+            showMessage(
+                `${result.message || "ONU synchronization completed."} ` +
+                `Inserted: ${details.inserted ?? 0}, ` +
+                `Updated: ${details.updated ?? 0}, ` +
+                `Skipped: ${details.skipped ?? 0}.`,
+                "success"
+            );
+
+            // Refresh ONU records after successful synchronization.
+            await loadOnus();
+        } catch (error) {
+            showMessage(
+                error.message || "ONU synchronization failed.",
+                "error"
+            );
+        } finally {
+            syncing = false;
+            refreshButton.disabled = false;
+            oltSelect.disabled = false;
+
+            body.querySelectorAll("[data-sync-olt]").forEach(item => {
+                item.disabled = false;
+                item.innerHTML = originalHtml;
+            });
+        }
+    }
+
+    head.addEventListener("click", event => {
+        const button = event.target.closest("[data-sort]");
+
+        if (!button) {
+            return;
+        }
+
+        const key = button.dataset.sort;
+
+        if (sortColumn === key) {
+            sortAscending = !sortAscending;
+        } else {
+            sortColumn = key;
+            sortAscending = true;
+        }
+
+        renderRows();
+    });
+
+    search.addEventListener("input", renderRows);
+
+    oltSelect.addEventListener("change", async () => {
+        if (syncing) {
+            return;
+        }
+
+        selectedOltId = oltSelect.value;
+        users = [];
+
+        renderRows();
+
+        await loadOnus();
+    });
+
+    refreshButton.addEventListener("click", async () => {
+        if (loading || syncing) {
+            return;
+        }
+
+        try {
+            if (!oltList.length) {
+                await loadOltList();
+            } else {
+                await loadOnus();
+            }
+        } catch (error) {
+            showMessage(
+                error.message || "Failed to refresh ONU data.",
+                "error"
+            );
+        }
+    });
+
+    body.addEventListener("click", async event => {
+        const button = event.target.closest("[data-sync-olt]");
+
+        if (!button || button.disabled || syncing || loading) {
+            return;
+        }
+
+        const oltId = button.dataset.syncOlt;
+
+        if (!oltId || String(oltId) !== String(selectedOltId)) {
+            return;
+        }
+
+        await syncSelectedOlt(button);
+    });
+
+    async function init() {
+        renderHead();
+
+        body.innerHTML = `
+            <tr>
+                <td class="olt-empty" colspan="${columns.length}">
+                    Loading OLT list...
+                </td>
+            </tr>
+        `;
+
+        try {
+            await loadOltList();
+        } catch (error) {
+            oltSelect.innerHTML =
+                '<option value="">Failed to load OLTs</option>';
+
+            users = [];
+            renderRows();
+
+            showMessage(
+                error.message ||
+                "Unable to load OLT list. Check login and API route.",
+                "error"
+            );
+        }
+    }
+
+    init();
+    </script>
+</body>
+</html>
