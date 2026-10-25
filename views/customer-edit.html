@@ -1,174 +1,262 @@
+<div class="cm-wrap customer-edit-wrap">
 
-<div class="cm-wrap">
-    <div class="cm-head">
-        <h5>
-            {{CUSTOMER_NAME}}'s Profile Edit
-            <span class="cm-badge {{STATUS_CLASS}}">{{STATUS}}</span>
-            <span class="cm-badge {{PAYMENT_CLASS}}">{{PAYMENT_STATUS}}</span>
-        </h5>
-        <button type="button" class="cm-close" data-bs-dismiss="modal">
+    <!-- Header -->
+    <div class="cm-head cm-edit-head">
+        <div class="cm-title-wrap">
+            <h5 class="cm-title">{{CUSTOMER_NAME}} 's Profile Edit</h5>
+
+            <div class="cm-badges">
+                <span class="cm-badge {{STATUS_CLASS}}">{{STATUS}}</span>
+                <span class="cm-badge {{PAYMENT_CLASS}}">{{PAYMENT_STATUS}}</span>
+            </div>
+        </div>
+
+        <button type="button"
+                class="cm-close"
+                data-bs-dismiss="modal"
+                aria-label="Close">
             <i class="fas fa-times"></i>
         </button>
     </div>
 
+    <!-- Edit Form -->
     <form id="editCustomerForm"
           class="customer-edit-form"
           method="POST"
-          action="/api/customers/update">
+          action="/api/customers/update"
+          autocomplete="off"
+          data-mikrotik-id="{{MIKROTIK_ID}}"
+          data-package-id="{{PACKAGE_ID}}"
+          data-area-id="{{AREA_ID}}"
+          data-sub-area-id="{{SUB_AREA_ID}}"
+          data-division-id="{{DIVISION_ID}}"
+          data-district-id="{{DISTRICT_ID}}"
+          data-upazila-id="{{UPAZILA_ID}}">
 
         <input type="hidden" name="id" value="{{ID}}">
         <input type="hidden" name="csrf_token" value="{{CSRF_TOKEN}}">
+        <input type="hidden" name="auto_fields" value="1">
 
         <div class="cm-body">
             <div class="row g-3">
 
+                <!-- Row 1 -->
                 <div class="col-md-4">
-                    <label class="cm-lbl">Customer ID *</label>
-                    <input class="cm-in" value="{{CUSTOMER_ID}}" readonly>
+                    <label class="cm-lbl">Customer ID <span class="text-danger">*</span></label>
+                    <input type="text" class="cm-in" name="customer_id"
+                           value="{{CUSTOMER_ID}}" maxlength="50" required>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">MikroTik *</label>
-                    <input class="cm-in" value="{{MIKROTIK_NAME}}" readonly>
-                    <input type="hidden" name="mikrotik_id" value="{{MIKROTIK_ID}}">
+                    <label class="cm-lbl">
+                        Mikrotik <span class="text-danger">*</span>
+                        <i class="fas fa-info-circle text-primary ms-1"
+                           title="Mikrotik বদলালে Package, Area ও Sub-Area আবার বেছে নিতে হবে"></i>
+                    </label>
+                    <select class="cm-sel" name="mikrotik_id" id="edit_mikrotik_id" required>
+                        <option value="{{MIKROTIK_ID}}" selected>{{MIKROTIK_NAME}}</option>
+                    </select>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">Package *</label>
+                    <label class="cm-lbl">Package <span class="text-danger">*</span></label>
                     <select class="cm-sel" name="package_id" id="edit_package_id" required>
                         {{PACKAGE_OPTIONS}}
                     </select>
                 </div>
 
+                <!-- Row 2 -->
                 <div class="col-md-4">
-                    <label class="cm-lbl">Monthly Fee</label>
-                    <input class="cm-in" id="edit_monthly_fee" value="{{MONTHLY_FEE}}" readonly>
+                    <label class="cm-lbl">Monthly Fee <span class="text-danger">*</span></label>
+                    <input type="number" class="cm-in" name="monthly_bill" id="edit_monthly_fee"
+                           value="{{MONTHLY_FEE_RAW}}" min="0" step="0.01" required>
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">Balance</label>
-                    <input class="cm-in" value="{{BALANCE}}" readonly>
+                    <input type="number" class="cm-in" name="balance"
+                           value="{{BALANCE_RAW}}" step="0.01">
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">PPPoE Name *</label>
-                    <input class="cm-in" name="pppoe_name" value="{{PPPOE_NAME}}" required>
+                    <label class="cm-lbl">PPPoE Name <span class="text-danger">*</span></label>
+                    <input type="text" class="cm-in" name="pppoe_name"
+                           value="{{PPPOE_NAME}}" maxlength="100" required>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="col-md-4">
+                    <label class="cm-lbl">Password <span class="text-danger">*</span></label>
+                    <input type="text" class="cm-in" name="password"
+                           value="{{PASSWORD}}" maxlength="100"
+                           autocomplete="new-password" required>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">PPPoE Password *</label>
-                    <input class="cm-in" type="password" name="password"
-                           value="{{PPPOE_PASSWORD}}" autocomplete="new-password" required>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">Area *</label>
+                    <label class="cm-lbl">Select Area <span class="text-danger">*</span></label>
                     <select class="cm-sel" name="area_id" id="edit_area_id" required>
                         {{AREA_OPTIONS}}
                     </select>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">Sub-Area *</label>
+                    <label class="cm-lbl">Select Sub-Area <span class="text-danger">*</span></label>
                     <select class="cm-sel" name="sub_area_id" id="edit_sub_area_id" required>
                         {{SUB_AREA_OPTIONS}}
                     </select>
                 </div>
 
+                <!-- Row 4 -->
                 <div class="col-md-4">
-                    <label class="cm-lbl">Name</label>
-                    <input class="cm-in" value="{{CUSTOMER_NAME}}" readonly>
+                    <label class="cm-lbl">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="cm-in" name="name"
+                           value="{{CUSTOMER_NAME}}" maxlength="150" required>
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">Mobile</label>
-                    <input class="cm-in" value="{{PHONE}}" readonly>
+                    <input type="tel" class="cm-in" name="phone"
+                           value="{{PHONE}}" maxlength="30">
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">NID No</label>
-                    <input class="cm-in" value="{{NID}}" readonly>
+                    <input type="text" class="cm-in" name="nid_no"
+                           value="{{NID}}" maxlength="50"
+                           placeholder="e.g. 10,13 or 17 digits">
                 </div>
 
+                <!-- Row 5 -->
                 <div class="col-md-4">
                     <label class="cm-lbl">Birth Date</label>
-                    <input class="cm-in" value="{{BIRTH_DATE}}" readonly>
+                    <input type="date" class="cm-in" name="birth_date"
+                           value="{{BIRTH_DATE_RAW}}">
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">Address</label>
-                    <input class="cm-in" value="{{ADDRESS}}" readonly>
+                    <input type="text" class="cm-in" name="address"
+                           value="{{ADDRESS}}" maxlength="500">
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">E-mail</label>
-                    <input class="cm-in" value="{{EMAIL}}" readonly>
+                    <input type="email" class="cm-in" name="email"
+                           value="{{EMAIL}}" maxlength="150">
                 </div>
 
+                <!-- Row 6 -->
                 <div class="col-md-4">
-                    <label class="cm-lbl">Billing Cycle</label>
-                    <input class="cm-in" value="{{BILLING_CYCLE}}" readonly>
+                    <label class="cm-lbl">Billing Cycle <span class="text-danger">*</span></label>
+                    <input type="datetime-local" class="cm-in" name="billing_cycle"
+                           value="{{BILLING_CYCLE_RAW}}" required>
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">Promise Date</label>
-                    <input class="cm-in" value="{{PROMISE_DATE}}" readonly>
+                    <input type="datetime-local" class="cm-in" name="promise_date"
+                           value="{{PROMISE_DATE_RAW}}">
                 </div>
 
                 <div class="col-md-4">
                     <label class="cm-lbl">Connection Date</label>
-                    <input class="cm-in" value="{{CONNECTION_DATE}}" readonly>
+                    <input type="datetime-local" class="cm-in" name="connection_date"
+                           value="{{CONNECTION_DATE_RAW}}">
                 </div>
 
+                <!-- Row 7 -->
                 <div class="col-md-4">
                     <label class="cm-lbl">Connection Fee</label>
-                    <input class="cm-in" value="{{CONNECTION_FEE}}" readonly>
+                    <input type="number" class="cm-in" name="connection_fee"
+                           value="{{CONNECTION_FEE_RAW}}" min="0" step="0.01">
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">Billing Type</label>
-                    <input class="cm-in" value="{{BILLING_TYPE}}" readonly>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">Division</label>
-                    <input class="cm-in" value="{{DIVISION}}" readonly>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">District</label>
-                    <input class="cm-in" value="{{DISTRICT}}" readonly>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">Upazila / Thana</label>
-                    <input class="cm-in" value="{{UPAZILA}}" readonly>
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">Comment</label>
-                    <input class="cm-in" name="comment" value="{{COMMENT}}">
-                </div>
-
-                <div class="col-md-4">
-                    <label class="cm-lbl">Status *</label>
-                    <select class="cm-sel" name="status" required>
-                        {{STATUS_OPTIONS}}
+                    <label class="cm-lbl">Billing Type <span class="text-danger">*</span></label>
+                    <select class="cm-sel" name="billing_type" required>
+                        <option value="Prepaid" {{PREPAID_SELECTED}}>Prepaid</option>
+                        <option value="Postpaid" {{POSTPAID_SELECTED}}>Postpaid</option>
                     </select>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="cm-lbl">Automatic Connection</label>
-                    <input class="cm-in" value="{{AUTO_CONNECTION}}" readonly>
+                    <label class="cm-lbl">Select Division</label>
+                    <select class="cm-sel" name="division_id" id="edit_division_id">
+                        <option value="">Select Division</option>
+                    </select>
+                </div>
+
+                <!-- Row 8 -->
+                <div class="col-md-4">
+                    <label class="cm-lbl">Select District</label>
+                    <select class="cm-sel" name="district_id" id="edit_district_id">
+                        <option value="">Select District</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Select Upazila/Thana</label>
+                    <select class="cm-sel" name="upazila_id" id="edit_upazila_id">
+                        <option value="">Select Upazila/Thana</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="cm-lbl">Comment</label>
+                    <input type="text" class="cm-in" name="comment"
+                           value="{{COMMENT}}" maxlength="2000">
+                </div>
+
+                <!-- Row 9 -->
+                <div class="col-md-4">
+                    <label class="cm-lbl">Status <span class="text-danger">*</span></label>
+                    <div class="cm-radio-row">
+                        <label class="cm-radio">
+                            <input type="radio" name="status" value="Active" {{ACTIVE_CHECKED}} required>
+                            <span>Active</span>
+                        </label>
+                        <label class="cm-radio">
+                            <input type="radio" name="status" value="Inactive" {{INACTIVE_CHECKED}}>
+                            <span>Inactive</span>
+                        </label>
+                        <label class="cm-radio">
+                            <input type="radio" name="status" value="Expired" {{EXPIRED_CHECKED}}>
+                            <span>Expired</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <label class="cm-lbl">Automatic Connection On/Off</label>
+                    <div class="cm-check-row">
+                        <label class="cm-check">
+                            <input type="checkbox" name="auto_continue" value="1"
+                                   {{AUTO_CONTINUE_CHECKED}}>
+                            <span>Will continue</span>
+                        </label>
+                        <label class="cm-check">
+                            <input type="checkbox" name="auto_next_month" value="1"
+                                   {{AUTO_NEXT_MONTH_CHECKED}}>
+                            <span>Next Month</span>
+                            <i class="fas fa-info-circle text-primary ms-1"
+                               title="পরবর্তী মাস থেকে অটো কানেকশন চালু থাকবে"></i>
+                        </label>
+                    </div>
                 </div>
 
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="cm-foot">
-            <button type="button" class="cm-btn cm-cancel"
-                    data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="cm-btn cm-save">Update Customer</button>
+            <button type="button" class="cm-btn cm-cancel" data-bs-dismiss="modal">
+                Cancel
+            </button>
+
+            <button type="submit" class="cm-btn cm-save">
+                Save
+            </button>
         </div>
+
     </form>
 </div>

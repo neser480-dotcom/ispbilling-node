@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices</title>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/billing-invoices.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div id="sidebarContainer"></div>
+
+    <!-- Topbar -->
+    <div id="topbarContainer"></div>
+
+    <!-- Invoice Content -->
+    <main class="main-content">
+
+        <div class="inv-header-bar">
+            <h4>
+                <i class="fa fa-file-invoice"></i>
+                Invoices
+            </h4>
+
+            <div class="inv-header-actions">
+                <button type="button" class="btn-icon" id="filterInvoices" title="Filter">
+                    <i class="fa fa-sliders"></i>
+                </button>
+
+                <button type="button" class="btn-icon" id="refreshInvoices" title="Refresh">
+                    <i class="fa fa-arrows-rotate"></i>
+                </button>
+
+                <button type="button" class="btn-icon" id="printInvoices" title="Print">
+                    <i class="fa fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="summary-sub-bar">
+            <div>
+                <i class="fa fa-gear"></i>
+                Total Data:
+                <span class="summary-badge" id="totalData">0</span>
+            </div>
+
+            <div class="search-box">
+                <input
+                    type="search"
+                    id="invoiceSearch"
+                    placeholder="Search invoice / customer..."
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Type</th>
+                            <th>Message Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Invoice Date</th>
+                            <th>Due Date</th>
+                            <th>Paid Date</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="invoiceTableBody">
+                        <tr>
+                            <td colspan="10" class="text-center">
+                                Loading invoices...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 text-muted small">
+            © AI IT - <span id="currentYear"></span>
+        </div>
+
+    </main>
+
+    <!-- Invoice Details Modal -->
+    <div class="invoice-modal-overlay" id="invoiceModal" hidden>
+        <div class="invoice-modal">
+
+            <div class="invoice-modal-header">
+                <h5>
+                    <i class="fa fa-file-invoice"></i>
+                    Invoice Details
+                </h5>
+
+                <button type="button" class="invoice-modal-close" id="closeInvoiceModal">
+                    <i class="fa fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="invoice-modal-body">
+                <div class="invoice-info-grid">
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Invoice ID</span>
+                        <span class="invoice-info-value" id="viewInvoiceId">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Customer ID</span>
+                        <span class="invoice-info-value" id="viewCustomerId">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Customer Name</span>
+                        <span class="invoice-info-value" id="viewCustomerName">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">PPPoE Username</span>
+                        <span class="invoice-info-value" id="viewUsername">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Type</span>
+                        <span class="invoice-info-value" id="viewType">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Message Type</span>
+                        <span class="invoice-info-value" id="viewMessageType">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Amount</span>
+                        <span class="invoice-info-value" id="viewAmount">-</span>
+                    </div>
+
+                    <div class="invoice-info-item">
+                        <span class="invoice-info-label">Status</span>
+                        <span class="invoice-info-value" id="viewStatus">-</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="invoice-modal-footer">
+                <button type="button" class="invoice-print-btn" id="printSingleInvoice">
+                    <i class="fa fa-print"></i>
+                    Print
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Load scripts only once -->
+    <script src="/assets/js/billing-invoices.js" defer></script>
+    <script src="/assets/js/sidebar-loader.js" defer></script>
+    <script src="/assets/js/topbar-loader.js" defer></script>
+
+    <script>
+        document.getElementById('currentYear').textContent =
+            new Date().getFullYear();
+    </script>
+
+</body>
+</html>

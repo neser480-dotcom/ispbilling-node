@@ -1,0 +1,382 @@
+
+body {
+    background: #f4f6f9;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+}
+
+.main-content {
+    padding: 24px;
+}
+
+.inv-header-bar {
+    background: #2b84ea;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inv-header-bar h4 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.inv-header-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-icon {
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    border: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.btn-icon:hover {
+    background: rgba(255,255,255,.4);
+}
+
+.summary-sub-bar {
+    background: #398cf3;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+}
+
+.summary-badge {
+    background: #1d6ed8;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.search-box input {
+    width: 260px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    padding: 7px 12px;
+    border-radius: 4px;
+}
+
+.search-box input::placeholder {
+    color: rgba(255,255,255,.85);
+}
+
+.search-box input:focus {
+    background: #fff;
+    color: #333;
+    outline: none;
+}
+
+.table-container {
+    background: #fff;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.custom-table th {
+    background: #fff;
+    color: #475569;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 12px 15px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.custom-table td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    font-size: 13.5px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-muted {
+    color: #64748b;
+}
+
+.small {
+    font-size: 12px;
+}
+
+.mt-4 {
+    margin-top: 24px;
+}
+
+.customer-cell {
+    min-width: 150px;
+    line-height: 1.35;
+}
+
+.customer-id,
+.customer-name,
+.customer-pppoe {
+    display: block;
+}
+
+.customer-id {
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.customer-name {
+    margin-top: 3px;
+    color: #334155;
+    font-weight: 500;
+}
+
+.customer-pppoe {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 11.5px;
+}
+
+.customer-pppoe-label {
+    color: #94a3b8;
+}
+
+.no-customer {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.badge-status {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.badge-status.paid {
+    background: #10b981;
+    color: #fff;
+}
+
+.badge-status.unpaid {
+    background: #ef4444;
+    color: #fff;
+}
+
+.badge-status.cancelled {
+    background: #64748b;
+    color: #fff;
+}
+
+.action-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.action-btn-more {
+    color: #2563eb;
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.action-dropdown-menu {
+    display: none;
+    position: fixed;
+    min-width: 145px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 5px 0;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+    z-index: 99999;
+}
+
+.action-dropdown-menu.show {
+    display: block;
+}
+
+.action-dropdown-menu button {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.action-dropdown-menu button:hover {
+    background: #f1f5f9;
+}
+
+.invoice-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.55);
+    z-index: 100000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.invoice-modal-overlay.show {
+    display: flex;
+}
+
+.invoice-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+
+.invoice-modal-header {
+    background: #2b84ea;
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.invoice-modal-header h5 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.invoice-modal-close {
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.invoice-modal-body {
+    padding: 20px;
+}
+
+.invoice-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.invoice-info-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    overflow-wrap: anywhere;
+}
+
+.invoice-info-label {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.invoice-info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.invoice-modal-footer {
+    padding: 12px 18px;
+    border-top: 1px solid #e2e8f0;
+    text-align: right;
+}
+
+.invoice-print-btn {
+    border: 0;
+    background: #2563eb;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 12px;
+    }
+
+    .summary-sub-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box input {
+        width: 100%;
+    }
+
+    .invoice-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media print {
+    .inv-header-actions,
+    .summary-sub-bar,
+    .action-dropdown,
+    .invoice-modal-overlay {
+        display: none !important;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+
+    .table-container {
+        box-shadow: none;
+    }
+
+    .table-responsive {
+        overflow: visible;
+    }
+}

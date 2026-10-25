@@ -112,6 +112,33 @@ function dateTimeLocal(value) {
     );
 }
 
+function dateOnly(value) {
+    if (!value) return "";
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) {
+        const text = String(value);
+        return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : "";
+    }
+
+    const pad = n => String(n).padStart(2, "0");
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function normalizeDateOnly(value, label) {
+    const text = String(value || "").trim();
+
+    if (!text) return null;
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        throw new ManageError(`Invalid ${label}.`);
+    }
+
+    return text;
+}
+
 function normalizeDate(value, label) {
     const text = String(value || "").trim();
 
@@ -447,7 +474,47 @@ async function editFragment({ user, id }) {
         STATUS_OPTIONS: statusOptions,
 
         AUTO_CONNECTION:
-            Number(c.auto_connection ?? 1) ? "On" : "Off"
+            Number(c.auto_connection ?? 1) ? "On" : "Off",
+
+        // ---- Raw values used by the editable form ----
+        PACKAGE_ID: Number(c.package_id || 0),
+        AREA_ID: Number(c.area_id || 0),
+        SUB_AREA_ID: Number(c.sub_area_id || 0),
+
+        // Division / District / Upazila are stored as text names;
+        // the browser script matches them by name against the API lists.
+        DIVISION_ID: e(c.division || ""),
+        DISTRICT_ID: e(c.district || ""),
+        UPAZILA_ID: e(c.upazila || c.thana || ""),
+
+        MONTHLY_FEE_RAW: e(Number(c.monthly_bill ?? c.display_bill ?? 0)),
+        PASSWORD: e(c.pppoe_password || ""),
+        BALANCE_RAW: e(Number(c.balance ?? 0).toFixed(2)),
+        BILLING_CYCLE_RAW: e(dateTimeLocal(c.billing_cycle || c.billing_date)),
+        PROMISE_DATE_RAW: e(dateTimeLocal(c.promise_date)),
+        CONNECTION_DATE_RAW: e(dateTimeLocal(c.connection_date)),
+        CONNECTION_FEE_RAW: e(Number(c.connection_fee || 0)),
+        BIRTH_DATE_RAW: e(dateOnly(c.birth_date)),
+
+        PREPAID_SELECTED:
+            String(c.billing_type || "Prepaid").toLowerCase() === "postpaid"
+                ? "" : "selected",
+        POSTPAID_SELECTED:
+            String(c.billing_type || "").toLowerCase() === "postpaid"
+                ? "selected" : "",
+
+        ACTIVE_CHECKED:
+            status.toLowerCase() === "active" ? "checked" : "",
+        INACTIVE_CHECKED:
+            status.toLowerCase() === "inactive" ? "checked" : "",
+        EXPIRED_CHECKED:
+            status.toLowerCase() === "expired" ? "checked" : "",
+
+        AUTO_CONTINUE_CHECKED:
+            Number(c.auto_connection ?? 1) ? "checked" : "",
+        AUTO_NEXT_MONTH_CHECKED:
+            Number(c.auto_next_month ?? c.auto_connection_next_month ?? 0)
+                ? "checked" : ""
     };
 
     // Replace known template placeholders.
@@ -475,6 +542,10 @@ async function updateCustomer({ user, body }) {
         throw new ManageError("Invalid customer ID.");
     }
 
+    // A key counts as "sent" only when it is present in the request.
+    // This keeps saveCustomerProfile() (which sends fewer keys) working.
+    const has = key => body[key] !== undefined;
+
     const newName = String(body.pppoe_name || "").trim();
     const newPassword = String(body.password || "").trim();
     const newPackageId = parseInt(body.package_id, 10) || 0;
@@ -498,21 +569,28 @@ async function updateCustomer({ user, body }) {
         newStatus = "Active";
     }
 
-    const customer = await getCustomer(
-        user,
-        id,
-        `id, company_id, customer_id, mikrotik_id,
-         package_id, pppoe_username, pppoe_password, comments, status`
-    );
+    const customer = await getCustomer(user, id);
 
     if (!customer) {
         throw new ManageError("Customer not found or access denied.", 404);
     }
 
+    // Column names that really exist in the customers table.
+    const columnSet = new Set(Object.keys(customer));
+
     const oldName = String(customer.pppoe_username || "").trim();
-    const mikrotikId = Number(customer.mikrotik_id || 0);
+    const oldRouterId = Number(customer.mikrotik_id || 0);
+    const newRouterId = has("mikrotik_id")
+        ? (parseInt(body.mikrotik_id, 10) || 0)
+        : oldRouterId;
+    const routerChanged = newRouterId !== oldRouterId;
     const s = scope(user);
 
+    if (newRouterId <= 0) {
+        throw new ManageError("Please select a MikroTik server.");
+    }
+
+    // ---- PPPoE username must be unique ----
     const [dupe] = await db.query(
         `SELECT id
          FROM customers
@@ -526,9 +604,33 @@ async function updateCustomer({ user, body }) {
         throw new ManageError("This PPPoE username already exists.");
     }
 
-    /*
-     * Package must belong to this customer company and router.
-     */
+    // ---- Customer ID must be unique (when changed) ----
+    let newCustomerId = null;
+
+    if (has("customer_id")) {
+        newCustomerId = String(body.customer_id || "").trim();
+
+        if (!newCustomerId) {
+            throw new ManageError("Customer ID is required.");
+        }
+
+        if (newCustomerId !== String(customer.customer_id || "")) {
+            const [cidDupe] = await db.query(
+                `SELECT id
+                 FROM customers
+                 WHERE customer_id = ?
+                   AND id != ?${s.sql}
+                 LIMIT 1`,
+                [newCustomerId, id, ...s.params]
+            );
+
+            if (cidDupe.length) {
+                throw new ManageError("This Customer ID already exists.");
+            }
+        }
+    }
+
+    // ---- Package must belong to this company and the (new) router ----
     const [pk] = await db.query(
         `SELECT *
          FROM mikrotik_packages
@@ -536,11 +638,7 @@ async function updateCustomer({ user, body }) {
            AND company_id = ?
            AND router_id = ?
          LIMIT 1`,
-        [
-            newPackageId,
-            Number(customer.company_id),
-            mikrotikId
-        ]
+        [newPackageId, Number(customer.company_id), newRouterId]
     );
 
     const pkg = pk[0];
@@ -559,11 +657,7 @@ async function updateCustomer({ user, body }) {
         );
     }
 
-    if (mikrotikId <= 0) {
-        throw new ManageError("Customer has no MikroTik server assigned.");
-    }
-
-    const router = await getRouter(user, mikrotikId);
+    const router = await getRouter(user, newRouterId);
 
     if (!router) {
         throw new ManageError("MikroTik server not found or access denied.");
@@ -574,73 +668,262 @@ async function updateCustomer({ user, body }) {
         throw new ManageError("MikroTik server configuration is incomplete.");
     }
 
+    // ---- Optional editable fields (validated before touching MikroTik) ----
+    const pairs = [
+        ["package_id", newPackageId],
+        ["pppoe_username", newName],
+        ["pppoe_password", newPassword],
+        ["comments", newComment],
+        ["status", newStatus]
+    ];
+
+    const put = (column, value) => {
+        if (columnSet.has(column)) pairs.push([column, value]);
+    };
+
+    if (routerChanged) put("mikrotik_id", newRouterId);
+    if (newCustomerId !== null) put("customer_id", newCustomerId);
+
+    if (has("name")) {
+        const name = String(body.name || "").trim();
+
+        if (!name) throw new ManageError("Customer name is required.");
+
+        put("name", name);
+    }
+
+    if (has("monthly_bill")) {
+        const fee = Number(body.monthly_bill);
+
+        if (!Number.isFinite(fee) || fee < 0) {
+            throw new ManageError("Monthly Fee must be a valid amount.");
+        }
+
+        put("monthly_bill", fee);
+    }
+
+    if (has("balance")) {
+        const balance = Number(body.balance === "" ? 0 : body.balance);
+
+        if (!Number.isFinite(balance)) {
+            throw new ManageError("Balance must be a valid number.");
+        }
+
+        put("balance", balance);
+    }
+
+    if (has("billing_cycle")) {
+        const value = normalizeDate(body.billing_cycle, "billing cycle");
+
+        if (!value) throw new ManageError("Billing Cycle is required.");
+
+        put(columnSet.has("billing_cycle") ? "billing_cycle" : "billing_date", value);
+    }
+
+    if (has("promise_date")) {
+        put("promise_date", normalizeDate(body.promise_date, "promise date"));
+    }
+
+    if (has("connection_date")) {
+        put("connection_date", normalizeDate(body.connection_date, "connection date"));
+    }
+
+    if (has("birth_date")) {
+        put("birth_date", normalizeDateOnly(body.birth_date, "birth date"));
+    }
+
+    if (has("connection_fee")) {
+        put("connection_fee", optionalMoney(body.connection_fee, "Connection Fee"));
+    }
+
+    if (has("connection_fee_due")) {
+        put(
+            "connection_fee_due",
+            optionalMoney(body.connection_fee_due, "Connection Fee Due")
+        );
+    }
+
+    if (has("billing_type")) {
+        put("billing_type", normalizeBillingType(body.billing_type));
+    }
+
+    for (const field of ["phone", "nid_no", "address", "email"]) {
+        if (has(field)) put(field, String(body[field] || "").trim());
+    }
+
+    // Division / District / Upazila are stored as text names.
+    for (const field of ["division", "district", "upazila"]) {
+        if (has(field)) put(field, String(body[field] || "").trim());
+    }
+
+    // Area / Sub-Area (ids) — must belong to this company / area.
+    if (has("area_id")) {
+        const areaId = parseInt(body.area_id, 10) || 0;
+
+        if (areaId > 0) {
+            const [areaRows] = await db.query(
+                "SELECT id FROM areas WHERE id = ? AND company_id = ? LIMIT 1",
+                [areaId, Number(customer.company_id)]
+            );
+
+            if (!areaRows.length) {
+                throw new ManageError("Selected area was not found.");
+            }
+
+            put("area_id", areaId);
+
+            if (has("sub_area_id")) {
+                const subId = parseInt(body.sub_area_id, 10) || 0;
+
+                if (subId > 0) {
+                    const [subRows] = await db.query(
+                        "SELECT id FROM sub_areas WHERE id = ? AND area_id = ? LIMIT 1",
+                        [subId, areaId]
+                    );
+
+                    if (!subRows.length) {
+                        throw new ManageError(
+                            "Selected sub-area does not belong to the selected area."
+                        );
+                    }
+
+                    put("sub_area_id", subId);
+                }
+            }
+        }
+    }
+
+    // Automatic connection checkboxes (unchecked boxes are not submitted,
+    // so the hidden `auto_fields` marker tells us the group was on the form).
+    if (has("auto_fields")) {
+        put("auto_connection", body.auto_continue ? 1 : 0);
+
+        if (columnSet.has("auto_next_month")) {
+            put("auto_next_month", body.auto_next_month ? 1 : 0);
+        } else if (columnSet.has("auto_connection_next_month")) {
+            put("auto_connection_next_month", body.auto_next_month ? 1 : 0);
+        }
+    }
+
+    // ---- MikroTik ----
     const session = ppp.createSession({
         companyId: customer.company_id,
         isSuper: true
     });
 
+    let moveNote = "";
+
     try {
-        let api;
+        if (!routerChanged) {
+            let api;
 
-        try {
-            api = await session.api(mikrotikId);
-        } catch (_) {
-            throw new ManageError("MikroTik connection failed.");
-        }
+            try {
+                api = await session.api(newRouterId);
+            } catch (_) {
+                throw new ManageError("MikroTik connection failed.");
+            }
 
-        let secret = null;
+            let secret = null;
 
-        if (oldName) {
-            secret = await ppp.findSecret(api, oldName);
-        }
+            if (oldName) {
+                secret = await ppp.findSecret(api, oldName);
+            }
 
-        if (!secret && newName !== oldName) {
-            secret = await ppp.findSecret(api, newName);
-        }
+            if (!secret && newName !== oldName) {
+                secret = await ppp.findSecret(api, newName);
+            }
 
-        if (!secret) {
-            throw new ManageError(
-                `MikroTik PPPoE secret not found. Old PPPoE username: ${oldName}`
-            );
-        }
+            if (!secret) {
+                throw new ManageError(
+                    `MikroTik PPPoE secret not found. Old PPPoE username: ${oldName}`
+                );
+            }
 
-        try {
-            await api.write("/ppp/secret/set", [
-                `=.id=${secret[".id"]}`,
-                `=name=${newName}`,
-                `=password=${newPassword}`,
-                `=profile=${profile}`,
-                `=comment=${newComment}`,
-                `=disabled=${newStatus === "Active" ? "no" : "yes"}`
-            ]);
-        } catch (error) {
-            throw new ManageError(
-                `MikroTik update failed: ${error.message}`
-            );
+            try {
+                await api.write("/ppp/secret/set", [
+                    `=.id=${secret[".id"]}`,
+                    `=name=${newName}`,
+                    `=password=${newPassword}`,
+                    `=profile=${profile}`,
+                    `=comment=${newComment}`,
+                    `=disabled=${newStatus === "Active" ? "no" : "yes"}`
+                ]);
+            } catch (error) {
+                throw new ManageError(
+                    `MikroTik update failed: ${error.message}`
+                );
+            }
+        } else {
+            // Moving to another MikroTik: create on the new one first,
+            // then remove from the old one.
+            let newApi;
+
+            try {
+                newApi = await session.api(newRouterId);
+            } catch (_) {
+                throw new ManageError("Connection to the new MikroTik server failed.");
+            }
+
+            if (await ppp.findSecret(newApi, newName)) {
+                throw new ManageError(
+                    "This PPPoE username already exists on the new MikroTik server."
+                );
+            }
+
+            try {
+                await newApi.write("/ppp/secret/add", [
+                    `=name=${newName}`,
+                    `=password=${newPassword}`,
+                    "=service=pppoe",
+                    `=profile=${profile}`,
+                    `=comment=${newComment}`,
+                    `=disabled=${newStatus === "Active" ? "no" : "yes"}`
+                ]);
+            } catch (error) {
+                throw new ManageError(
+                    `MikroTik create failed on the new server: ${error.message}`
+                );
+            }
+
+            if (oldRouterId > 0 && oldName) {
+                try {
+                    const oldApi = await session.api(oldRouterId);
+                    const oldSecret = await ppp.findSecret(oldApi, oldName);
+
+                    if (oldSecret) {
+                        await oldApi.write("/ppp/secret/remove", [
+                            `=.id=${oldSecret[".id"]}`
+                        ]);
+
+                        await ppp.kick(oldApi, oldName);
+                    }
+                } catch (error) {
+                    console.error(
+                        `Move MikroTik warning [${id}]:`,
+                        error.message
+                    );
+
+                    moveNote =
+                        " (The old MikroTik secret could not be removed - please remove it manually.)";
+                }
+            }
         }
     } finally {
         await session.closeAll();
     }
 
+    // ---- Database ----
     try {
+        const setClause = pairs
+            .map(([column]) => `\`${column}\` = ?`)
+            .join(", ");
+
         await db.query(
             `UPDATE customers
-             SET package_id = ?,
-                 pppoe_username = ?,
-                 pppoe_password = ?,
-                 comments = ?,
-                 status = ?
+             SET ${setClause}
              WHERE id = ?${s.sql}
              LIMIT 1`,
-            [
-                newPackageId,
-                newName,
-                newPassword,
-                newComment,
-                newStatus,
-                id,
-                ...s.params
-            ]
+            [...pairs.map(([, value]) => value), id, ...s.params]
         );
     } catch (error) {
         throw new ManageError(
@@ -653,11 +936,12 @@ async function updateCustomer({ user, body }) {
         user,
         id,
         "customer_update",
-        `Customer updated: ${customer.customer_id || id} | ` +
-        `PPPoE: ${oldName} -> ${newName} | Status: ${newStatus}`
+        `Customer updated: ${newCustomerId || customer.customer_id || id} | ` +
+        `PPPoE: ${oldName} -> ${newName} | Status: ${newStatus}` +
+        (routerChanged ? ` | MikroTik: ${oldRouterId} -> ${newRouterId}` : "")
     );
 
-    return "Customer updated successfully. MikroTik PPPoE also updated.";
+    return "Customer updated successfully. MikroTik PPPoE also updated." + moveNote;
 }
 
 /* -----------------------------------------------------------------------

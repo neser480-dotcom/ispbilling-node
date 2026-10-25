@@ -135,12 +135,12 @@
             | PROFILE NAME
             |--------------------------------------------------------------------------
             */
+const displayName =
+    String(user.company_name || '').trim() ||
+    String(user.fullname || '').trim() ||
+    'User';
 
-            setText(
-                'profileFullname',
-                fullname || 'User'
-            );
-
+setText('sidebarFullname', displayName);
 
             /*
             |--------------------------------------------------------------------------
@@ -377,11 +377,8 @@
 
             }
 
-
-            setText(
-                'profileFullname',
-                'User'
-            );
+setText('sidebarFullname', 'User');
+setText('profileFullname', 'User');
 
 
             setText(
@@ -406,138 +403,81 @@
     |--------------------------------------------------------------------------
     */
 
-    function initSubmenus() {
+function initSubmenus() {
+    const menus = document.querySelectorAll(
+        ".sidebar a[data-bs-toggle='collapse']"
+    );
 
-        const menus =
-            document.querySelectorAll(
-                ".sidebar a[data-bs-toggle='collapse']"
-            );
+    menus.forEach(function (menu) {
+        if (menu.dataset.sidebarBound === "true") {
+            return;
+        }
 
+        menu.dataset.sidebarBound = "true";
 
-        menus.forEach(
-            function (menu) {
+        menu.addEventListener("click", function (e) {
+            e.preventDefault();
 
-                /*
-                | Prevent duplicate event binding
-                */
+            // Bootstrap ও custom handler-এর দ্বৈত toggle বন্ধ
+            e.stopPropagation();
 
-                if (
-                    menu.dataset.sidebarBound ===
-                    'true'
-                ) {
-                    return;
-                }
+            const targetSelector = menu.getAttribute("href");
 
-
-                menu.dataset.sidebarBound =
-                    'true';
-
-
-                menu.addEventListener(
-                    'click',
-                    function (e) {
-
-                        e.preventDefault();
-
-
-                        const targetSelector =
-                            menu.getAttribute(
-                                'href'
-                            );
-
-
-                        if (
-                            !targetSelector ||
-                            targetSelector === '#'
-                        ) {
-                            return;
-                        }
-
-
-                        let target = null;
-
-
-                        try {
-
-                            target =
-                                document.querySelector(
-                                    targetSelector
-                                );
-
-                        } catch (error) {
-
-                            console.error(
-                                'Invalid sidebar target:',
-                                targetSelector
-                            );
-
-                            return;
-
-                        }
-
-
-                        if (!target) {
-                            return;
-                        }
-
-
-                        const isOpen =
-                            target.classList.contains(
-                                'show'
-                            );
-
-
-                        /*
-                        | Close other submenus
-                        */
-
-                        document
-                            .querySelectorAll(
-                                '.sidebar .collapse.show'
-                            )
-                            .forEach(
-                                function (openMenu) {
-
-                                    if (
-                                        openMenu !== target
-                                    ) {
-
-                                        openMenu.classList.remove(
-                                            'show'
-                                        );
-
-                                    }
-
-                                }
-                            );
-
-
-                        /*
-                        | Open / close selected submenu
-                        */
-
-                        if (isOpen) {
-
-                            target.classList.remove(
-                                'show'
-                            );
-
-                        } else {
-
-                            target.classList.add(
-                                'show'
-                            );
-
-                        }
-
-                    }
-                );
-
+            if (!targetSelector || targetSelector === "#") {
+                return;
             }
-        );
 
-    }
+            let target;
 
+            try {
+                target = document.querySelector(targetSelector);
+            } catch (error) {
+                console.error(
+                    "Invalid sidebar target:",
+                    targetSelector
+                );
+                return;
+            }
+
+            if (!target || !target.classList.contains("collapse")) {
+                return;
+            }
+
+            const isOpen = target.classList.contains("show");
+
+            // অন্য submenu বন্ধ করুন
+            document
+                .querySelectorAll(".sidebar .collapse.show")
+                .forEach(function (openMenu) {
+                    if (openMenu !== target) {
+                        openMenu.classList.remove("show");
+
+                        const otherTrigger = document.querySelector(
+                            '.sidebar a[data-bs-toggle="collapse"][href="#' +
+                            openMenu.id +
+                            '"]'
+                        );
+
+                        if (otherTrigger) {
+                            otherTrigger.setAttribute(
+                                "aria-expanded",
+                                "false"
+                            );
+                        }
+                    }
+                });
+
+            // বর্তমান submenu toggle করুন
+            if (isOpen) {
+                target.classList.remove("show");
+                menu.setAttribute("aria-expanded", "false");
+            } else {
+                target.classList.add("show");
+                menu.setAttribute("aria-expanded", "true");
+            }
+        });
+    });
+}
 
     /*
     |--------------------------------------------------------------------------

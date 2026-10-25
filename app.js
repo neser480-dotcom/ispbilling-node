@@ -69,7 +69,9 @@ const reportsRoutes =
 const activityLogRoutes =
     require("./routes/activity-log");
 
+const expenditureRoutes = require("./routes/expenditure.routes");
 
+const oltRoutes = require("./routes/olt");
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER ROUTES
@@ -396,7 +398,11 @@ app.use(
     "/api/software-billing",
     softwareBillingRoutes
 );
-
+app.use(
+    "/api/olt",
+    requireSoftwareBilling,
+    oltRoutes
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -638,8 +644,6 @@ app.use(
     requireSoftwareBilling,
     customerAddRoutes
 );
-
-
 /*
 |--------------------------------------------------------------------------
 | ACTIVE CUSTOMER
@@ -703,6 +707,11 @@ app.use(
     monitoringRoutes
 );
 
+app.use(
+    "/accounts/expenditure",
+    requireSoftwareBilling,
+    expenditureRoutes
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -922,7 +931,19 @@ app.get(
 
     }
 );
-
+app.get(
+    "/customers/add/modal",
+    requireSoftwareBilling,
+    (req, res) => {
+        res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "customer-add.html"
+            )
+        );
+    }
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -1020,11 +1041,13 @@ app.get(
     "/olt",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "OLT List module is not implemented yet."
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "olt-list.html"
+            )
         );
-
     }
 );
 
@@ -1032,11 +1055,13 @@ app.get(
     "/olt/onu",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "ONU List module is not implemented yet."
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "olt-users.html"
+            )
         );
-
     }
 );
 
@@ -1309,17 +1334,6 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
-app.get(
-    "/accounts/expenditure",
-    requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Expenditure module is not implemented yet."
-        );
-
-    }
-);
 
 
 /*

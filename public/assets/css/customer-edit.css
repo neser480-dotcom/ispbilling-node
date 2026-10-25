@@ -1,0 +1,252 @@
+/* =========================================================
+   CUSTOMER EDIT MODAL — screenshot style overrides
+   File: public/assets/css/customer-edit.css
+   Load AFTER customer-add.css
+   ========================================================= */
+
+/* ---------- Header ---------- */
+#customerActionModal .cm-edit-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+#customerActionModal .cm-title-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
+}
+
+#customerActionModal .cm-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #253247;
+}
+
+#customerActionModal .cm-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#customerActionModal .cm-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 5px;
+    background: #6c757d;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-transform: lowercase;
+}
+
+/* Status / payment colours (match {{STATUS_CLASS}} / {{PAYMENT_CLASS}}) */
+#customerActionModal .cm-badge.active,
+#customerActionModal .cm-badge.status-active { background: #1a73e8; }
+
+#customerActionModal .cm-badge.inactive,
+#customerActionModal .cm-badge.status-inactive { background: #6c757d; }
+
+#customerActionModal .cm-badge.expired,
+#customerActionModal .cm-badge.status-expired { background: #dc3545; }
+
+#customerActionModal .cm-badge.paid,
+#customerActionModal .cm-badge.payment-paid { background: #1f8f4e; }
+
+#customerActionModal .cm-badge.unpaid,
+#customerActionModal .cm-badge.due,
+#customerActionModal .cm-badge.payment-unpaid { background: #e08a00; }
+
+#customerActionModal .cm-close {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #5b6678;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#customerActionModal .cm-close:hover { color: #1f2a3b; }
+
+/* ---------- Body / fields ---------- */
+#customerActionModal .cm-body {
+    background: #fff;
+}
+
+#customerActionModal .cm-lbl .fa-info-circle {
+    font-size: 12px;
+    cursor: help;
+}
+
+#customerActionModal input.cm-in::placeholder {
+    color: #9aa4b2;
+}
+
+/* Readonly + disabled look (grey like screenshot) */
+#customerActionModal input.cm-in[readonly],
+#customerActionModal select.cm-sel:disabled {
+    background: #eef1f5;
+    color: #6b778a;
+    cursor: not-allowed;
+}
+
+/* ---------- Status radios & automatic connection checkboxes ---------- */
+#customerActionModal .cm-radio-row,
+#customerActionModal .cm-check-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    min-height: 26px;
+}
+
+#customerActionModal .cm-radio,
+#customerActionModal .cm-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #273449;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#customerActionModal .cm-radio input,
+#customerActionModal .cm-check input {
+    margin: 0;
+    accent-color: #1a73e8;
+    cursor: pointer;
+}
+
+#customerActionModal .cm-radio input:disabled,
+#customerActionModal .cm-check input:disabled {
+    cursor: not-allowed;
+}
+
+#customerActionModal .cm-radio input:disabled + span,
+#customerActionModal .cm-check input:disabled + span {
+    color: #8792a3;
+}
+
+/* ---------- Footer buttons ---------- */
+#customerActionModal .cm-foot {
+    padding: 10px 16px;
+}
+
+#customerActionModal .cm-btn {
+    min-width: 62px;
+    min-height: 32px;
+    padding: 6px 14px;
+}
+
+#customerActionModal .cm-cancel {
+    background: #6c757d;
+    color: #fff;
+}
+
+#customerActionModal .cm-cancel:hover {
+    background: #5a6268;
+}
+
+#customerActionModal .cm-save {
+    background: #1f8f4e;
+    color: #fff;
+}
+
+#customerActionModal .cm-save:hover {
+    background: #187a41;
+}
+
+/* ---------- No inner scroll: whole form visible at once ---------- */
+#customerActionModal .modal-dialog,
+#customerActionModal .modal-dialog-scrollable {
+    height: auto !important;
+    max-width: 1000px;
+    margin: 6px auto !important;
+}
+
+#customerActionModal .modal-content,
+#customerActionModal .modal-dialog-scrollable .modal-content {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+#customerActionModal .modal-body,
+#customerActionModal .modal-dialog-scrollable .modal-body,
+#customerActionModal #customerActionModalBody,
+#customerActionModal .cm-body {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Compact rows so all fields fit on one screen */
+#customerActionModal .cm-body {
+    padding: 10px 16px 8px !important;
+}
+
+#customerActionModal .cm-body .row {
+    --bs-gutter-x: 10px;
+    --bs-gutter-y: 6px;
+}
+
+#customerActionModal .cm-lbl {
+    margin-bottom: 2px;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+#customerActionModal input.cm-in,
+#customerActionModal select.cm-sel {
+    height: 30px;
+    min-height: 30px;
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+#customerActionModal .cm-radio-row,
+#customerActionModal .cm-check-row {
+    min-height: 30px;
+}
+
+#customerActionModal .cm-edit-head {
+    padding: 8px 16px;
+}
+
+#customerActionModal .cm-foot {
+    padding: 8px 16px;
+}
+
+/* If the screen is really too short, let the page (not the form) scroll */
+#customerActionModal {
+    overflow-y: auto;
+}
+
+/* ---------- Stacking: modal must sit above sidebar & topbar ---------- */
+#customerActionModal {
+    z-index: 20000 !important;
+}
+
+body > .modal-backdrop,
+.modal-backdrop {
+    z-index: 19999 !important;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 767.98px) {
+    #customerActionModal .cm-title { font-size: 14px; }
+    #customerActionModal .cm-radio-row,
+    #customerActionModal .cm-check-row { gap: 6px 14px; }
+}
