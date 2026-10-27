@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLT Users</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+
+    <style>
+        :root {
+            --olt-blue: #3288df;
+            --olt-blue-dark: #2476cb;
+            --olt-text: #344054;
+            --olt-muted: #667085;
+            --olt-border: #e7ebf0;
+            --olt-surface: #fff;
+            --olt-page-bg: #f5f7fb;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+        }
+
+        body {
+            overflow-x: clip;
+            background: var(--olt-page-bg);
+            color: var(--olt-text);
+            font-family: Arial, "Segoe UI", sans-serif;
+            font-size: 13px;
+        }
+
+        .main-content {
+            min-width: 0;
+            max-width: 100%;
+            margin-left: 260px;
+            margin-top: 70px;
+            transition: margin-left .3s;
+        }
+
+        @media (max-width: 992px) {
+            .main-content { margin-left: 0; }
+        }
+
+        @media (max-width: 768px) {
+            .main-content { margin-top: 65px; }
+        }
+
+        .olt-page {
+            width: 100%;
+            min-width: 0;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .olt-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px;
+            color: #fff;
+            background: #3288df;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .olt-header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 500;
+        }
+
+        .olt-header-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .olt-header-circle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            color: #3288df;
+            background: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .olt-header-circle-btn:hover { background: #eef6ff; }
+        .olt-header-circle-btn:disabled { opacity: .6; cursor: wait; }
+
+        .olt-filter-panel {
+            display: none;
+            margin-top: 12px;
+            padding: 16px;
+            background: #f0f7ff;
+            border: 1px solid #b3d4fc;
+            border-radius: 8px;
+        }
+
+        .olt-filter-panel.active {
+            display: block;
+        }
+
+        .olt-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .olt-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .olt-filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1d2939;
+        }
+
+        .olt-filter-group input, .olt-filter-group select {
+            height: 36px;
+            padding: 6px 10px;
+            border: 1px solid #b3d4fc;
+            border-radius: 6px;
+            outline: none;
+            font-size: 12px;
+            background: #fff;
+        }
+
+        .olt-filter-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .olt-btn {
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .olt-btn-primary { background: #3288df; color: #fff; }
+        .olt-btn-primary:hover { background: #2476cb; }
+
+        .olt-btn-secondary { background: #e4e7ec; color: #344054; }
+        .olt-btn-secondary:hover { background: #d0d5dd; }
+
+        .olt-content {
+            min-width: 0;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--olt-surface);
+            border: 1px solid var(--olt-border);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        .olt-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            background: #3288df;
+            border-radius: 8px;
+        }
+
+        .olt-summary-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .olt-summary-number {
+            padding: 3px 12px;
+            border-radius: 12px;
+            background: #2570be;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .olt-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .olt-search { width: min(300px, 60%); margin: 0; }
+        .olt-search input {
+            display: block;
+            width: 100%;
+            height: 36px;
+            padding: 6px 12px;
+            color: #fff;
+            background: #297acb;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 6px;
+            outline: none;
+            font-size: 13px;
+        }
+        .olt-search input::placeholder { color: rgba(255, 255, 255, 0.8); }
+        .olt-search input:focus { background: #fff; color: #333; border-color: #fff; }
+
+        .olt-table-scroll {
+            width: 100%;
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+
+        .olt-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+        }
+
+        .olt-table th {
+            padding: 12px 8px;
+            color: #475467;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: left;
+            border-bottom: 2px solid #eaecf0;
+            white-space: nowrap;
+        }
+
+        .olt-table td {
+            padding: 14px 8px;
+            font-size: 12px;
+            line-height: 1.45;
+            vertical-align: middle;
+            border-bottom: 1px solid #f2f4f7;
+        }
+
+        .olt-table tbody tr { background: #fff; }
+        .olt-table tbody tr:nth-child(even) { background: #fbfcfe; }
+        .olt-table tbody tr:hover { background: #f0f7ff; }
+
+        .olt-sort-button {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .olt-sort-mark { color: #3288df; font-size: 11px; }
+
+        .olt-primary-text {
+            display: block;
+            color: #344054;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .olt-sub-text {
+            display: block;
+            margin-top: 3px;
+            color: #667085;
+            font-size: 12px;
+        }
+
+        .olt-mac {
+            display: block;
+            color: #344054;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .olt-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            text-align: center;
+            text-transform: lowercase;
+        }
+
+        .olt-status.online { color: #fff; background: #12b76a; }
+        .olt-status.offline { color: #fff; background: #f04438; }
+        .olt-status.warning { color: #fff; background: #f79009; }
+        .olt-status.unknown { color: #fff; background: #667085; }
+
+        .olt-action-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: 1px solid #3288df;
+            background: #fff;
+            color: #3288df;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .olt-action-icon-btn:hover {
+            background: #3288df;
+            color: #fff;
+        }
+
+        .olt-empty {
+            padding: 40px 15px !important;
+            color: var(--olt-muted);
+            text-align: center;
+        }
+
+        .olt-footer {
+            padding: 16px 0 0;
+            color: #98a2b3;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .olt-message {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .olt-message.error, .olt-message.info, .olt-message.success { display: block; }
+        .olt-message.error { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
+        .olt-message.info { color: #084298; background: #cfe2ff; border-color: #b6d4fe; }
+        .olt-message.success { color: #0f5132; background: #d1e7dd; border-color: #a3cfbb; }
+    </style>
+</head>
+
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <div class="main-content">
+        <div class="olt-page">
+            <header class="olt-header">
+                <h1>OLT Users</h1>
+
+                <div class="olt-header-btn-group">
+                    <button class="olt-header-circle-btn" id="toggleFilterButton" type="button"
+                        title="Filter Options" aria-label="Filter Options">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                    <button class="olt-header-circle-btn" id="refreshTable" type="button"
+                        title="Refresh ONU data" aria-label="Refresh ONU data">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="filterPanel" class="olt-filter-panel">
+                <div class="olt-filter-grid">
+                    <div class="olt-filter-group">
+                        <label for="oltSelect">Select OLT</label>
+                        <select id="oltSelect" aria-label="Select OLT">
+                            <option value="">Loading OLTs...</option>
+                        </select>
+                    </div>
+
+                    <div class="olt-filter-group">
+                        <label for="routerMacFilter">Router MAC</label>
+                        <input type="text" id="routerMacFilter" placeholder="e.g. CC:2D:21:1D:F6:47" autocomplete="off">
+                    </div>
+
+                    <div class="olt-filter-group">
+                        <label for="onuMacFilter">ONU MAC / SN</label>
+                        <input type="text" id="onuMacFilter" placeholder="e.g. E4:2D:7B:01:95:0F" autocomplete="off">
+                    </div>
+
+                    <div class="olt-filter-actions">
+                        <button type="button" class="olt-btn olt-btn-primary" id="applyFilterBtn">
+                            <i class="fa-solid fa-magnifying-glass"></i> Filter
+                        </button>
+                        <button type="button" class="olt-btn olt-btn-secondary" id="resetFilterBtn">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <section class="olt-content">
+                <div class="olt-summary">
+                    <div class="olt-summary-title">
+                        <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <i class="fa-solid fa-database" aria-hidden="true"></i>
+                        <span>Total Data:</span>
+                        <span class="olt-summary-number" id="totalData">0</span>
+                    </div>
+
+                    <div class="olt-controls">
+                        <label class="olt-search">
+                            <input id="tableSearch" type="search"
+                                placeholder="Search"
+                                autocomplete="off" aria-label="Search OLT users">
+                        </label>
+                    </div>
+                </div>
+
+                <div id="pageMessage" class="olt-message" role="status"></div>
+
+                <div class="olt-table-scroll">
+                    <table class="table olt-table">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="olt-footer">© AI IT</div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+
+    <script>
+    "use strict";
+
+    const columns = [
+        ["customerId", "ID"],
+        ["name", "Name"],
+        ["address", "Mac Address"],
+        ["oltPort", "OLT & Ports"],
+        ["power", "Rx & Tx Power"],
+        ["distance", "Distance"],
+        ["environment", "Voltage & Temperature"],
+        ["lastUpdate", "Last update"],
+        ["action", "Action"]
+    ];
+
+    let users = [];
+    let sortColumn = "";
+    let sortAscending = true;
+    let selectedOltId = "";
+    let oltList = [];
+    let loading = false;
+    let syncing = false;
+
+    const head = document.getElementById("tableHead");
+    const body = document.getElementById("tableBody");
+    const search = document.getElementById("tableSearch");
+    const total = document.getElementById("totalData");
+    const oltSelect = document.getElementById("oltSelect");
+    const message = document.getElementById("pageMessage");
+    const refreshButton = document.getElementById("refreshTable");
+    const toggleFilterButton = document.getElementById("toggleFilterButton");
+    const filterPanel = document.getElementById("filterPanel");
+    const routerMacFilter = document.getElementById("routerMacFilter");
+    const onuMacFilter = document.getElementById("onuMacFilter");
+    const applyFilterBtn = document.getElementById("applyFilterBtn");
+    const resetFilterBtn = document.getElementById("resetFilterBtn");
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
+    }
+
+    function displayValue(value, suffix = "") {
+        if (value === null || value === undefined || value === "") {
+            return "—";
+        }
+        return `${value}${suffix}`;
+    }
+
+    function showMessage(text, type = "info") {
+        message.textContent = text;
+        message.className = `olt-message ${type}`;
+    }
+
+    function clearMessage() {
+        message.textContent = "";
+        message.className = "olt-message";
+    }
+
+    async function parseResponse(response) {
+        let result;
+
+        try {
+            result = await response.json();
+        } catch (_) {
+            throw new Error(`Invalid server response (HTTP ${response.status}).`);
+        }
+
+        if (!response.ok || result.success === false) {
+            throw new Error(
+                result.message || `Request failed (HTTP ${response.status}).`
+            );
+        }
+
+        return result;
+    }
+
+    async function apiGet(url) {
+        const response = await fetch(url, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: { Accept: "application/json" }
+        });
+
+        return parseResponse(response);
+    }
+
+    async function getCsrfToken() {
+        const result = await apiGet("/api/csrf-token");
+        const token = result.csrfToken || result.csrf_token || result.token;
+
+        if (!token) {
+            throw new Error("CSRF token পাওয়া যায়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।");
+        }
+
+        return token;
+    }
+
+    async function apiPost(url, payload = {}) {
+        const token = await getCsrfToken();
+
+        const response = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-CSRF-Token": token
+            },
+            body: JSON.stringify({
+                ...payload,
+                csrf_token: token
+            })
+        });
+
+        return parseResponse(response);
+    }
+
+    function formatDate(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        let hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const formattedHours = String(hours).padStart(2, '0');
+
+        return `${year}/${month}/${day}<br>${formattedHours}:${minutes} ${ampm}`;
+    }
+
+    function normalizeStatus(value) {
+        const status = String(value || "unknown").trim().toLowerCase();
+
+        if ([
+            "online", "up", "active", "working",
+            "registered", "connected", "1"
+        ].includes(status)) return "online";
+
+        if ([
+            "offline", "down", "unregistered", "inactive", "0"
+        ].includes(status)) return "offline";
+
+        if ([
+            "dying-gasp", "dying_gasp", "los", "losi", "warning"
+        ].includes(status)) return "warning";
+
+        return "unknown";
+    }
+
+    function statusLabel(status) {
+        return ({
+            online: "online",
+            offline: "offline",
+            warning: "warning",
+            unknown: "unknown"
+        })[status] || "unknown";
+    }
+
+    function normalizeOnu(row, olt) {
+        const rawStatus = normalizeStatus(row.status ?? row.onu_status);
+        const mac = row.mac || row.mac_address || row.onu_mac || "";
+        const routerMac = row.router_mac || row.router_mac_address || "";
+        const serial = row.serial || row.onu_sn || "";
+        const ip = row.ip_address || row.ip || "";
+        const customerName = row.customer_name || "";
+        const customerCode = row.customer_code || row.customer_id || "";
+
+        const customerLinked =
+            row.matched_customer_id !== null &&
+            row.matched_customer_id !== undefined &&
+            row.matched_customer_id !== "";
+
+        const name = customerName || row.name || row.onu_name || `ONU ${row.id}`;
+        const pon = row.pon ?? row.port ?? "";
+        const lastUpdate = row.last_update || row.updated_at || row.last_seen || "";
+        const distance = row.distance;
+
+        return {
+            id: row.id,
+            displayId: customerCode ? customerCode : row.id,
+            customerName,
+            customerLinked,
+            status: rawStatus,
+            name,
+            ip,
+            routerMac: routerMac ? routerMac : mac,
+            onuMac: mac ? mac : serial,
+            serial,
+            oltPort: row.olt_name || olt.name || olt.vendor || `OLT ${olt.id}`,
+            port: pon,
+            rx: displayValue(row.rx_power, ""),
+            tx: displayValue(row.tx_power, ""),
+            distance: distance === null || distance === undefined || distance === ""
+                ? "—"
+                : `${distance}${/[a-z]/i.test(String(distance)) ? "" : "m"}`,
+            voltage: displayValue(row.voltage, ""),
+            temperature: displayValue(row.temperature, ""),
+            lastUpdate: lastUpdate ? formatDate(lastUpdate) : "—",
+            searchText: [
+                row.id,
+                customerCode,
+                customerName,
+                row.customer_phone,
+                row.pppoe_username,
+                name,
+                ip,
+                mac,
+                routerMac,
+                serial,
+                pon,
+                rawStatus,
+                row.olt_name,
+                olt.name,
+                olt.vendor
+            ].join(" ")
+        };
+    }
+
+    function renderHead() {
+        head.innerHTML = `
+            <tr>
+                ${columns.map(([key, label]) => `
+                    <th scope="col">
+                        <button type="button" class="olt-sort-button" data-sort="${key}">
+                            ${label} <span class="olt-sort-mark">↓↑</span>
+                        </button>
+                    </th>
+                `).join("")}
+            </tr>
+        `;
+    }
+
+    function getCell(user, key) {
+        switch (key) {
+            case "customerId":
+                return `
+                    <div>
+                        <span class="olt-primary-text">${escapeHTML(user.displayId)}</span>
+                        <span class="olt-status ${escapeHTML(user.status)}">
+                            ${escapeHTML(statusLabel(user.status))}
+                        </span>
+                    </div>
+                `;
+
+            case "name":
+                return `
+                    <strong class="olt-primary-text">${escapeHTML(user.customerName || user.name || "—")}</strong>
+                    <span class="olt-sub-text">${escapeHTML(user.ip || "—")}</span>
+                `;
+
+            case "address":
+                return `
+                    <span class="olt-mac">${escapeHTML(user.routerMac || "—")}</span>
+                    <span class="olt-sub-text">${escapeHTML(user.onuMac || "—")}</span>
+                `;
+
+            case "oltPort":
+                return `
+                    <span class="olt-primary-text">${escapeHTML(user.oltPort)}</span>
+                    <span class="olt-sub-text">${escapeHTML(user.port || "—")}</span>
+                `;
+
+            case "power":
+                return `
+                    <span class="olt-rx">${escapeHTML(user.rx)}</span>
+                    <span class="olt-sub-text">${escapeHTML(user.tx)}</span>
+                `;
+
+            case "distance":
+                return `
+                    <div>${escapeHTML(user.distance)}</div>
+                    <span class="olt-sub-text">dying-gasp</span>
+                `;
+
+            case "environment":
+                return `
+                    <span class="olt-rx">${escapeHTML(user.voltage)}</span>
+                    <span class="olt-sub-text">${escapeHTML(user.temperature)}</span>
+                `;
+
+            case "lastUpdate":
+                return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
+
+            case "action":
+                return `
+                    <button type="button" class="olt-action-icon-btn"
+                        data-sync-olt="${escapeHTML(selectedOltId)}"
+                        title="Sync selected OLT"
+                        ${syncing ? "disabled" : ""}>
+                        <i class="fa-solid fa-network-wired"></i>
+                    </button>
+                `;
+
+            default:
+                return "";
+        }
+    }
+
+    function renderRows() {
+        const query = search.value.trim().toLowerCase();
+        const rMacVal = routerMacFilter.value.trim().toLowerCase();
+        const oMacVal = onuMacFilter.value.trim().toLowerCase();
+
+        let rows = users.filter(user => {
+            if (query && ![...Object.values(user), user.searchText].some(value =>
+                String(value ?? "").toLowerCase().includes(query)
+            )) {
+                return false;
+            }
+
+            if (rMacVal && !String(user.routerMac || "").toLowerCase().includes(rMacVal)) {
+                return false;
+            }
+
+            if (oMacVal && !String(user.onuMac || "").toLowerCase().includes(oMacVal)) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (sortColumn) {
+            rows.sort((a, b) =>
+                String(a[sortColumn] ?? "").localeCompare(
+                    String(b[sortColumn] ?? ""),
+                    undefined,
+                    { numeric: true, sensitivity: "base" }
+                ) * (sortAscending ? 1 : -1)
+            );
+        }
+
+        total.textContent = String(rows.length);
+
+        if (!rows.length) {
+            body.innerHTML = `
+                <tr>
+                    <td class="olt-empty" colspan="${columns.length}">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        ${users.length
+                            ? "No matching ONU data."
+                            : "No ONU data available. Run Sync to update this OLT."}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        body.innerHTML = rows.map(user => `
+            <tr>
+                ${columns.map(([key]) => `<td>${getCell(user, key)}</td>`).join("")}
+            </tr>
+        `).join("");
+    }
+
+ async function loadOltList() {
+    const result = await apiGet("/api/olt");
+
+    oltList = Array.isArray(result)
+        ? result
+        : Array.isArray(result.olts)
+            ? result.olts
+            : Array.isArray(result.data)
+                ? result.data
+                : [];
+
+    oltList = oltList.filter(olt => olt && olt.id != null);
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedId = params.get("olt_id") || params.get("id") || "";
+
+    oltSelect.innerHTML = [
+        '<option value="all">All OLTs</option>',
+        ...oltList.map(olt => `
+            <option value="${escapeHTML(olt.id)}">
+                ${escapeHTML(olt.name || olt.vendor || "OLT")} (#${escapeHTML(olt.id)})
+            </option>
+        `)
+    ].join("");
+
+    if (!oltList.length) {
+        selectedOltId = "all";
+        users = [];
+        renderRows();
+        showMessage("No OLT records were returned for your account.", "info");
+        return;
+    }
+
+    const requestedOlt = oltList.find(
+        olt => String(olt.id) === String(requestedId)
+    );
+
+    selectedOltId = requestedOlt ? String(requestedOlt.id) : "all";
+    oltSelect.value = selectedOltId;
+
+    await loadOnus();
+}
+async function loadOnus(keepMessage = false) {
+    if (loading || !oltList.length) return;
+
+    loading = true;
+    refreshButton.disabled = true;
+    refreshButton.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    if (!keepMessage) clearMessage();
+
+    body.innerHTML = `
+        <tr>
+            <td class="olt-empty" colspan="${columns.length}">
+                <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                Loading ONU data...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const targets = selectedOltId === "all"
+            ? [...oltList]
+            : oltList.filter(
+                olt => String(olt.id) === String(selectedOltId)
+            );
+
+        const results = await Promise.allSettled(
+            targets.map(async olt => {
+                const result = await apiGet(
+                    `/api/olt/${encodeURIComponent(olt.id)}/onus`
+                );
+
+                const rows = Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+                return {
+                    olt,
+                    rows: rows.map(row => normalizeOnu(row, olt))
+                };
+            })
+        );
+
+        const loaded = results
+            .filter(item => item.status === "fulfilled")
+            .map(item => item.value);
+
+        users = loaded.flatMap(item => item.rows);
+
+        renderRows();
+
+        const failed = results.filter(
+            item => item.status === "rejected"
+        ).length;
+
+        if (failed > 0) {
+            showMessage(
+                `${loaded.length} OLT-এর মধ্যে ${failed}টির ONU data লোড হয়নি। অন্য OLT-এর রেকর্ড দেখানো হয়েছে।`,
+                "error"
+            );
+        } else {
+            clearMessage();
+        }
+    } catch (error) {
+        users = [];
+        renderRows();
+        showMessage(
+            error.message || "Failed to load ONU data.",
+            "error"
+        );
+    } finally {
+        loading = false;
+        refreshButton.disabled = false;
+        refreshButton.innerHTML =
+            '<i class="fa-solid fa-rotate"></i>';
+    }
+}
+
+    async function syncSelectedOlt(button) {
+        if (!selectedOltId || syncing) return;
+
+        syncing = true;
+        clearMessage();
+
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        }
+
+        refreshButton.disabled = true;
+
+        try {
+            const result = await apiPost(
+                `/api/olt/${encodeURIComponent(selectedOltId)}/sync`
+            );
+
+            const details = result.data || {};
+
+            showMessage(
+                `${result.message || "ONU synchronization completed."} ` +
+                `Inserted: ${details.inserted ?? 0}, ` +
+                `Updated: ${details.updated ?? 0}, ` +
+                `Skipped: ${details.skipped ?? 0}.`,
+                "success"
+            );
+
+            await loadOnus(true);
+        } catch (error) {
+            showMessage(error.message || "ONU synchronization failed.", "error");
+        } finally {
+            syncing = false;
+            refreshButton.disabled = false;
+            renderRows();
+        }
+    }
+
+    toggleFilterButton.addEventListener("click", () => {
+        filterPanel.classList.toggle("active");
+    });
+
+    applyFilterBtn.addEventListener("click", () => {
+        renderRows();
+    });
+
+    resetFilterBtn.addEventListener("click", () => {
+        routerMacFilter.value = "";
+        onuMacFilter.value = "";
+        search.value = "";
+        renderRows();
+    });
+
+    head.addEventListener("click", event => {
+        const button = event.target.closest("[data-sort]");
+        if (!button) return;
+
+        const key = button.dataset.sort;
+
+        if (sortColumn === key) {
+            sortAscending = !sortAscending;
+        } else {
+            sortColumn = key;
+            sortAscending = true;
+        }
+
+        renderRows();
+    });
+
+    search.addEventListener("input", renderRows);
+
+    oltSelect.addEventListener("change", async () => {
+        if (syncing) return;
+
+        selectedOltId = oltSelect.value;
+        users = [];
+        renderRows();
+        await loadOnus();
+    });
+
+    refreshButton.addEventListener("click", async () => {
+        if (loading || syncing) return;
+
+        try {
+            if (!oltList.length) {
+                await loadOltList();
+            } else {
+                await loadOnus();
+            }
+        } catch (error) {
+            showMessage(error.message || "Failed to refresh ONU data.", "error");
+        }
+    });
+
+    body.addEventListener("click", async event => {
+        const syncButton = event.target.closest("[data-sync-olt]");
+
+        if (!syncButton || syncButton.disabled || syncing || loading) {
+            return;
+        }
+
+        if (String(syncButton.dataset.syncOlt) !== String(selectedOltId)) {
+            return;
+        }
+
+        await syncSelectedOlt(syncButton);
+    });
+
+    async function init() {
+        renderHead();
+
+        body.innerHTML = `
+            <tr><td class="olt-empty" colspan="${columns.length}">
+                Loading OLT list...
+            </td></tr>
+        `;
+
+        try {
+            await loadOltList();
+        } catch (error) {
+            oltSelect.innerHTML = '<option value="">Failed to load OLTs</option>';
+            users = [];
+            renderRows();
+
+            showMessage(
+                error.message || "Unable to load OLT list. Check login and API route.",
+                "error"
+            );
+        }
+    }
+
+    init();
+    </script>
+</body>
+</html>

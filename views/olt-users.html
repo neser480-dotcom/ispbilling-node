@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,1080 +14,1579 @@
         :root {
             --olt-blue: #3288df;
             --olt-blue-dark: #2476cb;
-            --olt-text: #444;
-            --olt-muted: #718096;
-            --olt-border: #e5e7eb;
+            --olt-text: #344054;
+            --olt-muted: #667085;
+            --olt-border: #e7ebf0;
+            --olt-surface: #fff;
+            --olt-page-bg: #f5f7fb;
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        .olt-page {
-            width: 100%;
-            min-width: 0;
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 18px 22px;
+        * { box-sizing: border-box; }
+        html, body { width: 100%; max-width: 100%; margin: 0; }
+        body {
+            overflow-x: clip;
+            background: var(--olt-page-bg);
             color: var(--olt-text);
             font-family: Arial, "Segoe UI", sans-serif;
-            font-size: 14px;
+            font-size: 13px;
         }
-
+        .main-content {
+            min-width: 0; max-width: 100%; margin-left: 260px; margin-top: 70px;
+            transition: margin-left .3s;
+        }
+        @media (max-width: 992px) { .main-content { margin-left: 0; } }
+        @media (max-width: 768px) { .main-content { margin-top: 65px; } }
+        .olt-page { width: 100%; min-width: 0; max-width: 1800px; margin: 0 auto; padding: 16px; }
         .olt-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 14px 18px;
-            color: #fff;
-            background: linear-gradient(110deg, #388fe4, #287fd6);
-            border-radius: 5px;
-            box-shadow: 0 2px 5px #00000012;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 18px 20px; color: #fff; background: #3288df; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-
-        .olt-header h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 500;
+        .olt-header h1 { margin: 0; font-size: 26px; font-weight: 500; }
+        .olt-header-btn-group { display: flex; align-items: center; gap: 10px; }
+        .olt-header-circle-btn {
+            display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+            border: 1px solid rgba(255,255,255,.5); border-radius: 8px; color: #3288df;
+            background: #fff; font-size: 14px; cursor: pointer; transition: background .2s;
         }
-
-        .olt-icon-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            flex: 0 0 36px;
-            border: 1px solid #ffffff80;
-            border-radius: 6px;
-            color: var(--olt-blue-dark);
-            background: #fff;
-            font-size: 18px;
+        .olt-header-circle-btn:hover { background: #eef6ff; }
+        .olt-header-circle-btn:disabled { opacity: .6; cursor: wait; }
+        .olt-filter-panel {
+            display: none; margin-top: 12px; padding: 16px; background: #f0f7ff;
+            border: 1px solid #b3d4fc; border-radius: 8px;
         }
-
-        .olt-icon-button:hover {
-            background: #eef6ff;
+        .olt-filter-panel.active { display: block; }
+        .olt-filter-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; align-items: end;
         }
-
-        .olt-icon-button:disabled {
-            opacity: .6;
-            cursor: wait;
+        .olt-filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .olt-filter-group label { font-size: 12px; font-weight: 600; color: #1d2939; }
+        .olt-filter-group input, .olt-filter-group select {
+            height: 36px; padding: 6px 10px; border: 1px solid #b3d4fc;
+            border-radius: 6px; outline: none; font-size: 12px; background: #fff;
         }
-
+        .olt-filter-actions { display: flex; gap: 8px; }
+        .olt-btn {
+            height: 36px; padding: 0 16px; border-radius: 6px; font-size: 12px;
+            font-weight: 600; border: none; cursor: pointer; display: inline-flex;
+            align-items: center; justify-content: center; gap: 6px;
+        }
+        .olt-btn-primary { background: #3288df; color: #fff; }
+        .olt-btn-primary:hover { background: #2476cb; }
+        .olt-btn-secondary { background: #e4e7ec; color: #344054; }
+        .olt-btn-secondary:hover { background: #d0d5dd; }
         .olt-content {
-            min-width: 0;
-            margin-top: 10px;
-            padding: 18px;
-            background: #fff;
-            border-radius: 5px;
+            min-width: 0; margin-top: 16px; padding: 16px; background: var(--olt-surface);
+            border: 1px solid var(--olt-border); border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.02);
         }
-
         .olt-summary {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-            min-height: 42px;
-            padding: 6px 10px;
-            color: #fff;
-            background: linear-gradient(110deg, #388fe4, #287fd6);
-            border-radius: 5px;
-            box-shadow: 0 2px 5px #00000020;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            gap: 12px; padding: 12px 16px; color: #fff; background: #3288df; border-radius: 8px;
         }
-
         .olt-summary-title {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            white-space: nowrap;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+            font-size: 14px; font-weight: 600;
         }
-
-        .olt-summary-number {
-            padding: 3px 10px;
-            border-radius: 12px;
-            background: #2675bf;
-            font-size: 12px;
-        }
-
-        .olt-controls {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            flex: 1;
-            min-width: 240px;
-        }
-
-        .olt-select,
+        .olt-summary-number { padding: 3px 12px; border-radius: 12px; background: #2570be; font-size: 13px; font-weight: 700; }
+        .olt-controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: 1; min-width: 0; }
+        .olt-search { width: min(300px, 60%); margin: 0; }
         .olt-search input {
-            height: 32px;
-            padding: 6px 10px;
-            color: #fff;
-            background: #267ed0;
-            border: 1px solid #ffffff60;
-            border-radius: 4px;
+            display: block; width: 100%; height: 36px; padding: 6px 12px; color: #fff;
+            background: #297acb; border: 1px solid rgba(255,255,255,.4);
+            border-radius: 6px; outline: none; font-size: 13px;
         }
-
-        .olt-select {
-            width: min(240px, 45%);
-            min-width: 130px;
-        }
-
-        .olt-select option {
-            color: #333;
-            background: #fff;
-        }
-
-        .olt-search {
-            width: min(320px, 55%);
-        }
-
-        .olt-search input {
-            display: block;
-            width: 100%;
-        }
-
-        .olt-search input::placeholder {
-            color: #e7f1ff;
-        }
-
-        .olt-search input:focus,
-        .olt-select:focus {
-            color: #333;
-            background: #fff;
-            outline: 2px solid #164f91;
-            outline-offset: 1px;
-        }
-
-        .olt-table-scroll {
-            width: 100%;
-            min-width: 0;
-            margin-top: 14px;
-            overflow-x: auto;
-            overscroll-behavior-x: contain;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .olt-table {
-            width: 100%;
-            min-width: 1150px;
-            margin-bottom: 0;
-            border-collapse: collapse;
-            table-layout: auto;
-            font-family: Arial, "Segoe UI", sans-serif;
-        }
-
+        .olt-search input::placeholder { color: rgba(255,255,255,.8); }
+        .olt-search input:focus { background: #fff; color: #333; border-color: #fff; }
+        .olt-table-scroll { width: 100%; margin-top: 16px; overflow-x: auto; }
+        .olt-table { width: 100%; margin: 0; border-collapse: collapse; }
         .olt-table th {
-            padding: 12px;
-            color: #555;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: left;
-            vertical-align: bottom;
-            white-space: nowrap;
-            border-bottom: 1px solid var(--olt-border);
+            padding: 12px 8px; color: #475467; background: #fff; font-size: 12px;
+            font-weight: 700; text-align: left; border-bottom: 2px solid #eaecf0; white-space: nowrap;
         }
-
-        .olt-table td {
-            padding: 12px;
-            font-size: 12px;
-            line-height: 1.5;
-            vertical-align: middle;
-            overflow-wrap: anywhere;
-            border-bottom: 1px solid #e8e8e8;
-        }
-
-        .olt-table tbody tr:nth-child(odd) {
-            background: #f1f1f1;
-        }
-
-        .olt-table tbody tr:nth-child(even) {
-            background: #fff;
-        }
-
-        .olt-table tbody tr:hover {
-            background: #eaf3fc;
-        }
-
+        .olt-table td { padding: 14px 8px; font-size: 12px; line-height: 1.45; vertical-align: middle; border-bottom: 1px solid #f2f4f7; }
+        .olt-table tbody tr { background: #fff; }
+        .olt-table tbody tr:nth-child(even) { background: #fbfcfe; }
+        .olt-table tbody tr:hover { background: #f0f7ff; }
         .olt-sort-button {
-            padding: 0;
-            border: 0;
-            color: inherit;
-            background: transparent;
-            font-weight: inherit;
-            text-align: left;
+            border: 0; background: transparent; padding: 0; font: inherit; color: inherit;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
         }
-
-        .olt-sort-mark {
-            color: #6e9dc4;
-        }
-
-        .olt-sub-text {
-            display: block;
-            margin-top: 3px;
-            color: #666;
-        }
-
+        .olt-sort-mark { color: #3288df; font-size: 11px; }
+        .olt-primary-text { display: block; color: #344054; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+        .olt-sub-text { display: block; margin-top: 5px; color: #667085; font-size: 11px; overflow-wrap: anywhere; }
+        .olt-mac { display: block; color: #344054; font-size: 11px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+        .olt-field-label { display: inline-block; min-width: 54px; color: #98a2b3; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+        .olt-metric { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+        .olt-metric + .olt-metric { margin-top: 5px; }
+        .olt-metric-value { color: #344054; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .olt-unlinked { color: #b54708; background: #fffaeb; border: 1px solid #fedf89; border-radius: 5px; padding: 3px 6px; font-size: 10px; font-weight: 700; display: inline-block; }
+        .olt-port-badge { display: inline-block; padding: 3px 7px; border-radius: 5px; background: #eff8ff; color: #175cd3; font-size: 11px; font-weight: 700; }
         .olt-status {
-            display: inline-block;
-            padding: 3px 8px;
-            color: #fff;
-            background: #23875e;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            white-space: nowrap;
+            display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px;
+            font-weight: 700; margin-top: 4px; text-align: center; text-transform: lowercase;
         }
-
-        .olt-status.offline {
-            background: #d9534f;
+        .olt-status.online { color: #fff; background: #12b76a; }
+        .olt-status.offline { color: #fff; background: #f04438; }
+        .olt-status.warning { color: #fff; background: #f79009; }
+        .olt-status.unknown { color: #fff; background: #667085; }
+        .olt-action-icon-btn {
+            display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+            border: 1px solid #3288df; background: #fff; color: #3288df; border-radius: 6px;
+            cursor: pointer; transition: all .2s;
         }
-
-        .olt-status.unknown {
-            background: #858585;
-        }
-
-        .olt-action-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-width: 75px;
-            height: 32px;
-            padding: 0 10px;
-            color: #267bc2;
-            background: #fff;
-            border: 1px solid #78a8d1;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-
-        .olt-action-button:hover {
-            color: #fff;
-            background: #267bc2;
-        }
-
-        .olt-action-button:disabled {
-            opacity: .65;
-            cursor: wait;
-        }
-
-        .olt-empty {
-            padding: 35px 15px !important;
-            color: var(--olt-muted);
-            text-align: center;
-        }
-
-        .olt-footer {
-            padding: 14px 0 2px;
-            color: #777;
-            font-size: 12px;
-            text-align: center;
-        }
-
+        .olt-action-icon-btn:hover { background: #3288df; color: #fff; }
+        .olt-action-icon-btn:disabled { opacity: .55; cursor: wait; }
+        .olt-empty { padding: 40px 15px !important; color: var(--olt-muted); text-align: center; }
+        .olt-footer { padding: 16px 0 0; color: #98a2b3; font-size: 12px; text-align: center; }
         .olt-message {
-            display: none;
-            margin-top: 12px;
-            padding: 9px 12px;
-            border-radius: 4px;
-            overflow-wrap: anywhere;
+            display: none; margin-top: 12px; padding: 10px 14px; border: 1px solid transparent;
+            border-radius: 6px; font-size: 13px;
         }
+        .olt-message.error, .olt-message.info, .olt-message.success { display: block; }
+        .olt-message.error { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
+        .olt-message.info { color: #084298; background: #cfe2ff; border-color: #b6d4fe; }
+        .olt-message.success { color: #0f5132; background: #d1e7dd; border-color: #a3cfbb; }
+        
+/* OLT Users Pagination */
+.olt-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--olt-border);
+}
 
-        .olt-message.error {
-            display: block;
-            color: #842029;
-            background: #f8d7da;
-        }
+.olt-pagination-info {
+    color: var(--olt-muted);
+    font-size: 12px;
+    font-weight: 500;
+}
 
-        .olt-message.info {
-            display: block;
-            color: #084298;
-            background: #cfe2ff;
-        }
+.olt-pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+}
 
-        .olt-message.success {
-            display: block;
-            color: #0f5132;
-            background: #d1e7dd;
-        }
+.olt-pagination-controls label {
+    color: var(--olt-muted);
+    font-size: 12px;
+}
 
-        @media (max-width: 1199px) {
-            .olt-page {
-                padding: 14px;
-            }
+.olt-pagination-controls select {
+    height: 32px;
+    padding: 4px 8px;
+    border: 1px solid var(--olt-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--olt-text);
+    font-size: 12px;
+    outline: none;
+}
 
-            .olt-content {
-                padding: 14px;
-            }
-        }
+.olt-page-btn,
+.olt-page-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--olt-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--olt-text);
+    font-size: 12px;
+    cursor: pointer;
+    transition: .2s ease;
+}
 
-        @media (max-width: 768px) {
-            .olt-page {
-                padding: 8px;
-            }
+.olt-page-btn:hover:not(:disabled),
+.olt-page-number:hover {
+    color: var(--olt-blue);
+    border-color: var(--olt-blue);
+    background: #f0f7ff;
+}
 
-            .olt-header {
-                padding: 12px;
-            }
+.olt-page-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
 
-            .olt-header h1 {
-                font-size: 20px;
-            }
+.olt-page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
 
-            .olt-content {
-                padding: 10px;
-            }
+.olt-page-number.active {
+    color: #fff;
+    background: var(--olt-blue);
+    border-color: var(--olt-blue);
+    font-weight: 700;
+}
 
-            .olt-summary {
-                align-items: stretch;
-            }
+.olt-page-ellipsis {
+    padding: 0 3px;
+    color: var(--olt-muted);
+}
 
-            .olt-controls {
-                flex-basis: 100%;
-                min-width: 0;
-            }
+@media (max-width: 600px) {
+    .olt-pagination {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 
-            .olt-select {
-                width: 45%;
-            }
+    .olt-pagination-controls {
+        justify-content: flex-start;
+        width: 100%;
+    }
 
-            .olt-search {
-                width: 55%;
-            }
+    .olt-page-btn,
+    .olt-page-number {
+        min-width: 30px;
+        height: 30px;
+    }
+}
 
-            .olt-table {
-                min-width: 1100px;
-            }
-        }
-
-        @media (max-width: 420px) {
-            .olt-page {
-                padding: 6px;
-            }
-
-            .olt-header {
-                padding: 10px;
-            }
-
-            .olt-header h1 {
-                font-size: 18px;
-            }
-
-            .olt-content {
-                padding: 8px;
-            }
-
-            .olt-summary {
-                padding: 7px;
-                font-size: 12px;
-            }
-
-            .olt-summary-number {
-                padding: 3px 7px;
-            }
-
-            .olt-select,
-            .olt-search input {
-                padding: 6px;
-                font-size: 12px;
-            }
-        }
     </style>
 </head>
-
 <body>
     <div id="sidebarContainer"></div>
     <div id="topbarContainer"></div>
 
-    <main class="main-content">
+    <div class="main-content">
         <div class="olt-page">
-
             <header class="olt-header">
-                <h1>
-                    <i class="fa-solid fa-network-wired me-2"></i>
-                    OLT Users
-                </h1>
-
-                <button
-                    class="olt-icon-button"
-                    id="refreshTable"
-                    type="button"
-                    title="Refresh ONU data"
-                    aria-label="Refresh ONU data">
-                    <i class="fa-solid fa-rotate"></i>
-                </button>
+                <h1>OLT Users</h1>
+                <div class="olt-header-btn-group">
+                    <button class="olt-header-circle-btn" id="toggleFilterButton" type="button" title="Filter Options" aria-label="Filter Options">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                    <button class="olt-header-circle-btn" id="refreshTable" type="button" title="Refresh ONU data" aria-label="Refresh ONU data">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
             </header>
+
+            <div id="filterPanel" class="olt-filter-panel">
+                <div class="olt-filter-grid">
+                    <div class="olt-filter-group">
+                        <label for="oltSelect">Select OLT</label>
+                        <select id="oltSelect" aria-label="Select OLT">
+                            <option value="all">All OLTs</option>
+                        </select>
+                    </div>
+                    <div class="olt-filter-group">
+                        <label for="routerMacFilter">Router MAC</label>
+                        <input type="text" id="routerMacFilter" placeholder="e.g. CC:2D:21:1D:F6:47" autocomplete="off">
+                    </div>
+                    <div class="olt-filter-group">
+                        <label for="onuMacFilter">ONU MAC / SN</label>
+                        <input type="text" id="onuMacFilter" placeholder="e.g. E4:2D:7B:01:95:0F" autocomplete="off">
+                    </div>
+                    <div class="olt-filter-actions">
+                        <button type="button" class="olt-btn olt-btn-primary" id="applyFilterBtn">
+                            <i class="fa-solid fa-magnifying-glass"></i> Filter
+                        </button>
+                        <button type="button" class="olt-btn olt-btn-secondary" id="resetFilterBtn">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <section class="olt-content">
                 <div class="olt-summary">
                     <div class="olt-summary-title">
                         <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                        <i class="fa-solid fa-database" aria-hidden="true"></i>
                         <span>Total Data:</span>
                         <span class="olt-summary-number" id="totalData">0</span>
                     </div>
-
                     <div class="olt-controls">
-                        <select
-                            id="oltSelect"
-                            class="olt-select"
-                            aria-label="Select OLT">
-                            <option value="">Loading OLTs...</option>
-                        </select>
-
                         <label class="olt-search">
-                            <input
-                                id="tableSearch"
-                                type="search"
-                                placeholder="Search ONU"
-                                autocomplete="off"
-                                aria-label="Search OLT users">
+                            <input id="tableSearch" type="search" placeholder="Search" autocomplete="off" aria-label="Search OLT users">
                         </label>
                     </div>
                 </div>
 
                 <div id="pageMessage" class="olt-message" role="status"></div>
 
-                <div class="olt-table-scroll">
-                    <table class="table table-hover olt-table">
-                        <thead id="tableHead"></thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
-                </div>
+<div class="olt-table-scroll">
+    <table class="table olt-table">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
 
-                <div class="olt-footer">© AI IT</div>
-            </section>
+<!-- Pagination: Footer-এর ঠিক উপরে -->
+<div class="olt-pagination">
+    <div class="olt-pagination-info" id="paginationInfo">
+        Showing 0–0 of 0
+    </div>
+
+    <div class="olt-pagination-controls">
+        <label for="pageSizeSelect">Rows:</label>
+        <select id="pageSizeSelect">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+            <option value="0">All</option>
+        </select>
+
+        <button type="button" id="firstPageBtn" class="olt-page-btn" title="First page">
+            <i class="fa-solid fa-angles-left"></i>
+        </button>
+        <button type="button" id="prevPageBtn" class="olt-page-btn" title="Previous page">
+            <i class="fa-solid fa-angle-left"></i>
+        </button>
+
+        <div id="pageNumbers" class="olt-page-numbers"></div>
+
+        <button type="button" id="nextPageBtn" class="olt-page-btn" title="Next page">
+            <i class="fa-solid fa-angle-right"></i>
+        </button>
+        <button type="button" id="lastPageBtn" class="olt-page-btn" title="Last page">
+            <i class="fa-solid fa-angles-right"></i>
+        </button>
+    </div>
+</div>
+
+<div class="olt-footer">© AI IT</div>
+</section>
+
         </div>
-    </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/sidebar-loader.js"></script>
     <script src="/assets/js/topbar-loader.js"></script>
 
-    <script>
-    "use strict";
 
-    const columns = [
-        ["id", "ID"],
-        ["name", "Name"],
-        ["address", "Address / MAC"],
-        ["oltPort", "OLT & Ports"],
-        ["power", "Rx & Tx Power"],
-        ["distance", "Distance"],
-        ["environment", "Voltage & Temperature"],
-        ["onu", "ONU"],
-        ["lastUpdate", "Last update"],
-        ["action", "Action"]
-    ];
+<script>
+"use strict";
 
-    let users = [];
-    let sortColumn = "";
-    let sortAscending = true;
-    let selectedOltId = "";
-    let oltList = [];
-    let loading = false;
-    let syncing = false;
+const columns = [
+    ["customerId", "ID"],
+    ["name", "Name"],
+    ["address", "Mac Address"],
+    ["oltPort", "OLT & Ports"],
+    ["power", "Rx & Tx Power"],
+    ["distance", "Distance"],
+    ["environment", "Voltage & Temperature"],
+    ["lastUpdate", "Last update"],
+    ["action", "Action"]
+];
 
-    const head = document.getElementById("tableHead");
-    const body = document.getElementById("tableBody");
-    const search = document.getElementById("tableSearch");
-    const total = document.getElementById("totalData");
-    const oltSelect = document.getElementById("oltSelect");
-    const message = document.getElementById("pageMessage");
-    const refreshButton = document.getElementById("refreshTable");
+let users = [];
+let sortColumn = "";
+let sortAscending = true;
+let selectedOltId = "all";
+let oltList = [];
+let loading = false;
+let syncing = false;
 
-    function escapeHTML(value) {
-        return String(value ?? "").replace(/[&<>"']/g, char => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        })[char]);
+/* Pagination */
+let currentPage = 1;
+let pageSize = 100;
+
+const head = document.getElementById("tableHead");
+const body = document.getElementById("tableBody");
+const search = document.getElementById("tableSearch");
+const total = document.getElementById("totalData");
+const oltSelect = document.getElementById("oltSelect");
+const message = document.getElementById("pageMessage");
+const refreshButton = document.getElementById("refreshTable");
+const toggleFilterButton = document.getElementById("toggleFilterButton");
+const filterPanel = document.getElementById("filterPanel");
+const routerMacFilter = document.getElementById("routerMacFilter");
+const onuMacFilter = document.getElementById("onuMacFilter");
+const applyFilterBtn = document.getElementById("applyFilterBtn");
+const resetFilterBtn = document.getElementById("resetFilterBtn");
+
+/* Pagination elements */
+const paginationInfo = document.getElementById("paginationInfo");
+const pageSizeSelect = document.getElementById("pageSizeSelect");
+const pageNumbers = document.getElementById("pageNumbers");
+const firstPageBtn = document.getElementById("firstPageBtn");
+const prevPageBtn = document.getElementById("prevPageBtn");
+const nextPageBtn = document.getElementById("nextPageBtn");
+const lastPageBtn = document.getElementById("lastPageBtn");
+
+
+/* --------------------------------------------------
+   HELPERS
+-------------------------------------------------- */
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function displayValue(value, suffix = "") {
+    return value === null || value === undefined || value === ""
+        ? "—"
+        : `${value}${suffix}`;
+}
+
+function showMessage(text, type = "info") {
+    message.textContent = text;
+    message.className = `olt-message ${type}`;
+}
+
+function clearMessage() {
+    message.textContent = "";
+    message.className = "olt-message";
+}
+
+async function parseResponse(response) {
+    let result;
+
+    try {
+        result = await response.json();
+    } catch (_) {
+        throw new Error(
+            `Invalid server response (HTTP ${response.status}).`
+        );
     }
 
-    function displayValue(value, suffix = "") {
-        if (value === null || value === undefined || value === "") {
-            return "—";
+    if (!response.ok || result.success === false) {
+        throw new Error(
+            result.message || `Request failed (HTTP ${response.status}).`
+        );
+    }
+
+    return result;
+}
+
+async function apiGet(url) {
+    const response = await fetch(url, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+            Accept: "application/json"
         }
+    });
 
-        return `${value}${suffix}`;
+    return parseResponse(response);
+}
+
+async function getCsrfToken() {
+    const result = await apiGet("/api/csrf-token");
+
+    const token =
+        result.csrfToken ||
+        result.csrf_token ||
+        result.token;
+
+    if (!token) {
+        throw new Error(
+            "CSRF token পাওয়া যায়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।"
+        );
     }
 
-    function showMessage(text, type = "info") {
-        message.textContent = text;
-        message.className = `olt-message ${type}`;
+    return token;
+}
+
+async function apiPost(url, payload = {}) {
+    const token = await getCsrfToken();
+
+    const response = await fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-Token": token
+        },
+        body: JSON.stringify({
+            ...payload,
+            csrf_token: token
+        })
+    });
+
+    return parseResponse(response);
+}
+
+function formatDate(value) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return escapeHTML(value);
     }
 
-    function clearMessage() {
-        message.textContent = "";
-        message.className = "olt-message";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+
+    hours = hours % 12 || 12;
+
+    const formattedHours = String(hours).padStart(2, "0");
+
+    return `${year}/${month}/${day}<br>${formattedHours}:${minutes} ${ampm}`;
+}
+
+function normalizeStatus(value) {
+    const status = String(value || "unknown")
+        .trim()
+        .toLowerCase();
+
+    if ([
+        "online", "up", "active", "working",
+        "registered", "connected", "1"
+    ].includes(status)) {
+        return "online";
     }
 
-    async function parseResponse(response) {
-        let result;
-
-        try {
-            result = await response.json();
-        } catch (_) {
-            throw new Error(
-                `Invalid server response (HTTP ${response.status}).`
-            );
-        }
-
-        if (!response.ok || result.success === false) {
-            throw new Error(
-                result.message || `Request failed (HTTP ${response.status}).`
-            );
-        }
-
-        return result;
+    if ([
+        "offline", "down", "unregistered",
+        "inactive", "0"
+    ].includes(status)) {
+        return "offline";
     }
 
-    async function apiGet(url) {
-        const response = await fetch(url, {
-            method: "GET",
-            credentials: "same-origin",
-            headers: {
-                "Accept": "application/json"
-            }
-        });
-
-        return parseResponse(response);
+    if ([
+        "dying-gasp", "dying_gasp",
+        "los", "losi", "warning"
+    ].includes(status)) {
+        return "warning";
     }
 
-    async function apiPost(url) {
-        const response = await fetch(url, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({})
-        });
+    return "unknown";
+}
 
-        return parseResponse(response);
-    }
+function statusLabel(status) {
+    return {
+        online: "online",
+        offline: "offline",
+        warning: "warning",
+        unknown: "unknown"
+    }[status] || "unknown";
+}
 
-    function normalizeOnu(row, olt) {
-        const rawStatus = String(row.status || "unknown")
-            .trim()
-            .toLowerCase();
 
-        let status = "Unknown";
+/* --------------------------------------------------
+   NORMALIZE ONU
+-------------------------------------------------- */
 
-        if (
-            ["online", "up", "active", "working", "registered"].includes(rawStatus)
-        ) {
-            status = "Online";
-        } else if (
-            ["offline", "down", "los", "unregistered"].includes(rawStatus)
-        ) {
-            status = "Offline";
-        }
+function normalizeOnu(row, olt) {
+    const rawStatus = normalizeStatus(
+        row.status ??
+        row.onu_status ??
+        row.online_status
+    );
 
-        const rx = row.rx_power;
-        const tx = row.tx_power;
+    const mac =
+        row.mac ||
+        row.mac_address ||
+        row.onu_mac ||
+        row.macAddress ||
+        "";
 
-        const lastUpdate =
-            row.last_update ||
-            row.updated_at ||
-            row.last_seen ||
-            "";
+    const routerMac =
+        row.router_mac ||
+        row.router_mac_address ||
+        row.routerMac ||
+        "";
 
-        const mac =
-            row.mac ||
-            row.onu_mac ||
-            row.serial ||
-            row.onu_sn ||
-            "";
+    const serial =
+        row.serial ||
+        row.onu_sn ||
+        row.serial_number ||
+        "";
 
-        const distance = row.distance;
+    const ip =
+        row.ip_address ||
+        row.ip ||
+        row.customer_ip ||
+        "";
 
-        return {
-            id: row.id,
+    const customerName =
+        row.customer_name ||
+        row.mapped_customer_name ||
+        "";
 
-            name:
-                row.name ||
-                row.onu_name ||
-                row.serial ||
-                row.onu_sn ||
-                `ONU ${row.id}`,
+    const customerCode =
+        row.customer_code ||
+        row.customer_id ||
+        row.matched_customer_id ||
+        "";
 
-            address: mac,
+    const customerLinked =
+        (
+            row.matched_customer_id !== null &&
+            row.matched_customer_id !== undefined &&
+            row.matched_customer_id !== ""
+        ) ||
+        row.is_linked === true ||
+        row.linked === true ||
+        Boolean(customerName);
 
-            oltPort:
-                olt.name ||
-                olt.vendor ||
-                `OLT ${olt.id}`,
+    const name =
+        customerName ||
+        row.name ||
+        row.onu_name ||
+        `ONU ${row.id}`;
 
-            port: row.pon || "",
+    const pon =
+        row.pon_port ??
+        row.pon_no ??
+        row.pon_id ??
+        row.pon ??
+        row.port_no ??
+        row.port ??
+        "";
 
-            rx: rx === null || rx === undefined || rx === ""
-                ? "—"
-                : `${rx} dBm`,
+    const lastUpdate =
+        row.last_update ||
+        row.updated_at ||
+        row.last_seen ||
+        row.last_updated ||
+        "";
 
-            tx: tx === null || tx === undefined || tx === ""
-                ? "—"
-                : `${tx} dBm`,
+    const distanceRaw =
+        row.distance ??
+        row.distance_m ??
+        row.distance_meter;
 
-            distance:
-                distance === null || distance === undefined || distance === ""
-                    ? "—"
-                    : `${distance}${/[a-z]/i.test(String(distance)) ? "" : " m"}`,
+    const distance =
+        distanceRaw === null ||
+        distanceRaw === undefined ||
+        distanceRaw === ""
+            ? "—"
+            : `${distanceRaw}${/[a-z]/i.test(String(distanceRaw)) ? "" : "m"}`;
 
-            voltage: displayValue(row.voltage, " V"),
+    const rx =
+        row.rx_power ??
+        row.rxPower ??
+        row.rx ??
+        row.rx_dbm;
 
-            temperature: displayValue(row.temperature, " °C"),
+    const tx =
+        row.tx_power ??
+        row.txPower ??
+        row.tx ??
+        row.tx_dbm;
 
-            onu: status,
+    const voltage =
+        row.voltage ??
+        row.ont_voltage;
 
-            lastUpdate: lastUpdate
-                ? formatDate(lastUpdate)
-                : "—",
+    const temperature =
+        row.temperature ??
+        row.temp ??
+        row.ont_temperature;
 
-            searchText: [
-                row.id,
-                row.name,
-                row.onu_name,
-                mac,
-                row.serial,
-                row.onu_sn,
-                row.pon,
-                status,
-                olt.name,
-                olt.vendor
-            ].join(" ")
-        };
-    }
+    const alarm =
+        row.alarm_status ||
+        row.alarm ||
+        row.last_down_reason ||
+        row.dying_gasp_status ||
+        row.dying_gasp ||
+        row.last_event ||
+        "";
 
-    function formatDate(value) {
-        const date = new Date(value);
+    return {
+        id: row.id,
+        oltId: String(row.olt_id || olt.id),
+        displayId: customerCode ? customerCode : row.id,
+        customerName,
+        customerLinked,
+        status: rawStatus,
+        alarm: String(alarm || "").replace(/[_-]+/g, " "),
+        name,
+        ip,
+        routerMac,
+        onuMac: mac,
+        serial,
+        oltPort:
+            row.olt_name ||
+            olt.name ||
+            olt.vendor ||
+            `OLT ${olt.id}`,
+        port: pon,
+        rx: displayValue(
+            rx,
+            rx === null || rx === undefined || rx === ""
+                ? ""
+                : " dBm"
+        ),
+        tx: displayValue(
+            tx,
+            tx === null || tx === undefined || tx === ""
+                ? ""
+                : " dBm"
+        ),
+        distance,
+        voltage: displayValue(
+            voltage,
+            voltage === null || voltage === undefined || voltage === ""
+                ? ""
+                : " V"
+        ),
+        temperature: displayValue(
+            temperature,
+            temperature === null ||
+            temperature === undefined ||
+            temperature === ""
+                ? ""
+                : " °C"
+        ),
+        lastUpdate: lastUpdate
+            ? formatDate(lastUpdate)
+            : "—",
+        searchText: [
+            row.id,
+            customerCode,
+            customerName,
+            row.customer_phone,
+            row.pppoe_username,
+            name,
+            ip,
+            mac,
+            routerMac,
+            serial,
+            pon,
+            rawStatus,
+            alarm,
+            row.olt_name,
+            olt.name,
+            olt.vendor
+        ].join(" ")
+    };
+}
 
-        if (Number.isNaN(date.getTime())) {
-            return String(value);
-        }
 
-        return date.toLocaleString();
-    }
+/* --------------------------------------------------
+   TABLE HEADER
+-------------------------------------------------- */
 
-    function renderHead() {
-        head.innerHTML = `
-            <tr>
-                ${columns.map(([key, label]) => `
-                    <th scope="col">
-                        <button
-                            type="button"
-                            class="olt-sort-button"
-                            data-sort="${key}">
-                            ${label}
-                            <span class="olt-sort-mark">↕</span>
-                        </button>
-                    </th>
-                `).join("")}
-            </tr>
-        `;
-    }
-
-    function getCell(user, key) {
-        switch (key) {
-            case "id":
-                return escapeHTML(user.id);
-
-            case "name":
-                return escapeHTML(user.name);
-
-            case "address":
-                return escapeHTML(user.address || "—");
-
-            case "oltPort":
-                return `
-                    ${escapeHTML(user.oltPort)}
-                    <span class="olt-sub-text">
-                        PON: ${escapeHTML(user.port || "—")}
-                    </span>
-                `;
-
-            case "power":
-                return `
-                    RX: ${escapeHTML(user.rx)}
-                    <span class="olt-sub-text">
-                        TX: ${escapeHTML(user.tx)}
-                    </span>
-                `;
-
-            case "distance":
-                return escapeHTML(user.distance);
-
-            case "environment":
-                return `
-                    Voltage: ${escapeHTML(user.voltage)}
-                    <span class="olt-sub-text">
-                        Temperature: ${escapeHTML(user.temperature)}
-                    </span>
-                `;
-
-            case "onu": {
-                const status = String(user.onu || "Unknown");
-                const normalized = status.toLowerCase();
-
-                const cssClass = normalized === "offline"
-                    ? "offline"
-                    : normalized === "online"
-                        ? ""
-                        : "unknown";
-
-                return `
-                    <span class="olt-status ${cssClass}">
-                        ${escapeHTML(status)}
-                    </span>
-                `;
-            }
-
-            case "lastUpdate":
-                return escapeHTML(user.lastUpdate);
-
-            case "action":
-                return `
+function renderHead() {
+    head.innerHTML = `
+        <tr>
+            ${columns.map(([key, label]) => `
+                <th scope="col">
                     <button
                         type="button"
-                        class="olt-action-button"
-                        data-sync-olt="${escapeHTML(selectedOltId)}"
-                        title="Sync selected OLT"
-                        aria-label="Sync selected OLT">
-                        <i class="fa-solid fa-rotate"></i>
-                        Sync
+                        class="olt-sort-button"
+                        data-sort="${key}">
+                        ${label}
+                        <span class="olt-sort-mark">↓↑</span>
                     </button>
-                `;
+                </th>
+            `).join("")}
+        </tr>
+    `;
+}
 
-            default:
-                return "";
-        }
-    }
 
-    function renderRows() {
-        const query = search.value.trim().toLowerCase();
+/* --------------------------------------------------
+   TABLE CELLS
+-------------------------------------------------- */
 
-        let rows = users.filter(user => {
-            if (!query) {
-                return true;
-            }
-
-            return Object.values(user).some(value =>
-                String(value ?? "").toLowerCase().includes(query)
-            );
-        });
-
-        if (sortColumn) {
-            rows.sort((a, b) => {
-                const av = String(a[sortColumn] ?? "");
-                const bv = String(b[sortColumn] ?? "");
-
-                return av.localeCompare(
-                    bv,
-                    undefined,
-                    {
-                        numeric: true,
-                        sensitivity: "base"
-                    }
-                ) * (sortAscending ? 1 : -1);
-            });
-        }
-
-        total.textContent = String(rows.length);
-
-        if (!rows.length) {
-            body.innerHTML = `
-                <tr>
-                    <td class="olt-empty" colspan="${columns.length}">
-                        <i class="fa-solid fa-circle-info me-1"></i>
-                        ${
-                            users.length
-                                ? "No matching ONU data."
-                                : "No ONU data available. Run Sync to update this OLT."
-                        }
-                    </td>
-                </tr>
+function getCell(user, key) {
+    switch (key) {
+        case "customerId":
+            return `
+                <div>
+                    <span class="olt-primary-text">
+                        ${escapeHTML(user.displayId)}
+                    </span>
+                </div>
+                <span class="olt-status ${escapeHTML(user.status)}">
+                    ${escapeHTML(statusLabel(user.status))}
+                </span>
             `;
 
-            return;
+        case "name":
+            return `
+                ${user.customerLinked
+                    ? `
+                        <strong class="olt-primary-text">
+                            ${escapeHTML(user.customerName || user.name || "—")}
+                        </strong>
+                    `
+                    : `
+                        <span class="olt-unlinked">
+                            Customer not linked
+                        </span>
+                    `
+                }
+                <span class="olt-sub-text">
+                    ${escapeHTML(user.ip || "—")}
+                </span>
+            `;
+
+        case "address": {
+            const routerMac = String(user.routerMac || "").trim();
+            const onuMac = String(user.onuMac || "").trim();
+
+            const sameMac =
+                routerMac &&
+                onuMac &&
+                routerMac.toLowerCase() === onuMac.toLowerCase();
+
+            if (sameMac) {
+                return `
+                    <span class="olt-field-label">MAC</span>
+                    <span class="olt-mac">${escapeHTML(onuMac)}</span>
+                `;
+            }
+
+            if (!routerMac && !onuMac) {
+                return `<span class="olt-mac">—</span>`;
+            }
+
+            return `
+                ${routerMac ? `
+                    <div>
+                        <span class="olt-field-label">Router</span>
+                        <span class="olt-mac">${escapeHTML(routerMac)}</span>
+                    </div>
+                ` : ""}
+
+                ${onuMac ? `
+                    <div class="olt-sub-text">
+                        <span class="olt-field-label">ONU</span>
+                        <span class="olt-mac">${escapeHTML(onuMac)}</span>
+                    </div>
+                ` : ""}
+
+                ${user.serial && user.serial !== onuMac ? `
+                    <span class="olt-sub-text">
+                        <span class="olt-field-label">S/N</span>
+                        ${escapeHTML(user.serial)}
+                    </span>
+                ` : ""}
+            `;
         }
 
-        body.innerHTML = rows.map(user => `
-            <tr>
-                ${columns.map(([key]) => `
-                    <td>${getCell(user, key)}</td>
-                `).join("")}
-            </tr>
-        `).join("");
+        case "oltPort":
+            return `
+                <span class="olt-primary-text">
+                    ${escapeHTML(user.oltPort)}
+                </span>
+                <span class="olt-sub-text">
+                    <span class="olt-field-label">Port</span>
+                    ${escapeHTML(user.port || "—")}
+                </span>
+            `;
 
-        if (syncing) {
-            body.querySelectorAll("[data-sync-olt]").forEach(button => {
-                button.disabled = true;
-                button.innerHTML =
-                    '<i class="fa-solid fa-spinner fa-spin"></i> Syncing';
-            });
+        case "power":
+            return `
+                <div class="olt-metric">
+                    <span class="olt-field-label">RX</span>
+                    <span class="olt-metric-value">${escapeHTML(user.rx)}</span>
+                </div>
+                <div class="olt-metric">
+                    <span class="olt-field-label">TX</span>
+                    <span class="olt-metric-value">${escapeHTML(user.tx)}</span>
+                </div>
+            `;
+
+        case "distance":
+            return `
+                <div class="olt-metric">
+                    <span class="olt-field-label">Range</span>
+                    <span class="olt-metric-value">${escapeHTML(user.distance)}</span>
+                </div>
+                <div class="olt-sub-text">
+                    <span class="olt-field-label">Alarm</span>
+                    ${escapeHTML(user.alarm || "—")}
+                </div>
+            `;
+
+        case "environment":
+            return `
+                <div class="olt-metric">
+                    <span class="olt-field-label">Volt</span>
+                    <span class="olt-metric-value">${escapeHTML(user.voltage)}</span>
+                </div>
+                <div class="olt-metric">
+                    <span class="olt-field-label">Temp</span>
+                    <span class="olt-metric-value">${escapeHTML(user.temperature)}</span>
+                </div>
+            `;
+
+        case "lastUpdate":
+            return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
+
+        case "action":
+            return `
+                <button
+                    type="button"
+                    class="olt-action-icon-btn"
+                    data-sync-olt="${escapeHTML(user.oltId)}"
+                    title="Sync this OLT"
+                    aria-label="Sync OLT ${escapeHTML(user.oltId)}"
+                    ${syncing ? "disabled" : ""}>
+                    <i class="fa-solid fa-network-wired"></i>
+                </button>
+            `;
+
+        default:
+            return "";
+    }
+}
+
+
+/* --------------------------------------------------
+   FILTERED AND SORTED DATA
+-------------------------------------------------- */
+
+function getFilteredRows() {
+    const query = search.value.trim().toLowerCase();
+    const rMacVal = routerMacFilter.value.trim().toLowerCase();
+    const oMacVal = onuMacFilter.value.trim().toLowerCase();
+
+    let rows = users.filter(user => {
+        if (
+            query &&
+            ![...Object.values(user), user.searchText].some(value =>
+                String(value ?? "").toLowerCase().includes(query)
+            )
+        ) {
+            return false;
         }
+
+        if (
+            rMacVal &&
+            !String(user.routerMac || "").toLowerCase().includes(rMacVal)
+        ) {
+            return false;
+        }
+
+        if (
+            oMacVal &&
+            !String(user.onuMac || "").toLowerCase().includes(oMacVal)
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+
+    if (sortColumn) {
+        rows.sort((a, b) => {
+            return String(a[sortColumn] ?? "").localeCompare(
+                String(b[sortColumn] ?? ""),
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            ) * (sortAscending ? 1 : -1);
+        });
     }
 
-    async function loadOltList() {
-        const result = await apiGet("/api/olt");
+    return rows;
+}
 
-        oltList = Array.isArray(result.data)
-            ? result.data
-            : [];
 
-        const params = new URLSearchParams(window.location.search);
-        const requestedId =
-            params.get("olt_id") ||
-            params.get("id") ||
-            "";
+/* --------------------------------------------------
+   PAGINATION BUTTONS
+-------------------------------------------------- */
 
-        oltSelect.innerHTML = "";
+function renderPagination(totalRows, totalPages, startIndex, endIndex) {
+    paginationInfo.textContent = totalRows === 0
+        ? "Showing 0–0 of 0"
+        : `Showing ${startIndex + 1}–${endIndex} of ${totalRows}`;
 
-        if (!oltList.length) {
-            oltSelect.innerHTML =
-                '<option value="">No OLT available</option>';
+    firstPageBtn.disabled = currentPage <= 1 || totalRows === 0;
+    prevPageBtn.disabled = currentPage <= 1 || totalRows === 0;
+    nextPageBtn.disabled = currentPage >= totalPages || totalRows === 0;
+    lastPageBtn.disabled = currentPage >= totalPages || totalRows === 0;
 
-            users = [];
-            renderRows();
+    const pagesToShow = new Set([1, totalPages]);
 
-            showMessage(
-                "No OLT records were returned for your account.",
-                "info"
-            );
+    for (
+        let page = Math.max(1, currentPage - 2);
+        page <= Math.min(totalPages, currentPage + 2);
+        page++
+    ) {
+        pagesToShow.add(page);
+    }
 
-            return;
+    const sortedPages = [...pagesToShow].sort((a, b) => a - b);
+
+    let previousPage = 0;
+    let html = "";
+
+    for (const page of sortedPages) {
+        if (previousPage && page - previousPage > 1) {
+            html += `<span class="olt-page-ellipsis">…</span>`;
         }
 
-        oltSelect.innerHTML = oltList.map(olt => `
+        html += `
+            <button
+                type="button"
+                class="olt-page-number ${page === currentPage ? "active" : ""}"
+                data-page="${page}"
+                aria-label="Go to page ${page}"
+                aria-current="${page === currentPage ? "page" : "false"}">
+                ${page}
+            </button>
+        `;
+
+        previousPage = page;
+    }
+
+    pageNumbers.innerHTML = html;
+}
+
+
+/* --------------------------------------------------
+   RENDER TABLE WITH PAGINATION
+-------------------------------------------------- */
+
+function renderRows() {
+    const rows = getFilteredRows();
+    const totalRows = rows.length;
+
+    const totalPages = pageSize === 0
+        ? 1
+        : Math.max(1, Math.ceil(totalRows / pageSize));
+
+    currentPage = Math.min(
+        Math.max(1, currentPage),
+        totalPages
+    );
+
+    const startIndex = pageSize === 0
+        ? 0
+        : (currentPage - 1) * pageSize;
+
+    const endIndex = pageSize === 0
+        ? totalRows
+        : Math.min(startIndex + pageSize, totalRows);
+
+    const visibleRows = pageSize === 0
+        ? rows
+        : rows.slice(startIndex, endIndex);
+
+    total.textContent = String(totalRows);
+
+    renderPagination(
+        totalRows,
+        totalPages,
+        startIndex,
+        endIndex
+    );
+
+    if (!visibleRows.length) {
+        body.innerHTML = `
+            <tr>
+                <td class="olt-empty" colspan="${columns.length}">
+                    <i class="fa-solid fa-circle-info me-1"></i>
+                    ${users.length
+                        ? "No matching ONU data."
+                        : "No ONU data available for the selected OLT(s)."}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    body.innerHTML = visibleRows.map(user => `
+        <tr>
+            ${columns.map(([key]) => `
+                <td>${getCell(user, key)}</td>
+            `).join("")}
+        </tr>
+    `).join("");
+}
+
+
+/* --------------------------------------------------
+   LOAD OLT LIST
+-------------------------------------------------- */
+
+async function loadOltList() {
+    const result = await apiGet("/api/olt");
+
+    oltList = Array.isArray(result)
+        ? result
+        : Array.isArray(result.olts)
+            ? result.olts
+            : Array.isArray(result.data)
+                ? result.data
+                : [];
+
+    oltList = oltList.filter(olt => olt && olt.id != null);
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedId =
+        params.get("olt_id") ||
+        params.get("id") ||
+        "";
+
+    oltSelect.innerHTML = [
+        '<option value="all">All OLTs</option>',
+        ...oltList.map(olt => `
             <option value="${escapeHTML(olt.id)}">
                 ${escapeHTML(olt.name || olt.vendor || "OLT")}
                 (#${escapeHTML(olt.id)})
             </option>
-        `).join("");
+        `)
+    ].join("");
 
-        const requestedOlt = oltList.find(
-            olt => String(olt.id) === String(requestedId)
+    if (!oltList.length) {
+        selectedOltId = "all";
+        users = [];
+        currentPage = 1;
+        renderRows();
+
+        showMessage(
+            "No OLT records were returned for your account.",
+            "info"
+        );
+        return;
+    }
+
+    const requestedOlt = oltList.find(
+        olt => String(olt.id) === String(requestedId)
+    );
+
+    selectedOltId = requestedOlt
+        ? String(requestedOlt.id)
+        : "all";
+
+    oltSelect.value = selectedOltId;
+
+    currentPage = 1;
+    await loadOnus();
+}
+
+
+/* --------------------------------------------------
+   LOAD ONU DATA
+-------------------------------------------------- */
+
+async function loadOnus(keepMessage = false) {
+    if (loading || !oltList.length) return;
+
+    loading = true;
+    refreshButton.disabled = true;
+
+    refreshButton.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    if (!keepMessage) {
+        clearMessage();
+    }
+
+    body.innerHTML = `
+        <tr>
+            <td class="olt-empty" colspan="${columns.length}">
+                <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                Loading ONU data...
+            </td>
+        </tr>
+    `;
+
+    try {
+        const targets = selectedOltId === "all"
+            ? [...oltList]
+            : oltList.filter(
+                olt => String(olt.id) === String(selectedOltId)
+            );
+
+        const results = await Promise.allSettled(
+            targets.map(async olt => {
+                const result = await apiGet(
+                    `/api/olt/${encodeURIComponent(olt.id)}/onus`
+                );
+
+                const rows = Array.isArray(result.data)
+                    ? result.data
+                    : [];
+
+                return {
+                    olt,
+                    rows: rows.map(row => normalizeOnu(row, olt))
+                };
+            })
         );
 
-        const initialOlt = requestedOlt || oltList[0];
+        const loaded = results
+            .filter(item => item.status === "fulfilled")
+            .map(item => item.value);
 
-        selectedOltId = String(initialOlt.id);
-        oltSelect.value = selectedOltId;
+        users = loaded.flatMap(item => item.rows);
 
-        await loadOnus();
-    }
+        currentPage = 1;
+        renderRows();
 
-    async function loadOnus() {
-        if (!selectedOltId || loading) {
-            return;
-        }
+        const failed = results.filter(
+            item => item.status === "rejected"
+        );
 
-        loading = true;
-        refreshButton.disabled = true;
-        refreshButton.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-        clearMessage();
-
-        body.innerHTML = `
-            <tr>
-                <td class="olt-empty" colspan="${columns.length}">
-                    <i class="fa-solid fa-spinner fa-spin me-1"></i>
-                    Loading ONU data...
-                </td>
-            </tr>
-        `;
-
-        try {
-            const result = await apiGet(
-                `/api/olt/${encodeURIComponent(selectedOltId)}/onus`
-            );
-
-            const rawRows = Array.isArray(result.data)
-                ? result.data
-                : [];
-
-            const olt = oltList.find(
-                item => String(item.id) === String(selectedOltId)
-            ) || {};
-
-            users = rawRows.map(row => normalizeOnu(row, olt));
-
-            renderRows();
-        } catch (error) {
-            users = [];
-            renderRows();
+        if (failed.length) {
+            const failedIds = failed.map(item => {
+                const index = results.indexOf(item);
+                return targets[index]?.id;
+            }).filter(Boolean);
 
             showMessage(
-                error.message || "Failed to load ONU data.",
+                `কিছু OLT-এর ONU data লোড হয়নি। ব্যর্থ OLT ID: ${failedIds.join(", ")}। সফল OLT-এর রেকর্ড দেখানো হয়েছে।`,
                 "error"
             );
-        } finally {
-            loading = false;
-            refreshButton.disabled = false;
-            refreshButton.innerHTML =
-                '<i class="fa-solid fa-rotate"></i>';
-        }
-    }
-
-    async function syncSelectedOlt(button) {
-        if (!selectedOltId || syncing) {
-            return;
-        }
-
-        syncing = true;
-        clearMessage();
-
-        const originalHtml =
-            '<i class="fa-solid fa-rotate"></i> Sync';
-
-        if (button) {
-            button.disabled = true;
-            button.innerHTML =
-                '<i class="fa-solid fa-spinner fa-spin"></i> Syncing';
-        }
-
-        refreshButton.disabled = true;
-        oltSelect.disabled = true;
-
-        try {
-            const result = await apiPost(
-                `/api/olt/${encodeURIComponent(selectedOltId)}/sync`
-            );
-
-            const details = result.data || {};
-
-            showMessage(
-                `${result.message || "ONU synchronization completed."} ` +
-                `Inserted: ${details.inserted ?? 0}, ` +
-                `Updated: ${details.updated ?? 0}, ` +
-                `Skipped: ${details.skipped ?? 0}.`,
-                "success"
-            );
-
-            // Refresh ONU records after successful synchronization.
-            await loadOnus();
-        } catch (error) {
-            showMessage(
-                error.message || "ONU synchronization failed.",
-                "error"
-            );
-        } finally {
-            syncing = false;
-            refreshButton.disabled = false;
-            oltSelect.disabled = false;
-
-            body.querySelectorAll("[data-sync-olt]").forEach(item => {
-                item.disabled = false;
-                item.innerHTML = originalHtml;
-            });
-        }
-    }
-
-    head.addEventListener("click", event => {
-        const button = event.target.closest("[data-sort]");
-
-        if (!button) {
-            return;
-        }
-
-        const key = button.dataset.sort;
-
-        if (sortColumn === key) {
-            sortAscending = !sortAscending;
         } else {
-            sortColumn = key;
-            sortAscending = true;
+            clearMessage();
         }
-
-        renderRows();
-    });
-
-    search.addEventListener("input", renderRows);
-
-    oltSelect.addEventListener("change", async () => {
-        if (syncing) {
-            return;
-        }
-
-        selectedOltId = oltSelect.value;
+    } catch (error) {
         users = [];
-
+        currentPage = 1;
         renderRows();
 
-        await loadOnus();
-    });
+        showMessage(
+            error.message || "Failed to load ONU data.",
+            "error"
+        );
+    } finally {
+        loading = false;
+        refreshButton.disabled = false;
 
-    refreshButton.addEventListener("click", async () => {
-        if (loading || syncing) {
-            return;
-        }
+        refreshButton.innerHTML =
+            '<i class="fa-solid fa-rotate"></i>';
+    }
+}
 
-        try {
-            if (!oltList.length) {
-                await loadOltList();
-            } else {
-                await loadOnus();
-            }
-        } catch (error) {
-            showMessage(
-                error.message || "Failed to refresh ONU data.",
-                "error"
-            );
-        }
-    });
 
-    body.addEventListener("click", async event => {
-        const button = event.target.closest("[data-sync-olt]");
+/* --------------------------------------------------
+   SYNC OLT
+-------------------------------------------------- */
 
-        if (!button || button.disabled || syncing || loading) {
-            return;
-        }
-
-        const oltId = button.dataset.syncOlt;
-
-        if (!oltId || String(oltId) !== String(selectedOltId)) {
-            return;
-        }
-
-        await syncSelectedOlt(button);
-    });
-
-    async function init() {
-        renderHead();
-
-        body.innerHTML = `
-            <tr>
-                <td class="olt-empty" colspan="${columns.length}">
-                    Loading OLT list...
-                </td>
-            </tr>
-        `;
-
-        try {
-            await loadOltList();
-        } catch (error) {
-            oltSelect.innerHTML =
-                '<option value="">Failed to load OLTs</option>';
-
-            users = [];
-            renderRows();
-
-            showMessage(
-                error.message ||
-                "Unable to load OLT list. Check login and API route.",
-                "error"
-            );
-        }
+async function syncSelectedOlt(button, targetOltId) {
+    if (
+        !targetOltId ||
+        targetOltId === "all" ||
+        syncing ||
+        loading
+    ) {
+        return;
     }
 
-    init();
-    </script>
+    const targetOlt = oltList.find(
+        olt => String(olt.id) === String(targetOltId)
+    );
+
+    if (!targetOlt) {
+        showMessage("নির্বাচিত OLT পাওয়া যায়নি।", "error");
+        return;
+    }
+
+    syncing = true;
+    clearMessage();
+
+    if (button) {
+        button.disabled = true;
+        button.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
+
+    refreshButton.disabled = true;
+
+    try {
+        const result = await apiPost(
+            `/api/olt/${encodeURIComponent(targetOltId)}/sync`
+        );
+
+        const details = result.data || {};
+
+        showMessage(
+            `${result.message || "ONU synchronization completed."} ` +
+            `Inserted: ${details.inserted ?? 0}, ` +
+            `Updated: ${details.updated ?? 0}, ` +
+            `Skipped: ${details.skipped ?? 0}.`,
+            "success"
+        );
+
+        await loadOnus(true);
+    } catch (error) {
+        showMessage(
+            error.message || "ONU synchronization failed.",
+            "error"
+        );
+    } finally {
+        syncing = false;
+        refreshButton.disabled = false;
+        renderRows();
+    }
+}
+
+
+/* --------------------------------------------------
+   FILTER PANEL
+-------------------------------------------------- */
+
+toggleFilterButton.addEventListener("click", () => {
+    filterPanel.classList.toggle("active");
+});
+
+
+applyFilterBtn.addEventListener("click", async () => {
+    const nextOltId = oltSelect.value || "all";
+    const oltChanged = nextOltId !== selectedOltId;
+
+    selectedOltId = nextOltId;
+    currentPage = 1;
+
+    if (oltChanged) {
+        await loadOnus();
+    } else {
+        renderRows();
+    }
+});
+
+
+resetFilterBtn.addEventListener("click", async () => {
+    routerMacFilter.value = "";
+    onuMacFilter.value = "";
+    search.value = "";
+
+    selectedOltId = "all";
+    oltSelect.value = "all";
+
+    sortColumn = "";
+    sortAscending = true;
+    currentPage = 1;
+
+    await loadOnus();
+});
+
+
+/* --------------------------------------------------
+   SORTING
+-------------------------------------------------- */
+
+head.addEventListener("click", event => {
+    const button = event.target.closest("[data-sort]");
+    if (!button) return;
+
+    const key = button.dataset.sort;
+
+    if (sortColumn === key) {
+        sortAscending = !sortAscending;
+    } else {
+        sortColumn = key;
+        sortAscending = true;
+    }
+
+    currentPage = 1;
+    renderRows();
+});
+
+
+/* --------------------------------------------------
+   SEARCH AND MAC FILTERS
+-------------------------------------------------- */
+
+search.addEventListener("input", () => {
+    currentPage = 1;
+    renderRows();
+});
+
+routerMacFilter.addEventListener("input", () => {
+    currentPage = 1;
+    renderRows();
+});
+
+onuMacFilter.addEventListener("input", () => {
+    currentPage = 1;
+    renderRows();
+});
+
+
+/* --------------------------------------------------
+   PAGE SIZE
+-------------------------------------------------- */
+
+pageSizeSelect.addEventListener("change", () => {
+    pageSize = Number(pageSizeSelect.value);
+
+    if (!Number.isFinite(pageSize) || pageSize < 0) {
+        pageSize = 100;
+    }
+
+    currentPage = 1;
+    renderRows();
+});
+
+
+/* --------------------------------------------------
+   FIRST / PREVIOUS / NEXT / LAST
+-------------------------------------------------- */
+
+firstPageBtn.addEventListener("click", () => {
+    currentPage = 1;
+    renderRows();
+});
+
+prevPageBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderRows();
+    }
+});
+
+nextPageBtn.addEventListener("click", () => {
+    const totalRows = getFilteredRows().length;
+
+    const totalPages = pageSize === 0
+        ? 1
+        : Math.max(1, Math.ceil(totalRows / pageSize));
+
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderRows();
+    }
+});
+
+lastPageBtn.addEventListener("click", () => {
+    const totalRows = getFilteredRows().length;
+
+    currentPage = pageSize === 0
+        ? 1
+        : Math.max(1, Math.ceil(totalRows / pageSize));
+
+    renderRows();
+});
+
+
+/* --------------------------------------------------
+   PAGE NUMBER BUTTONS
+-------------------------------------------------- */
+
+pageNumbers.addEventListener("click", event => {
+    const button = event.target.closest("[data-page]");
+    if (!button) return;
+
+    const page = Number(button.dataset.page);
+
+    if (!Number.isInteger(page) || page < 1) {
+        return;
+    }
+
+    currentPage = page;
+    renderRows();
+});
+
+
+/* --------------------------------------------------
+   OLT SELECTION
+-------------------------------------------------- */
+
+oltSelect.addEventListener("change", async () => {
+    if (syncing || loading) return;
+
+    selectedOltId = oltSelect.value || "all";
+    currentPage = 1;
+
+    await loadOnus();
+});
+
+
+/* --------------------------------------------------
+   REFRESH
+-------------------------------------------------- */
+
+refreshButton.addEventListener("click", async () => {
+    if (loading || syncing) return;
+
+    try {
+        if (!oltList.length) {
+            await loadOltList();
+        } else {
+            await loadOnus();
+        }
+    } catch (error) {
+        showMessage(
+            error.message || "Failed to refresh ONU data.",
+            "error"
+        );
+    }
+});
+
+
+/* --------------------------------------------------
+   SYNC BUTTON DELEGATION
+-------------------------------------------------- */
+
+body.addEventListener("click", async event => {
+    const syncButton = event.target.closest("[data-sync-olt]");
+
+    if (
+        !syncButton ||
+        syncButton.disabled ||
+        syncing ||
+        loading
+    ) {
+        return;
+    }
+
+    await syncSelectedOlt(
+        syncButton,
+        syncButton.dataset.syncOlt
+    );
+});
+
+
+/* --------------------------------------------------
+   INITIALIZE
+-------------------------------------------------- */
+
+async function init() {
+    renderHead();
+
+    pageSize = Number(pageSizeSelect.value) || 100;
+    currentPage = 1;
+
+    body.innerHTML = `
+        <tr>
+            <td class="olt-empty" colspan="${columns.length}">
+                Loading OLT list...
+            </td>
+        </tr>
+    `;
+
+    try {
+        await loadOltList();
+    } catch (error) {
+        oltSelect.innerHTML =
+            '<option value="all">All OLTs</option>';
+
+        users = [];
+        currentPage = 1;
+        renderRows();
+
+        showMessage(
+            error.message ||
+            "Unable to load OLT list. Check login and API route.",
+            "error"
+        );
+    }
+}
+
+init();
+</script>
+
 </body>
 </html>

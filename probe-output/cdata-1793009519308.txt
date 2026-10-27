@@ -1,0 +1,36 @@
+===== [config] show mac-address ont 0/0/1 ? =====
+show mac-address ont 0/0/1 
+ <1-64>               - ONT ID. <U><1-64>
+
+
+Modokande OLT(config)# show mac-address ont 0/0/1 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show mac-address port epon ? =====
+show mac-address port epon 
+ F/S/P                - FrameID/SlotID/PortID. <S><0-0>/<0-0>/<1-4>
+
+
+Modokande OLT(config)# show mac-address port epon 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show ont ? =====
+show ont 
+ auto-aging           - ONT aging timer
+ autofind             - ONT autofind switch
+ basic-info           - Basic ONT information
+ info                 - ONT information
+ load                 - ONT load
+ moving-check         - ONT authentication moving check
+ policy-auth          - <Group> ont policy authentication command group
+ register-statistics  - ont register statistics
+
+
+Modokande OLT(config)# show ont 
+Command incomplete.
+
+Modokande OLT(config)#

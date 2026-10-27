@@ -1,0 +1,10 @@
+
+{
+  "commands": [
+    {
+      "command": "show mac-address port epon {iface}/{pon} with-ont-location",
+      "perPon": true,
+      "lineRegex": "^(?<mac>[0-9a-f]{2}(?::[0-9a-f]{2}){5})\\s+\\d+\\s+pon\\d+/\\d+/(?<pon>\\d+)\\s+(?<ont>\\d+)\\s+dynamic$"
+    }
+  ]
+}

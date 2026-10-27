@@ -37,7 +37,15 @@ router.post("/:id/check", controller.check);
 // Synchronize OLT and ONU information
 router.post("/:id/sync", controller.sync);
 
+// Automatic ONU -> customer mapping (add ?dry_run=1 or body.dry_run to preview)
+router.post("/:id/auto-map", controller.autoMap);
+
 // OLT Users / ONU list
 router.get("/:id/onus", controller.listOnus);
+
+// ONU customer mapping
+router.get("/:id/customers/search", controller.searchCustomers);
+router.post("/:id/onus/:onuId/customer", controller.linkOnuCustomer);
+router.delete("/:id/onus/:onuId/customer", controller.unlinkOnuCustomer);
 
 module.exports = router;

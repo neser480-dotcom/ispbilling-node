@@ -1,0 +1,56 @@
+===== [config] show mac-address port epon 0/0/4 with-ont-location =====
+-----------------------------------------------------------------------------
+ Total: 47 
+-----------------------------------------------------------------------------
+ MAC                 VLAN   Port          ONT-Id  MAC-Type 
+-----------------------------------------------------------------------------
+ 08:40:F3:97:27:CF   204    pon0/0/4      1       dynamic
+ 74:DA:88:52:4D:77   204    pon0/0/4      2       dynamic
+ CC:2D:21:6B:73:A0   204    pon0/0/4      3       dynamic
+ D8:32:14:65:E1:F0   204    pon0/0/4      4       dynamic
+ 58:D9:D5:07:02:58   204    pon0/0/4      5       dynamic
+ D8:32:14:3D:99:38   204    pon0/0/4      6       dynamic
+ CC:2D:21:14:92:08   204    pon0/0/4      7       dynamic
+ D8:32:14:37:09:9F   204    pon0/0/4      8       dynamic
+ D8:32:14:D7:25:50   204    pon0/0/4      9       dynamic
+ CC:2D:21:CA:D8:58   204    pon0/0/4      10      dynamic
+ 24:2F:D0:DB:3F:45   204    pon0/0/4      11      dynamic
+ B8:3A:08:DE:C3:B8   204    pon0/0/4      12      dynamic
+ C0:C9:E3:B5:FB:71   204    pon0/0/4      13      dynamic
+ CC:2D:21:76:7F:18   204    pon0/0/4      14      dynamic
+ DC:62:79:47:6C:85   204    pon0/0/4      15      dynamic
+ B8:3A:08:8D:AF:3F   204    pon0/0/4      16      dynamic
+ D8:32:14:79:03:98   204    pon0/0/4      17      dynamic
+ 04:95:E6:0F:1F:78   204    pon0/0/4      18      dynamic
+                                    04:95:E6:9E:63:48   204    pon0/0/4      19      dynamic
+ 00:D3:9E:B9:2C:08   204    pon0/0/4      20      dynamic
+ D8:32:14:33:35:A0   204    pon0/0/4      20      dynamic
+ B8:3A:08:92:CF:EF   204    pon0/0/4      21      dynamic
+ 08:40:F3:B1:AB:A7   204    pon0/0/4      22      dynamic
+ 08:40:F3:97:2C:77   204    pon0/0/4      23      dynamic
+ 00:D3:9F:70:C1:F2   204    pon0/0/4      23      dynamic
+ CC:2D:21:9B:81:90   204    pon0/0/4      24      dynamic
+ A0:7D:12:20:65:E1   204    pon0/0/4      24      dynamic
+ 08:40:F3:B3:50:B7   204    pon0/0/4      25      dynamic
+ 00:D3:9F:70:A3:FE   204    pon0/0/4      25      dynamic
+ D8:32:14:66:1E:20   204    pon0/0/4      26      dynamic
+ CC:2D:21:72:CB:77   204    pon0/0/4      27      dynamic
+ 58:D9:D5:27:8C:78   204    pon0/0/4      28      dynamic
+ 08:40:F3:78:DC:5F   204    pon0/0/4      29      dynamic
+ D8:32:14:E0:71:D0   204    pon0/0/4      30      dynamic
+ CC:2D:21:68:DD:50   204    pon0/0/4      31      dynamic
+ 88:BD:09:0D:13:7A   204    pon0/0/4      32      dynamic
+ 00:D3:9E:EF:6B:92   204    pon0/0/4      33      dynamic
+ 08:40:F3:79:71:9F   204    pon0/0/4      33      dynamic
+ 50:0F:F5:F6:B3:98   204    pon0/0/4      34      dynamic
+ 50:0F:F5:66:42:90   204    pon0/0/4      35      dynamic
+ CC:2D:21:89:C3:60   204    pon0/0/4      35      dynamic
+ 50:0F:F5:BB:9D:40   204    pon0/0/4      36      dynamic
+                                    6C:4C:BC:8E:D6:12   204    pon0/0/4      37      dynamic
+ 80:9F:E4:38:1F:DF   204    pon0/0/4      38      dynamic
+ 30:16:9D:F4:64:3E   204    pon0/0/4      40      dynamic
+ D8:32:14:A2:BD:80   204    pon0/0/4      41      dynamic
+ 80:9F:E4:15:CF:CC   204    pon0/0/4      42      dynamic
+-----------------------------------------------------------------------------
+
+Modokande OLT(config)#

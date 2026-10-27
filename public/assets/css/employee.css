@@ -1,0 +1,603 @@
+
+/* =====================================================
+   STAFF / EMPLOYEE PAGE
+   Responsive: Desktop, Laptop, Tablet, Mobile
+   ===================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* ---------- Main Layout ---------- */
+
+#sidebarContainer {
+    z-index: 1030;
+}
+
+#mainContent {
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#topbarContainer {
+    position: relative;
+    z-index: 1020;
+    min-width: 0;
+    width: 100%;
+}
+
+#mainContent > main {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin-top: 0 !important;
+    padding-top: 16px;
+    box-sizing: border-box;
+}
+
+#mainContent .main.content {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ---------- Header ---------- */
+
+.top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    width: 100%;
+    min-width: 0;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+
+    background-color: #0d6efd;
+    color: #fff;
+    border-radius: 8px;
+}
+
+.top-header h1,
+.top-header h2,
+.top-header h3,
+.top-header h4,
+.top-header h5 {
+    margin: 0;
+    color: inherit;
+}
+
+.top-header a,
+.top-header button {
+    color: #fff;
+    text-decoration: none;
+}
+
+.top-header .btn:focus-visible,
+.top-header a:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 4px;
+}
+
+/* ---------- Alerts ---------- */
+
+#pageAlert {
+    position: relative;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Cards ---------- */
+
+.table-card {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.06);
+    overflow: visible !important;
+}
+
+.table-card .table {
+    margin-bottom: 0;
+}
+
+.table-card .card-body {
+    min-width: 0;
+}
+
+/* ---------- Table ---------- */
+
+.table-responsive {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-card th,
+.table-card td {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.table-card th {
+    font-weight: 600;
+}
+
+/* ---------- Dropdown ---------- */
+
+.dropdown {
+    position: relative;
+}
+
+.table-card .dropdown-menu {
+    z-index: 2000;
+    max-width: min(90vw, 320px);
+}
+
+.table-card .dropdown-item {
+    white-space: nowrap;
+}
+
+/* ---------- Forms ---------- */
+
+.form-control,
+.form-select {
+    max-width: 100%;
+}
+
+textarea.form-control {
+    resize: vertical;
+}
+
+/* ---------- Modals ---------- */
+
+.modal {
+    z-index: 1055;
+}
+
+.modal-backdrop {
+    z-index: 1050;
+}
+
+.modal-dialog {
+    width: auto;
+    max-width: 800px;
+    margin: 1.75rem auto;
+}
+
+.modal-content {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.modal-body {
+    min-width: 0;
+    max-height: calc(100vh - 220px);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.modal .row {
+    min-width: 0;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+    min-width: 0;
+}
+
+.modal-footer,
+.modal-header {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Footer ---------- */
+
+footer {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* =====================================================
+   TABLET
+   ===================================================== */
+
+@media (max-width: 991.98px) {
+    #mainContent > main {
+        padding-top: 14px;
+    }
+
+    .top-header {
+        padding: 14px 16px;
+    }
+
+    .modal-dialog {
+        max-width: calc(100% - 32px);
+    }
+}
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
+@media (max-width: 576px) {
+    #mainContent > main {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        padding-top: 12px;
+    }
+
+    .top-header {
+        padding: 12px 14px;
+        gap: 10px;
+        border-radius: 7px;
+    }
+
+    .top-header .d-flex {
+        gap: 14px !important;
+    }
+
+    .table-card {
+        padding: 12px !important;
+        border-radius: 7px;
+    }
+
+    .table-card .row {
+        row-gap: 10px;
+    }
+
+    .table-responsive {
+        overflow-x: auto !important;
+    }
+
+    .table-card th,
+    .table-card td {
+        white-space: nowrap;
+    }
+
+    .modal-dialog {
+        max-width: none;
+        margin: 10px;
+    }
+
+    .modal-body {
+        max-height: calc(100vh - 180px);
+        padding: 14px;
+    }
+
+    .modal-header,
+    .modal-footer {
+        padding: 12px 14px;
+    }
+
+    .form-control,
+    .form-select {
+        font-size: 16px;
+    }
+}
+
+/* =====================================================
+   EXTRA SMALL MOBILE
+   ===================================================== */
+
+@media (max-width: 380px) {
+    #mainContent > main {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    .top-header {
+        padding: 10px;
+    }
+
+    .table-card {
+        padding: 8px !important;
+    }
+
+    .modal-dialog {
+        margin: 6px;
+    }
+}
+
+/* =====================================================
+   PRINT
+   ===================================================== */
+
+@media print {
+    @page {
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        width: 100% !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    #sidebarContainer,
+    #topbarContainer,
+    .top-header,
+    footer,
+    #pageAlert,
+    .dropdown,
+    .modal,
+    .no-print {
+        display: none !important;
+    }
+
+    #mainContent {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #mainContent > main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .table-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: 0 !important;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .table-card th,
+    .table-card td {
+        white-space: normal !important;
+    }
+
+    a {
+        color: #000 !important;
+        text-decoration: none !important;
+    }
+}
+
+/* ===== Employee page: align with global layout ===== */
+
+#sidebarContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    z-index: 1030;
+}
+
+#mainContent {
+    margin-left: 250px;
+    margin-top: 85px;
+    width: calc(100% - 250px);
+    max-width: calc(100% - 250px);
+    min-width: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#mainContent > #topbarContainer {
+    position: fixed;
+    top: 0;
+    left: 250px;
+    right: 0;
+    width: auto;
+    z-index: 1020;
+}
+
+#mainContent > main {
+    width: 100%;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Tablet and mobile */
+@media (max-width: 991.98px) {
+    #sidebarContainer {
+        /* Preserve sidebar.css mobile behaviour */
+        width: 250px;
+    }
+
+    #mainContent {
+        margin-left: 0;
+        margin-top: 75px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #mainContent > #topbarContainer {
+        left: 0;
+    }
+
+    #mainContent > main {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 576px) {
+    #mainContent {
+        margin-top: 65px;
+    }
+
+    #mainContent > main {
+        padding: 12px;
+    }
+}
+
+/* ==============================
+   EMPLOYEE TOAST NOTIFICATION
+============================== */
+
+#employeeToastContainer {
+    position: fixed;
+    top: 85px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 340px;
+    max-width: calc(100vw - 30px);
+    pointer-events: none;
+}
+
+.employee-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 17px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1f2937;
+    border-left: 5px solid #2563eb;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+    animation: employeeToastIn 0.3s ease forwards;
+}
+
+.employee-toast.success {
+    border-left-color: #16a34a;
+}
+
+.employee-toast.error {
+    border-left-color: #dc2626;
+}
+
+.employee-toast.warning {
+    border-left-color: #f59e0b;
+}
+
+.employee-toast.info {
+    border-left-color: #2563eb;
+}
+
+.employee-toast .toast-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 16px;
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.employee-toast.success .toast-icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.employee-toast.error .toast-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.employee-toast.warning .toast-icon {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.employee-toast .toast-message {
+    flex: 1;
+    min-width: 0;
+}
+
+.employee-toast .toast-close {
+    flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
+.employee-toast .toast-close:hover {
+    color: #111827;
+}
+
+.employee-toast.toast-hide {
+    animation: employeeToastOut 0.25s ease forwards;
+}
+
+@keyframes employeeToastIn {
+    from {
+        opacity: 0;
+        transform: translateX(25px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes employeeToastOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(25px);
+    }
+}
+
+@media (max-width: 576px) {
+    #employeeToastContainer {
+        top: 70px;
+        right: 12px;
+        width: calc(100vw - 24px);
+        max-width: none;
+    }
+
+    .employee-toast {
+        padding: 12px;
+        font-size: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .employee-toast,
+    .employee-toast.toast-hide {
+        animation: none;
+    }
+}

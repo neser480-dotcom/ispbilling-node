@@ -1,0 +1,50 @@
+===== [interface epon 0/0] show ont ? =====
+show ont 
+ alarm                 - <Group> alarm command group
+ alarm-config          - ONT alarm configuration
+ auto-reboot           - Ont auto reboot
+ autofind              - Automatically found ONT
+ basic-info            - Basic ONT information
+ black-list            - MAC(s) in the black list
+ capability            - ONT capability set
+ catv                  - <Group> nscrtv catv command group
+ config-capability     - ONT configuration capability set
+ dhcp-server           - ONT dhcp server config
+ fec                   - ONT FEC Capability
+ info                  - ONT information
+ ipconfig              - ONT IP
+ mac-limit             - mac limit
+ multicast-group       - Get multicast group
+ multicast-mode        - Set multicast mode
+ offline-list          - ONT offline list
+ optical-alarm-profile - ONT optical alarm configuration
+ optical-info          - ONT optical transceiver information
+ port                  - Ont port
+ power-saving          - ONT Power Saving Configuration
+ predetermine          - Predetermine ONT
+ register-statistics   - ont register statistics
+                                    service-sla           - ONT service sla configuration
+ sla                   - ONT sla configuration
+ snmp-config           - ONT snmp config
+ statistics            - Statistics
+ up-down-log           - ONT up and down information
+ version               - ONT version information
+ voip                  - ONT voip management
+ wan                   - ONT wan management
+ wifi                  - ONT wifi management
+
+
+Modokande OLT(config-interface-epon-0/0)# show ont 
+Command incomplete.
+
+Modokande OLT(config-interface-epon-0/0)#
+
+===== [interface epon 0/0] show mac-address ? =====
+show mac-address 
+ security             - Security MAC addresses info
+
+
+Modokande OLT(config-interface-epon-0/0)# show mac-address 
+Command incomplete.
+
+Modokande OLT(config-interface-epon-0/0)#

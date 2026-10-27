@@ -1,0 +1,203 @@
+===== [privileged] show ? =====
+show 
+ board                - <Group> board command group
+ client               - Users information
+ cpu                  - Show used percent of cpu
+ current-config       - Show current configuration
+ device               - Show information about device
+ exec-timeout         - Timeout in seconds
+ fan                  - Show fan information
+ history              - Display the session command history
+ hwinfo               - Device hardware info
+ ip                   - IP information
+ ipv6                 - IP information
+ license              - Device license
+ memory               - Show used percent of memory
+ power                - Show power number and state
+ progress             - Show progress
+ saved-config         - Show the saved configuration information
+ temperature          - Temperature information
+ time                 - show system time
+ uptime               - Show system run time
+ version              - Show version information
+
+
+Modokande OLT# show 
+                                   Command incomplete.
+
+Modokande OLT#
+
+===== [config] show ? =====
+show 
+ aaa                   - aaa auth
+ acl                   - ACL configuration
+ alarm                 - <Group> alarm command group
+ alarm-profile         - <Group> alarm profile configuration command group
+ arp                   - arp
+ auto-backup           - Auto backup
+ autosave              - <Group> autosave command group
+ board                 - <Group> board command group
+ client                - Users information
+ cpu                   - Show used percent of cpu
+ current-config        - Show current configuration
+ dba-profile           - <Group> DBA profile configuration command group
+ ddm-info              - DDM information about the optical transceiver
+ device                - Show information about device
+ dhcp-client           - <Group> dhcp-client command group
+ dhcp-relay            - <Group> DHCP relay command group
+ dhcp-server           - Dhcp server configuration command
+ dhcp-snooping         - <Group> DHCP snooping command group
+ dns                   - Specify domain name system
+ dot1x                 - IEEE 802.1x
+ event                 - <Group> event command group
+ exec-timeout          - Timeout in seconds
+ fan                   - Show fan information
+                                    file                  - User file system information
+ firmware              - Firmware information
+ history               - Display the session command history
+ hwinfo                - Device hardware info
+ igmp                  - <Group> igmp command group
+ interface             - <Group> interface command group
+ ip                    - IP information
+ ip-source             - IP source guard config
+ ip-subnet-vlan        - vlan
+ ipv6                  - IPv6 status and configuration information
+ lacp                  - Link Aggregation Control Protocol
+ layer3                - layer3
+ license               - Device license
+ link-aggregation      - link-aggregation
+ lldp                  - <Group> LLDP command group
+ location              - Show MAC address location
+ log                   - Show operation log information
+ loopback-detection    - Detect if loopback exists
+ mac-address           - <Group> mac-address command group
+ mac-vlan              - vlan
+ memory                - Memory statistics
+ mirror                - Mirror information
+ mstp                  - multiple spanning tree protocol
+ multicast-vlan        - multicast-vlan configuration command
+                                    ntp-service           - Specify NTP(Network Time Protocol) configuration
+                         information
+ ont                   - <Group> ont command group
+ ont-lineprofile       - <Group> line profile configuration command group
+ ont-slaprofile        - <Group> sla profile configuration command group
+ ont-srvprofile        - <Group> service profile configuration command group
+ ont-typeprofile       - <Group> onttype profile configuration command group
+ optical-alarm-profile - <Group> optical alarm profile configuration command
+                         group
+ packet-control        - Show packet control information
+ packet-filter         - Packet fileter configuration
+ port-security         - Security port config
+ power                 - Show power number and state
+ pppoe                 - PPPOE Plus(intermedia agent)
+ process               - Show process
+ progress              - Show progress
+ protect-group         - <Group> Protect group configuration command group
+ protocol-vlan         - vlan
+ psg                   - protect switch group
+ qos                   - Qos configuration
+ radius-server         - <Group> radius server template command group
+ rip                   - rip
+ saved-config          - Show the saved configuration information
+ service               - Service
+                                    snmp-agent            - <Group> snmp-agent command group
+ spanning-tree         - <Group> spanning tree protocol command group
+ statistics            - Port statistics
+ syslog                - Show syslog information
+ tac-plus-server       - <Group>  tacacs plus server template command group
+ temperature           - Temperature information
+ time                  - show system time
+ time-range            - Time range configuration
+ timezone              - Display current time zone
+ traffic-modify        - Traffic modify
+ traffic-profile       - <Group> traffic profile command group
+ uptime                - Show system run time
+ user                  - user
+ version               - Show version information
+ vlan                  - Vlan configuration
+ vlan-pool             - VLAN pool configuration
+ web                   - Web server config
+
+
+Modokande OLT(config)# show 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show MAC ? =====
+ERROR: OLT command timed out: show MAC ?. show MAC-
+ mac-address          - <Group> mac-address command group
+ mac-vlan             - vlan
+
+
+Modokande OLT(config)# show MAC-
+mac-address mac-vlan   
+
+Modokande OLT(config)# show MAC-
+
+===== [config] show address ? =====
+showaddress
+% There is no matched command.
+
+Modokande OLT(config)# show MAC-showaddress
+Unknown command: (vtysh)show MAC-showaddress
+
+Modokande OLT(config)#
+
+===== [config] show mac-address ? =====
+show mac-address 
+ all                  - Show all MAC addresses
+ black-hole           - Show all black-hole MAC addresses
+ dynamic              - Show all dynamic MAC addresses
+ flapping             - Flapping
+ ont                  - Show MAC address by ONT ID
+ port                 - Show MAC address by port
+ security             - Security MAC addresses info
+ static               - Show all static MAC addresses
+ timer                - Show MAC addresses timer
+ vlan                 - Show MAC address by vlan
+
+
+Modokande OLT(config)# show mac-address 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show mac-vlan ? =====
+show mac-vlan 
+ all                  - mac-vlan
+
+
+Modokande OLT(config)# show mac-vlan 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [interface epon 0/0] show ? =====
+show 
+ anti-rogueont        - Anti rogue ont
+ dot1x                - IEEE 802.1x
+ mac-address          - <Group> mac-address command group
+ mirror               - Mirror information
+ ont                  - <Group> ont command group
+ port                 - <Group> port command group
+ port-rate            - Port rate configuration
+ port-security        - Security port config
+ statistics           - Statistics information
+ vlan                 - VLAN configuration
+
+
+Modokande OLT(config-interface-epon-0/0)# show 
+Command incomplete.
+
+Modokande OLT(config-interface-epon-0/0)#
+
+===== [interface epon 0/0] show mac-address ? =====
+show mac-address 
+ security             - Security MAC addresses info
+
+
+Modokande OLT(config-interface-epon-0/0)# show mac-address 
+Command incomplete.
+
+Modokande OLT(config-interface-epon-0/0)#

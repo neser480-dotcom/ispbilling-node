@@ -30,11 +30,11 @@ function numberOrNull(value) {
 function normalizeStatus(value) {
     const s = String(value || "").trim().toLowerCase();
 
-    if (/offline|down|los|dying|inactive/.test(s)) {
+    if (/^(offline|down|los|inactive|unregistered)$/.test(s)) {
         return "offline";
     }
 
-    if (/online|working|up|active|normal/.test(s)) {
+    if (/^(online|working|up|normal|registered)$/.test(s)) {
         return "online";
     }
 
@@ -62,6 +62,9 @@ function stripMorePrompt(value) {
 |--------------------------------------------------------------------------
 | ONU TABLE PARSER
 |--------------------------------------------------------------------------
+| Verified ECOM E08EP-4S+ row:
+| 0/1 1 8 10:AF:8F:76:F5:9D Active Online success match dying-gasp
+|--------------------------------------------------------------------------
 */
 
 function parseRows(output, pon, kind) {
@@ -74,46 +77,40 @@ function parseRows(output, pon, kind) {
     for (const rawLine of lines) {
         const line = rawLine.trim();
 
+        if (!line) continue;
+
+        const match = line.match(
+            /^(\d+\/\d+)\s+(\d+)\s+(\d+)\s+((?:[0-9a-f]{2}:){5}[0-9a-f]{2})\s+(\S+)\s+(\S+)/i
+        );
+
+        if (!match) continue;
+
+        const fs = match[1];
+        const ponNumber = Number(match[2]);
+        const ontId = Number(match[3]);
+        const mac = cleanMac(match[4]);
+        const controlFlag = match[5];
+        const runState = normalizeStatus(match[6]);
+
         if (
-            !line ||
-            /^(index|ont\s+id|no\.?\s+ont|[-=+]+)$/i.test(line) ||
-            /total\s+(number|count)|command\s+(failed|not found)/i.test(line) ||
-            /unknown command|invalid input|error:/i.test(line) ||
-            /show ont|config-epon|--more|press\s+['"]?q/i.test(line)
+            !fs ||
+            !Number.isInteger(ponNumber) ||
+            ponNumber < 1 ||
+            !Number.isInteger(ontId) ||
+            ontId < 1 ||
+            !mac
         ) {
             continue;
         }
 
-        const cols = line
-            .split(/\s{2,}|\t+|\s*\|\s*/)
-            .map(value => value.trim())
-            .filter(Boolean);
-
-        if (cols.length < 2) continue;
-
-        if (/^(ont|onu|id|no\.?)$/i.test(cols[0])) {
-            continue;
-        }
-
-        const idMatch = line.match(/^\s*(\d{1,3})\s+/);
-
-        if (!idMatch) continue;
-
-        const ontId = Number(idMatch[1]);
-
-        if (ontId < 1 || ontId > 256) continue;
-
-        const macMatch = line.match(
-            /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b/i
-        );
-
-        const row = {
-            pon: Number(pon),
+        rows.push({
+            f_s: fs,
+            pon: ponNumber,
             ont_id: ontId,
-            f_s: "0/1",
-            status: "unknown",
-            run_state: "unknown",
-            onu_mac: macMatch ? cleanMac(macMatch[0]) : "",
+            onu_mac: mac,
+            control_flag: controlFlag,
+            run_state: runState,
+            status: runState,
             onu_sn: "",
             onu_name: "",
             distance: null,
@@ -123,55 +120,7 @@ function parseRows(output, pon, kind) {
             laser_bias: null,
             temperature: null,
             raw: line
-        };
-
-        if (kind === "info") {
-            const statusMatch = line.match(
-                /\b(online|offline|working|down|up|active|inactive)\b/i
-            );
-
-            if (statusMatch) {
-                row.run_state = normalizeStatus(statusMatch[0]);
-                row.status = row.run_state;
-            }
-        }
-
-        if (kind === "basic") {
-            const withoutMac = macMatch
-                ? line.replace(macMatch[0], " ")
-                : line;
-
-            const tokens =
-                withoutMac.match(/\b[A-Z0-9]{8,20}\b/gi) || [];
-
-            if (tokens.length) {
-                row.onu_sn = tokens[0];
-            }
-
-            if (cols.length > 1) {
-                row.onu_name = cols.slice(1, 3).join(" ").slice(0, 100);
-            }
-
-            const distanceMatch = line.match(
-                /(-?\d+(?:\.\d+)?)\s*m\b/i
-            );
-
-            if (distanceMatch) {
-                row.distance = Number(distanceMatch[1]);
-            }
-        }
-
-        if (kind === "optical") {
-            const nums = line.match(/-?\d+(?:\.\d+)?/g) || [];
-
-            if (nums.length >= 2) row.voltage = numberOrNull(nums[1]);
-            if (nums.length >= 3) row.temperature = numberOrNull(nums[2]);
-            if (nums.length >= 4) row.laser_bias = numberOrNull(nums[3]);
-            if (nums.length >= 5) row.tx_power = numberOrNull(nums[4]);
-            if (nums.length >= 6) row.rx_power = numberOrNull(nums[5]);
-        }
-
-        rows.push(row);
+        });
     }
 
     return rows;
@@ -255,8 +204,6 @@ class EcomDriver {
 
         this.socket = socket;
         socket.setEncoding("utf8");
-
-        // Use our own deadlines rather than destroying an idle socket.
         socket.setTimeout(0);
 
         socket.on("data", data => {
@@ -265,7 +212,6 @@ class EcomDriver {
             }
         });
 
-        // Keep an error listener attached for the socket's lifetime.
         socket.on("error", err => {
             this.lastSocketError = err;
             this.loggedIn = false;
@@ -319,7 +265,9 @@ class EcomDriver {
                     !socket.writable
                 ) {
                     throw this.lastSocketError ||
-                        new Error("OLT Telnet connection closed during login");
+                        new Error(
+                            "OLT Telnet connection closed during login"
+                        );
                 }
 
                 return new Promise((resolve, reject) => {
@@ -336,7 +284,9 @@ class EcomDriver {
                     this.socket !== socket
                 ) {
                     throw this.lastSocketError ||
-                        new Error("OLT Telnet connection closed during login");
+                        new Error(
+                            "OLT Telnet connection closed during login"
+                        );
                 }
 
                 await this.wait(150);
@@ -575,9 +525,7 @@ class EcomDriver {
 
         const cmd = String(command).trim();
 
-        // Clear stale data before issuing the command.
         await this.readAvailable(100);
-
         await this.write(cmd + "\r\n");
 
         let output = "";
@@ -601,7 +549,6 @@ class EcomDriver {
             }
 
             if (hasMorePrompt(output)) {
-                // The CLI is waiting for the next page.
                 await this.write(" ");
                 output = stripMorePrompt(output);
                 continue;
@@ -679,179 +626,77 @@ class EcomDriver {
     |--------------------------------------------------------------------------
     | ONU DISCOVERY
     |--------------------------------------------------------------------------
+    | E08EP-4S+ has been verified with the global read-only command:
+    | show ont info all
+    |--------------------------------------------------------------------------
     */
 
     async getONUs() {
         await this.connect();
         await this.detectModel();
-        await this.enterConfig();
 
-        const merged = new Map();
-        const failures = [];
-
-        for (const iface of this.interfacePaths) {
-            const enter = await this.command(
-                `interface epon ${iface}`,
-                8000
-            );
-
-            if (/unknown command|invalid input|failed/i.test(enter)) {
-                failures.push(`interface epon ${iface}: ${enter}`);
-                continue;
-            }
-
-            for (let pon = 1; pon <= 4; pon++) {
-                let infoOutput = "";
-                let basicOutput = "";
-                let opticalOutput = "";
-
-                try {
-                    infoOutput = await this.command(
-                        `show ont info ${pon} all`,
-                        30000
-                    );
-
-                    if (/unknown command|invalid input/i.test(infoOutput)) {
-                        infoOutput = await this.command(
-                            `show ont info ${iface} ${pon} all`,
-                            30000
-                        );
-                    }
-
-                    basicOutput = await this.command(
-                        `show ont basic-info ${pon} all`,
-                        30000
-                    );
-
-                    if (/unknown command|invalid input/i.test(basicOutput)) {
-                        basicOutput = await this.command(
-                            `show ont basic-info ${iface} ${pon} all`,
-                            30000
-                        );
-                    }
-
-                    opticalOutput = await this.command(
-                        `show ont optical-info ${pon} all`,
-                        30000
-                    );
-
-                    if (/unknown command|invalid input/i.test(opticalOutput)) {
-                        opticalOutput = await this.command(
-                            `show ont optical-info ${iface} ${pon} all`,
-                            30000
-                        );
-                    }
-                } catch (err) {
-                    failures.push(`${iface} PON ${pon}: ${err.message}`);
-                    continue;
-                }
-
-                if (
-                    /unknown command|invalid input|command failed/i.test(infoOutput) &&
-                    /unknown command|invalid input|command failed/i.test(basicOutput)
-                ) {
-                    failures.push(
-                        `${iface} PON ${pon}: info/basic commands failed`
-                    );
-                    continue;
-                }
-
-                const info = parseRows(infoOutput, pon, "info");
-                const basic = parseRows(basicOutput, pon, "basic");
-                const optical = parseRows(opticalOutput, pon, "optical");
-
-                const keyOf = row =>
-                    `${iface}:${pon}:${row.ont_id}`;
-
-                const byKey = new Map();
-
-                for (const row of [...info, ...basic, ...optical]) {
-                    const key = keyOf(row);
-
-                    const previous = byKey.get(key) || {
-                        pon,
-                        ont_id: row.ont_id,
-                        f_s: iface,
-                        status: "unknown",
-                        run_state: "unknown",
-                        onu_mac: "",
-                        onu_sn: "",
-                        onu_name: "",
-                        distance: null,
-                        rx_power: null,
-                        tx_power: null,
-                        voltage: null,
-                        laser_bias: null,
-                        temperature: null
-                    };
-
-                    const next = {
-                        ...previous,
-                        ...row,
-                        pon,
-                        ont_id: row.ont_id,
-                        f_s: iface
-                    };
-
-                    if (
-                        row.status === "unknown" &&
-                        previous.status !== "unknown"
-                    ) {
-                        next.status = previous.status;
-                        next.run_state = previous.run_state;
-                    }
-
-                    for (const field of [
-                        "onu_mac",
-                        "onu_sn",
-                        "onu_name",
-                        "distance",
-                        "rx_power",
-                        "tx_power",
-                        "voltage",
-                        "laser_bias",
-                        "temperature"
-                    ]) {
-                        if (
-                            row[field] === "" ||
-                            row[field] === null ||
-                            row[field] === undefined
-                        ) {
-                            next[field] = previous[field] ??
-                                (typeof row[field] === "string" ? "" : null);
-                        }
-                    }
-
-                    byKey.set(key, next);
-                }
-
-                for (const [key, row] of byKey) {
-                    if (!row.ont_id) continue;
-
-                    merged.set(key, {
-                        ...row,
-                        olt_model: this.model || "ECOM EPON",
-                        vendor: this.vendor,
-                        onu_mac: cleanMac(row.onu_mac) || "",
-                        status: normalizeStatus(
-                            row.run_state || row.status
-                        )
-                    });
-                }
-            }
-
-            await this.command("exit", 8000);
-            await this.enterConfig();
-        }
-
-        if (!merged.size && failures.length) {
+        if (this.model !== "E08EP-4S+") {
             throw new Error(
-                "ONU scan failed; refusing to report an empty list. " +
-                failures.join(" | ")
+                "The verified ONU parser currently supports E08EP-4S+ only. " +
+                "Detected model: " + (this.model || "Unknown")
             );
         }
 
-        return [...merged.values()];
+        const output = await this.command(
+            "show ont info all",
+            30000
+        );
+
+        const rows = parseRows(output, null, "info");
+
+        if (!rows.length) {
+            throw new Error(
+                "ECOM parser returned zero ONU rows. " +
+                "Database sync must not continue."
+            );
+        }
+
+        const identities = new Set();
+        const macs = new Set();
+
+        for (const row of rows) {
+            if (
+                !row.f_s ||
+                !Number.isInteger(row.pon) ||
+                row.pon < 1 ||
+                !Number.isInteger(row.ont_id) ||
+                row.ont_id < 1 ||
+                !row.onu_mac
+            ) {
+                throw new Error(
+                    "Invalid ONU row detected; refusing incomplete results."
+                );
+            }
+
+            const identity =
+                `${row.f_s}:${row.pon}:${row.ont_id}`;
+
+            if (identities.has(identity)) {
+                throw new Error(
+                    "Duplicate ONU identity detected: " + identity
+                );
+            }
+
+            if (macs.has(row.onu_mac)) {
+                throw new Error(
+                    "Duplicate ONU MAC detected: " + row.onu_mac
+                );
+            }
+
+            identities.add(identity);
+            macs.add(row.onu_mac);
+        }
+
+        return rows.map(row => ({
+            ...row,
+            olt_model: this.model,
+            vendor: this.vendor
+        }));
     }
 
     async getONUList() {
@@ -872,6 +717,50 @@ class EcomDriver {
             success: true,
             ...info
         };
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LEARNED MAC COLLECTION - READ ONLY
+    |--------------------------------------------------------------------------
+    | Verified on E08EP-4S+ (OLT 45 probe):
+    |   show mac-address port pon <F/S/P> with-ont-location   (config mode)
+    | One command per PON; each line carries the ONT-Id. See
+    | ecom-learned-mac.js. A failure here never affects ONU discovery.
+    |--------------------------------------------------------------------------
+    */
+
+    async getLearnedMacs(onuRows = []) {
+        const { collectEcomLearnedMacs } = require("./ecom-learned-mac");
+
+        const empty = (message) => ({
+            supported: false,
+            entries: [],
+            errors: [message],
+            lines: 0
+        });
+
+        if (!Array.isArray(onuRows) || !onuRows.length) {
+            return empty("No ONU rows supplied.");
+        }
+
+        await this.connect();
+
+        if (!this.model) {
+            await this.detectModel();
+        }
+
+        if (this.model !== "E08EP-4S+") {
+            return empty(
+                "Learned-MAC command not verified for model: " +
+                (this.model || "Unknown")
+            );
+        }
+
+        // The verified command is run in configuration mode.
+        await this.enterConfig();
+
+        return collectEcomLearnedMacs(this, onuRows);
     }
 
     /*

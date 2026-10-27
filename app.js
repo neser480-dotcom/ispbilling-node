@@ -34,6 +34,13 @@ const billingRoutes =
 
 /*
 |--------------------------------------------------------------------------
+| staff routes|--------------------------------------------------------------------------
+*/
+
+const staffRoutes = require("./routes/staff.routes");
+const salaryRoutes = require("./routes/salary.routes");
+/*
+|--------------------------------------------------------------------------
 | AUTH / REGISTER
 |--------------------------------------------------------------------------
 */
@@ -715,6 +722,23 @@ app.use(
 
 /*
 |--------------------------------------------------------------------------
+| staff page
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+    "/api/staff",
+    requireSoftwareBilling,
+    staffRoutes
+);
+app.use(
+    "/api/staff/salary",
+    requireSoftwareBilling,
+    salaryRoutes
+);
+
+/*
+|--------------------------------------------------------------------------
 | LOGIN PAGE
 |--------------------------------------------------------------------------
 */
@@ -1161,7 +1185,27 @@ app.get(
 
     }
 );
+/*
+|--------------------------------------------------------------------------
+| STAFF SALARY PAGE
+|--------------------------------------------------------------------------
+*/
 
+app.get(
+    "/staff/salary",
+    requireSoftwareBilling,
+    (req, res) => {
+
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "employee-salary.html"
+            )
+        );
+
+    }
+);
 app.get(
     "/staff/collector",
     requireSoftwareBilling,
@@ -1178,11 +1222,9 @@ app.get(
     "/staff/employee",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Employee module is not implemented yet."
+        return res.sendFile(
+            path.join(__dirname, "views", "employee.html")
         );
-
     }
 );
 
@@ -1391,28 +1433,74 @@ app.get(
 );
 
 
-/*
-|--------------------------------------------------------------------------
-| 404
-|--------------------------------------------------------------------------
-*/
+// CENTRAL ERROR HANDLER
+app.use((err, req, res, next) => {
+    console.error("[APP ERROR]", {
+        method: req.method,
+        path: req.path,
+        code: err.code || null,
+        message: err.message || "Unknown error"
+    });
 
-app.use(
-    (req, res) => {
+    if (res.headersSent) return next(err);
 
-        return res.status(404).json({
+    let status = Number(err.status || err.statusCode) || 500;
+    let code = "INTERNAL_SERVER_ERROR";
+    let message = "সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
 
-            success:
-                false,
-
-            message:
-                "Route not found."
-
-        });
-
+    if (err.code === "ER_DUP_ENTRY") {
+        status = 409;
+        code = "DUPLICATE_ENTRY";
+        message = "এই তথ্যটি আগে থেকেই আছে।";
+    } else if (
+        err.code === "ER_NO_REFERENCED_ROW_2" ||
+        err.code === "ER_ROW_IS_REFERENCED_2"
+    ) {
+        status = 409;
+        code = "DATABASE_RELATION_ERROR";
+        message = "এই তথ্যের সঙ্গে সম্পর্কিত অন্য রেকর্ড আছে।";
+    } else if (
+        err.code === "ECONNREFUSED" ||
+        err.code === "PROTOCOL_CONNECTION_LOST" ||
+        err.code === "ETIMEDOUT"
+    ) {
+        status = 503;
+        code = "DATABASE_CONNECTION_ERROR";
+        message = "ডাটাবেজে সংযোগ করা যাচ্ছে না।";
+    } else if (status === 401) {
+        message = "আবার লগইন করুন।";
+    } else if (status === 403) {
+        message = "এই কাজ করার অনুমতি নেই।";
+    } else if (status === 400) {
+        message = "আপনার দেওয়া তথ্য যাচাই করুন।";
     }
-);
 
+    if (status < 400 || status > 599) status = 500;
+
+    if (req.path.startsWith("/api/")) {
+        return res.status(status).json({
+            success: false,
+            code,
+            message
+        });
+    }
+
+    return res.status(status).send(message);
+});
+
+
+// 404 HANDLER — সবশেষে
+app.use((req, res) => {
+    if (req.path.startsWith("/api/")) {
+        return res.status(404).json({
+            success: false,
+            code: "API_ROUTE_NOT_FOUND",
+            message: "API endpoint পাওয়া যায়নি।"
+        });
+    }
+
+    return res.status(404).send("এই পেজটি পাওয়া যায়নি।");
+});
 
 /*
 |--------------------------------------------------------------------------

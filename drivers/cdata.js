@@ -153,7 +153,6 @@ class CDataDriver extends EcomDriver {
                         `show ont basic-info ${pon} all`,
                         `show ont basic-info ${iface} ${pon} all`
                     ]);
-
                     opticalOutput = await this.runFirstSupported([
                         `show ont optical-info ${pon} all`,
                         `show ont optical-info ${iface} ${pon} all`
@@ -444,6 +443,22 @@ class CDataDriver extends EcomDriver {
             status: String(row.status || "unknown").toLowerCase(),
             serial: row.mac || row.onu_mac || row.serial || ""
         }));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LEARNED MAC (for customer auto-mapping)
+    |--------------------------------------------------------------------------
+    | Runs only when CDATA_LEARNED_MAC_CONFIG is set. Never throws for an
+    | unsupported/unverified command; the caller keeps the ONU list intact.
+    */
+
+    async getLearnedMacs(onuRows = []) {
+        const {
+            collectLearnedMacs
+        } = require("./cdata-learned-mac");
+
+        return collectLearnedMacs(this, onuRows);
     }
 
     async getOnuPower() {

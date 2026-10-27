@@ -2,7 +2,62 @@
 
     'use strict';
 
+    /* =========================================================
+       LOAD APP TOAST ONCE
+    ========================================================= */
 
+    function loadAppToast() {
+        return new Promise(function (resolve) {
+
+            // Toast already loaded
+            if (window.AppToast) {
+                resolve(true);
+                return;
+            }
+
+            // Script is already loading
+            let existingScript = document.querySelector(
+                'script[data-app-toast]'
+            );
+
+            if (existingScript) {
+                existingScript.addEventListener(
+                    'load',
+                    function () {
+                        resolve(!!window.AppToast);
+                    },
+                    { once: true }
+                );
+
+                existingScript.addEventListener(
+                    'error',
+                    function () {
+                        resolve(false);
+                    },
+                    { once: true }
+                );
+
+                return;
+            }
+
+            const script = document.createElement('script');
+
+            script.src = '/assets/js/app-toast.js';
+            script.dataset.appToast = 'true';
+            script.async = true;
+
+            script.onload = function () {
+                resolve(!!window.AppToast);
+            };
+
+            script.onerror = function () {
+                console.error('App Toast script load failed.');
+                resolve(false);
+            };
+
+            document.head.appendChild(script);
+        });
+    }
     /* =========================================================
        PREVENT DUPLICATE INITIALIZATION
     ========================================================= */

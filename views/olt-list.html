@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,8 +139,6 @@
       box-shadow: 0 0 0 3px #dbeafe;
     }
 
-    .olt-toolbar { display: none !important; }
-
     .olt-card {
       overflow: hidden;
       background: #fff;
@@ -170,12 +167,6 @@
       font-weight: 700;
       text-transform: uppercase;
       border-bottom: 1px solid #e5e7eb;
-    }
-
-    .olt-table th i {
-      font-size: 10px;
-      margin-left: 4px;
-      color: #9ca3af;
     }
 
     .olt-table td {
@@ -285,81 +276,16 @@
     .olt-toast.warning { background: #b45309; }
     .olt-toast.info { background: #1d4ed8; }
 
-    .olt-toast-icon {
-      font-size: 20px;
-      padding-top: 1px;
-    }
-
-    .olt-toast-content {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .olt-toast-title {
-      font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 3px;
-    }
-
-    .olt-toast-message {
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-
-    .olt-toast-close {
-      border: 0;
-      background: transparent;
-      color: #fff;
-      opacity: .8;
-      cursor: pointer;
-      font-size: 21px;
-      line-height: 1;
-      padding: 0 2px;
-    }
-
+    .olt-toast-icon { font-size: 20px; padding-top: 1px; }
+    .olt-toast-content { flex: 1; min-width: 0; }
+    .olt-toast-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+    .olt-toast-message { font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+    .olt-toast-close { border: 0; background: transparent; color: #fff; opacity: .8; cursor: pointer; font-size: 21px; line-height: 1; padding: 0 2px; }
     .olt-toast-close:hover { opacity: 1; }
-
-    .olt-toast.olt-toast-out {
-      animation: oltToastOut .2s ease-in forwards;
-    }
 
     @keyframes oltToastIn {
       from { opacity: 0; transform: translateX(18px); }
       to { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes oltToastOut {
-      to { opacity: 0; transform: translateX(18px); }
-    }
-
-    @media (max-width: 576px) {
-      .olt-list-page { padding: 12px; }
-      .olt-heading { padding: 13px 14px; }
-      .olt-heading h2 { font-size: 20px; }
-
-      .olt-list-page .olt-summary {
-        align-items: stretch;
-        padding: 12px;
-      }
-
-      .olt-list-page .olt-summary .olt-search {
-        width: 100%;
-        max-width: 100%;
-        flex: 1 1 100%;
-      }
-
-      #oltModal .modal-dialog { margin: .5rem; }
-
-      #oltModal .modal-content {
-        max-height: calc(100vh - 1rem);
-      }
-
-      #oltToastContainer {
-        top: 70px;
-        right: 12px;
-        width: calc(100vw - 24px);
-      }
     }
   </style>
 </head>
@@ -373,16 +299,13 @@
 
       <div class="olt-heading">
         <h2>OLT</h2>
-
         <div class="d-flex gap-2">
           <button type="button" class="olt-btn" id="refreshTopBtn" title="Refresh">
             <i class="fa-solid fa-rotate"></i>
           </button>
-
           <button type="button" class="olt-btn olt-btn-primary" id="addOltBtn" title="Add OLT">
             <i class="fa-solid fa-plus"></i>
           </button>
-
           <button type="button" class="olt-btn" id="reloadTopBtn" title="Reload">
             <i class="fa-solid fa-rotate-right"></i>
           </button>
@@ -398,8 +321,7 @@
 
         <div class="olt-search">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="search" id="oltSearch" placeholder="Search"
-                 autocomplete="off" aria-label="Search OLTs">
+          <input type="search" id="oltSearch" placeholder="Search" autocomplete="off" aria-label="Search OLTs">
         </div>
       </section>
 
@@ -437,15 +359,23 @@
       <div class="modal-content">
         <form id="oltForm">
           <div class="modal-header">
-            <h5 class="modal-title" id="oltModalTitle">Add OLT</h5>
+            <h5 class="modal-title" id="oltModalTitle">Create OLT</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
           <div class="modal-body">
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltVendor">Vendor</label>
+              <label class="form-label fw-semibold" for="oltMikrotik">Select MikroTik <span class="text-danger">*</span></label>
+              <select class="form-select" id="oltMikrotik" required>
+                <option value="">Select MikroTik</option>
+                <!-- আপনার ব্যাকএন্ড থেকে ডাইনামিক অপশন এখানে আসবে -->
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="oltVendor">Select OLT Vendor <span class="text-danger">*</span></label>
               <select class="form-select" id="oltVendor" required>
-                <option value="">Select vendor</option>
+                <option value="">Select OLT Vendor</option>
                 <option value="CData EPon">CData EPon</option>
                 <option value="ECom EPon">ECom EPon</option>
                 <option value="Other">Other</option>
@@ -453,26 +383,31 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltName">OLT Name</label>
+              <label class="form-label fw-semibold" for="oltName">Name <span class="text-danger">*</span></label>
               <input class="form-control" id="oltName" maxlength="150" required>
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-semibold" for="oltPon">PON Ports</label>
-                <input class="form-control" id="oltPon" type="number" min="1" step="1" required>
-              </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="oltPon">PON Port <span class="text-danger">*</span></label>
+              <select class="form-select" id="oltPon" required>
+                <option value="">Select PON Port</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="4">4</option>
+                <option value="8">8</option>
+                <option value="16">16</option>
+              </select>
+            </div>
 
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-semibold" for="oltUsername">User Name</label>
-                <input class="form-control" id="oltUsername" autocomplete="username" required>
-              </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="oltUsername">OLT User Name <span class="text-danger">*</span></label>
+              <input class="form-control" id="oltUsername" autocomplete="username" required>
             </div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold" for="oltPassword">
-                Password
-                <span class="text-muted fw-normal" id="oltPasswordHint">(required for new OLT)</span>
+                OLT User Password <span class="text-danger">*</span>
+                <span class="text-muted fw-normal" id="oltPasswordHint"></span>
               </label>
 
               <div class="input-group">
@@ -481,47 +416,26 @@
                   <i class="fa-solid fa-eye"></i>
                 </button>
               </div>
-
-              <small class="text-muted">
-                Edit করার সময় ফাঁকা রাখলে বর্তমান password অপরিবর্তিত থাকবে।
-              </small>
+              <small class="text-muted">Edit করার সময় ফাঁকা রাখলে বর্তমান password অপরিবর্তিত থাকবে।</small>
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltHost">Host / IP</label>
+              <label class="form-label fw-semibold" for="oltHost">OLT IP <span class="text-danger">*</span></label>
               <input class="form-control" id="oltHost" autocomplete="off" required>
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltPort">Port</label>
+              <label class="form-label fw-semibold" for="oltPort">OLT Port <span class="text-danger">*</span></label>
               <input class="form-control" id="oltPort" type="number" min="1" max="65535" required>
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-semibold" for="oltSnmpVersion">SNMP Version</label>
-                <select class="form-select" id="oltSnmpVersion">
-                  <option value="v1">v1</option>
-                  <option value="v2c" selected>v2c</option>
-                  <option value="v3">v3</option>
-                </select>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-semibold" for="oltCommunity">SNMP Community</label>
-                <input class="form-control" id="oltCommunity" value="public" autocomplete="off">
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltRemarks">Remarks (optional)</label>
-              <textarea class="form-control" id="oltRemarks" rows="2" maxlength="1000"></textarea>
-            </div>
+            <input type="hidden" id="oltSnmpVersion" value="v2c">
+            <input type="hidden" id="oltCommunity" value="public">
           </div>
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-sm">Save OLT</button>
+            <button type="submit" class="btn btn-success btn-sm">Submit</button>
           </div>
         </form>
       </div>
@@ -532,598 +446,631 @@
   <script src="/assets/js/sidebar-loader.js"></script>
   <script src="/assets/js/topbar-loader.js"></script>
 
-  <script>
-  "use strict";
+<script>
+"use strict";
 
-  (function () {
-    const tableBody = document.getElementById("oltTableBody");
-    const searchInput = document.getElementById("oltSearch");
-    const totalCount = document.getElementById("totalOltCount");
-    const modalElement = document.getElementById("oltModal");
-    const oltModal = bootstrap.Modal.getOrCreateInstance(modalElement);
-    const oltForm = document.getElementById("oltForm");
+(function () {
+  const tableBody = document.getElementById("oltTableBody");
+  const searchInput = document.getElementById("oltSearch");
+  const totalCount = document.getElementById("totalOltCount");
+  const modalElement = document.getElementById("oltModal");
+  const oltModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+  const oltForm = document.getElementById("oltForm");
 
-    let oltRecords = [];
-    let editingOltId = null;
-    let loading = false;
-    let saving = false;
-    const busyActions = new Set();
+  let oltRecords = [];
+  let mikrotikRecords = [];
+  let editingOltId = null;
+  let loading = false;
+  let loadingMikrotiks = false;
+  let saving = false;
 
-    const field = {
-      vendor: document.getElementById("oltVendor"),
-      name: document.getElementById("oltName"),
-      pon: document.getElementById("oltPon"),
-      username: document.getElementById("oltUsername"),
-      password: document.getElementById("oltPassword"),
-      host: document.getElementById("oltHost"),
-      port: document.getElementById("oltPort"),
-      snmpVersion: document.getElementById("oltSnmpVersion"),
-      community: document.getElementById("oltCommunity"),
-      remarks: document.getElementById("oltRemarks")
+  const busyActions = new Set();
+
+  const field = {
+    mikrotik: document.getElementById("oltMikrotik"),
+    vendor: document.getElementById("oltVendor"),
+    name: document.getElementById("oltName"),
+    pon: document.getElementById("oltPon"),
+    username: document.getElementById("oltUsername"),
+    password: document.getElementById("oltPassword"),
+    host: document.getElementById("oltHost"),
+    port: document.getElementById("oltPort"),
+    snmpVersion: document.getElementById("oltSnmpVersion"),
+    community: document.getElementById("oltCommunity")
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, function (char) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char];
+    });
+  }
+
+  function showMessage(message, type = "info") {
+    let container = document.getElementById("oltToastContainer");
+
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "oltToastContainer";
+      container.setAttribute("aria-live", "polite");
+      document.body.appendChild(container);
+    }
+
+    const allowedTypes = ["success", "danger", "warning", "info"];
+    if (!allowedTypes.includes(type)) type = "info";
+
+    const icons = {
+      success: "fa-circle-check",
+      danger: "fa-circle-exclamation",
+      warning: "fa-triangle-exclamation",
+      info: "fa-circle-info"
     };
 
-    function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>"']/g, function (char) {
-        return {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        }[char];
-      });
+    const titles = {
+      success: "Success",
+      danger: "Error",
+      warning: "Warning",
+      info: "Information"
+    };
+
+    const toast = document.createElement("div");
+    toast.className = "olt-toast " + type;
+
+    const icon = document.createElement("i");
+    icon.className = "fa-solid " + icons[type] + " olt-toast-icon";
+
+    const content = document.createElement("div");
+    content.className = "olt-toast-content";
+
+    const title = document.createElement("div");
+    title.className = "olt-toast-title";
+    title.textContent = titles[type];
+
+    const text = document.createElement("div");
+    text.className = "olt-toast-message";
+    text.textContent = String(message || "Operation completed.");
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "olt-toast-close";
+    close.textContent = "×";
+
+    content.append(title, text);
+    toast.append(icon, content, close);
+    container.appendChild(toast);
+
+    let timer;
+
+    function removeToast() {
+      clearTimeout(timer);
+      if (toast.isConnected) toast.remove();
     }
 
-    function showMessage(message, type = "info") {
-      let container = document.getElementById("oltToastContainer");
+    close.addEventListener("click", removeToast);
+    timer = setTimeout(removeToast, type === "danger" ? 7000 : 4000);
+  }
 
-      if (!container) {
-        container = document.createElement("div");
-        container.id = "oltToastContainer";
-        container.setAttribute("aria-live", "polite");
-        container.setAttribute("aria-atomic", "false");
-        document.body.appendChild(container);
+  async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      ...options,
+      headers: { ...(options.headers || {}) }
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+    let data = {};
+
+    if (contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(responseText || "Request failed: " + response.status);
       }
 
-      const allowedTypes = ["success", "danger", "warning", "info"];
-      if (!allowedTypes.includes(type)) type = "info";
+      throw new Error("Server did not return JSON. Check the API route.");
+    }
 
-      const icons = {
-        success: "fa-circle-check",
-        danger: "fa-circle-exclamation",
-        warning: "fa-triangle-exclamation",
-        info: "fa-circle-info"
-      };
-
-      const titles = {
-        success: "Success",
-        danger: "Error",
-        warning: "Warning",
-        info: "Information"
-      };
-
-      const toast = document.createElement("div");
-      toast.className = "olt-toast " + type;
-      toast.setAttribute("role", type === "danger" ? "alert" : "status");
-
-      const icon = document.createElement("i");
-      icon.className = "fa-solid " + icons[type] + " olt-toast-icon";
-      icon.setAttribute("aria-hidden", "true");
-
-      const content = document.createElement("div");
-      content.className = "olt-toast-content";
-
-      const title = document.createElement("div");
-      title.className = "olt-toast-title";
-      title.textContent = titles[type];
-
-      const text = document.createElement("div");
-      text.className = "olt-toast-message";
-      text.textContent = String(message || "Operation completed.");
-
-      const close = document.createElement("button");
-      close.type = "button";
-      close.className = "olt-toast-close";
-      close.textContent = "×";
-      close.setAttribute("aria-label", "Close notification");
-
-      content.append(title, text);
-      toast.append(icon, content, close);
-      container.appendChild(toast);
-
-      let timer;
-
-      function removeToast() {
-        clearTimeout(timer);
-
-        if (!toast.isConnected) return;
-
-        toast.classList.add("olt-toast-out");
-
-        toast.addEventListener("animationend", function () {
-          toast.remove();
-        }, { once: true });
-
-        setTimeout(function () {
-          toast.remove();
-        }, 350);
-      }
-
-      close.addEventListener("click", removeToast);
-
-      timer = setTimeout(
-        removeToast,
-        type === "danger" ? 7000 : 4000
+    if (
+      !response.ok ||
+      data.success === false ||
+      data.status === false
+    ) {
+      throw new Error(
+        data.message || data.error || "Request failed: " + response.status
       );
+    }
 
-      while (container.children.length > 5) {
-        container.firstElementChild.remove();
+    return data;
+  }
+
+  function normalizeVendor(value) {
+    const raw = String(value ?? "").trim();
+    const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const vendorMap = {
+      cdata: "CData EPon",
+      cdataepon: "CData EPon",
+      ecom: "ECom EPon",
+      ecomepon: "ECom EPon",
+      other: "Other"
+    };
+
+    return vendorMap[key] || "Other";
+  }
+
+  function normalizeOlt(row) {
+    return {
+      id: Number(row.id),
+      mikrotik_id: row.mikrotik_id ?? row.mikrotik ?? "",
+      mikrotik_name: row.mikrotik_name ?? "",
+      vendor: normalizeVendor(row.vendor),
+      name: row.name ?? "",
+      pon: row.pon_ports ?? row.pon ?? "",
+      username: row.username ?? "",
+      host: row.ip ?? row.host ?? "",
+      port: row.port ?? "",
+      createdAt: row.created_at ?? row.createdAt ?? "",
+      snmp_version: row.snmp_version ?? "v2c",
+      community: row.community ?? "public"
+    };
+  }
+
+  function formatDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleString();
+  }
+
+  /*
+   * Load MikroTik routers from the existing /api/router endpoint.
+   */
+  async function loadMikrotiks() {
+    if (loadingMikrotiks) return;
+
+    loadingMikrotiks = true;
+
+    const previousValue = field.mikrotik.value;
+    field.mikrotik.disabled = true;
+
+    try {
+      const data = await apiRequest("/api/router");
+
+      const rows = Array.isArray(data)
+        ? data
+        : (data.routers || data.data || []);
+
+      if (!Array.isArray(rows)) {
+        throw new Error("MikroTik API response format is invalid.");
       }
-    }
 
-    function hideMessage() {
-      const container = document.getElementById("oltToastContainer");
-      if (container) container.replaceChildren();
-    }
+      mikrotikRecords = rows;
 
-    async function apiRequest(url, options = {}) {
-      const response = await fetch(url, {
-        credentials: "same-origin",
-        ...options,
-        headers: { ...(options.headers || {}) }
+      field.mikrotik.replaceChildren();
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = rows.length
+        ? "Select MikroTik"
+        : "No MikroTik routers found";
+
+      field.mikrotik.appendChild(placeholder);
+
+      rows.forEach(function (router) {
+        const id = Number(router.id);
+
+        if (!Number.isInteger(id) || id < 1) return;
+
+        const option = document.createElement("option");
+        option.value = String(id);
+
+        const name = String(router.name || "MikroTik");
+        const ip = String(router.ip || "");
+
+        option.textContent = ip
+          ? `${name} (${ip})`
+          : name;
+
+        field.mikrotik.appendChild(option);
       });
 
-      const contentType = response.headers.get("content-type") || "";
-      let data = {};
-
-      if (contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        const responseText = await response.text();
-
-        if (!response.ok) {
-          throw new Error(responseText || "Request failed: " + response.status);
-        }
-
-        throw new Error("Server did not return JSON. Check the API route.");
+      if (
+        previousValue &&
+        Array.from(field.mikrotik.options).some(
+          option => option.value === String(previousValue)
+        )
+      ) {
+        field.mikrotik.value = String(previousValue);
       }
+    } catch (error) {
+      field.mikrotik.replaceChildren();
 
-      if (!response.ok || data.success === false || data.status === false) {
-        throw new Error(
-          data.message ||
-          data.error ||
-          "Request failed: " + response.status
-        );
-      }
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Failed to load MikroTik";
+      field.mikrotik.appendChild(option);
 
-      return data;
+      showMessage(
+        "MikroTik router list load failed: " + error.message,
+        "danger"
+      );
+    } finally {
+      field.mikrotik.disabled = false;
+      loadingMikrotiks = false;
     }
+  }
 
-    function normalizeVendor(value) {
-      const raw = String(value ?? "").trim();
-      const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  function renderTable() {
+    const term = searchInput.value.trim().toLowerCase();
 
-      const vendorMap = {
-        cdata: "CData EPon",
-        cdataepon: "CData EPon",
-        cdataolt: "CData EPon",
-        cdataeponolt: "CData EPon",
-
-        ecom: "ECom EPon",
-        ecomepon: "ECom EPon",
-        ecomolt: "ECom EPon",
-        ecomeponolt: "ECom EPon",
-
-        other: "Other",
-        generic: "Other",
-        unknown: "Other"
-      };
-
-      return vendorMap[key] || "";
-    }
-
-    function normalizeOlt(row) {
-      return {
-        id: Number(row.id),
-        vendor: normalizeVendor(row.vendor),
-        name: row.name ?? "",
-        pon: row.pon_ports ?? row.pon ?? "",
-        username: row.username ?? "",
-        host: row.ip ?? row.host ?? "",
-        port: row.port ?? "",
-        createdAt: row.created_at ?? row.createdAt ?? "",
-        snmp_version: row.snmp_version ?? "v2c",
-        community: row.community ?? "public",
-        remarks: row.remarks ?? ""
-      };
-    }
-
-    function formatDate(value) {
-      if (!value) return "—";
-
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return String(value);
-
-      return date.toLocaleString();
-    }
-
-    function renderTable() {
-      const term = searchInput.value.trim().toLowerCase();
-
-      const filtered = oltRecords.filter(function (olt) {
-        return [
-          olt.vendor,
-          olt.name,
-          olt.pon,
-          olt.username,
-          olt.host,
-          olt.port,
-          olt.createdAt
-        ].some(function (value) {
-          return String(value ?? "").toLowerCase().includes(term);
-        });
+    const filtered = oltRecords.filter(function (olt) {
+      return [
+        olt.vendor,
+        olt.name,
+        olt.pon,
+        olt.username,
+        olt.host,
+        olt.port,
+        olt.mikrotik_name,
+        olt.createdAt
+      ].some(function (value) {
+        return String(value ?? "").toLowerCase().includes(term);
       });
+    });
 
-      totalCount.textContent = String(oltRecords.length);
+    totalCount.textContent = String(oltRecords.length);
 
-      if (!filtered.length) {
-        tableBody.innerHTML = `
-          <tr>
-            <td colspan="9" class="olt-empty">
-              ${oltRecords.length
-                ? "No matching OLT found."
-                : "No OLT records found."}
-            </td>
-          </tr>`;
-        return;
-      }
-
-      tableBody.innerHTML = filtered.map(function (olt, index) {
-        return `
-          <tr data-olt-id="${olt.id}">
-            <td>${index + 1}</td>
-            <td>
-              <span class="olt-vendor">${escapeHtml(olt.vendor || "Unknown")}</span>
-            </td>
-            <td class="olt-name">${escapeHtml(olt.name)}</td>
-            <td>${escapeHtml(olt.pon)}</td>
-            <td>${escapeHtml(olt.username)}</td>
-            <td>${escapeHtml(olt.host)}</td>
-            <td>${escapeHtml(olt.port)}</td>
-            <td class="olt-muted">${escapeHtml(formatDate(olt.createdAt))}</td>
-            <td>
-              <div class="olt-actions">
-                <button type="button" class="olt-icon-btn"
-                  data-action="check" data-id="${olt.id}"
-                  title="Test Connection" aria-label="Test connection">
-                  <i class="fa-solid fa-plug"></i>
-                </button>
-
-                <button type="button" class="olt-icon-btn"
-                  data-action="sync" data-id="${olt.id}"
-                  title="Sync ONU" aria-label="Synchronize ONU">
-                  <i class="fa-solid fa-rotate"></i>
-                </button>
-
-                <button type="button" class="olt-icon-btn"
-                  data-action="edit" data-id="${olt.id}"
-                  title="Edit OLT" aria-label="Edit OLT">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-
-                <button type="button" class="olt-icon-btn"
-                  data-action="delete" data-id="${olt.id}"
-                  title="Delete OLT" aria-label="Delete OLT">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>`;
-      }).join("");
-    }
-
-    async function loadOlts() {
-      if (loading) return;
-      loading = true;
-
+    if (!filtered.length) {
       tableBody.innerHTML = `
         <tr>
           <td colspan="9" class="olt-empty">
-            <i class="fa-solid fa-spinner fa-spin"></i> Loading OLTs...
+            ${oltRecords.length
+              ? "No matching OLT found."
+              : "No OLT records found."}
           </td>
         </tr>`;
+      return;
+    }
 
-      try {
-        const data = await apiRequest("/api/olt");
+    tableBody.innerHTML = filtered.map(function (olt, index) {
+      return `
+        <tr data-olt-id="${olt.id}">
+          <td>${index + 1}</td>
+          <td>
+            <span class="olt-vendor">
+              ${escapeHtml(olt.vendor || "Unknown")}
+            </span>
+          </td>
+          <td class="olt-name">${escapeHtml(olt.name)}</td>
+          <td>${escapeHtml(olt.pon)}</td>
+          <td>${escapeHtml(olt.username)}</td>
+          <td>${escapeHtml(olt.host)}</td>
+          <td>${escapeHtml(olt.port)}</td>
+          <td class="olt-muted">${escapeHtml(formatDate(olt.createdAt))}</td>
+          <td>
+            <div class="olt-actions">
+              <button type="button" class="olt-icon-btn"
+                data-action="check" data-id="${olt.id}"
+                title="Test Connection">
+                <i class="fa-solid fa-plug"></i>
+              </button>
 
-        const rows = Array.isArray(data) ? data :
-          Array.isArray(data.olts) ? data.olts :
-          Array.isArray(data.data) ? data.data : null;
+              <button type="button" class="olt-icon-btn"
+                data-action="sync" data-id="${olt.id}"
+                title="Sync ONU">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
 
-        if (!rows) {
-          throw new Error("OLT API response format is not recognized.");
-        }
+              <button type="button" class="olt-icon-btn"
+                data-action="edit" data-id="${olt.id}"
+                title="Edit OLT">
+                <i class="fa-solid fa-pen"></i>
+              </button>
 
-        oltRecords = rows.map(normalizeOlt);
-        renderTable();
-      } catch (error) {
-        oltRecords = [];
-        renderTable();
-        showMessage(error.message || "Failed to load OLTs.", "danger");
-        console.error("OLT list error:", error);
-      } finally {
-        loading = false;
+              <button type="button" class="olt-icon-btn"
+                data-action="delete" data-id="${olt.id}"
+                title="Delete OLT">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+  }
+
+  async function loadOlts() {
+    if (loading) return;
+
+    loading = true;
+
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="9" class="olt-empty">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          Loading OLTs...
+        </td>
+      </tr>`;
+
+    try {
+      const data = await apiRequest("/api/olt");
+
+      const rows = Array.isArray(data)
+        ? data
+        : (data.olts || data.data || null);
+
+      if (!rows) {
+        throw new Error("OLT API response format is not recognized.");
       }
+
+      oltRecords = rows.map(normalizeOlt);
+      renderTable();
+    } catch (error) {
+      oltRecords = [];
+      renderTable();
+
+      showMessage(
+        error.message || "Failed to load OLTs.",
+        "danger"
+      );
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function openAddModal() {
+    editingOltId = null;
+    oltForm.reset();
+
+    await loadMikrotiks();
+
+    field.mikrotik.value = "";
+    field.vendor.value = "";
+    field.pon.value = "";
+    field.password.value = "";
+    field.password.required = true;
+
+    document.getElementById("oltPasswordHint").textContent = "";
+
+    field.port.value = "23";
+
+    document.getElementById("oltModalTitle").textContent = "Create OLT";
+    oltForm.querySelector('[type="submit"]').textContent = "Submit";
+
+    oltModal.show();
+  }
+
+  async function openEditModal(id) {
+    const olt = oltRecords.find(item => item.id === id);
+
+    if (!olt) {
+      showMessage("OLT record not found.", "warning");
+      return;
     }
 
-    function openAddModal() {
-      editingOltId = null;
-      oltForm.reset();
+    await loadMikrotiks();
 
-      field.vendor.value = "";
-      field.password.value = "";
-      field.password.required = true;
-      field.password.type = "password";
+    editingOltId = id;
 
-      document.getElementById("oltPasswordHint").textContent =
-        "(required for new OLT)";
+    field.mikrotik.value = String(olt.mikrotik_id || "");
+    field.vendor.value = olt.vendor;
+    field.name.value = olt.name;
+    field.pon.value = String(olt.pon);
+    field.username.value = olt.username;
+    field.host.value = olt.host;
+    field.port.value = olt.port;
 
-      field.port.value = "23";
-      field.snmpVersion.value = "v2c";
-      field.community.value = "public";
-      field.remarks.value = "";
+    field.password.value = "";
+    field.password.required = false;
 
-      document.getElementById("oltModalTitle").textContent = "Add OLT";
-      oltForm.querySelector('[type="submit"]').textContent = "Save OLT";
+    document.getElementById("oltPasswordHint").textContent =
+      "(leave blank to keep current)";
 
-      const toggleButton = document.getElementById("toggleOltPassword");
-      toggleButton.innerHTML = '<i class="fa-solid fa-eye"></i>';
-      toggleButton.setAttribute("aria-label", "Show password");
+    document.getElementById("oltModalTitle").textContent = "Edit OLT";
+    oltForm.querySelector('[type="submit"]').textContent = "Update";
 
-      oltModal.show();
+    oltModal.show();
+  }
+
+  async function getCsrfToken() {
+    const data = await apiRequest("/api/csrf-token");
+    const token = data.csrfToken || data.csrf_token || data.token;
+
+    if (!token) {
+      throw new Error("CSRF token পাওয়া যায়নি।");
     }
 
-    function openEditModal(id) {
-      const olt = oltRecords.find(function (item) {
-        return item.id === id;
+    return token;
+  }
+
+  async function saveOlt(event) {
+    event.preventDefault();
+
+    if (saving || !oltForm.reportValidity()) return;
+
+    saving = true;
+
+    const submitButton = oltForm.querySelector('[type="submit"]');
+    const originalText = submitButton.textContent;
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Saving...";
+
+    try {
+      const token = await getCsrfToken();
+
+      const payload = {
+        mikrotik_id: field.mikrotik.value
+          ? Number(field.mikrotik.value)
+          : null,
+        vendor: field.vendor.value,
+        name: field.name.value.trim(),
+        pon_ports: Number(field.pon.value),
+        username: field.username.value.trim(),
+        ip: field.host.value.trim(),
+        port: Number(field.port.value),
+        snmp_version: field.snmpVersion.value,
+        community: field.community.value.trim(),
+        csrf_token: token
+      };
+
+      if (field.password.value !== "") {
+        payload.password = field.password.value;
+      }
+
+      const isEdit = editingOltId !== null;
+
+      const url = isEdit
+        ? "/api/olt/" + editingOltId
+        : "/api/olt";
+
+      const result = await apiRequest(url, {
+        method: isEdit ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token
+        },
+        body: JSON.stringify(payload)
       });
 
-      if (!olt) {
-        showMessage("OLT record not found. Refresh the list and try again.", "warning");
-        return;
-      }
+      oltModal.hide();
 
-      editingOltId = id;
+      showMessage(
+        result.message ||
+          (isEdit
+            ? "OLT updated successfully."
+            : "OLT added successfully."),
+        "success"
+      );
 
-      field.vendor.value = olt.vendor;
-      field.name.value = olt.name;
-      field.pon.value = olt.pon;
-      field.username.value = olt.username;
-      field.host.value = olt.host;
-      field.port.value = olt.port;
+      await loadOlts();
+    } catch (error) {
+      showMessage(
+        error.message || "Could not save OLT.",
+        "danger"
+      );
+    } finally {
+      saving = false;
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
+  }
 
-      field.password.value = "";
-      field.password.required = false;
-      field.password.type = "password";
+  async function runOltAction(action, id, button) {
+    if (!Number.isInteger(id) || id < 1) return;
+    if (busyActions.has(id)) return;
 
-      document.getElementById("oltPasswordHint").textContent =
-        "(leave blank to keep current password)";
-
-      field.snmpVersion.value = olt.snmp_version;
-      field.community.value = olt.community;
-      field.remarks.value = olt.remarks;
-
-      document.getElementById("oltModalTitle").textContent = "Edit OLT";
-      oltForm.querySelector('[type="submit"]').textContent = "Update OLT";
-
-      const toggleButton = document.getElementById("toggleOltPassword");
-      toggleButton.innerHTML = '<i class="fa-solid fa-eye"></i>';
-      toggleButton.setAttribute("aria-label", "Show password");
-
-      oltModal.show();
+    if (action === "edit") {
+      await openEditModal(id);
+      return;
     }
 
-    async function getCsrfToken() {
-      const data = await apiRequest("/api/csrf-token");
-      const token = data.csrfToken || data.csrf_token || data.token;
-
-      if (!token) {
-        throw new Error("CSRF token পাওয়া যায়নি। Server response যাচাই করো।");
-      }
-
-      return token;
+    if (
+      action === "delete" &&
+      !confirm("এই OLT এবং এর ONU records delete করতে চাও?")
+    ) {
+      return;
     }
 
-    async function saveOlt(event) {
-      event.preventDefault();
+    busyActions.add(id);
 
-      if (saving || !oltForm.reportValidity()) return;
+    if (button) button.disabled = true;
 
-      const port = Number(field.port.value);
-      const ponPorts = Number(field.pon.value);
+    try {
+      const token = await getCsrfToken();
+      let result;
 
-      if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        showMessage("Port অবশ্যই 1 থেকে 65535-এর মধ্যে হতে হবে।", "warning");
-        return;
-      }
-
-      if (!Number.isInteger(ponPorts) || ponPorts < 1) {
-        showMessage("PON Ports একটি বৈধ ধনাত্মক সংখ্যা হতে হবে।", "warning");
-        return;
-      }
-
-      if (editingOltId === null && !field.password.value) {
-        showMessage("নতুন OLT যোগ করতে Password দিতে হবে।", "warning");
-        return;
-      }
-
-      saving = true;
-
-      const submitButton = oltForm.querySelector('[type="submit"]');
-      const originalText = submitButton.textContent;
-
-      submitButton.disabled = true;
-      submitButton.textContent = "Saving...";
-
-      try {
-        const token = await getCsrfToken();
-
-        const payload = {
-          vendor: field.vendor.value,
-          name: field.name.value.trim(),
-          pon_ports: ponPorts,
-          username: field.username.value.trim(),
-          ip: field.host.value.trim(),
-          port: port,
-          snmp_version: field.snmpVersion.value,
-          community: field.community.value.trim(),
-          remarks: field.remarks.value.trim(),
-          csrf_token: token
-        };
-
-        if (field.password.value !== "") {
-          payload.password = field.password.value;
-        }
-
-        const isEdit = editingOltId !== null;
-        const url = isEdit
-          ? "/api/olt/" + editingOltId
-          : "/api/olt";
-
-        const result = await apiRequest(url, {
-          method: isEdit ? "PUT" : "POST",
+      if (action === "delete") {
+        result = await apiRequest("/api/olt/" + id, {
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": token
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            confirm: true,
+            csrf_token: token
+          })
         });
-
-        oltModal.hide();
-
-        showMessage(
-          result.message ||
-            (isEdit ? "OLT updated successfully." : "OLT added successfully."),
-          "success"
-        );
-
-        await loadOlts();
-      } catch (error) {
-        showMessage(error.message || "Could not save OLT.", "danger");
-        console.error("OLT save error:", error);
-      } finally {
-        saving = false;
-        submitButton.disabled = false;
-        submitButton.textContent = originalText;
-      }
-    }
-
-    async function runOltAction(action, id, button) {
-      if (!Number.isInteger(id) || id < 1) return;
-      if (busyActions.has(id)) return;
-
-      if (action === "edit") {
-        openEditModal(id);
-        return;
-      }
-
-      if (!["check", "sync", "delete"].includes(action)) {
-        showMessage("Unsupported OLT action.", "warning");
-        return;
-      }
-
-      if (
-        action === "delete" &&
-        !confirm("এই OLT এবং এর ONU records delete করতে চাও?")
-      ) {
-        return;
-      }
-
-      busyActions.add(id);
-      if (button) button.disabled = true;
-
-      try {
-        const token = await getCsrfToken();
-
-        let result;
-
-        if (action === "delete") {
-          result = await apiRequest("/api/olt/" + id, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": token
-            },
-            body: JSON.stringify({ confirm: true, csrf_token: token })
-          });
-        } else {
-          result = await apiRequest("/api/olt/" + id + "/" + action, {
+      } else {
+        result = await apiRequest(
+          "/api/olt/" + id + "/" + action,
+          {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "X-CSRF-Token": token
             },
-            body: JSON.stringify({ csrf_token: token })
-          });
-        }
-
-        const defaultMessage =
-          action === "delete" ? "OLT deleted successfully." :
-          action === "check" ? "OLT connection test successful." :
-          "OLT sync request completed.";
-
-        showMessage(result.message || defaultMessage, "success");
-
-        await loadOlts();
-      } catch (error) {
-        showMessage(error.message || "OLT action failed.", "danger");
-        console.error("OLT action error:", error);
-      } finally {
-        busyActions.delete(id);
-        if (button) button.disabled = false;
-      }
-    }
-
-    document.getElementById("addOltBtn")
-      .addEventListener("click", openAddModal);
-
-    document.getElementById("refreshTopBtn")
-      .addEventListener("click", loadOlts);
-
-    document.getElementById("reloadTopBtn")
-      .addEventListener("click", loadOlts);
-
-    document.getElementById("toggleOltPassword")
-      .addEventListener("click", function () {
-        const showing = field.password.type === "text";
-        field.password.type = showing ? "password" : "text";
-
-        this.innerHTML = showing
-          ? '<i class="fa-solid fa-eye"></i>'
-          : '<i class="fa-solid fa-eye-slash"></i>';
-
-        this.setAttribute(
-          "aria-label",
-          showing ? "Show password" : "Hide password"
+            body: JSON.stringify({
+              csrf_token: token
+            })
+          }
         );
-      });
+      }
 
-    searchInput.addEventListener("input", renderTable);
-    oltForm.addEventListener("submit", saveOlt);
-
-    tableBody.addEventListener("click", function (event) {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
-
-      runOltAction(
-        button.dataset.action,
-        Number(button.dataset.id),
-        button
+      showMessage(
+        result.message || "Action completed successfully.",
+        "success"
       );
+
+      await loadOlts();
+    } catch (error) {
+      showMessage(
+        error.message || "OLT action failed.",
+        "danger"
+      );
+    } finally {
+      busyActions.delete(id);
+      if (button) button.disabled = false;
+    }
+  }
+
+  document.getElementById("addOltBtn")
+    .addEventListener("click", openAddModal);
+
+  document.getElementById("refreshTopBtn")
+    .addEventListener("click", loadOlts);
+
+  document.getElementById("reloadTopBtn")
+    .addEventListener("click", loadOlts);
+
+  document.getElementById("toggleOltPassword")
+    .addEventListener("click", function () {
+      const showing = field.password.type === "text";
+
+      field.password.type = showing ? "password" : "text";
+
+      this.innerHTML = showing
+        ? '<i class="fa-solid fa-eye"></i>'
+        : '<i class="fa-solid fa-eye-slash"></i>';
     });
 
-    loadOlts();
-  })();
-  </script>
+  searchInput.addEventListener("input", renderTable);
+  oltForm.addEventListener("submit", saveOlt);
+
+  tableBody.addEventListener("click", function (event) {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+
+    runOltAction(
+      button.dataset.action,
+      Number(button.dataset.id),
+      button
+    );
+  });
+
+  loadOlts();
+  loadMikrotiks();
+})();
+</script>
 </body>
 </html>

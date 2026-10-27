@@ -1,0 +1,163 @@
+
+"use strict";
+
+(function () {
+    if (window.AppToast) return;
+
+    let container = null;
+    const recent = new Map();
+
+    function createContainer() {
+        if (container && document.body.contains(container)) {
+            return container;
+        }
+
+        container = document.createElement("div");
+        container.id = "appToastContainer";
+
+        Object.assign(container.style, {
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            zIndex: "99999",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            width: "min(380px, calc(100vw - 32px))",
+            pointerEvents: "none"
+        });
+
+        document.body.appendChild(container);
+        return container;
+    }
+
+    function show(message, type = "error", duration = 4500) {
+        const text = String(message || "একটি সমস্যা হয়েছে।").trim();
+        if (!text) return;
+
+        const key = type + ":" + text;
+        const now = Date.now();
+
+        if (recent.has(key) && now - recent.get(key) < 1800) {
+            return;
+        }
+
+        recent.set(key, now);
+
+        for (const [itemKey, time] of recent) {
+            if (now - time > 10000) recent.delete(itemKey);
+        }
+
+        const root = createContainer();
+        const toast = document.createElement("div");
+
+        const colors = {
+            success: "#15803d",
+            error: "#b91c1c",
+            warning: "#a16207",
+            info: "#1d4ed8"
+        };
+
+        toast.setAttribute("role", "status");
+
+        Object.assign(toast.style, {
+            background: "#ffffff",
+            color: "#1f2937",
+            borderLeft: "5px solid " + (colors[type] || colors.error),
+            borderRadius: "10px",
+            boxShadow: "0 8px 28px rgba(0,0,0,.18)",
+            padding: "14px 16px",
+            fontSize: "14px",
+            lineHeight: "1.55",
+            overflowWrap: "anywhere",
+            pointerEvents: "auto",
+            opacity: "0",
+            transform: "translateX(12px)",
+            transition: "opacity .2s ease, transform .2s ease"
+        });
+
+        const heading = document.createElement("div");
+        heading.textContent = ({
+            success: "সফল",
+            error: "সমস্যা হয়েছে",
+            warning: "সতর্কতা",
+            info: "তথ্য"
+        })[type] || "সমস্যা হয়েছে";
+
+        heading.style.fontWeight = "700";
+        heading.style.marginBottom = "4px";
+
+        const body = document.createElement("div");
+        body.textContent = text;
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.textContent = "×";
+        close.setAttribute("aria-label", "বন্ধ করুন");
+
+        Object.assign(close.style, {
+            float: "right",
+            border: "0",
+            background: "transparent",
+            fontSize: "22px",
+            cursor: "pointer",
+            marginLeft: "12px",
+            color: "#6b7280"
+        });
+
+        close.addEventListener("click", () => toast.remove());
+
+        toast.append(close, heading, body);
+        root.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.style.opacity = "1";
+            toast.style.transform = "translateX(0)";
+        });
+
+        if (duration > 0) {
+            window.setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(12px)";
+                window.setTimeout(() => toast.remove(), 250);
+            }, duration);
+        }
+    }
+
+    window.AppToast = {
+        success: message => show(message, "success"),
+        error: message => show(message, "error", 6000),
+        warning: message => show(message, "warning"),
+        info: message => show(message, "info"),
+
+        fromResponse: async response => {
+            let data = {};
+
+            try {
+                data = await response.clone().json();
+            } catch (_) {
+                // JSON না হলে নিরাপদ সাধারণ বার্তা ব্যবহার হবে
+            }
+
+            if (!response.ok || data.success === false) {
+                show(
+                    data.message ||
+                    (response.status === 401
+                        ? "সেশন শেষ হয়েছে। আবার লগইন করুন।"
+                        : response.status === 403
+                        ? "এই কাজ করার অনুমতি নেই।"
+                        : response.status === 404
+                        ? "চাওয়া তথ্য বা API পাওয়া যায়নি।"
+                        : response.status >= 500
+                        ? "সার্ভারে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।"
+                        : "অনুরোধটি সম্পন্ন হয়নি। তথ্য যাচাই করুন।"),
+                    "error",
+                    6000
+                );
+                return false;
+            }
+
+            return true;
+        }
+    };
+})();

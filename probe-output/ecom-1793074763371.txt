@@ -1,0 +1,21 @@
+===== [config] show mac-address port pon 0/1/1 with-ont-location =====
+-----------------------------------------------------------------------------
+ Total: 6 
+-----------------------------------------------------------------------------
+ MAC                 VLAN   Port          ONT-Id  MAC-Type 
+-----------------------------------------------------------------------------
+ E8:65:D4:7E:55:48   301    epon0/1/1     14      dynamic
+ B4:B0:24:DE:85:3B   301    epon0/1/1     15      dynamic
+ B8:3A:08:2A:39:9F   301    epon0/1/1     18      dynamic
+ D8:32:14:DE:E8:58   301    epon0/1/1     22      dynamic
+ A0:7F:06:26:0B:C1   301    epon0/1/1     22      dynamic
+ 58:D9:D5:35:51:F0   301    epon0/1/1     25      dynamic
+-----------------------------------------------------------------------------
+E08EP-4S+(config)#
+
+===== [config] show mac-address port pon 0/1/1 ont ? =====
+show mac-address port pon 0/1/1 ont 
+  <1-128>  ONT ID. <U><1-128>
+E08EP-4S+(config)# show mac-address port pon 0/1/1 ont 
+% Command incomplete.
+E08EP-4S+(config)#

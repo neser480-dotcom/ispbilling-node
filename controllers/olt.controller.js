@@ -3,16 +3,25 @@
 
 const mysql = require("mysql2/promise");
 const net = require("net");
-const { syncOnus } = require("../drivers/olt-sync.service");
+const crypto = require("crypto");
+const {
+    syncOnus,
+    driverFor,
+    disconnectDriver
+} = require("../drivers/olt-sync.service");
+const { autoMapOnus } = require("../drivers/onu-auto-mapping.service");
+const {
+    collectPppSessions,
+    loadMikrotikService
+} = require("../drivers/ppp-sessions");
 
 /*
 |--------------------------------------------------------------------------
 | OLT CONTROLLER
 |--------------------------------------------------------------------------
-| - Tenant-scoped OLT access
-| - Super admin can access all OLTs
-| - TCP connectivity check
-| - Vendor-driver-based ONU synchronization
+| Tenant-scoped OLT access
+| Super admin can access all OLTs
+| OLT CRUD, TCP check, ONU sync and customer mapping
 |--------------------------------------------------------------------------
 */
 
@@ -87,7 +96,7 @@ function validId(value) {
     const id = Number(value);
 
     if (!Number.isSafeInteger(id) || id < 1) {
-        throw new OltError("Invalid OLT ID.");
+        throw new OltError("Invalid ID.");
     }
 
     return id;
@@ -168,7 +177,9 @@ function validateInput(body, editing = false) {
         ponPorts < 1 ||
         ponPorts > 256
     ) {
-        throw new OltError("PON port count must be between 1 and 256.");
+        throw new OltError(
+            "PON port count must be between 1 and 256."
+        );
     }
 
     if (!["v1", "v2c", "v3"].includes(snmpVersion)) {
@@ -212,6 +223,32 @@ function jsonError(res, error) {
     });
 }
 
+function verifyMappingCsrf(req) {
+    const sessionToken = String(
+        req.session?.csrf_token || ""
+    );
+
+    const requestToken = String(
+        req.body?.csrf_token ||
+        req.headers["x-csrf-token"] ||
+        ""
+    );
+
+    if (!sessionToken || !requestToken) {
+        throw new OltError("Invalid CSRF token.", 403);
+    }
+
+    const a = Buffer.from(sessionToken);
+    const b = Buffer.from(requestToken);
+
+    if (
+        a.length !== b.length ||
+        !crypto.timingSafeEqual(a, b)
+    ) {
+        throw new OltError("Invalid CSRF token.", 403);
+    }
+}
+
 async function findOlt(req, id) {
     const scope = scopeSql(req, "ol");
 
@@ -224,7 +261,10 @@ async function findOlt(req, id) {
     );
 
     if (!rows.length) {
-        throw new OltError("OLT not found or access denied.", 404);
+        throw new OltError(
+            "OLT not found or access denied.",
+            404
+        );
     }
 
     return rows[0];
@@ -245,15 +285,15 @@ exports.list = async (req, res) => {
         const search = clean(req.query.search, 150);
         const scope = scopeSql(req, "ol");
 
-        let where = `WHERE 1=1 ${scope.sql}`;
+        let where = `WHERE ol.deleted_at IS NULL ${scope.sql}`;
         const params = [...scope.params];
 
         if (search) {
             where += ` AND (
-                ol.name LIKE ? OR
-                ol.vendor LIKE ? OR
-                ol.ip LIKE ? OR
-                ol.username LIKE ?
+                ol.name LIKE ?
+                OR ol.vendor LIKE ?
+                OR ol.ip LIKE ?
+                OR ol.username LIKE ?
             )`;
 
             const like = `%${search}%`;
@@ -282,7 +322,10 @@ exports.list = async (req, res) => {
                     FROM onu AS o
                     WHERE o.olt_id = ol.id
                       AND LOWER(COALESCE(o.status, ''))
-                          IN ('online', 'up', 'connected', 'active', '1')
+                          IN (
+                              'online', 'up', 'connected',
+                              'active', '1'
+                          )
                 ) AS onu_online
              FROM olts AS ol
              ${where}
@@ -318,7 +361,10 @@ exports.details = async (req, res) => {
                 SUM(
                     CASE
                         WHEN LOWER(COALESCE(status, ''))
-                        IN ('online', 'up', 'connected', 'active', '1')
+                            IN (
+                                'online', 'up', 'connected',
+                                'active', '1'
+                            )
                         THEN 1 ELSE 0
                     END
                 ) AS online,
@@ -359,7 +405,10 @@ exports.create = async (req, res) => {
         const company = companyId(req);
 
         if (!isSuperAdmin(req) && !company) {
-            throw new OltError("Company scope is missing.", 403);
+            throw new OltError(
+                "Company scope is missing.",
+                403
+            );
         }
 
         connection = await getPool().getConnection();
@@ -440,7 +489,8 @@ exports.update = async (req, res) => {
         const id = validId(req.params.id);
         const old = await findOlt(req, id);
         const data = validateInput(req.body || {}, true);
-        const password = String(req.body?.password ?? "") || old.password;
+        const password =
+            String(req.body?.password ?? "") || old.password;
 
         const scope = scopeSql(req, "ol");
 
@@ -487,6 +537,8 @@ exports.update = async (req, res) => {
 |--------------------------------------------------------------------------
 | DELETE /api/olt/:id
 |--------------------------------------------------------------------------
+| Archive OLT; preserve ONU records and customer mappings.
+|--------------------------------------------------------------------------
 */
 
 exports.remove = async (req, res) => {
@@ -510,27 +562,47 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        const [deletedOnu] = await connection.execute(
-            "DELETE FROM onu WHERE olt_id = ?",
-            [id]
+        // Preserve the OLT name for ONU records.
+        await connection.execute(
+            `UPDATE onu
+                SET olt_name = CASE
+                    WHEN olt_name IS NULL
+                         OR TRIM(olt_name) = ''
+                    THEN ?
+                    ELSE olt_name
+                END
+              WHERE olt_id = ?`,
+            [olt.name, id]
         );
 
-        await connection.execute(
-            `DELETE ol
-               FROM olts AS ol
-              WHERE ol.id = ? ${scope.sql}`,
+        // Archive instead of deleting the OLT.
+        const [result] = await connection.execute(
+            `UPDATE olts AS ol
+                SET deleted_at = NOW()
+              WHERE ol.id = ?
+                AND ol.deleted_at IS NULL
+                ${scope.sql}`,
             [id, ...scope.params]
         );
+
+        if (result.affectedRows !== 1) {
+            throw new OltError(
+                "OLT not found, already archived, or access denied.",
+                404
+            );
+        }
 
         await connection.commit();
 
         return res.json({
             success: true,
-            message: "OLT deleted.",
-            deleted_onu: deletedOnu.affectedRows,
+            message: "OLT archived. ONU records preserved.",
+            deleted_onu: 0,
+            preserved_onu: true,
             olt: {
                 id: olt.id,
-                name: olt.name
+                name: olt.name,
+                deleted_at: true
             }
         });
     } catch (error) {
@@ -554,7 +626,6 @@ exports.remove = async (req, res) => {
 |--------------------------------------------------------------------------
 */
 
-
 exports.check = async (req, res) => {
     let driver = null;
     let olt = null;
@@ -566,10 +637,14 @@ exports.check = async (req, res) => {
         const id = validId(req.params.id);
         olt = await findOlt(req, id);
 
-        if (!olt.ip || !olt.port || !olt.username || !olt.password) {
+        if (
+            !olt.ip ||
+            !olt.port ||
+            !olt.username ||
+            !olt.password
+        ) {
             throw new OltError(
-                "OLT IP, Port, Username এবং Password যাচাই করুন।",
-                400
+                "OLT IP, Port, Username এবং Password যাচাই করুন।"
             );
         }
 
@@ -600,8 +675,7 @@ exports.check = async (req, res) => {
             driver = new EcomDriver(config);
         } else {
             throw new OltError(
-                `এই Vendor-এর connection test সেট করা নেই: ${vendor}`,
-                400
+                `এই Vendor-এর connection test সেট করা নেই: ${vendor}`
             );
         }
 
@@ -621,7 +695,10 @@ exports.check = async (req, res) => {
             result = { success: true };
         }
 
-        if (result === false || (result && result.success === false)) {
+        if (
+            result === false ||
+            (result && result.success === false)
+        ) {
             throw new Error(
                 result?.message || "OLT connection test failed."
             );
@@ -631,8 +708,8 @@ exports.check = async (req, res) => {
 
         await getPool().execute(
             `UPDATE olts AS ol
-             SET status = ?, last_check = NOW()
-             WHERE ol.id = ? ${scope.sql}`,
+                SET status = ?, last_check = NOW()
+              WHERE ol.id = ? ${scope.sql}`,
             ["online", id, ...scope.params]
         );
 
@@ -645,36 +722,35 @@ exports.check = async (req, res) => {
             olt: {
                 id: olt.id,
                 name: olt.name,
-                vendor: vendor,
+                vendor,
                 ip: olt.ip,
                 port: olt.port
             },
             connection_time: Date.now() - startedAt,
             device: result || {}
         });
-
     } catch (error) {
         console.error("[OLT CHECK]", error);
 
-        // OLT পাওয়া গেলে এবং প্রকৃত connection test শুরু হলে
-        // ব্যর্থতার status update করুন।
         if (olt && testStarted) {
             try {
                 const scope = scopeSql(req, "ol");
 
                 await getPool().execute(
                     `UPDATE olts AS ol
-                     SET status = ?, last_check = NOW()
-                     WHERE ol.id = ? ${scope.sql}`,
+                        SET status = ?, last_check = NOW()
+                      WHERE ol.id = ? ${scope.sql}`,
                     ["offline", olt.id, ...scope.params]
                 );
             } catch (dbError) {
-                console.error("[OLT CHECK STATUS UPDATE]", dbError);
+                console.error(
+                    "[OLT CHECK STATUS UPDATE]",
+                    dbError
+                );
             }
         }
 
         return jsonError(res, error);
-
     } finally {
         if (driver && typeof driver.disconnect === "function") {
             try {
@@ -699,7 +775,6 @@ exports.sync = async (req, res) => {
     try {
         const id = validId(req.params.id);
         const olt = await findOlt(req, id);
-
         const result = await syncOnus(getPool(), olt);
 
         return res.json({
@@ -714,6 +789,139 @@ exports.sync = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
+| POST /api/olt/:id/auto-map   (body: { dry_run: true } to preview)
+|--------------------------------------------------------------------------
+| Database-only matching (no OLT connection). Learned-MAC evidence is added
+| automatically during /sync.
+|--------------------------------------------------------------------------
+*/
+
+
+exports.autoMap = async (req, res) => {
+    let driver = null;
+
+    try {
+        verifyMappingCsrf(req);
+
+        const id = validId(req.params.id);
+        const olt = await findOlt(req, id);
+
+        const dryRun =
+            req.body?.dry_run === true ||
+            req.body?.dry_run === "true" ||
+            req.query?.dry_run === "1";
+
+        let ppp = {
+            sessions: [],
+            errors: []
+        };
+
+        try {
+            ppp = await collectPppSessions(
+                getPool(),
+                olt.company_id,
+                loadMikrotikService()
+            );
+        } catch (error) {
+            ppp.errors.push(error.message);
+        }
+
+        let onuRows = [];
+
+        let learned = {
+            supported: false,
+            entries: [],
+            errors: [],
+            lines: 0,
+            reason: "Not collected"
+        };
+
+        const oltErrors = [];
+
+        // OLT evidence collection is restricted to Dry Run.
+        if (dryRun) {
+            try {
+                driver = driverFor(olt);
+
+                await driver.connect();
+
+                if (typeof driver.detectModel === "function") {
+                    await driver.detectModel();
+                }
+
+                onuRows = await driver.getONUList();
+
+                if (!Array.isArray(onuRows)) {
+                    throw new Error(
+                        "OLT getONUList() did not return an array."
+                    );
+                }
+
+                if (typeof driver.getLearnedMacs === "function") {
+                    learned = await driver.getLearnedMacs(onuRows);
+                } else {
+                    learned.reason =
+                        "This OLT driver does not support learned-MAC collection.";
+                }
+            } catch (error) {
+                oltErrors.push(error.message);
+            } finally {
+                if (driver) {
+                    try {
+                        await disconnectDriver(driver);
+                    } catch (error) {
+                        oltErrors.push(
+                            "OLT disconnect: " + error.message
+                        );
+                    }
+
+                    driver = null;
+                }
+            }
+        }
+
+        const result = await autoMapOnus(getPool(), {
+            companyId: olt.company_id,
+            oltId: id,
+            dryRun,
+            entries: learned.entries || [],
+            sessions: ppp.sessions
+        });
+
+        result.pppSessions = ppp.sessions.length;
+        result.pppErrors = (ppp.errors || []).slice(0, 10);
+
+        result.oltOnusCollected = onuRows.length;
+        result.learnedMacSupported = !!learned.supported;
+        result.learnedMacEntries = (learned.entries || []).length;
+        result.learnedMacLines = learned.lines || 0;
+        result.learnedMacReason = learned.reason || null;
+        result.learnedMacErrors = (learned.errors || []).slice(0, 10);
+        result.oltErrors = oltErrors.slice(0, 10);
+
+        return res.json({
+            success: true,
+            message: dryRun
+                ? "Auto mapping preview completed."
+                : "Auto mapping completed.",
+            data: result
+        });
+    } catch (error) {
+        if (driver) {
+            try {
+                await disconnectDriver(driver);
+            } catch {
+                // Preserve the original error.
+            }
+        }
+
+        return jsonError(res, error);
+    }
+};
+
+
+/*
+|--------------------------------------------------------------------------
 | GET /api/olt/:id/onus
 |--------------------------------------------------------------------------
 */
@@ -721,48 +929,255 @@ exports.sync = async (req, res) => {
 exports.listOnus = async (req, res) => {
     try {
         const id = validId(req.params.id);
-        await findOlt(req, id);
-
+        const olt = await findOlt(req, id);
         const search = clean(req.query.search, 150);
 
         let sql = `
             SELECT
-                id,
-                olt_id,
-                onu_name AS name,
-                onu_mac AS mac,
-                onu_sn AS serial,
-                pon,
-                status,
-                rx_power,
-                tx_power,
-                distance,
-                voltage,
-temperature,
-COALESCE(updated_at, last_seen) AS last_update
-            FROM onu
-            WHERE olt_id = ?
+                o.id,
+                o.olt_id,
+
+                CASE
+                    WHEN c.id IS NOT NULL THEN
+                        COALESCE(
+                            NULLIF(TRIM(c.name), ''),
+                            NULLIF(TRIM(c.customer_id), ''),
+                            'Customer name unavailable'
+                        )
+                    ELSE 'Customer not linked'
+                END AS name,
+
+                COALESCE(
+                    NULLIF(TRIM(o.ip_address), ''),
+                    ''
+                ) AS ip_address,
+
+                COALESCE(
+                    NULLIF(TRIM(o.onu_mac), ''),
+                    NULLIF(TRIM(o.mac_address), ''),
+                    ''
+                ) AS mac,
+
+                o.onu_sn AS serial,
+                o.customer_id AS onu_customer_id,
+
+                um.id AS mapping_id,
+                um.customer_id AS mapping_customer_id,
+
+                c.id AS matched_customer_id,
+                c.customer_id AS customer_code,
+                c.name AS customer_name,
+                c.phone AS customer_phone,
+                c.onu_mac AS customer_onu_mac,
+                c.pppoe_username,
+
+                COALESCE(
+                    NULLIF(TRIM(o.olt_name), ''),
+                    ol.name,
+                    ''
+                ) AS olt_name,
+
+                o.pon,
+                o.port,
+                o.status,
+                o.rx_power,
+                o.tx_power,
+                o.distance,
+                o.bias_current,
+                o.voltage,
+                o.temperature,
+
+                COALESCE(
+                    o.last_update,
+                    o.updated_at,
+                    o.last_seen
+                ) AS last_update
+
+            FROM onu AS o
+
+            LEFT JOIN olts AS ol
+                ON ol.id = o.olt_id
+
+            LEFT JOIN onu_user_mapping AS um
+                ON um.onu_id = o.id
+                AND um.olt_id = o.olt_id
+                AND um.company_id = ol.company_id
+
+            LEFT JOIN customers AS c
+                ON c.company_id = ol.company_id
+                AND (
+                    (
+                        um.id IS NOT NULL
+                        AND um.customer_id IS NOT NULL
+                        AND c.id = um.customer_id
+                    )
+
+                    OR (
+                        um.id IS NULL
+                        AND c.id = o.customer_id
+                    )
+
+                    OR (
+                        um.id IS NULL
+                        AND (
+                            o.customer_id IS NULL
+                            OR o.customer_id = 0
+                        )
+                        AND (
+                            (
+                                NULLIF(TRIM(o.onu_mac), '') IS NOT NULL
+                                AND UPPER(
+                                    REPLACE(TRIM(c.onu_mac), '-', ':')
+                                ) = UPPER(
+                                    REPLACE(TRIM(o.onu_mac), '-', ':')
+                                )
+                            )
+                            OR (
+                                NULLIF(TRIM(o.mac_address), '') IS NOT NULL
+                                AND UPPER(
+                                    REPLACE(TRIM(c.onu_mac), '-', ':')
+                                ) = UPPER(
+                                    REPLACE(TRIM(o.mac_address), '-', ':')
+                                )
+                            )
+                        )
+                    )
+                )
+
+            WHERE o.olt_id = ?
+              AND ol.id = ?
         `;
 
-        const params = [id];
+        const params = [id, id];
 
         if (search) {
             sql += `
                 AND (
-                    onu_name LIKE ?
-                    OR onu_mac LIKE ?
-                    OR onu_sn LIKE ?
-                    OR CAST(pon AS CHAR) LIKE ?
+                    CAST(o.id AS CHAR) LIKE ?
+                    OR o.onu_name LIKE ?
+                    OR o.name LIKE ?
+                    OR o.ip_address LIKE ?
+                    OR o.mac_address LIKE ?
+                    OR o.onu_mac LIKE ?
+                    OR o.onu_sn LIKE ?
+                    OR o.status LIKE ?
+                    OR o.olt_name LIKE ?
+                    OR CAST(o.pon AS CHAR) LIKE ?
+                    OR c.name LIKE ?
+                    OR CAST(c.customer_id AS CHAR) LIKE ?
+                    OR c.phone LIKE ?
+                    OR c.pppoe_username LIKE ?
                 )
             `;
 
             const like = `%${search}%`;
-            params.push(like, like, like, like);
+
+            params.push(
+                like, like, like, like, like,
+                like, like, like, like, like,
+                like, like, like, like
+            );
         }
 
-        sql += " ORDER BY id DESC LIMIT 1000";
+        sql += `
+            ORDER BY o.id DESC
+            LIMIT 1000
+        `;
 
         const [rows] = await getPool().execute(sql, params);
+
+        return res.json({
+            success: true,
+            total: rows.length,
+            data: rows.map(row => {
+                const linked = row.matched_customer_id != null;
+
+                return {
+                    ...row,
+
+                    customer_code: linked
+                        ? (row.customer_code ?? null)
+                        : null,
+
+                    customer_name: linked
+                        ? (row.customer_name || null)
+                        : null,
+
+                    customer_phone: linked
+                        ? (row.customer_phone || null)
+                        : null,
+
+                    pppoe_username: linked
+                        ? (row.pppoe_username || null)
+                        : null,
+
+                    customer_linked: linked,
+
+                    onu_device_name:
+                        row.onu_name ||
+                        row.name ||
+                        "ONU",
+
+                    mapping_required: !linked
+                };
+            })
+        });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| GET /api/olt/:id/customers/search?q=
+|--------------------------------------------------------------------------
+*/
+
+exports.searchCustomers = async (req, res) => {
+    try {
+        const oltId = validId(req.params.id);
+        const olt = await findOlt(req, oltId);
+        const q = clean(req.query.q, 100);
+
+        if (q.length < 2) {
+            return res.json({
+                success: true,
+                total: 0,
+                data: []
+            });
+        }
+
+        const like = `%${q}%`;
+
+        const [rows] = await getPool().execute(
+            `SELECT
+                c.id,
+                c.customer_id AS customer_code,
+                c.name,
+                c.phone,
+                c.pppoe_username,
+                c.mikrotik_id
+             FROM customers AS c
+             WHERE c.company_id = ?
+               AND c.deleted_at IS NULL
+               AND (
+                    c.name LIKE ?
+                    OR CAST(c.customer_id AS CHAR) LIKE ?
+                    OR c.phone LIKE ?
+                    OR c.pppoe_username LIKE ?
+                    OR c.mikrotik_id LIKE ?
+               )
+             ORDER BY c.name ASC
+             LIMIT 20`,
+            [
+                olt.company_id,
+                like,
+                like,
+                like,
+                like,
+                like
+            ]
+        );
 
         return res.json({
             success: true,
@@ -771,5 +1186,173 @@ COALESCE(updated_at, last_seen) AS last_update
         });
     } catch (error) {
         return jsonError(res, error);
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| POST /api/olt/:id/onus/:onuId/customer
+|--------------------------------------------------------------------------
+*/
+
+exports.linkOnuCustomer = async (req, res) => {
+    let connection;
+
+    try {
+        verifyMappingCsrf(req);
+
+        const oltId = validId(req.params.id);
+        const onuId = validId(req.params.onuId);
+        const customerId = validId(req.body?.customer_id);
+
+        const olt = await findOlt(req, oltId);
+
+        connection = await getPool().getConnection();
+        await connection.beginTransaction();
+
+        const [onus] = await connection.execute(
+            `SELECT id
+               FROM onu
+              WHERE id = ?
+                AND olt_id = ?
+              LIMIT 1`,
+            [onuId, oltId]
+        );
+
+        if (!onus.length) {
+            throw new OltError(
+                "ONU not found on this OLT.",
+                404
+            );
+        }
+
+        const [customers] = await connection.execute(
+            `SELECT id
+               FROM customers
+              WHERE id = ?
+                AND company_id = ?
+                AND deleted_at IS NULL
+              LIMIT 1`,
+            [customerId, olt.company_id]
+        );
+
+        if (!customers.length) {
+            throw new OltError(
+                "Customer not found or access denied.",
+                404
+            );
+        }
+
+        await connection.execute(
+            `INSERT INTO onu_user_mapping
+                (company_id, olt_id, onu_id, customer_id)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                company_id = VALUES(company_id),
+                olt_id = VALUES(olt_id),
+                customer_id = VALUES(customer_id)`,
+            [
+                olt.company_id,
+                oltId,
+                onuId,
+                customerId
+            ]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            success: true,
+            message: "ONU customer mapping saved.",
+            data: {
+                olt_id: oltId,
+                onu_id: onuId,
+                customer_id: customerId
+            }
+        });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback().catch(() => {});
+        }
+
+        return jsonError(res, error);
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| DELETE /api/olt/:id/onus/:onuId/customer
+|--------------------------------------------------------------------------
+*/
+
+exports.unlinkOnuCustomer = async (req, res) => {
+    let connection;
+
+    try {
+        verifyMappingCsrf(req);
+
+        const oltId = validId(req.params.id);
+        const onuId = validId(req.params.onuId);
+        const olt = await findOlt(req, oltId);
+
+        connection = await getPool().getConnection();
+        await connection.beginTransaction();
+
+        const [onus] = await connection.execute(
+            `SELECT id
+               FROM onu
+              WHERE id = ?
+                AND olt_id = ?
+              LIMIT 1`,
+            [onuId, oltId]
+        );
+
+        if (!onus.length) {
+            throw new OltError(
+                "ONU not found on this OLT.",
+                404
+            );
+        }
+
+        await connection.execute(
+            `INSERT INTO onu_user_mapping
+                (company_id, olt_id, onu_id, customer_id)
+             VALUES (?, ?, ?, NULL)
+             ON DUPLICATE KEY UPDATE
+                company_id = VALUES(company_id),
+                olt_id = VALUES(olt_id),
+                customer_id = NULL`,
+            [
+                olt.company_id,
+                oltId,
+                onuId
+            ]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            success: true,
+            message: "ONU customer mapping removed.",
+            data: {
+                olt_id: oltId,
+                onu_id: onuId,
+                customer_id: null
+            }
+        });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback().catch(() => {});
+        }
+
+        return jsonError(res, error);
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
