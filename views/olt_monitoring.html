@@ -1,0 +1,182 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OLT Monitoring</title>
+    <link rel="stylesheet" href="/assets/css/olt-monitor.css">
+</head>
+<body>
+
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
+
+<div class="main-content">
+<main class="olt-monitor" id="oltMonitor">
+<div class="om-page">
+
+    <section class="om-toolbar">
+        <div class="om-heading">
+            <div class="om-mark" aria-hidden="true">⌁</div>
+            <div>
+                <h1 class="om-title">OLT Monitoring</h1>
+                <p class="om-subtitle">Hardware · PON Modules · Optical Power</p>
+            </div>
+        </div>
+
+        <div class="om-controls">
+            <label for="omOltSelect">Select OLT</label>
+<select class="om-select" id="omOltSelect">
+    <option value="">Loading OLTs...</option>
+</select>
+            <button class="om-btn" id="omRefresh" type="button">↻ Refresh</button>
+            <span class="om-status neutral" id="omConnectionStatus">
+                <i class="om-dot"></i>
+                <span id="omOnlineLabel">Not connected</span>
+            </span>
+        </div>
+    </section>
+
+    <div id="omErrorMessage" class="om-data-error" role="status" aria-live="polite"></div>
+
+    <section class="om-grid om-summary">
+        <article class="om-card">
+            <header class="om-card-head">
+                <h2 class="om-card-title"><span class="om-icon">▣</span>Device Information</h2>
+                <span class="om-pill neutral" id="omDeviceState">No data</span>
+            </header>
+            <div class="om-card-body"><div class="om-kv" id="omDeviceInfo"></div></div>
+        </article>
+
+        <article class="om-card">
+            <header class="om-card-head">
+                <h2 class="om-card-title"><span class="om-icon">◉</span>System Status</h2>
+            </header>
+            <div class="om-card-body"><div class="om-stat-list" id="omSystemInfo"></div></div>
+        </article>
+
+        <article class="om-card">
+            <header class="om-card-head">
+                <h2 class="om-card-title"><span class="om-icon">⏣</span>PON Overview</h2>
+            </header>
+            <div class="om-card-body"><div class="om-stat-list" id="omPonOverview"></div></div>
+        </article>
+    </section>
+
+    <section class="om-card">
+        <header class="om-card-head">
+            <h2 class="om-card-title">
+                <span class="om-icon">▤</span>
+                <span id="omFrontTitle">ECOM 8S · Front Panel View</span>
+            </h2>
+            <div class="om-legend">
+                <span style="color:#20e39a">● Normal</span>
+                <span style="color:#ffca45">● Warning</span>
+                <span style="color:#ff596b">● Critical</span>
+                <span style="color:#94a3b8">● No Data</span>
+            </div>
+        </header>
+
+        <div class="om-device-wrap">
+            <div class="om-device">
+                <div class="om-device-brand">
+                    <div>
+                        <div class="om-brand-name" id="omBrand">ECOM</div>
+                        <div class="om-brand-model" id="omBrandModel">8S · EPON OLT</div>
+                    </div>
+                    <div class="om-port-state"><span>● PWR</span> <span>● SYS</span> <span>● ALM</span></div>
+                </div>
+                <div class="om-port-bank" id="omPortBank"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="om-grid om-lower">
+        <div class="om-stack">
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">▦</span>PON Module Information</h2>
+                </header>
+                <div class="om-table-wrap">
+                    <table>
+                        <thead><tr><th>Module / Slot</th><th>Type</th><th>PON Ports</th><th>Status</th></tr></thead>
+                        <tbody id="omModuleRows"></tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">◌</span>PON Port Status</h2>
+                    <span class="om-pill neutral" id="omPortCount">8 ports</span>
+                </header>
+                <div class="om-pon-status" id="omPonTiles"></div>
+            </article>
+
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">▣</span>Power Supply Information</h2>
+                </header>
+                <div class="om-table-wrap">
+                    <table>
+                        <thead><tr><th>PSU</th><th>Status</th><th>Input V</th><th>Output V</th><th>Load</th></tr></thead>
+                        <tbody id="omPsuRows"></tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+
+        <div class="om-stack">
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">⌁</span>PON Optical Power</h2>
+                </header>
+                <div class="om-table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>PON</th><th>TX dBm</th><th>RX dBm</th><th>Bias mA</th><th>Temp °C</th><th>Voltage V</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="omPowerRows"></tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">◉</span>Selected PON Details</h2>
+                    <span class="om-pill neutral" id="omSelectedStatus">PON 1</span>
+                </header>
+                <div class="om-card-body"><div class="om-kv" id="omSelectedInfo"></div></div>
+            </article>
+
+            <article class="om-card">
+                <header class="om-card-head">
+                    <h2 class="om-card-title"><span class="om-icon">⚑</span>Recent Events / Alarms</h2>
+                </header>
+                <div class="om-table-wrap">
+                    <table>
+                        <thead><tr><th>Time</th><th>Event</th><th>Source</th><th>Level</th></tr></thead>
+                        <tbody id="omAlarmRows"></tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <footer class="om-foot">
+        <span id="omDataNote">Waiting for live OLT API connection.</span>
+        <span id="omLastUpdated">Last updated: —</span>
+    </footer>
+
+</div>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
+<script src="/assets/js/olt-monitor.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+===== [config] show port ddm-info epon ? =====
+show port ddm-info epon 
+  F/S/P  Port number, such as 0/0/X
+E08EP-4S+(config)# show port ddm-info epon 
+% Command incomplete.
+E08EP-4S+(config)#

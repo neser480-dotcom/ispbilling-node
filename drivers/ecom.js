@@ -523,10 +523,30 @@ class EcomDriver {
             throw new Error("OLT Telnet is not connected");
         }
 
-        const cmd = String(command).trim();
+   const cmd = String(command).trim();
 
-        await this.readAvailable(100);
-        await this.write(cmd + "\r\n");
+// Clear stale input before sending the command.
+// Do not change the command text or remove internal spaces.
+const staleInput = await this.readAvailable(100);
+
+if (staleInput) {
+    console.log(
+        "[TELNET PRE-COMMAND BUFFER]",
+        JSON.stringify(staleInput)
+    );
+}
+
+console.log(
+    "[TELNET COMMAND SENT]",
+    JSON.stringify(cmd)
+);
+
+console.log(
+    "[TELNET COMMAND HEX]",
+    Buffer.from(cmd + "\r\n", "utf8").toString("hex")
+);
+
+await this.write(cmd + "\r\n");
 
         let output = "";
         const deadline = Date.now() + timeout;
@@ -541,12 +561,22 @@ class EcomDriver {
                         "OLT Telnet connection closed while executing: " + cmd
                     );
             }
+const chunk = await this.readAvailable(150);
 
-            const chunk = await this.readAvailable(150);
+if (chunk) {
+    if (cmd === "show ddm-info all") {
+        console.log(
+            "[CDATA RX RAW]",
+            JSON.stringify(chunk)
+        );
+        console.log(
+            "[CDATA RX HEX]",
+            Buffer.from(chunk, "utf8").toString("hex")
+        );
+    }
 
-            if (chunk) {
-                output += chunk;
-            }
+    output += chunk;
+}
 
             if (hasMorePrompt(output)) {
                 await this.write(" ");

@@ -1,0 +1,6 @@
+===== [config] show ont basic-info ? =====
+show ont basic-info 
+  F/S  FrameID/SlotID. <S><0-0>/<0-0>
+E08EP-4S+(config)# show ont basic-info 
+% Command incomplete.
+E08EP-4S+(config)#

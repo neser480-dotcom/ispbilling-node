@@ -1,0 +1,8 @@
+===== [config] show interface ? =====
+show interface 
+  loopback  Loopback interface
+  mgmt      Management ethernet interface
+  vlanif    VLAN interface
+E08EP-4S+(config)# show interface 
+% Command incomplete.
+E08EP-4S+(config)#

@@ -1,0 +1,8 @@
+===== [config] show diagnostic-information ? =====
+show diagnostic-information 
+  lldp   lldp
+  stp    stp
+  users  Users
+E08EP-4S+(config)# show diagnostic-information 
+% Command incomplete.
+E08EP-4S+(config)#

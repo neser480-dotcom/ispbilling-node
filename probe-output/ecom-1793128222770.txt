@@ -1,0 +1,76 @@
+===== [config] show power =====
+% Command incomplete.
+E08EP-4S+(config)#
+
+===== [config] show fan =====
+-----------------------------------------------------------------------------
+  Fan speed mode: auto 
+  Fan speed level: 4 
+-----------------------------------------------------------------------------
+  FAN[1] status: Normal     (7620RPM)
+  FAN[2] status: Normal     (7680RPM)
+  FAN[3] status: Normal     (7500RPM)
+-----------------------------------------------------------------------------
+  Fan speed level1 :10.00(C) Slowest
+  Fan speed level2 :20.00(C) 
+  Fan speed level3 :30.00(C) 
+  Fan speed level4 :40.00(C) 
+  Fan speed level5 :45.00(C) 
+  Fan speed level6 :50.00(C) 
+  Fan speed level7 :65.00(C) Fastest
+-----------------------------------------------------------------------------
+E08EP-4S+(config)#
+
+===== [config] show temperature =====
+-----------------------------------------------------------------------------
+Slot  current        
+-----------------------------------------------------------------------------
+0     46.00          
+1     46.00          
+2     41.75          
+E08EP-4S+(config)#
+
+===== [config] show cpu =====
+-----------------------------------------------------------------------------
+  Load Average(5sec)  : 32.24% 
+  Load Average(1min)  : 31.23% 
+  Load Average(5min)  : 31.34% 
+  Load Average(15min) : 31.70% 
+-----------------------------------------------------------------------------
+E08EP-4S+(config)#
+
+===== [config] show memory =====
+-----------------------------------------------------------------------------
+  Total memory   : 1005MB
+  Free memory    : 880MB
+  Utilization    : 12.00% 
+-----------------------------------------------------------------------------
+E08EP-4S+(config)#
+
+===== [config] show system =====
+% Command incomplete.
+E08EP-4S+(config)#
+
+===== [config] show device =====
+Device type            : EPON OLT
+  Device MAC address     : E0:67:B3:7B:D3:DA
+  Device serial-number   : E2508020658
+  Device vendor name     : ECOM
+
+admin's Device status:
+Slot  Model          Status          OnlineTime            OfflineTime       
+--------------------------------------------------------------------------
+0     E08EP-4S+      Normal      2026-10-19 13:01:23       --                
+1     FD3041T        Normal      2026-10-19 13:01:52       --                
+2     FD3041T        Normal      2026-10-19 13:01:52       --                
+
+E08EP-4S+(config)#
+
+===== [config] show firmware =====
+% Command incomplete.
+E08EP-4S+(config)#
+
+===== [config] show uptime =====
+System running time : 1 weeks, 1 day 12 hour 19 minute 36 second. 
+  System uptime time  : Mon Oct 19 13:00:43 2026 
+E08EP-4S+(config)#

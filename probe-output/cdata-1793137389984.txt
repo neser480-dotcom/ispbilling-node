@@ -1,0 +1,65 @@
+===== [config] show ont basic-info ? =====
+show ont basic-info 
+ F/S                  - FrameID/SlotID. <S><0-0>/<0-0>
+
+
+Modokande OLT(config)# show ont basic-info 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show ont info ? =====
+show ont info 
+ F/S                  - FrameID/SlotID. <S><0-0>/<0-0>
+ by-loid              - By LOID
+ by-mac               - By MAC
+
+
+Modokande OLT(config)# show ont info 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show ont load ? =====
+show ont load 
+ info                 - Information about the file loaded to the ONT
+ select               - ONTs in the loading list
+
+
+Modokande OLT(config)# show ont load 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show interface ? =====
+show interface 
+ mgmt                 - Management ethernet interface
+ vlanif               - VLAN interface
+
+
+Modokande OLT(config)# show interface 
+Command incomplete.
+
+Modokande OLT(config)#
+
+===== [config] show interface epon ? =====
+show interface epon
+% There is no matched command.
+
+Modokande OLT(config)# show interface epon
+Unknown command: (vtysh)show interface epon
+
+Modokande OLT(config)#
+
+===== [config] show ddm-info all =====
+-----------------------------------------------------------------------------
+  F/S PORT  Temp(C) Vol(V) TXBias(mA)  TXPower(dBm) RXPower(dBm)
+-----------------------------------------------------------------------------
+  0/0 pon1  34.2    3.30   8           7.79         -24.43   
+  0/0 pon2  36.6    3.29   10          7.71         -28.23   
+  0/0 pon3  40.9    3.24   22          6.13         -23.87   
+  0/0 pon4  35.2    3.23   10          9.44         -29.58   
+  0/0 xge1  0.0     0.00   0           0.00         0.00        
+-----------------------------------------------------------------------------
+
+Modokande OLT(config)#

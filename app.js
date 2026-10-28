@@ -79,6 +79,7 @@ const activityLogRoutes =
 const expenditureRoutes = require("./routes/expenditure.routes");
 
 const oltRoutes = require("./routes/olt");
+const oltMonitorRoutes = require("./routes/olt-monitor");
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER ROUTES
@@ -410,7 +411,11 @@ app.use(
     requireSoftwareBilling,
     oltRoutes
 );
-
+app.use(
+    "/api/olt-monitor",
+    requireSoftwareBilling,
+    oltMonitorRoutes
+);
 /*
 |--------------------------------------------------------------------------
 | BILLING
@@ -1088,7 +1093,19 @@ app.get(
         );
     }
 );
-
+app.get(
+    "/olt_monitoring",
+    requireSoftwareBilling,
+    (req, res) => {
+        res.sendFile(
+            require("path").join(
+                __dirname,
+                "views",
+                "olt_monitoring.html"
+            )
+        );
+    }
+);
 
 /*
 |--------------------------------------------------------------------------

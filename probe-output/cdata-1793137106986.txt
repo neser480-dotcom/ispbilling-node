@@ -1,0 +1,9 @@
+===== [config] show ddm-info ? =====
+show ddm-info 
+ all                  - All Ports
+
+
+Modokande OLT(config)# show ddm-info 
+Command incomplete.
+
+Modokande OLT(config)#

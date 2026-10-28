@@ -1,0 +1,47 @@
+===== [config] show power state =====
+-----------------------------------------------------------------------------
+ Slot-ID   Presence              Power                State                Type       
+-----------------------------------------------------------------------------
+ 1         YES                   ON                   Normal               AC         
+ 2         YES                   ON                   Normal               AC         
+-----------------------------------------------------------------------------
+Channel   Vol(V) 
+0        11.84 
+1        3.33 
+2        1.83 
+3        1.20 
+4        1.12 
+5        1.01 
+6        0.91 
+-----------------------------------------------------------------------------
+Device power: 10.45(w) 
+-----------------------------------------------------------------------------
+E08EP-4S+(config)#
+
+===== [config] show version =====
+Software version V3.4.66
+EPON OLT uptime is 1 weeks, 1 days, 12 hours, 20 minutes.
+1005M  bytes SDRAM
+1019M  bytes FLASH
+BKP version information:
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+u-boot   version : -- 
+Hardware version : V1.1 
+Firmware version : V3.4.66_260526 
+Web      version : V3.3.5_250728 
+Device csm       : X335
+E08EP-4S+(config)#
+
+===== [config] show system ? =====
+show system 
+  multicast-group  Multicast group
+E08EP-4S+(config)# show system 
+% Command incomplete.
+E08EP-4S+(config)#
+
+===== [config] show firmware ? =====
+show firmware 
+  info  Information
+E08EP-4S+(config)# show firmware 
+% Command incomplete.
+E08EP-4S+(config)#

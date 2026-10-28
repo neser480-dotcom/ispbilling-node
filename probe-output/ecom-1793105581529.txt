@@ -1,0 +1,8 @@
+===== [config] show optical-alarm-profile ? =====
+show optical-alarm-profile 
+  all           All Optical alarm profiles
+  profile-id    By profile ID
+  profile-name  By profile name
+E08EP-4S+(config)# show optical-alarm-profile 
+% Command incomplete.
+E08EP-4S+(config)#

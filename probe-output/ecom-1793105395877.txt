@@ -1,0 +1,6 @@
+===== [config] show ont basic-info 0/1 1 ? =====
+show ont basic-info 0/1 1 
+  all  All ONTS in the port
+E08EP-4S+(config)# show ont basic-info 0/1 1 
+% Command incomplete.
+E08EP-4S+(config)#

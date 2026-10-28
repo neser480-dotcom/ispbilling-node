@@ -1,0 +1,18 @@
+===== [config] show port ddm-info epon 0/1/4 =====
+epon 0/1/4 Transceiver information: 
+-----------------------------------------------------------------------------
+ Temp(C)           :40.02
+ Voltage(V)        :3.24
+ Bias(mA)          :12.83
+ TX power(dBM)     :8.00
+ RX power(dBM)     : -31.55
+-----------------------------------------------------------------------------
+ Diagnostic Monitor: YES 
+ Vendor Name       : ZIBBIX           
+ Product name      :                  
+ Version           :      
+ Serial Number     : 2353001860       
+ Manufact Date     : 20231230 
+-----------------------------------------------------------------------------
+
+E08EP-4S+(config)#

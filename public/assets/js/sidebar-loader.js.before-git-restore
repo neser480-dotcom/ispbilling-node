@@ -1,0 +1,85 @@
+
+(function () {
+    'use strict';
+
+    if (window.__ispBillingSidebarLoaderInitialized) {
+        return;
+    }
+
+    window.__ispBillingSidebarLoaderInitialized = true;
+
+    async function loadSidebar() {
+        const container = document.getElementById('sidebarContainer');
+
+        if (!container) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/partials/sidebar.html', {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-cache',
+                headers: {
+                    Accept: 'text/html'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Sidebar HTTP ' + response.status);
+            }
+
+            container.innerHTML = await response.text();
+
+            // Load CSS and wait until it is ready.
+            let css = document.querySelector('link[data-sidebar-css]');
+
+            if (!css) {
+                css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = '/assets/css/sidebar.css';
+                css.dataset.sidebarCss = 'true';
+
+                const cssReady = new Promise(function (resolve, reject) {
+                    css.addEventListener('load', resolve, { once: true });
+                    css.addEventListener('error', reject, { once: true });
+                });
+
+                document.head.appendChild(css);
+                await cssReady;
+            } else if (!css.sheet) {
+                await new Promise(function (resolve, reject) {
+                    css.addEventListener('load', resolve, { once: true });
+                    css.addEventListener('error', reject, { once: true });
+                });
+            }
+
+            // Load Sidebar JS after HTML is inserted.
+            let script = document.querySelector('script[data-sidebar-js]');
+
+            if (!script) {
+                script = document.createElement('script');
+                script.src = '/assets/js/sidebar.js';
+                script.dataset.sidebarJs = 'true';
+
+                const scriptReady = new Promise(function (resolve, reject) {
+                    script.addEventListener('load', resolve, { once: true });
+                    script.addEventListener('error', reject, { once: true });
+                });
+
+                document.body.appendChild(script);
+                await scriptReady;
+            }
+        } catch (error) {
+            console.error('Sidebar loading error:', error);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadSidebar, {
+            once: true
+        });
+    } else {
+        loadSidebar();
+    }
+})();

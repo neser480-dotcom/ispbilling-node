@@ -1,0 +1,6 @@
+===== [config] show ont autofind ? =====
+show ont autofind 
+  all  Pon Port ID. <U>
+E08EP-4S+(config)# show ont autofind 
+% Command incomplete.
+E08EP-4S+(config)#

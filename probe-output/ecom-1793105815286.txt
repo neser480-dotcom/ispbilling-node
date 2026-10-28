@@ -1,0 +1,7 @@
+===== [config] show port ? =====
+show port 
+  ddm-info  DDM information
+  vlan-vpn  Specify 802.1Q-in-Q VPN function
+E08EP-4S+(config)# show port 
+% Command incomplete.
+E08EP-4S+(config)#

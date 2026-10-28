@@ -1,0 +1,6 @@
+===== [config] show power ? =====
+show power 
+  state  Show power number and state
+E08EP-4S+(config)# show power 
+% Command incomplete.
+E08EP-4S+(config)#

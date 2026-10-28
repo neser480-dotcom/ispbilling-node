@@ -1,0 +1,18 @@
+===== [config] show port ddm-info epon 0/2/3 =====
+epon 0/2/3 Transceiver information: 
+-----------------------------------------------------------------------------
+ Temp(C)           :28.80
+ Voltage(V)        :3.27
+ Bias(mA)          :13.00
+ TX power(dBM)     :9.32
+ RX power(dBM)     : -27.21
+-----------------------------------------------------------------------------
+ Diagnostic Monitor: YES 
+ Vendor Name       : DBC              
+ Product name      : EPON OLT PX20+++ 
+ Version           : 000  
+ Serial Number     : IVT2511140164    
+ Manufact Date     : 20251114  
+-----------------------------------------------------------------------------
+
+E08EP-4S+(config)#

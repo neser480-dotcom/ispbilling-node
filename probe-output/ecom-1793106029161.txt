@@ -1,0 +1,18 @@
+===== [config] show port ddm-info epon 0/1/1 =====
+epon 0/1/1 Transceiver information: 
+-----------------------------------------------------------------------------
+ Temp(C)           :37.44
+ Voltage(V)        :3.22
+ Bias(mA)          :11.87
+ TX power(dBM)     :7.65
+ RX power(dBM)     : -24.20
+-----------------------------------------------------------------------------
+ Diagnostic Monitor: YES 
+ Vendor Name       :  
+ Product name      :                  
+ Version           : 000  
+ Serial Number     : 9704B014693      
+ Manufact Date     : 20231230  
+-----------------------------------------------------------------------------
+
+E08EP-4S+(config)#
