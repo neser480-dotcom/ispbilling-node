@@ -63,6 +63,14 @@ document.addEventListener("DOMContentLoaded", function () {
     let companies = [];
 
 
+    let lastAreas = [];
+
+    let sortKey = "";
+
+    let sortDir = 1;
+
+
+
     /*
     |--------------------------------------------------------------------------
     | HTML ESCAPE
@@ -213,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
         areaTableBody.innerHTML = `
             <tr>
                 <td
-                    colspan="${isSuperAdmin ? 7 : 6}"
+                    colspan="${isSuperAdmin ? 6 : 5}"
                     class="text-center py-5 text-muted"
                 >
                     <i
@@ -301,7 +309,7 @@ document.addEventListener("DOMContentLoaded", function () {
             areaTableBody.innerHTML = `
                 <tr>
                     <td
-                        colspan="${isSuperAdmin ? 7 : 6}"
+                        colspan="${isSuperAdmin ? 6 : 5}"
                         class="text-center py-5 text-danger"
                     >
                         <i class="fa fa-triangle-exclamation me-2"></i>
@@ -330,6 +338,21 @@ document.addEventListener("DOMContentLoaded", function () {
     */
 
     function updateCompanyField() {
+
+        const companyTh =
+            document.querySelector(
+                "#areaTable thead .company-column"
+            );
+
+        if (companyTh) {
+
+            companyTh.classList.toggle(
+                "d-none",
+                !isSuperAdmin
+            );
+
+        }
+
 
         if (
             !companyFieldWrap ||
@@ -384,7 +407,118 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     */
 
+    function companyNameOf(area) {
+
+        const company =
+            companies.find(
+                function (item) {
+
+                    return Number(item.id) ===
+                        Number(area.company_id);
+
+                }
+            );
+
+        return company
+            ? company.name
+            : "Company #" + Number(area.company_id);
+
+    }
+
+
+    function sortAreas(list) {
+
+        const rows = list.slice();
+
+        if (!sortKey) {
+            return rows;
+        }
+
+        const collator =
+            new Intl.Collator(
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            );
+
+        rows.sort(
+            function (a, b) {
+
+                let result = 0;
+
+                if (sortKey === "id") {
+
+                    result =
+                        Number(a.id) - Number(b.id);
+
+                } else if (sortKey === "sub") {
+
+                    result =
+                        Number(a.sub_area_count || 0) -
+                        Number(b.sub_area_count || 0);
+
+                } else if (sortKey === "company") {
+
+                    result =
+                        collator.compare(
+                            companyNameOf(a),
+                            companyNameOf(b)
+                        );
+
+                } else {
+
+                    result =
+                        collator.compare(
+                            String(a[sortKey] || ""),
+                            String(b[sortKey] || "")
+                        );
+
+                }
+
+                return result * sortDir;
+
+            }
+        );
+
+        return rows;
+
+    }
+
+
+    function updateSortIcons() {
+
+        document
+            .querySelectorAll("#areaTable thead th[data-sort]")
+            .forEach(
+                function (th) {
+
+                    const icon =
+                        th.querySelector(".sort-icon");
+
+                    if (!icon) {
+                        return;
+                    }
+
+                    icon.textContent =
+                        th.dataset.sort === sortKey
+                            ? (sortDir === 1 ? "↑" : "↓")
+                            : "⇅";
+
+                }
+            );
+
+    }
+
+
     function renderAreas(areas) {
+
+        lastAreas = areas;
+
+        const colCount =
+            isSuperAdmin ? 6 : 5;
+
 
         if (totalAreaCount) {
 
@@ -399,7 +533,7 @@ document.addEventListener("DOMContentLoaded", function () {
             areaTableBody.innerHTML = `
                 <tr>
                     <td
-                        colspan="${isSuperAdmin ? 7 : 6}"
+                        colspan="${colCount}"
                         class="text-center py-5 text-muted"
                     >
                         <i
@@ -411,6 +545,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 </tr>
             `;
 
+            updateSortIcons();
+
             return;
         }
 
@@ -418,7 +554,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let html = "";
 
 
-        areas.forEach(
+        sortAreas(areas).forEach(
             function (area, index) {
 
                 const isMikroTik =
@@ -426,75 +562,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     area.mikrotik_id !== "";
 
 
-                const rowClass =
-                    isMikroTik
-                        ? "mikrotik-area"
-                        : "manual-area";
-
-
-                const typeBadge =
-                    isMikroTik
-                        ? `
-                            <span class="badge bg-info text-dark area-type-badge">
-                                MikroTik
-                            </span>
-                        `
-                        : `
-                            <span class="badge bg-secondary area-type-badge">
-                                Manual
-                            </span>
-                        `;
-
-
-                let companyHtml = "";
-
-
-                if (isSuperAdmin) {
-
-                    const company =
-                        companies.find(
-                            function (item) {
-
-                                return Number(item.id) ===
-                                    Number(area.company_id);
-
-                            }
-                        );
-
-
-                    const companyName =
-                        company
-                            ? company.name
-                            : "Company #" +
-                              Number(area.company_id);
-
-
-                    companyHtml = `
-                        <td class="company-column">
-                            ${escapeHtml(companyName)}
-                        </td>
-                    `;
-
-                }
-
-
                 const areaId =
                     Number(area.id);
-
 
                 const areaName =
                     escapeHtml(area.name);
 
-
                 const rawName =
                     String(area.name || "");
-
 
                 const remarks =
                     escapeHtml(
                         area.remarks || ""
                     );
-
 
                 const subCount =
                     Number(
@@ -502,171 +582,112 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
 
-                let actionHtml = "";
+                const companyHtml =
+                    isSuperAdmin
+                        ? `
+                            <td class="company-column">
+                                ${escapeHtml(companyNameOf(area))}
+                            </td>
+                        `
+                        : "";
 
 
                 /*
                 |--------------------------------------------------------------------------
-                | MIKROTIK AREA
+                | ACTION (...) MENU
+                |--------------------------------------------------------------------------
+                | MikroTik Area  -> locked (name/delete managed automatically)
+                | Manual Area    -> Edit / Delete
                 |--------------------------------------------------------------------------
                 */
 
-                if (isMikroTik) {
+                const menuItems =
+                    isMikroTik
+                        ? `
+                            <li>
+                                <span class="dropdown-item-text text-muted small">
+                                    <i class="fa fa-lock me-2"></i>
+                                    MikroTik Managed
+                                </span>
+                            </li>
+                        `
+                        : `
+                            <li>
+                                <button
+                                    type="button"
+                                    class="dropdown-item edit-area-btn"
+                                    data-id="${areaId}"
+                                    data-name="${escapeHtml(rawName)}"
+                                    data-remarks="${escapeHtml(area.remarks || "")}"
+                                >
+                                    <i class="fa fa-edit me-2 text-primary"></i>
+                                    Edit
+                                </button>
+                            </li>
 
-                    actionHtml = `
-                        <span
-                            class="badge bg-light text-primary border"
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+
+                            <li>
+                                <button
+                                    type="button"
+                                    class="dropdown-item text-danger delete-area-btn"
+                                    data-id="${areaId}"
+                                    data-name="${escapeHtml(rawName)}"
+                                >
+                                    <i class="fa fa-trash me-2"></i>
+                                    Delete
+                                </button>
+                            </li>
+                        `;
+
+
+                const actionHtml = `
+                    <div class="dropdown">
+
+                        <button
+                            type="button"
+                            class="area-dots"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            title="Actions"
                         >
-                            <i class="fa fa-lock me-1"></i>
-                            MikroTik Managed
-                        </span>
-                    `;
+                            <i class="fa fa-ellipsis"></i>
+                        </button>
 
-                } else {
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            ${menuItems}
+                        </ul>
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | MANUAL AREA ACTIONS
-                    |--------------------------------------------------------------------------
-                    */
-
-                    actionHtml = `
-                        <div class="dropdown">
-
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-link text-primary"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                title="Actions"
-                            >
-                                <i class="fa fa-ellipsis-v"></i>
-                            </button>
-
-
-                            <ul class="dropdown-menu dropdown-menu-end">
-
-                                <li>
-
-                                    <button
-                                        type="button"
-                                        class="dropdown-item edit-area-btn"
-                                        data-id="${areaId}"
-                                        data-name="${escapeHtml(rawName)}"
-                                        data-remarks="${escapeHtml(area.remarks || "")}"
-                                    >
-
-                                        <i
-                                            class="fa fa-edit me-2 text-primary"
-                                        ></i>
-
-                                        Edit
-
-                                    </button>
-
-                                </li>
-
-
-                                <li>
-
-                                    <hr class="dropdown-divider">
-
-                                </li>
-
-
-                                <li>
-
-                                    <button
-                                        type="button"
-                                        class="dropdown-item text-danger delete-area-btn"
-                                        data-id="${areaId}"
-                                        data-name="${escapeHtml(rawName)}"
-                                    >
-
-                                        <i
-                                            class="fa fa-trash me-2"
-                                        ></i>
-
-                                        Delete
-
-                                    </button>
-
-                                </li>
-
-
-                            </ul>
-
-                        </div>
-                    `;
-
-                }
+                    </div>
+                `;
 
 
                 html += `
-                    <tr class="${rowClass}">
+                    <tr>
 
-                        <td>
-                            ${index + 1}
-                        </td>
+                        <td>${index + 1}</td>
 
-
-                        <td>
-
-                            <div class="fw-semibold">
-
-                                <i
-                                    class="${
-                                        isMikroTik
-                                            ? "fa fa-server"
-                                            : "fa fa-map-marker-alt"
-                                    } me-2 text-primary"
-                                ></i>
-
-                                ${areaName}
-
-                            </div>
-
-                        </td>
-
+                        <td class="area-name">${areaName}</td>
 
                         ${companyHtml}
 
-
                         <td>
-                            ${typeBadge}
-                        </td>
-
-
-                        <td>
-
                             <a
                                 href="/areas/sub/${areaId}"
-                                class="btn btn-sm btn-outline-primary"
+                                class="btn-subarea"
                             >
-
-                                <i
-                                    class="fa fa-location-dot me-1"
-                                ></i>
-
-                                Sub Area ${subCount}
-
+                                Sub Area <b>${subCount}</b>
+                                <i class="fa fa-arrow-right"></i>
                             </a>
-
                         </td>
 
+                        <td>${remarks}</td>
 
-                        <td>
-                            ${remarks}
-                        </td>
-
-
-                        <td class="text-end pe-4">
-
+                        <td class="text-center">
                             ${actionHtml}
-
                         </td>
-
 
                     </tr>
                 `;
@@ -677,6 +698,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         areaTableBody.innerHTML =
             html;
+
+        updateSortIcons();
 
     }
 
@@ -1519,6 +1542,44 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLE HEADER SORT
+    |--------------------------------------------------------------------------
+    */
+
+    document
+        .querySelectorAll("#areaTable thead th[data-sort]")
+        .forEach(
+            function (th) {
+
+                th.addEventListener(
+                    "click",
+                    function () {
+
+                        const key =
+                            this.dataset.sort;
+
+                        if (sortKey === key) {
+
+                            sortDir = -sortDir;
+
+                        } else {
+
+                            sortKey = key;
+                            sortDir = 1;
+
+                        }
+
+                        renderAreas(lastAreas);
+
+                    }
+                );
+
+            }
+        );
 
 
     /*

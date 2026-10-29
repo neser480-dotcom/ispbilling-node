@@ -287,6 +287,7 @@ async function syncOnus(pool, olt) {
     const driver = driverFor(olt);
     let rows;
     let learned = { supported: false, entries: [], errors: [] };
+    let opticalErrors = [];
 
     try {
         await driver.connect();
@@ -302,6 +303,9 @@ async function syncOnus(pool, olt) {
         }
 
         rows = await driver.getONUList();
+        opticalErrors = Array.isArray(driver.opticalErrors)
+            ? driver.opticalErrors.slice(0, 10)
+            : [];
 
         /*
          * Learned MACs are optional. A failure here must never affect the
@@ -568,6 +572,7 @@ async function syncOnus(pool, olt) {
         return {
             success: true,
             mapping,
+            opticalErrors,
             found: normalized.length,
             inserted,
             updated,
@@ -591,7 +596,7 @@ async function syncOnus(pool, olt) {
 
 module.exports = {
     driverFor,
-    disconnectDriver,
     testConnection,
-    syncOnus
+    syncOnus,
+    disconnectDriver
 };

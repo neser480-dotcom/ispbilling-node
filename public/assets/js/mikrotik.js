@@ -635,28 +635,15 @@ document.addEventListener(
                                         class="text-center"
                                     >
 
-                                        <button
-                                            type="button"
-                                            class="btn btn-primary btn-sm package-edit"
-                                            data-id="${packageId}"
-                                            title="Edit"
-                                        >
-
-                                            <i class="fa fa-edit"></i>
-
-                                        </button>
-
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-danger btn-sm package-delete"
-                                            data-id="${packageId}"
-                                            title="Delete"
-                                        >
-
-                                            <i class="fa fa-trash"></i>
-
-                                        </button>
+                                        <div class="dropdown">
+                                            <button type="button" class="cfg-dots dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Action">
+                                                <i class="fa fa-ellipsis"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end cfg-menu">
+                                                <li><a href="#" class="dropdown-item package-edit" data-id="${packageId}"><i class="fa fa-edit me-2 text-primary"></i>Edit</a></li>
+                                                <li><a href="#" class="dropdown-item package-delete" data-id="${packageId}"><i class="fa fa-trash me-2 text-danger"></i>Delete</a></li>
+                                            </ul>
+                                        </div>
 
                                     </td>
 
@@ -943,43 +930,72 @@ document.addEventListener(
         |--------------------------------------------------------------------------
         */
 
+        function askCustomerSync() {
+
+            return new Promise(resolve => {
+
+                if (!modalRoot) {
+                    resolve({ confirmed: true, includeInactive: false });
+                    return;
+                }
+
+                modalRoot.innerHTML = `
+                    <div class="modal fade" id="customerSyncModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">PPPoE Customer Sync</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="includeInactive">
+                                        <label class="form-check-label" for="includeInactive">
+                                            Do you want to sync with Inactive customer ?
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-success btn-sm" id="customerSyncConfirm">Sync</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const el = document.getElementById("customerSyncModal");
+                const modal = bootstrap.Modal.getOrCreateInstance(el);
+                let result = { confirmed: false, includeInactive: false };
+
+                el.querySelector("#customerSyncConfirm").addEventListener("click", () => {
+                    result = {
+                        confirmed: true,
+                        includeInactive: el.querySelector("#includeInactive").checked
+                    };
+                    modal.hide();
+                });
+
+                el.addEventListener("hidden.bs.modal", () => resolve(result), { once: true });
+
+                modal.show();
+            });
+        }
+
+
         if (syncCustomerButton) {
 
             syncCustomerButton.addEventListener(
                 "click",
                 async () => {
 
-                    const confirm =
-                        await Swal.fire({
+                    const choice = await askCustomerSync();
 
-                            icon:
-                                "question",
-
-                            title:
-                                "Sync Customers?",
-
-                            text:
-                                "MikroTik থেকে customer data sync করা হবে।",
-
-                            showCancelButton:
-                                true,
-
-                            confirmButtonText:
-                                "Yes, Sync",
-
-                            cancelButtonText:
-                                "Cancel"
-
-                        });
-
-
-                    if (
-                        !confirm.isConfirmed
-                    ) {
-
+                    if (!choice.confirmed) {
                         return;
-
                     }
+
+                    const includeInactive = choice.includeInactive;
 
 
                     syncCustomerButton.disabled =
@@ -1017,7 +1033,9 @@ document.addEventListener(
                                 `${API}/${routerId}/customers/sync`,
                                 {
                                     method:
-                                        "POST"
+                                        "POST",
+
+                                    body: JSON.stringify({ include_inactive: includeInactive })
                                 }
                             );
 
@@ -1328,6 +1346,11 @@ document.addEventListener(
             packageTable.addEventListener(
                 "click",
                 event => {
+
+                    if (event.target.closest(".dropdown-item")) {
+                        event.preventDefault();
+                    }
+
 
                     const editButton =
                         event.target.closest(

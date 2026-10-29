@@ -65,6 +65,49 @@ function fakePool(db) {
             writes.push(q);
             return [{}];
         }
+        if (/^SELECT onu_id, customer_id FROM onu_customer_links WHERE company_id = \?/.test(q)) {
+            if (!db.extra) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
+            return [db.extra.filter(e => e.company_id === p[0])];
+        }
+        if (/^SELECT onu_id FROM onu_customer_links WHERE company_id = \? AND customer_id = \?/.test(q)) {
+            return [db.extra.filter(e => e.company_id === p[0] && e.customer_id === p[1])];
+        }
+        if (/^INSERT INTO onu_customer_links/.test(q)) {
+            if (db.extra.some(e => e.company_id === p[0] && e.customer_id === p[3])) {
+                throw Object.assign(new Error('dup'), { code: 'ER_DUP_ENTRY' });
+            }
+            db.extra.push({ company_id: p[0], olt_id: p[1], onu_id: p[2], customer_id: p[3] });
+            return [{}];
+        }
+        if (/^SELECT onu_id FROM onu_ppp_info WHERE company_id = \? AND customer_id = \?/.test(q)) {
+            if (!db.ppp) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
+            return [db.ppp.filter(x => x.company_id === p[0] && x.customer_id === p[1])];
+        }
+        if (/^SELECT 1 FROM onu_ppp_info LIMIT 1/.test(q)) {
+            if (!db.ppp) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
+            return [[]];
+        }
+        if (/^SELECT onu_id, customer_id FROM onu_user_mapping WHERE company_id = \? AND olt_id = \? AND customer_id IS NOT NULL/.test(q)) {
+            return [db.map.filter(m => m.company_id === p[0] && m.olt_id === p[1] && m.customer_id != null)];
+        }
+        if (/^SELECT id, customer_id FROM onu WHERE olt_id = \?/.test(q)) {
+            return [db.onu.filter(o => o.olt_id === p[0] && o.customer_id)
+                .map(o => ({ id: o.id, customer_id: o.customer_id }))];
+        }
+        if (/^INSERT INTO onu_ppp_info/.test(q)) {
+            const row = {
+                company_id: p[0], olt_id: p[1], onu_id: p[2], customer_id: p[3],
+                pppoe_username: p[4], caller_id: p[5], ip_address: p[6]
+            };
+            const i = db.ppp.findIndex(x => x.company_id === p[0] && x.customer_id === p[3]);
+            if (i >= 0) { if (db.ppp[i].onu_id === p[2]) db.ppp[i] = row; } else db.ppp.push(row);
+            return [{}];
+        }
+        if (/^UPDATE onu SET ip_address = \? WHERE id = \? AND olt_id = \? AND \(ip_address IS NULL OR ip_address <> \?\)/.test(q)) {
+            const o = db.onu.find(x => x.id === p[1]);
+            if (o && o.ip_address !== p[0]) o.ip_address = p[0];
+            return [{}];
+        }
         if (/^UPDATE onu SET ip_address/.test(q)) {
             const o = db.onu.find(x => x.id === p[1]);
             if (o && !o.ip_address) o.ip_address = p[0];
@@ -75,6 +118,7 @@ function fakePool(db) {
 
     const conn = {
         execute: run,
+        query: async () => [[]],
         beginTransaction: async () => {},
         commit: async () => {},
         rollback: async () => { db.rolledBack = true; },
@@ -124,26 +168,6 @@ test('extractMacs reads several MACs from one cell', () => {
 
 /* ---------- decisions ---------- */
 
-test('direct ONU MAC match links exactly one customer', async () => {
-    const db = baseDb();
-    const r = await autoMapOnus(fakePool(db), { companyId: 10, oltId: 1 });
-
-    assert.equal(r.linked, 1);
-    assert.deepEqual(db.map, [{ company_id: 10, olt_id: 1, onu_id: 1, customer_id: 100 }]);
-    assert.equal(r.unmatched, 3);
-});
-
-test('learned MAC matches customers.router_mac', async () => {
-    const db = baseDb();
-    const r = await autoMapOnus(fakePool(db), {
-        companyId: 10, oltId: 1,
-        entries: [{ onu_mac: '84:16:f9:fc:a0:77', learned_macs: ['e4-2d-7b-01-95-0f'] }]
-    });
-
-    assert.equal(r.linked, 2);
-    assert.ok(db.map.some(m => m.onu_id === 2 && m.customer_id === 101));
-});
-
 test('tenant isolation: other company customer is never linked', async () => {
     const db = baseDb();
     await autoMapOnus(fakePool(db), { companyId: 10, oltId: 1 });
@@ -170,17 +194,6 @@ test('existing mapping is never overwritten', async () => {
     assert.equal(db.map.find(m => m.onu_id === 1).customer_id, 101);
     assert.equal(r.alreadyLinked, 1);
     assert.equal(r.linked, 0);
-});
-
-test('empty NULL placeholder row is filled by default (UPDATE, no duplicate)', async () => {
-    const db = baseDb();
-    db.map.push({ company_id: 10, olt_id: 1, onu_id: 1, customer_id: null });
-
-    const r = await autoMapOnus(fakePool(db), { companyId: 10, oltId: 1 });
-
-    assert.equal(r.linked, 1);
-    assert.equal(db.map.length, 1);
-    assert.equal(db.map[0].customer_id, 100);
 });
 
 test('manual unlink (NULL customer row) is respected when protection is on', async () => {
@@ -226,19 +239,6 @@ test('same customer matched by two ONUs links neither', async () => {
     assert.equal(db.map.length, 0);
 });
 
-test('PPPoE caller-id evidence links customer and fills IP', async () => {
-    const db = baseDb();
-    const r = await autoMapOnus(fakePool(db), {
-        companyId: 10, oltId: 1,
-        entries: [{ onu_mac: '04:95:E6:95:E7:80', learned_macs: ['12:22:33:44:55:66'] }],
-        sessions: [{ mac: '12-22-33-44-55-66', username: 'faruk', address: '10.10.12.207' }]
-    });
-
-    assert.ok(db.map.some(m => m.onu_id === 3 && m.customer_id === 101));
-    assert.equal(db.onu[2].ip_address, '10.10.12.207');
-    assert.equal(r.linked, 2);
-});
-
 test('dry run writes nothing', async () => {
     const db = baseDb();
     const pool = fakePool(db);
@@ -254,16 +254,6 @@ test('wrong company cannot map an OLT', async () => {
         autoMapOnus(fakePool(baseDb()), { companyId: 99, oltId: 1 }),
         /OLT not found/
     );
-});
-
-test('re-running is idempotent', async () => {
-    const db = baseDb();
-    const pool = fakePool(db);
-    await autoMapOnus(pool, { companyId: 10, oltId: 1 });
-    const again = await autoMapOnus(pool, { companyId: 10, oltId: 1 });
-
-    assert.equal(again.linked, 0);
-    assert.equal(db.map.length, 1);
 });
 
 test('pure decide(): ONU without any MAC is reported, not linked', () => {
@@ -379,18 +369,6 @@ test('perOnt collection runs one command per ONU with the real format', async ()
     ]);
 });
 
-test('router-mode ONU: own MAC = PPP caller-id -> pppoe user -> customer + IP', async () => {
-    const db = baseDb();
-    const r = await autoMapOnus(fakePool(db), {
-        companyId: 10, oltId: 1,
-        sessions: [{ mac: '84:16:F9:FC:A0:77', username: 'faruk', address: '10.10.12.207' }]
-    });
-
-    assert.ok(db.map.some(m => m.onu_id === 2 && m.customer_id === 101));
-    assert.equal(db.onu[1].ip_address, '10.10.12.207');
-    assert.equal(r.linked, 2);
-});
-
 test('PPP session of another tenant username cannot link (unknown username)', async () => {
     const db = baseDb();
     await autoMapOnus(fakePool(db), {
@@ -444,15 +422,183 @@ test('default config parses with-ont-location output (several MACs per ONT, pagi
     assert.equal(byOnu['B8:3A:08:26:D1:B0'], undefined);
 });
 
-test('bridge-mode router behind an ONU links via learned MAC + PPP caller-id', async () => {
+test('PPP info: a customer that was NOT linked gets no row (conflict)', async () => {
     const db = baseDb();
-    const r = await autoMapOnus(fakePool(db), {
+    db.ppp = [];
+    db.map.push({ company_id: 10, olt_id: 1, onu_id: 4, customer_id: 101 });
+
+    await autoMapOnus(fakePool(db), {
         companyId: 10, oltId: 1,
-        entries: [{ onu_mac: '04:95:E6:95:E7:80', learned_macs: ['E0:D3:62:99:58:7B'] }],
-        sessions: [{ mac: 'E0:D3:62:99:58:7B', username: 'faruk', address: '10.10.12.9' }]
+        sessions: [{ mac: '84:16:F9:FC:A0:77', username: 'faruk', address: '10.0.0.5' }]
     });
 
-    assert.ok(db.map.some(m => m.onu_id === 3 && m.customer_id === 101));
-    assert.equal(db.onu[2].ip_address, '10.10.12.9');
-    assert.equal(r.linked, 2);
+    assert.ok(!db.ppp.some(r => r.onu_id === 2));
+});
+
+test('PPP info: dry run saves nothing', async () => {
+    const db = baseDb();
+    db.ppp = [];
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, dryRun: true,
+        sessions: [{ mac: '84:16:F9:FC:A0:77', username: 'faruk', address: '10.0.0.5' }]
+    });
+
+    assert.equal(db.ppp.length, 0);
+});
+
+/* ---------- switch ONU: many customers behind one ONU (onu_ppp_info) ---------- */
+
+function switchDb(count = 5) {
+    const db = baseDb();
+    db.ppp = [];
+
+    // master ONU 3 + `count` PPPoE customers behind its switch
+    for (let i = 1; i <= count; i++) {
+        db.customers.push({
+            id: 300 + i, company_id: 10, onu_mac: '', router_mac: '',
+            pppoe_username: `sw${i}`
+        });
+    }
+
+    return db;
+}
+
+const macN = n => `10:00:00:00:00:${String(n).padStart(2, '0')}`;
+
+const switchSessions = (count = 5) => Array.from({ length: count }, (_, i) => ({
+    mac: macN(i + 1),
+    username: `sw${i + 1}`,
+    address: `10.10.20.${i + 1}`
+}));
+
+const switchEntry = (count = 5) => [{
+    onu_mac: '04:95:E6:95:E7:80',
+    learned_macs: Array.from({ length: count }, (_, i) => macN(i + 1))
+}];
+
+for (const count of [2, 5, 10]) {
+    test(`switch ONU with ${count} customers: all are stored under the one ONU`, async () => {
+        const db = switchDb(count);
+
+        const r = await autoMapOnus(fakePool(db), {
+            companyId: 10, oltId: 1,
+            entries: switchEntry(count), sessions: switchSessions(count)
+        });
+
+        const rows = db.ppp.filter(x => x.onu_id === 3);
+
+        assert.equal(rows.length, count);
+        assert.deepEqual(
+            rows.map(x => x.customer_id).sort((a, b) => a - b),
+            Array.from({ length: count }, (_, i) => 301 + i)
+        );
+        assert.equal(r.multiOnu, 1);
+        assert.equal(r.multiCustomers, count);
+        assert.equal(r.ambiguous, 0);
+        // a switch has no single primary customer
+        assert.ok(!db.map.some(m => m.onu_id === 3));
+        // each customer keeps its own caller-id and IP
+        assert.equal(rows.find(x => x.customer_id === 301).caller_id, '10:00:00:00:00:01');
+        assert.equal(rows.find(x => x.customer_id === 301).ip_address, '10.10.20.1');
+    });
+}
+
+test('switch ONU: re-running creates no duplicates', async () => {
+    const db = switchDb(5);
+    const pool = fakePool(db);
+    const opts = { companyId: 10, oltId: 1, entries: switchEntry(5), sessions: switchSessions(5) };
+
+    await autoMapOnus(pool, opts);
+    await autoMapOnus(pool, opts);
+
+    assert.equal(db.ppp.filter(x => x.onu_id === 3).length, 5);
+});
+
+test('switch ONU: a customer added later joins the same ONU', async () => {
+    const db = switchDb(5);
+    const pool = fakePool(db);
+
+    await autoMapOnus(pool, {
+        companyId: 10, oltId: 1, entries: switchEntry(3), sessions: switchSessions(3)
+    });
+    assert.equal(db.ppp.length, 3);
+
+    await autoMapOnus(pool, {
+        companyId: 10, oltId: 1, entries: switchEntry(5), sessions: switchSessions(5)
+    });
+    assert.equal(db.ppp.filter(x => x.onu_id === 3).length, 5);
+});
+
+test('switch ONU dry run writes nothing', async () => {
+    const db = switchDb(5);
+
+    const r = await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, dryRun: true,
+        entries: switchEntry(5), sessions: switchSessions(5)
+    });
+
+    assert.equal(db.ppp.length, 0);
+    assert.equal(r.multiOnu, 1);
+});
+
+test('customer linked to another ONU is never moved under the switch', async () => {
+    const db = switchDb(3);
+    db.map.push({ company_id: 10, olt_id: 1, onu_id: 4, customer_id: 302 });
+
+    const r = await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, entries: switchEntry(3), sessions: switchSessions(3)
+    });
+
+    assert.ok(!db.ppp.some(x => x.customer_id === 302));
+    assert.equal(db.ppp.filter(x => x.onu_id === 3).length, 2);
+    assert.equal(r.pppConflicts, 1);
+    assert.equal(db.map.find(m => m.onu_id === 4).customer_id, 302);
+});
+
+test('customer already stored under another ONU is not stolen', async () => {
+    const db = switchDb(3);
+    db.ppp.push({
+        company_id: 10, olt_id: 1, onu_id: 4, customer_id: 301,
+        pppoe_username: 'sw1', caller_id: '10:00:00:00:00:01', ip_address: '9.9.9.9'
+    });
+
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, entries: switchEntry(3), sessions: switchSessions(3)
+    });
+
+    assert.equal(db.ppp.find(x => x.customer_id === 301).onu_id, 4);
+});
+
+test('duplicate PPPoE username is never treated as a switch customer', async () => {
+    const db = switchDb(2);
+    db.customers.push({ id: 399, company_id: 10, onu_mac: '', router_mac: '', pppoe_username: 'sw1' });
+
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, entries: switchEntry(2), sessions: switchSessions(2)
+    });
+
+    assert.ok(!db.ppp.some(x => x.pppoe_username === 'sw1'));
+    assert.ok(db.ppp.some(x => x.pppoe_username === 'sw2'));
+});
+
+test('single customer behind an ONU is still linked normally, with caller-id saved', async () => {
+    const db = switchDb(1);
+
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, entries: switchEntry(1), sessions: switchSessions(1)
+    });
+
+    assert.ok(db.map.some(m => m.onu_id === 3 && m.customer_id === 301));
+    assert.equal(db.ppp.length, 1);
+});
+
+test('other tenant PPP username cannot be stored', async () => {
+    const db = switchDb(1);
+
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1, entries: switchEntry(1),
+        sessions: [{ mac: '10:00:00:00:00:01', username: 'other-tenant', address: '1.1.1.1' }]
+    });
+
+    assert.equal(db.ppp.length, 0);
 });

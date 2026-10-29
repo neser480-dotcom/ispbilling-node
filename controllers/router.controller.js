@@ -2195,6 +2195,12 @@ async function customerSync(
         |--------------------------------------------------------------------------
         */
 
+        const includeInactive =
+            [true, 1, "1", "true"].includes(
+                req.body?.include_inactive
+            );
+
+
         const total =
             secrets.length;
 
@@ -2302,6 +2308,18 @@ async function customerSync(
                 ) {
 
                     inactive++;
+
+                }
+
+
+                if (
+                    isInactive &&
+                    !includeInactive
+                ) {
+
+                    skipped++;
+
+                    continue;
 
                 }
 

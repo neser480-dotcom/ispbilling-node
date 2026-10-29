@@ -4,11 +4,7 @@
 const mysql = require("mysql2/promise");
 const net = require("net");
 const crypto = require("crypto");
-const {
-    syncOnus,
-    driverFor,
-    disconnectDriver
-} = require("../drivers/olt-sync.service");
+const { syncOnus } = require("../drivers/olt-sync.service");
 const { autoMapOnus } = require("../drivers/onu-auto-mapping.service");
 const {
     collectPppSessions,
@@ -285,7 +281,7 @@ exports.list = async (req, res) => {
         const search = clean(req.query.search, 150);
         const scope = scopeSql(req, "ol");
 
-        let where = `WHERE ol.deleted_at IS NULL ${scope.sql}`;
+        let where = `WHERE 1=1 ${scope.sql}`;
         const params = [...scope.params];
 
         if (search) {
@@ -537,8 +533,6 @@ exports.update = async (req, res) => {
 |--------------------------------------------------------------------------
 | DELETE /api/olt/:id
 |--------------------------------------------------------------------------
-| Archive OLT; preserve ONU records and customer mappings.
-|--------------------------------------------------------------------------
 */
 
 exports.remove = async (req, res) => {
@@ -562,47 +556,27 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        // Preserve the OLT name for ONU records.
-        await connection.execute(
-            `UPDATE onu
-                SET olt_name = CASE
-                    WHEN olt_name IS NULL
-                         OR TRIM(olt_name) = ''
-                    THEN ?
-                    ELSE olt_name
-                END
-              WHERE olt_id = ?`,
-            [olt.name, id]
+        const [deletedOnu] = await connection.execute(
+            "DELETE FROM onu WHERE olt_id = ?",
+            [id]
         );
 
-        // Archive instead of deleting the OLT.
-        const [result] = await connection.execute(
-            `UPDATE olts AS ol
-                SET deleted_at = NOW()
-              WHERE ol.id = ?
-                AND ol.deleted_at IS NULL
-                ${scope.sql}`,
+        await connection.execute(
+            `DELETE ol
+               FROM olts AS ol
+              WHERE ol.id = ? ${scope.sql}`,
             [id, ...scope.params]
         );
-
-        if (result.affectedRows !== 1) {
-            throw new OltError(
-                "OLT not found, already archived, or access denied.",
-                404
-            );
-        }
 
         await connection.commit();
 
         return res.json({
             success: true,
-            message: "OLT archived. ONU records preserved.",
-            deleted_onu: 0,
-            preserved_onu: true,
+            message: "OLT deleted.",
+            deleted_onu: deletedOnu.affectedRows,
             olt: {
                 id: olt.id,
-                name: olt.name,
-                deleted_at: true
+                name: olt.name
             }
         });
     } catch (error) {
@@ -796,10 +770,7 @@ exports.sync = async (req, res) => {
 |--------------------------------------------------------------------------
 */
 
-
 exports.autoMap = async (req, res) => {
-    let driver = null;
-
     try {
         verifyMappingCsrf(req);
 
@@ -811,10 +782,7 @@ exports.autoMap = async (req, res) => {
             req.body?.dry_run === "true" ||
             req.query?.dry_run === "1";
 
-        let ppp = {
-            sessions: [],
-            errors: []
-        };
+        let ppp = { sessions: [], errors: [] };
 
         try {
             ppp = await collectPppSessions(
@@ -822,82 +790,19 @@ exports.autoMap = async (req, res) => {
                 olt.company_id,
                 loadMikrotikService()
             );
-        } catch (error) {
-            ppp.errors.push(error.message);
-        }
-
-        let onuRows = [];
-
-        let learned = {
-            supported: false,
-            entries: [],
-            errors: [],
-            lines: 0,
-            reason: "Not collected"
-        };
-
-        const oltErrors = [];
-
-        // OLT evidence collection is restricted to Dry Run.
-        if (dryRun) {
-            try {
-                driver = driverFor(olt);
-
-                await driver.connect();
-
-                if (typeof driver.detectModel === "function") {
-                    await driver.detectModel();
-                }
-
-                onuRows = await driver.getONUList();
-
-                if (!Array.isArray(onuRows)) {
-                    throw new Error(
-                        "OLT getONUList() did not return an array."
-                    );
-                }
-
-                if (typeof driver.getLearnedMacs === "function") {
-                    learned = await driver.getLearnedMacs(onuRows);
-                } else {
-                    learned.reason =
-                        "This OLT driver does not support learned-MAC collection.";
-                }
-            } catch (error) {
-                oltErrors.push(error.message);
-            } finally {
-                if (driver) {
-                    try {
-                        await disconnectDriver(driver);
-                    } catch (error) {
-                        oltErrors.push(
-                            "OLT disconnect: " + error.message
-                        );
-                    }
-
-                    driver = null;
-                }
-            }
+        } catch (pppError) {
+            ppp.errors.push(pppError.message);
         }
 
         const result = await autoMapOnus(getPool(), {
             companyId: olt.company_id,
             oltId: id,
             dryRun,
-            entries: learned.entries || [],
             sessions: ppp.sessions
         });
 
         result.pppSessions = ppp.sessions.length;
         result.pppErrors = (ppp.errors || []).slice(0, 10);
-
-        result.oltOnusCollected = onuRows.length;
-        result.learnedMacSupported = !!learned.supported;
-        result.learnedMacEntries = (learned.entries || []).length;
-        result.learnedMacLines = learned.lines || 0;
-        result.learnedMacReason = learned.reason || null;
-        result.learnedMacErrors = (learned.errors || []).slice(0, 10);
-        result.oltErrors = oltErrors.slice(0, 10);
 
         return res.json({
             success: true,
@@ -907,18 +812,9 @@ exports.autoMap = async (req, res) => {
             data: result
         });
     } catch (error) {
-        if (driver) {
-            try {
-                await disconnectDriver(driver);
-            } catch {
-                // Preserve the original error.
-            }
-        }
-
         return jsonError(res, error);
     }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1086,11 +982,135 @@ exports.listOnus = async (req, res) => {
 
         const [rows] = await getPool().execute(sql, params);
 
+        /*
+         * Several customers behind one ONU (switch). Optional table: when the
+         * migration has not been run the list simply has no extra customers.
+         */
+        const extrasByOnu = new Map();
+
+        try {
+            const [extraRows] = await getPool().execute(
+                `SELECT l.onu_id,
+                        c.id AS customer_db_id,
+                        c.customer_id AS customer_code,
+                        c.name,
+                        c.phone,
+                        c.pppoe_username
+                   FROM onu_customer_links AS l
+                   JOIN olts AS ol
+                     ON ol.id = l.olt_id
+                    AND ol.company_id = l.company_id
+                   JOIN customers AS c
+                     ON c.id = l.customer_id
+                    AND c.company_id = l.company_id
+                    AND c.deleted_at IS NULL
+                  WHERE l.olt_id = ?
+                    AND ol.id = ?
+                  ORDER BY c.name`,
+                [id, id]
+            );
+
+            for (const extra of extraRows) {
+                const key = Number(extra.onu_id);
+
+                if (!extrasByOnu.has(key)) extrasByOnu.set(key, []);
+
+                extrasByOnu.get(key).push({
+                    id: extra.customer_db_id,
+                    customer_code: extra.customer_code ?? null,
+                    name: extra.name || null,
+                    phone: extra.phone || null,
+                    pppoe_username: extra.pppoe_username || null
+                });
+            }
+        } catch (extraError) {
+            if (!extraError || extraError.code !== 'ER_NO_SUCH_TABLE') {
+                throw extraError;
+            }
+        }
+
+        /*
+         * Live MikroTik info (caller-id MAC, IP) saved by Sync / Auto map.
+         * Optional table: without the migration the list works as before.
+         */
+        const pppByCustomer = new Map();
+
+        try {
+            const [pppRows] = await getPool().execute(
+                `SELECT p.onu_id,
+                        p.customer_id,
+                        p.caller_id,
+                        p.ip_address,
+                        p.pppoe_username,
+                        c.customer_id AS customer_code,
+                        c.name,
+                        c.phone
+                   FROM onu_ppp_info AS p
+                   JOIN olts AS ol
+                     ON ol.id = p.olt_id
+                    AND ol.company_id = p.company_id
+                   JOIN customers AS c
+                     ON c.id = p.customer_id
+                    AND c.company_id = p.company_id
+                    AND c.deleted_at IS NULL
+                  WHERE p.olt_id = ?
+                    AND ol.id = ?
+                  ORDER BY c.name`,
+                [id, id]
+            );
+
+            for (const item of pppRows) {
+                const customerId = Number(item.customer_id);
+
+                pppByCustomer.set(customerId, {
+                    caller_id: item.caller_id || null,
+                    ip: item.ip_address || null,
+                    pppoe_username: item.pppoe_username || null
+                });
+
+                // Every customer saved for this ONU (switch) is listed.
+                const key = Number(item.onu_id);
+
+                if (!extrasByOnu.has(key)) extrasByOnu.set(key, []);
+
+                if (!extrasByOnu.get(key).some(x => Number(x.id) === customerId)) {
+                    extrasByOnu.get(key).push({
+                        id: customerId,
+                        customer_code: item.customer_code ?? null,
+                        name: item.name || null,
+                        phone: item.phone || null,
+                        pppoe_username: item.pppoe_username || null
+                    });
+                }
+            }
+        } catch (pppError) {
+            if (!pppError || pppError.code !== 'ER_NO_SUCH_TABLE') {
+                throw pppError;
+            }
+        }
+
         return res.json({
             success: true,
             total: rows.length,
             data: rows.map(row => {
                 const linked = row.matched_customer_id != null;
+                const primaryPpp = linked
+                    ? pppByCustomer.get(Number(row.matched_customer_id))
+                    : null;
+                const extraCustomers = (extrasByOnu.get(Number(row.id)) || [])
+                    .filter(extra =>
+                        !linked ||
+                        Number(extra.id) !== Number(row.matched_customer_id)
+                    )
+                    .map(extra => {
+                        const ppp = pppByCustomer.get(Number(extra.id));
+
+                        return {
+                            ...extra,
+                            caller_id: ppp ? ppp.caller_id : null,
+                            ip: ppp ? ppp.ip : null
+                        };
+                    });
 
                 return {
                     ...row,
@@ -1113,12 +1133,19 @@ exports.listOnus = async (req, res) => {
 
                     customer_linked: linked,
 
+                    ppp_caller_id: primaryPpp ? primaryPpp.caller_id : null,
+                    ppp_ip: primaryPpp ? primaryPpp.ip : null,
+
+                    extra_customers: extraCustomers,
+                    customer_count:
+                        (linked ? 1 : 0) + extraCustomers.length,
+
                     onu_device_name:
                         row.onu_name ||
                         row.name ||
                         "ONU",
 
-                    mapping_required: !linked
+                    mapping_required: !linked && !extraCustomers.length
                 };
             })
         });

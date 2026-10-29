@@ -1,0 +1,484 @@
+/* ==================================================
+   MIKROTIK CONFIGURATION PAGE  (শুধু body.mk-config-page এ কাজ করে,
+   তাই /mikrotik লিস্ট পেজ বা অন্য পেজে কোনো প্রভাব পড়ে না)
+================================================== */
+
+:root {
+    --mk-page-bg: #efefef;
+    --mk-card-bg: #ffffff;
+    --mk-text: #555555;
+    --mk-head: #555555;
+    --mk-muted: #666666;
+    --mk-row-odd: #efefef;
+    --mk-row-even: #ffffff;
+    --mk-blue: #2f86e3;
+    --mk-blue-2: #318de8;
+    --mk-pill: #2a6fc6;
+    --mk-search: #2b7ad6;
+    --mk-accent: #2f86e3;
+    --mk-line: #dcdcdc;
+    --mk-input-bg: #ffffff;
+}
+
+[data-bs-theme="dark"],
+[data-theme="dark"],
+html.dark,
+body.dark,
+html.dark-mode,
+body.dark-mode,
+html.dark-theme,
+body.dark-theme,
+html.night,
+body.night {
+    --mk-page-bg: #141922;
+    --mk-card-bg: #1e2530;
+    --mk-text: #cfd6e2;
+    --mk-head: #e2e8f2;
+    --mk-muted: #8f9bb0;
+    --mk-row-odd: #262e3b;
+    --mk-row-even: #1e2530;
+    --mk-blue: #2467b8;
+    --mk-blue-2: #2a6fc6;
+    --mk-pill: #1d4f94;
+    --mk-search: #1d4f94;
+    --mk-accent: #5aa2f0;
+    --mk-line: #364050;
+    --mk-input-bg: #141922;
+}
+
+
+.mk-config-page {
+    background: var(--mk-page-bg);
+    overflow-x: hidden;
+}
+
+
+/* ---------- BLUE HEADER ---------- */
+
+.mk-config-page .mk-header {
+    background: var(--mk-blue);
+    color: #fff;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+}
+
+.mk-config-page .mk-title {
+    flex: 1;
+    margin: 0;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.mk-config-page .mk-back {
+    background: #00a65a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 3px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.mk-config-page .mk-back:hover {
+    background: #008d4c;
+    color: #fff;
+}
+
+.mk-config-page .mk-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.mk-config-page .mk-btn-white {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mk-config-page .mk-btn-white:hover {
+    background: rgba(255, 255, 255, .18);
+}
+
+.mk-config-page .mk-btn-white i {
+    margin-left: 4px;
+}
+
+
+/* ---------- WHITE CARD ---------- */
+
+.mk-config-page .mk-card {
+    background: var(--mk-card-bg);
+    border-radius: 4px;
+    padding: 10px 15px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+}
+
+
+/* ---------- TABS ---------- */
+
+.mk-config-page .mk-tabs {
+    border-bottom: 1px solid var(--mk-line);
+    margin-bottom: 12px;
+}
+
+.mk-config-page .mk-tabs .nav-link {
+    font-size: 12px;
+    padding: 6px 12px;
+    color: var(--mk-text);
+    border: 1px solid transparent;
+    border-radius: 3px 3px 0 0;
+}
+
+.mk-config-page .mk-tabs .nav-link.active {
+    background: var(--mk-card-bg);
+    color: var(--mk-text);
+    border-color: var(--mk-line) var(--mk-line) var(--mk-card-bg);
+}
+
+
+/* ---------- SELECT / INFO / SYNC ROW ---------- */
+
+.mk-config-page .mk-info-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 14px;
+    align-items: start;
+}
+
+.mk-config-page .mk-select-col {
+    padding-left: 60px;
+}
+
+.mk-config-page .mk-select-label {
+    display: block;
+    font-size: 16px;
+    color: var(--mk-text);
+    margin-bottom: 4px;
+}
+
+.mk-config-page .mk-select-col .form-select {
+    width: 140px;
+    max-width: 100%;
+    font-size: 12px;
+    padding: 4px 28px 4px 10px;
+    background-color: var(--mk-input-bg);
+    color: var(--mk-text);
+    border-color: var(--mk-line);
+}
+
+.mk-config-page .mk-router-col {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--mk-text);
+}
+
+.mk-config-page .mk-router-col strong {
+    color: var(--mk-head);
+    font-weight: 700;
+}
+
+.mk-config-page .mk-sync-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.mk-config-page .mk-btn-blue {
+    background: var(--mk-card-bg);
+    border: 1px solid var(--mk-accent);
+    color: var(--mk-accent);
+    font-size: 12px;
+    padding: 5px 9px;
+    border-radius: 4px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mk-config-page .mk-btn-blue:hover {
+    background: var(--mk-accent);
+    color: #fff;
+}
+
+.mk-config-page .mk-btn-blue i {
+    margin-left: 4px;
+}
+
+
+/* ---------- BLUE DATA STRIP ---------- */
+
+.mk-config-page .mk-strip {
+    background: var(--mk-blue-2);
+    color: #fff;
+    border-radius: 6px;
+    padding: 9px 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .15);
+}
+
+.mk-config-page .mk-total {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mk-config-page .mk-count-pill {
+    display: inline-block;
+    min-width: 28px;
+    text-align: center;
+    background: var(--mk-pill);
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.mk-config-page .mk-search-wrap {
+    width: 310px;
+    max-width: 100%;
+}
+
+.mk-config-page .mk-search-wrap input {
+    height: 26px;
+    border: 0;
+    border-radius: 3px;
+    background: var(--mk-search);
+    color: #fff;
+    font-size: 12px;
+    padding: 0 8px;
+}
+
+.mk-config-page .mk-search-wrap input::placeholder {
+    color: #fff;
+    opacity: .9;
+}
+
+.mk-config-page .mk-search-wrap input:focus {
+    background: var(--mk-search);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .45);
+}
+
+.mk-config-page .mk-search-wrap input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+
+/* ---------- TABLE ---------- */
+
+.mk-config-page .mk-table {
+    --bs-table-bg: transparent;
+    margin-bottom: 0;
+}
+
+.mk-config-page .mk-table thead th {
+    background: transparent;
+    border-bottom: 0;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--mk-head);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.mk-config-page .mk-table thead th[data-sort-col] {
+    cursor: pointer;
+}
+
+.mk-config-page .sort-icon {
+    color: var(--mk-accent);
+    font-size: 11px;
+    margin-left: 3px;
+}
+
+.mk-config-page .mk-table tbody tr:nth-child(odd) {
+    --bs-table-bg: var(--mk-row-odd);
+}
+
+.mk-config-page .mk-table tbody tr:nth-child(even) {
+    --bs-table-bg: var(--mk-row-even);
+}
+
+.mk-config-page .mk-table tbody td {
+    padding: 6px 8px;
+    border: 0;
+    font-size: 12.5px;
+    color: var(--mk-text);
+    vertical-align: middle;
+}
+
+.mk-config-page .mk-table tbody td:first-child {
+    font-weight: 700;
+}
+
+/* Action কলামে JS যে বাটন/মেনু দেয়, সেগুলো ছোট ও মানানসই */
+.mk-config-page .mk-table tbody td .btn {
+    font-size: 12px;
+    padding: 2px 8px;
+}
+
+
+/* ---------- FOOTER ---------- */
+
+.mk-config-page .mk-footer {
+    text-align: center;
+    color: var(--mk-muted);
+    font-size: 14px;
+    margin-top: 38px;
+}
+
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 992px) {
+
+    .mk-config-page .main-content {
+        margin-left: 0 !important;
+    }
+
+    .mk-config-page .mk-info-row {
+        grid-template-columns: 1fr;
+    }
+
+    .mk-config-page .mk-select-col {
+        padding-left: 0;
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .mk-config-page .mk-strip {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mk-config-page .mk-search-wrap {
+        width: 100%;
+    }
+
+    .mk-config-page .mk-title {
+        order: 3;
+        flex-basis: 100%;
+    }
+
+}
+
+
+/* ==================================================
+   NIGHT MODE – Bootstrap parts (modal / dropdown / form)
+================================================== */
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .modal-content {
+    background: #1e2530;
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .modal-footer {
+    border-top-color: #364050;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .form-control,
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .form-select {
+    background-color: #141922;
+    border-color: #364050;
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .form-label {
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .dropdown-menu {
+    background: #1e2530;
+    border-color: #364050;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .dropdown-item {
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .dropdown-item:hover {
+    background: #2a3342;
+    color: #fff;
+}
+
+
+/* ==================================================
+   MODAL LOOK (PPPoE Customer Sync / Package Sync / Edit …)
+   সাদা হেডার, নিচে সরু লাইন, ছোট লেখা, ছোট Cancel/Sync বাটন
+   (Bootstrap-এর স্ট্যান্ডার্ড modal ক্লাসে কাজ করে; শুধু এই পেজে)
+================================================== */
+
+.mk-config-page .modal-content {
+    border: 0;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
+}
+
+.mk-config-page .modal-header {
+    background: transparent;
+    color: var(--mk-head);
+    border-bottom: 1px solid var(--mk-line);
+    padding: 14px 16px;
+}
+
+.mk-config-page .modal-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--mk-head);
+}
+
+.mk-config-page .modal-header .btn-close,
+.mk-config-page .modal-header .btn-close-white {
+    filter: none;
+}
+
+.mk-config-page .modal-body {
+    font-size: 12px;
+    color: var(--mk-text);
+    padding: 14px 16px;
+}
+
+.mk-config-page .modal-body .form-check-label,
+.mk-config-page .modal-body label {
+    font-size: 12px;
+}
+
+.mk-config-page .modal-footer {
+    border-top: 0;
+    padding: 4px 16px 14px;
+}
+
+.mk-config-page .modal-footer .btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 3px;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .mk-config-page .modal-header .btn-close,
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night).mk-config-page .modal-header .btn-close {
+    filter: invert(1);
+}

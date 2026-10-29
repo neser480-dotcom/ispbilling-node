@@ -1,34 +1,24 @@
+
 'use strict';
 
 /*
 |--------------------------------------------------------------------------
 | ONU -> CUSTOMER AUTO MAPPING
 |--------------------------------------------------------------------------
-| Evidence used (all comparisons are done on normalized MACs, inside one
-| company only):
+| Primary link:
+|   onu_user_mapping - one customer per ONU
 |
-|   1. ONU's own MAC  (onu.onu_mac / onu.mac_address) == customers.onu_mac
-|   2. MACs learned behind the ONU on the OLT (when the OLT driver could
-|      collect them)               == customers.router_mac  or customers.onu_mac
-|   3. ONU MAC (or learned MAC) == MikroTik /ppp/active caller-id -> PPPoE
-|      name == customers.pppoe_username (also supplies the customer's IP)
+| Multi-customer PPP links:
+|   onu_ppp_info - one row per company/customer
 |
-| An ONU is linked ONLY when all evidence points to exactly ONE customer and
-| that customer is not already linked to another ONU. Everything else stays
-| unlinked and is reported with a reason.
-|
-| Existing links are never touched:
-|   - onu_user_mapping row with a customer      -> already linked
-|   - onu_user_mapping row with NULL customer   -> an empty placeholder (the
-|                                                  table cannot tell it from a
-|                                                  manual Unlink). It is filled
-|                                                  by UPDATE unless
-|                                                  ONU_AUTO_MAP_RESPECT_UNLINK=on
-|                                                  (or relinkUnlinked:false)
-|   - legacy onu.customer_id (no mapping row)   -> already linked
-|
-| Only columns already used by olt.controller.js are written:
-|   onu_user_mapping (company_id, olt_id, onu_id, customer_id)
+| Safety:
+|   - Exact PPPoE username matching only.
+|   - Multiple customers per ONU are allowed in onu_ppp_info.
+|   - Ambiguous primary links are never guessed.
+|   - Customers are never silently moved between ONUs.
+|   - Existing primary links and manual unlink behavior are preserved.
+|   - Dry-run performs no database writes.
+|   - Recoverable per-ONU errors are reported and processing continues.
 |--------------------------------------------------------------------------
 */
 
@@ -36,12 +26,7 @@ const MAC_PATTERN =
     /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b|\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b|\b[0-9a-f]{12}\b/gi;
 
 const MAX_DETAILS = 500;
-
-/*
-|--------------------------------------------------------------------------
-| MAC HELPERS
-|--------------------------------------------------------------------------
-*/
+const MAX_ERRORS = 200;
 
 function normalizeMac(value) {
     const hex = String(value ?? '')
@@ -51,13 +36,12 @@ function normalizeMac(value) {
     if (hex.length !== 12) return null;
     if (/^0+$/.test(hex) || /^F+$/.test(hex)) return null;
 
-    // Multicast/broadcast addresses can never identify one device.
+    // Reject multicast MAC addresses.
     if (parseInt(hex.slice(0, 2), 16) & 1) return null;
 
     return hex.match(/.{2}/g).join(':');
 }
 
-// A DB cell may hold one MAC or several ("aa:..., bb:...").
 function extractMacs(value) {
     const found = new Set();
 
@@ -69,44 +53,78 @@ function extractMacs(value) {
     return [...found];
 }
 
-/*
-|--------------------------------------------------------------------------
-| PURE DECISION LOGIC (no database)
-|--------------------------------------------------------------------------
-*/
-
 function indexCustomers(customers) {
     const byOnuMac = new Map();
     const byRouterMac = new Map();
     const byPppoe = new Map();
+    const byId = new Map();
 
-    const put = (map, mac, id) => {
-        if (!map.has(mac)) map.set(mac, new Set());
-        map.get(mac).add(Number(id));
+    const put = (map, key, id) => {
+        if (!map.has(key)) map.set(key, new Set());
+        map.get(key).add(Number(id));
     };
 
-    for (const customer of customers) {
+    for (const customer of customers || []) {
+        const id = Number(customer.id);
+
+        if (!Number.isInteger(id) || id <= 0) continue;
+
+        const username = String(customer.pppoe_username || '').trim();
+
+        byId.set(id, {
+            id,
+            pppoe_username: username,
+            mikrotik_id: customer.mikrotik_id == null
+                ? null
+                : String(customer.mikrotik_id)
+        });
+
         for (const mac of extractMacs(customer.onu_mac)) {
-            put(byOnuMac, mac, customer.id);
+            put(byOnuMac, mac, id);
         }
 
         for (const mac of extractMacs(customer.router_mac)) {
-            put(byRouterMac, mac, customer.id);
+            put(byRouterMac, mac, id);
         }
 
-        const pppoe = String(customer.pppoe_username ?? '').trim();
-
-        if (pppoe) {
-            if (!byPppoe.has(pppoe)) byPppoe.set(pppoe, new Set());
-            byPppoe.get(pppoe).add(Number(customer.id));
-        }
+        if (username) put(byPppoe, username, id);
     }
 
-    return { byOnuMac, byRouterMac, byPppoe };
+    return { byOnuMac, byRouterMac, byPppoe, byId };
 }
 
+function indexSessions(sessions) {
+    const byMac = new Map();
+
+    for (const item of sessions || []) {
+        const mac = normalizeMac(item.mac);
+        const username = String(item.username ?? '').trim();
+
+        if (!mac || !username) continue;
+
+        if (!byMac.has(mac)) byMac.set(mac, []);
+
+        byMac.get(mac).push({
+            mac,
+            username,
+            routerId: item.routerId == null
+                ? null
+                : String(item.routerId),
+            address: String(item.address ?? '').trim() || null
+        });
+    }
+
+    return byMac;
+}
+
+/*
+|--------------------------------------------------------------------------
+| PRIMARY LINK EVIDENCE
+|--------------------------------------------------------------------------
+*/
+
 function collectEvidence(onu, learnedMacs, index, sessionsByMac) {
-    const customers = new Map(); // customerId -> Set(reason)
+    const customers = new Map();
     let ip = null;
 
     const add = (set, reason) => {
@@ -120,15 +138,13 @@ function collectEvidence(onu, learnedMacs, index, sessionsByMac) {
         add(index.byOnuMac.get(onu.mac), 'onu_mac=customer.onu_mac');
     }
 
-    // The router-mode ONU dials PPPoE itself, so MikroTik's caller-id is
-    // the ONU's own MAC (or a MAC learned behind it).
     for (const mac of [onu.mac, ...learnedMacs]) {
         if (!mac) continue;
 
         for (const session of sessionsByMac.get(mac) || []) {
             add(
                 index.byPppoe.get(session.username),
-                'mac=ppp_active.caller_id->pppoe_username'
+                'caller_id->pppoe_username'
             );
 
             if (!ip && session.address) ip = session.address;
@@ -143,43 +159,26 @@ function collectEvidence(onu, learnedMacs, index, sessionsByMac) {
     return { customers, ip };
 }
 
-// sessions: [{ mac, username, address }] from MikroTik /ppp/active
-function indexSessions(sessions) {
-    const byMac = new Map();
+/*
+|--------------------------------------------------------------------------
+| PRIMARY LINK DECISIONS
+|--------------------------------------------------------------------------
+| Multiple matches are ambiguous only for the single primary link.
+| Multi-customer PPP mapping is handled separately below.
+|--------------------------------------------------------------------------
+*/
 
-    for (const item of sessions || []) {
-        const mac = normalizeMac(item.mac);
-        const username = String(item.username ?? '').trim();
-
-        if (!mac || !username) continue;
-
-        if (!byMac.has(mac)) byMac.set(mac, []);
-
-        byMac.get(mac).push({
-            username,
-            address: String(item.address ?? '').trim() || null
-        });
-    }
-
-    return byMac;
-}
-
-/**
- * Decide what to do for every ONU. Pure function: no I/O.
- *
- * @param {object} input
- * @param {Array}  input.onus            [{ id, mac, legacyCustomerId }]
- * @param {Map}    input.learned         onuId -> Set(MAC)
- * @param {Map}    input.mappings        onuId -> customerId|null (rows in onu_user_mapping)
- * @param {Map}    input.linkedElsewhere customerId -> onuId (links of ALL company ONUs)
- * @param {object} input.index           result of indexCustomers()
- */
 function decide({
-    onus, learned, mappings, linkedElsewhere, index,
-    sessionsByMac = new Map(), relinkUnlinked = true
+    onus,
+    learned,
+    mappings,
+    linkedElsewhere,
+    index,
+    sessionsByMac = new Map(),
+    relinkUnlinked = true
 }) {
     const decisions = [];
-    const claims = new Map(); // customerId -> [onuId]
+    const claims = new Map();
 
     for (const onu of onus) {
         const base = { onuId: onu.id, onuMac: onu.mac || null };
@@ -210,19 +209,26 @@ function decide({
         const learnedMacs = [...(learned.get(onu.id) || [])];
 
         if (!onu.mac && !learnedMacs.length) {
-            decisions.push({ ...base, status: 'no_mac', reason: 'ONU has no MAC' });
+            decisions.push({
+                ...base,
+                status: 'no_mac',
+                reason: 'ONU has no MAC'
+            });
             continue;
         }
 
         const { customers: evidence, ip } = collectEvidence(
-            onu, learnedMacs, index, sessionsByMac
+            onu,
+            learnedMacs,
+            index,
+            sessionsByMac
         );
 
         if (evidence.size === 0) {
             decisions.push({
                 ...base,
                 status: 'unmatched',
-                reason: 'no customer has this MAC'
+                reason: 'no customer has matching MAC/PPPoE evidence'
             });
             continue;
         }
@@ -231,7 +237,7 @@ function decide({
             decisions.push({
                 ...base,
                 status: 'ambiguous',
-                reason: 'MACs match several customers',
+                reason: 'multiple customers match; primary link not selected',
                 candidates: [...evidence.keys()]
             });
             continue;
@@ -251,7 +257,6 @@ function decide({
         claims.get(customerId).push(onu.id);
     }
 
-    // Second pass: a customer may be linked to one ONU only.
     for (const decision of decisions) {
         if (decision.status !== 'candidate') continue;
 
@@ -264,8 +269,7 @@ function decide({
                 'same customer matches several ONUs: ' + rivals.join(', ');
         } else if (other !== undefined && other !== decision.onuId) {
             decision.status = 'conflict';
-            decision.reason =
-                `customer already linked to ONU ${other}`;
+            decision.reason = `customer already linked to ONU ${other}`;
         } else {
             decision.status = 'will_link';
         }
@@ -282,7 +286,10 @@ function decide({
 
 async function loadContext(conn, company, olt, entries, sessions) {
     const [oltRows] = await conn.execute(
-        'SELECT id FROM olts WHERE id = ? AND company_id = ? LIMIT 1',
+        `SELECT id
+           FROM olts
+          WHERE id = ? AND company_id = ?
+          LIMIT 1`,
         [olt, company]
     );
 
@@ -351,7 +358,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
     }
 
     const [customers] = await conn.execute(
-        `SELECT id, onu_mac, router_mac, pppoe_username
+        `SELECT id, onu_mac, router_mac, pppoe_username, mikrotik_id
            FROM customers
           WHERE company_id = ?
             AND deleted_at IS NULL
@@ -363,11 +370,11 @@ async function loadContext(conn, company, olt, entries, sessions) {
         [company]
     );
 
-    // Learned MACs arrive keyed by ONU MAC; resolve to DB ids inside this OLT.
     const idsByMac = new Map();
 
     for (const onu of onus) {
         if (!onu.mac) continue;
+
         if (!idsByMac.has(onu.mac)) idsByMac.set(onu.mac, []);
         idsByMac.get(onu.mac).push(onu.id);
     }
@@ -375,7 +382,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
     const learned = new Map();
     const problems = [];
 
-    for (const entry of entries) {
+    for (const entry of entries || []) {
         let onuId = Number(entry.onu_id);
 
         if (!Number.isInteger(onuId) || onuId <= 0) {
@@ -420,33 +427,55 @@ async function loadContext(conn, company, olt, entries, sessions) {
 
 /*
 |--------------------------------------------------------------------------
-| WRITE ONE LINK (inside a transaction, with re-checks)
+| SAVEPOINT HELPERS
+|--------------------------------------------------------------------------
+| Savepoints isolate recoverable row-level failures inside a live
+| transaction. A lost DB connection/transaction still aborts the run.
+|--------------------------------------------------------------------------
+*/
+
+async function createSavepoint(conn, dryRun) {
+    if (dryRun) return false;
+    await conn.query('SAVEPOINT onu_mapping_item');
+    return true;
+}
+
+async function rollbackSavepoint(conn, enabled) {
+    if (!enabled) return;
+
+    await conn.query('ROLLBACK TO SAVEPOINT onu_mapping_item');
+}
+
+/*
+|--------------------------------------------------------------------------
+| WRITE PRIMARY LINK
 |--------------------------------------------------------------------------
 */
 
 async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
-    const onuId = decision.onuId;
-    const customerId = decision.customerId;
+    const { onuId, customerId } = decision;
 
     const [onu] = await conn.execute(
-        `SELECT customer_id FROM onu WHERE id = ? AND olt_id = ? FOR UPDATE`,
+        `SELECT customer_id
+           FROM onu
+          WHERE id = ? AND olt_id = ?
+          FOR UPDATE`,
         [onuId, olt]
     );
 
     if (!onu.length) return 'onu_missing';
-
     if (Number(onu[0].customer_id) > 0) return 'already_linked';
 
     const [existing] = await conn.execute(
         `SELECT customer_id
            FROM onu_user_mapping
           WHERE onu_id = ? AND company_id = ? AND olt_id = ?
-          LIMIT 1 FOR UPDATE`,
+          LIMIT 1
+          FOR UPDATE`,
         [onuId, company, olt]
     );
 
-    const fillEmptyRow =
-        existing.length &&
+    const fillEmptyRow = existing.length &&
         existing[0].customer_id == null &&
         relinkUnlinked;
 
@@ -457,7 +486,8 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
     }
 
     const [customer] = await conn.execute(
-        `SELECT id FROM customers
+        `SELECT id
+           FROM customers
           WHERE id = ? AND company_id = ? AND deleted_at IS NULL
           LIMIT 1`,
         [customerId, company]
@@ -466,7 +496,8 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
     if (!customer.length) return 'customer_missing';
 
     const [taken] = await conn.execute(
-        `SELECT onu_id FROM onu_user_mapping
+        `SELECT onu_id
+           FROM onu_user_mapping
           WHERE company_id = ? AND customer_id = ?
           LIMIT 1`,
         [company, customerId]
@@ -495,9 +526,7 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
                 [customerId, onuId, company, olt]
             );
 
-            if (updated && updated.affectedRows === 0) {
-                return 'already_linked';
-            }
+            if (!updated.affectedRows) return 'already_linked';
         } else {
             await conn.execute(
                 `INSERT INTO onu_user_mapping
@@ -510,14 +539,13 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
         if (error && error.code === 'ER_DUP_ENTRY') {
             return 'already_linked';
         }
-
         throw error;
     }
 
-    // Show the customer's current IP in the ONU list (never overwrite one).
     if (decision.ip) {
         await conn.execute(
-            `UPDATE onu SET ip_address = ?
+            `UPDATE onu
+                SET ip_address = ?
               WHERE id = ? AND olt_id = ?
                 AND (ip_address IS NULL OR ip_address = '')`,
             [String(decision.ip).slice(0, 64), onuId, olt]
@@ -529,27 +557,142 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
 
 /*
 |--------------------------------------------------------------------------
+| MULTI-CUSTOMER PPP MAPPING
+|--------------------------------------------------------------------------
+| A single ONU may serve many PPPoE customers behind a switch.
+| Each exact, uniquely identified username is saved separately.
+|--------------------------------------------------------------------------
+*/
+
+async function writeOnuPppInfo(
+    conn,
+    company,
+    olt,
+    onuId,
+    onuMac,
+    learnedMacs,
+    index,
+    sessionsByMac,
+    dryRun = false,
+    linkedElsewhere = new Map()
+) {
+    const macs = new Set(
+        [onuMac, ...(learnedMacs || [])]
+            .map(normalizeMac)
+            .filter(Boolean)
+    );
+
+    const matches = new Map();
+
+    for (const mac of macs) {
+        for (const session of sessionsByMac.get(mac) || []) {
+            const username = String(session.username || '').trim();
+            const ids = index.byPppoe.get(username);
+
+            // Never guess if one PPPoE username belongs to multiple rows.
+            if (!ids || ids.size !== 1) continue;
+
+            const customerId = [...ids][0];
+
+            if (!matches.has(customerId)) {
+                matches.set(customerId, {
+                    customerId,
+                    username,
+                    callerId: session.mac,
+                    ip: session.address || null
+                });
+            }
+        }
+    }
+
+    const result = {
+        matched: matches.size,
+        customerIds: [...matches.keys()],
+        saved: 0,
+        conflicts: 0,
+        dryRun: !!dryRun
+    };
+
+    for (const item of matches.values()) {
+        // A customer already linked to another ONU is never moved here.
+        const primaryOnu = linkedElsewhere.get(item.customerId);
+
+        if (primaryOnu !== undefined && Number(primaryOnu) !== Number(onuId)) {
+            result.conflicts++;
+            continue;
+        }
+
+        const [existing] = await conn.execute(
+            `SELECT onu_id
+               FROM onu_ppp_info
+              WHERE company_id = ? AND customer_id = ?
+              LIMIT 1`,
+            [company, item.customerId]
+        );
+
+        if (
+            existing.length &&
+            Number(existing[0].onu_id) !== Number(onuId)
+        ) {
+            result.conflicts++;
+            continue;
+        }
+
+        if (dryRun) {
+            // This is a count of would-save records, not persisted rows.
+            result.saved++;
+            continue;
+        }
+
+        await conn.execute(
+            `INSERT INTO onu_ppp_info
+                (company_id, olt_id, onu_id, customer_id,
+                 pppoe_username, caller_id, ip_address)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                olt_id = IF(onu_id = VALUES(onu_id),
+                            VALUES(olt_id), olt_id),
+                pppoe_username = IF(onu_id = VALUES(onu_id),
+                                    VALUES(pppoe_username),
+                                    pppoe_username),
+                caller_id = IF(onu_id = VALUES(onu_id),
+                               VALUES(caller_id), caller_id),
+                ip_address = IF(onu_id = VALUES(onu_id),
+                                VALUES(ip_address), ip_address)`,
+            [
+                company,
+                olt,
+                onuId,
+                item.customerId,
+                item.username,
+                item.callerId,
+                item.ip
+            ]
+        );
+
+        result.saved++;
+    }
+
+    return result;
+}
+
+/*
+|--------------------------------------------------------------------------
 | PUBLIC API
 |--------------------------------------------------------------------------
 */
 
-/**
- * @param {object} pool  mysql2/promise pool
- * @param {object} opts
- * @param {number} opts.companyId
- * @param {number} opts.oltId
- * @param {Array}  [opts.entries]  [{ onu_mac | onu_id, learned_macs: [] }]
- * @param {Array}  [opts.sessions] [{ mac, username, address }] MikroTik /ppp/active
- * @param {boolean}[opts.dryRun]
- * @param {boolean}[opts.relinkUnlinked] fill NULL placeholder rows (default on)
- */
 function defaultRelinkUnlinked() {
     return String(process.env.ONU_AUTO_MAP_RESPECT_UNLINK || 'off')
         .toLowerCase() !== 'on';
 }
 
 async function autoMapOnus(pool, {
-    companyId, oltId, entries = [], sessions = [], dryRun = false,
+    companyId,
+    oltId,
+    entries = [],
+    sessions = [],
+    dryRun = false,
     relinkUnlinked = defaultRelinkUnlinked()
 }) {
     const company = Number(companyId);
@@ -567,6 +710,10 @@ async function autoMapOnus(pool, {
         throw new TypeError('entries must be an array.');
     }
 
+    if (!Array.isArray(sessions)) {
+        throw new TypeError('sessions must be an array.');
+    }
+
     const conn = await pool.getConnection();
 
     const report = {
@@ -582,12 +729,36 @@ async function autoMapOnus(pool, {
         noMac: 0,
         skippedAtWrite: 0,
         learnedOnu: 0,
+        multiOnu: 0,
+        multiCustomers: 0,
+        pppMatched: 0,
+        pppSaved: 0,
+        pppConflicts: 0,
+        pppWriteErrors: 0,
+        linkErrors: 0,
         problems: [],
+        errors: [],
         details: []
     };
 
+    const addError = (phase, onuId, error) => {
+        if (report.errors.length >= MAX_ERRORS) return;
+
+        report.errors.push({
+            phase,
+            onuId: onuId == null ? null : Number(onuId),
+            message: String(error && error.message || error || 'Unknown error')
+                .slice(0, 500),
+            code: error && error.code || null
+        });
+    };
+
+    let transactionStarted = false;
+
     try {
-        const ctx = await loadContext(conn, company, olt, entries, sessions);
+        const ctx = await loadContext(
+            conn, company, olt, entries, sessions
+        );
 
         report.totalOnu = ctx.onus.length;
         report.learnedOnu = ctx.learned.size;
@@ -595,27 +766,149 @@ async function autoMapOnus(pool, {
 
         const decisions = decide({ ...ctx, relinkUnlinked });
 
-        if (!dryRun) await conn.beginTransaction();
+        if (!dryRun) {
+            await conn.beginTransaction();
+            transactionStarted = true;
+        }
 
-        try {
-            for (const decision of decisions) {
-                switch (decision.status) {
-                    case 'already_linked': report.alreadyLinked++; break;
-                    case 'manually_unlinked': report.manuallyUnlinked++; break;
-                    case 'unmatched': report.unmatched++; break;
-                    case 'ambiguous': report.ambiguous++; break;
-                    case 'conflict': report.conflicts++; break;
-                    case 'no_mac': report.noMac++; break;
+        /*
+         * First pass: save multi-customer PPP information.
+         * One recoverable ONU error should not stop the next ONU.
+         */
+        const decisionByOnu = new Map(
+            decisions.map(item => [item.onuId, item])
+        );
 
-                    case 'will_link':
-                        if (dryRun) {
-                            report.wouldLink++;
-                            break;
-                        }
+        for (const onu of ctx.onus) {
+            const decision = decisionByOnu.get(onu.id);
 
-                        {
+            if (
+                decision &&
+                decision.status === 'manually_unlinked' &&
+                !relinkUnlinked
+            ) {
+                continue;
+            }
+
+            let savepoint = false;
+
+            try {
+                savepoint = await createSavepoint(conn, !!dryRun);
+
+                const pppResult = await writeOnuPppInfo(
+                    conn,
+                    company,
+                    olt,
+                    onu.id,
+                    onu.mac,
+                    [...(ctx.learned.get(onu.id) || [])],
+                    ctx.index,
+                    ctx.sessionsByMac,
+                    !!dryRun,
+                    ctx.linkedElsewhere
+                );
+
+                report.pppMatched += pppResult.matched;
+                report.pppSaved += pppResult.saved;
+                report.pppConflicts += pppResult.conflicts;
+
+                if (decision && pppResult.matched) {
+                    decision.ppp = pppResult;
+
+                    // Several customers behind one ONU (switch): every
+                    // candidate is proven by its own PPPoE session.
+                    if (
+                        decision.status === 'ambiguous' &&
+                        Array.isArray(decision.candidates) &&
+                        decision.candidates.every(id =>
+                            pppResult.customerIds.includes(Number(id))
+                        )
+                    ) {
+                        decision.status = 'multi';
+                        decision.reason =
+                            `switch ONU: ${pppResult.customerIds.length} customers`;
+                        decision.customers = pppResult.customerIds;
+                    }
+                }
+
+                if (savepoint) {
+                    await conn.query('RELEASE SAVEPOINT onu_mapping_item');
+                }
+            } catch (error) {
+                report.pppWriteErrors++;
+                addError('ppp_mapping', onu.id, error);
+
+                if (savepoint) {
+                    try {
+                        await rollbackSavepoint(conn, true);
+                        await conn.query(
+                            'RELEASE SAVEPOINT onu_mapping_item'
+                        );
+                    } catch (rollbackError) {
+                        // Connection/transaction may be unusable.
+                        throw new Error(
+                            `ONU ${onu.id} PPP mapping failed and its ` +
+                            `savepoint could not be recovered: ` +
+                            String(rollbackError.message || rollbackError)
+                        );
+                    }
+                }
+            }
+        }
+
+        /*
+         * Second pass: single primary link.
+         * Ambiguous decisions are counted and skipped, not fatal.
+         */
+        for (const decision of decisions) {
+            switch (decision.status) {
+                case 'already_linked':
+                    report.alreadyLinked++;
+                    break;
+
+                case 'manually_unlinked':
+                    report.manuallyUnlinked++;
+                    break;
+
+                case 'unmatched':
+                    report.unmatched++;
+                    break;
+
+                case 'ambiguous':
+                    report.ambiguous++;
+                    break;
+
+                case 'multi':
+                    report.multiOnu++;
+                    report.multiCustomers += decision.customers.length;
+                    break;
+
+                case 'conflict':
+                    report.conflicts++;
+                    break;
+
+                case 'no_mac':
+                    report.noMac++;
+                    break;
+
+                case 'will_link':
+                    if (dryRun) {
+                        report.wouldLink++;
+                        break;
+                    }
+
+                    {
+                        let savepoint = false;
+
+                        try {
+                            savepoint = await createSavepoint(conn, false);
+
                             const outcome = await writeLink(
-                                conn, company, olt, decision, relinkUnlinked
+                                conn,
+                                company,
+                                olt,
+                                decision,
+                                relinkUnlinked
                             );
 
                             if (outcome === 'linked') {
@@ -626,25 +919,61 @@ async function autoMapOnus(pool, {
                                 decision.status = 'skipped';
                                 decision.reason = outcome;
                             }
-                        }
-                        break;
-                }
 
-                if (
-                    decision.status !== 'already_linked' &&
-                    report.details.length < MAX_DETAILS
-                ) {
-                    report.details.push(decision);
-                }
+                            await conn.query(
+                                'RELEASE SAVEPOINT onu_mapping_item'
+                            );
+                        } catch (error) {
+                            report.linkErrors++;
+                            addError('primary_link', decision.onuId, error);
+
+                            if (savepoint) {
+                                try {
+                                    await rollbackSavepoint(conn, true);
+                                    await conn.query(
+                                        'RELEASE SAVEPOINT onu_mapping_item'
+                                    );
+                                } catch (rollbackError) {
+                                    throw new Error(
+                                        `ONU ${decision.onuId} primary link ` +
+                                        `failed and its savepoint could not ` +
+                                        `be recovered: ` +
+                                        String(
+                                            rollbackError.message || rollbackError
+                                        )
+                                    );
+                                }
+                            }
+
+                            report.skippedAtWrite++;
+                            decision.status = 'skipped';
+                            decision.reason = 'write_error';
+                        }
+                    }
+                    break;
             }
 
-            if (!dryRun) await conn.commit();
-        } catch (error) {
-            if (!dryRun) await conn.rollback().catch(() => {});
-            throw error;
+            if (
+                decision.status !== 'already_linked' &&
+                report.details.length < MAX_DETAILS
+            ) {
+                report.details.push(decision);
+            }
+        }
+
+        if (!dryRun) {
+            await conn.commit();
+            transactionStarted = false;
         }
 
         return report;
+    } catch (error) {
+        if (transactionStarted) {
+            await conn.rollback().catch(() => {});
+            transactionStarted = false;
+        }
+
+        throw error;
     } finally {
         conn.release();
     }

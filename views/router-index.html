@@ -4,56 +4,25 @@
 <head>
 
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <title>Mikrotik</title>
 
-    <title>MikroTik Router Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-    <link
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-        rel="stylesheet"
-    >
-
-    <link
-        rel="stylesheet"
-        href="/assets/css/sidebar.css"
-    >
-
-    <link
-        rel="stylesheet"
-        href="/assets/css/topbar.css"
-    >
-
-    <link
-        rel="stylesheet"
-        href="/assets/css/router.css"
-    >
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/router.css">
 
 </head>
 
-
 <body>
 
-
-<!-- =========================================================
-     SIDEBAR
-========================================================= -->
-
+<!-- SIDEBAR -->
 <div id="sidebarContainer"></div>
 
-
-<!-- =========================================================
-     TOPBAR
-========================================================= -->
-
+<!-- TOPBAR -->
 <div id="topbarContainer"></div>
 
 
@@ -63,176 +32,92 @@
 
 <div class="main-content">
 
-    <div class="container-fluid">
+    <div class="router-wrap">
 
-        <div class="card shadow-sm border-0">
+        <!-- PAGE HEADER -->
+        <div class="router-page-header">
 
+            <h4 class="router-page-title" id="routerPanelTitle">Mikrotik</h4>
 
-            <!-- =================================================
-                 HEADER
-            ================================================== -->
+            <div class="router-header-actions">
 
-            <div class="card-header bg-primary text-white">
+                <button type="button" class="header-icon-btn" id="refreshRouters" title="Refresh">
+                    <i class="fa fa-rotate-right"></i>
+                </button>
 
-                <div class="d-flex justify-content-between align-items-center">
-
-                    <div class="d-flex align-items-center">
-
-                        <span
-                            class="badge bg-light text-primary fs-6 me-2 px-3 py-2"
-                        >
-
-                            <i class="fa fa-server"></i>
-
-                            MikroTik
-
-                        </span>
-
-                        <h5
-                            class="mb-0 text-white fw-bold"
-                            id="routerPanelTitle"
-                        >
-                            Router Manager
-                        </h5>
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        class="btn btn-light btn-sm"
-                        id="addRouter"
-                    >
-
-                        <i class="fa fa-plus"></i>
-
-                        Add Router
-
-                    </button>
-
-                </div>
+                <button type="button" class="header-icon-btn" id="addRouter" title="Add Router">
+                    <i class="fa fa-plus"></i>
+                </button>
 
             </div>
 
-
-            <!-- =================================================
-                 BODY
-            ================================================== -->
-
-            <div class="card-body">
+        </div>
 
 
-                <!-- =================================================
-                     TOOLBAR
-                ================================================== -->
+        <!-- CARD -->
+        <div class="router-card">
 
-                <div
-                    class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
+            <!-- TOOLBAR -->
+            <div class="router-toolbar">
+
+                <div class="router-toolbar-left">
+
+                    <i class="fa fa-gear router-toolbar-icon"></i>
+
+                    <span class="router-total-label">Total Data:</span>
+
+                    <span class="router-pill" id="totalRouter">0</span>
+
+                    <span class="router-company" id="companyInfo"></span>
+
+                </div>
+
+                <input
+                    type="text"
+                    id="routerSearch"
+                    class="router-search"
+                    placeholder="Search"
+                    autocomplete="off"
                 >
 
-                    <div>
-
-                        <span
-                            class="badge bg-primary px-3 py-2"
-                            id="companyInfo"
-                        >
-                            Loading...
-                        </span>
-
-                        <span
-                            class="badge bg-secondary px-3 py-2 ms-2"
-                            id="totalRouter"
-                        >
-                            Total Router: 0
-                        </span>
-
-                    </div>
+            </div>
 
 
-                    <div class="d-flex gap-2">
+            <!-- TABLE -->
+            <div class="table-responsive router-table-wrap">
 
-                        <input
-                            type="text"
-                            id="routerSearch"
-                            class="form-control form-control-sm"
-                            placeholder="Search router..."
-                        >
+                <table class="table align-middle mb-0" id="routerTable">
 
-                        <button
-                            type="button"
-                            class="btn btn-outline-primary btn-sm"
-                            id="refreshRouters"
-                            title="Refresh"
-                        >
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>User Name</th>
+                            <th>Host</th>
+                            <th>Port</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
 
-                            <i class="fa fa-refresh"></i>
+                    <tbody id="routerTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fa fa-spinner fa-spin me-1"></i> Loading...
+                            </td>
+                        </tr>
+                    </tbody>
 
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- =================================================
-                     TABLE
-                ================================================== -->
-
-                <div class="table-responsive">
-
-                    <table
-                        class="table table-hover align-middle mb-0"
-                        id="routerTable"
-                    >
-
-                        <thead>
-
-                            <tr>
-
-                                <th>#</th>
-
-                                <th>Name</th>
-
-                                <th>Username</th>
-
-                                <th>IP</th>
-
-                                <th>Port</th>
-
-                                <th>Status</th>
-
-                                <th class="text-center">
-                                    Action
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody id="routerTableBody">
-
-                            <tr>
-
-                                <td
-                                    colspan="7"
-                                    class="text-center text-muted py-4"
-                                >
-
-                                    Loading...
-
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
+                </table>
 
             </div>
 
+        </div>
+
+
+        <!-- FOOTER -->
+        <div class="router-footer">
+            &copy; Shunno IT - <span id="routerYear"></span>
         </div>
 
     </div>
@@ -240,51 +125,19 @@
 </div>
 
 
-<!-- =========================================================
-     MODAL ROOT
-========================================================= -->
-
+<!-- MODAL ROOT -->
 <div id="modalRoot"></div>
 
 
-<!-- =========================================================
-     BOOTSTRAP
-========================================================= -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
-
-
-<!-- =========================================================
-     SIDEBAR LOADER
-========================================================= -->
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/sidebar-loader.js"></script>
-
-
-<!-- =========================================================
-     TOPBAR LOADER
-========================================================= -->
-
 <script src="/assets/js/topbar-loader.js"></script>
-
-
-<!-- =========================================================
-     SWEETALERT
-========================================================= -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/sweetalert2@11"
-></script>
-
-
-<!-- =========================================================
-     ROUTER MANAGER JS
-========================================================= -->
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="/assets/js/router-index.js"></script>
 
+<script>
+    document.getElementById("routerYear").textContent = new Date().getFullYear();
+</script>
 
 </body>
 

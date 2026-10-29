@@ -153,10 +153,24 @@ class CDataDriver extends EcomDriver {
                         `show ont basic-info ${pon} all`,
                         `show ont basic-info ${iface} ${pon} all`
                     ]);
+console.log(
+    '[CDATA BASIC-INFO RAW]',
+    'Interface:', iface,
+    'PON:', pon,
+    '\n',
+    String(basicOutput).slice(0, 8000)
+);
                     opticalOutput = await this.runFirstSupported([
                         `show ont optical-info ${pon} all`,
                         `show ont optical-info ${iface} ${pon} all`
                     ]);
+                    console.log(
+    '[CDATA OPTICAL-INFO RAW]',
+    'Interface:', iface,
+    'PON:', pon,
+    '\n',
+    String(opticalOutput).slice(0, 4000)
+);
                 } catch (err) {
                     failures.push(
                         `${iface} PON ${pon}: ${err.message}`
@@ -382,6 +396,17 @@ class CDataDriver extends EcomDriver {
 
             if (kind === "basic") {
                 const fields = rest.split(/\s+/).filter(Boolean);
+
+                // VERIFIED on the real OLT (probe 2026-10-29): an offline ONT
+                // is listed with "--" instead of Type/Distance/Up time, e.g.
+                //   0/0  2  13  48:AD:08:4F:24:85 --
+                // and the footer counts it ("Total: 62, online 56").
+                if (!fields.length || /^-+$/.test(fields[0])) {
+                    row.status = "Offline";
+                    row.run_state = "offline";
+                    rows.push(row);
+                    continue;
+                }
 
                 // The supplied PHP parser reads distance from column 6.
                 // Here, use the first numeric field after the MAC/type.

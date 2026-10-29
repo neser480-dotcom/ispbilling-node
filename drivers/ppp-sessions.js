@@ -38,11 +38,12 @@ async function collectPppSessions(pool, companyId, mikrotik) {
             result.routers++;
 
             for (const item of active) {
-                result.sessions.push({
-                    mac: item['caller-id'],
-                    username: item.name,
-                    address: item.address
-                });
+  result.sessions.push({
+    mac: item['caller-id'] || item.callerId || "",
+    username: item.name || item.username || "",
+    address: item.address || "",
+    routerId: String(row.mikrotik_id)
+});
             }
         } catch (error) {
             result.errors.push(`router ${row.mikrotik_id}: ${error.message}`);

@@ -128,6 +128,77 @@ function parseRows(output, pon, kind) {
 
 /*
 |--------------------------------------------------------------------------
+| OPTICAL / BASIC INFO PARSERS
+|--------------------------------------------------------------------------
+| Verified on the real OLT (probe 2026-10-28), inside "interface epon <F/S>":
+|
+|   show ont optical-info <PON> all
+|     0/1  1  8    10:af:8f:76:f5:9d   3.27   2.32   -15.69   13.85   59.75
+|                                      Volt   Tx     Rx       Bias     Temp
+|   show ont basic-info <PON> all
+|     0/1  1  8  10:AF:8F:76:F5:9D SFU   1279   0:01:55:17  0000
+|                                  Type  Dist(m) Up time     Model
+|--------------------------------------------------------------------------
+*/
+
+const NUM = "(-?\\d+(?:\\.\\d+)?)";
+
+const OPTICAL_LINE = new RegExp(
+    "^(\\d+\\/\\d+)\\s+(\\d+)\\s+(\\d+)\\s+" +
+    "((?:[0-9a-f]{2}:){5}[0-9a-f]{2})\\s+" +
+    [NUM, NUM, NUM, NUM, NUM].join("\\s+") + "$",
+    "i"
+);
+
+const BASIC_LINE =
+    /^(\d+\/\d+)\s+(\d+)\s+(\d+)\s+((?:[0-9a-f]{2}:){5}[0-9a-f]{2})\s+(\S+)\s+(\d+)\s+/i;
+
+function parseOpticalInfo(output) {
+    const rows = [];
+
+    for (const raw of stripAnsi(output).replace(/\r/g, "").split("\n")) {
+        const m = raw.trim().match(OPTICAL_LINE);
+
+        if (!m) continue;
+
+        rows.push({
+            f_s: m[1],
+            pon: Number(m[2]),
+            ont_id: Number(m[3]),
+            onu_mac: cleanMac(m[4]),
+            voltage: Number(m[5]),
+            tx_power: Number(m[6]),
+            rx_power: Number(m[7]),
+            bias_current: Number(m[8]),
+            temperature: Number(m[9])
+        });
+    }
+
+    return rows;
+}
+
+function parseBasicInfo(output) {
+    const rows = [];
+
+    for (const raw of stripAnsi(output).replace(/\r/g, "").split("\n")) {
+        const m = raw.trim().match(BASIC_LINE);
+
+        if (!m) continue;
+
+        rows.push({
+            f_s: m[1],
+            pon: Number(m[2]),
+            ont_id: Number(m[3]),
+            onu_mac: cleanMac(m[4]),
+            distance: Number(m[6])
+        });
+    }
+
+    return rows;
+}
+
+/*
+|--------------------------------------------------------------------------
 | ECOM TELNET DRIVER
 |--------------------------------------------------------------------------
 */
@@ -523,30 +594,10 @@ class EcomDriver {
             throw new Error("OLT Telnet is not connected");
         }
 
-   const cmd = String(command).trim();
+        const cmd = String(command).trim();
 
-// Clear stale input before sending the command.
-// Do not change the command text or remove internal spaces.
-const staleInput = await this.readAvailable(100);
-
-if (staleInput) {
-    console.log(
-        "[TELNET PRE-COMMAND BUFFER]",
-        JSON.stringify(staleInput)
-    );
-}
-
-console.log(
-    "[TELNET COMMAND SENT]",
-    JSON.stringify(cmd)
-);
-
-console.log(
-    "[TELNET COMMAND HEX]",
-    Buffer.from(cmd + "\r\n", "utf8").toString("hex")
-);
-
-await this.write(cmd + "\r\n");
+        await this.readAvailable(100);
+        await this.write(cmd + "\r\n");
 
         let output = "";
         const deadline = Date.now() + timeout;
@@ -561,22 +612,12 @@ await this.write(cmd + "\r\n");
                         "OLT Telnet connection closed while executing: " + cmd
                     );
             }
-const chunk = await this.readAvailable(150);
 
-if (chunk) {
-    if (cmd === "show ddm-info all") {
-        console.log(
-            "[CDATA RX RAW]",
-            JSON.stringify(chunk)
-        );
-        console.log(
-            "[CDATA RX HEX]",
-            Buffer.from(chunk, "utf8").toString("hex")
-        );
-    }
+            const chunk = await this.readAvailable(150);
 
-    output += chunk;
-}
+            if (chunk) {
+                output += chunk;
+            }
 
             if (hasMorePrompt(output)) {
                 await this.write(" ");
@@ -643,6 +684,11 @@ if (chunk) {
     }
 
     async enterConfig() {
+        // Already in global config mode: "config" would only be rejected.
+        if (/\(config\)#\s*$/.test(this.prompt || "")) {
+            return "";
+        }
+
         let output = await this.command("config", 8000);
 
         if (/unknown command|invalid input/i.test(output)) {
@@ -722,11 +768,113 @@ if (chunk) {
             macs.add(row.onu_mac);
         }
 
+        const optical = await this.collectOptical(rows);
+
         return rows.map(row => ({
             ...row,
+            ...(optical.get(
+                `${row.f_s}:${row.pon}:${row.ont_id}`
+            ) || {}),
             olt_model: this.model,
             vendor: this.vendor
         }));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | OPTICAL POWER / DISTANCE (read only, optional)
+    |--------------------------------------------------------------------------
+    | Needs "interface epon <F/S>". Any failure only leaves these readings
+    | empty; the ONU list itself is never affected. Values are matched by
+    | F/S + PON + ONT-ID and must also carry the same MAC as the ONU row.
+    |--------------------------------------------------------------------------
+    */
+
+    async collectOptical(rows) {
+        const result = new Map();
+
+        this.opticalErrors = [];
+
+        const ports = new Map(); // f_s -> Set(pon)
+
+        for (const row of rows) {
+            if (!ports.has(row.f_s)) ports.set(row.f_s, new Set());
+            ports.get(row.f_s).add(row.pon);
+        }
+
+        const macOf = new Map(
+            rows.map(row => [
+                `${row.f_s}:${row.pon}:${row.ont_id}`,
+                row.onu_mac
+            ])
+        );
+
+        const take = (items) => {
+            for (const item of items) {
+                const key = `${item.f_s}:${item.pon}:${item.ont_id}`;
+
+                // Never attach a reading to a different device.
+                if (macOf.get(key) !== item.onu_mac) continue;
+
+                const { f_s, pon, ont_id, onu_mac, ...values } = item;
+
+                result.set(key, { ...(result.get(key) || {}), ...values });
+            }
+        };
+
+        try {
+            await this.enterConfig();
+
+            for (const [fs, pons] of ports) {
+                const entered = await this.command(
+                    `interface epon ${fs}`, 8000
+                );
+
+                if (/unknown command|invalid input|command failed/i
+                    .test(entered)) {
+                    this.opticalErrors.push(`interface epon ${fs}: rejected`);
+                    continue;
+                }
+
+                try {
+                    for (const pon of [...pons].sort((a, b) => a - b)) {
+                        for (const [kind, parse] of [
+                            ["optical-info", parseOpticalInfo],
+                            ["basic-info", parseBasicInfo]
+                        ]) {
+                            const command =
+                                `show ont ${kind} ${pon} all`;
+
+                            try {
+                                const text = await this.command(command, 30000);
+
+                                if (/unknown command|invalid input|command failed|incomplete command/i
+                                    .test(text)) {
+                                    this.opticalErrors.push(`${fs} ${command}: rejected`);
+                                    continue;
+                                }
+
+                                take(parse(text));
+                            } catch (error) {
+                                this.opticalErrors.push(
+                                    `${fs} ${command}: ${error.message}`
+                                );
+                            }
+                        }
+                    }
+                } finally {
+                    try {
+                        await this.command("exit", 8000);
+                    } catch (error) {
+                        this.opticalErrors.push("exit: " + error.message);
+                    }
+                }
+            }
+        } catch (error) {
+            this.opticalErrors.push(error.message);
+        }
+
+        return result;
     }
 
     async getONUList() {
@@ -822,5 +970,7 @@ if (chunk) {
 module.exports = {
     EcomDriver,
     cleanMac,
-    parseRows
+    parseRows,
+    parseOpticalInfo,
+    parseBasicInfo
 };

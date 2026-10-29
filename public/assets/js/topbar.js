@@ -1508,83 +1508,93 @@
        LOGOUT
     ========================================================= */
 
-    function initLogout() {
+function initLogout() {
 
-        const logoutBtn =
-            getElement(
-                'logoutBtn'
+    const logoutBtn = getElement('logoutBtn');
+
+    if (!logoutBtn) {
+        return;
+    }
+
+    if (logoutBtn.dataset.bound === 'true') {
+        return;
+    }
+
+    logoutBtn.dataset.bound = 'true';
+
+    logoutBtn.addEventListener('click', async function (event) {
+
+        event.preventDefault();
+
+        if (logoutBtn.dataset.loggingOut === 'true') {
+            return;
+        }
+
+        logoutBtn.dataset.loggingOut = 'true';
+
+        try {
+
+            // প্রথমে বর্তমান session-এর CSRF token নিন
+            const csrfResponse = await fetch('/api/auth/csrf', {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!csrfResponse.ok) {
+                throw new Error('CSRF token পাওয়া যায়নি।');
+            }
+
+            const csrfData = await csrfResponse.json();
+            const csrfToken = csrfData.csrf_token;
+
+            if (!csrfData.success || !csrfToken) {
+                throw new Error('CSRF token অনুপস্থিত।');
+            }
+
+            // CSRF token সহ Logout request
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    csrf_token: csrfToken
+                })
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                    result.message || 'Logout ব্যর্থ হয়েছে।'
+                );
+            }
+
+            window.location.replace('/');
+
+        } catch (error) {
+
+            console.error('Logout error:', error);
+
+            alert(
+                'Logout হয়নি: ' +
+                (error.message || 'আবার চেষ্টা করুন।')
             );
 
-
-        if (!logoutBtn) {
-            return;
+            delete logoutBtn.dataset.loggingOut;
         }
 
+    });
 
-        if (
-            logoutBtn.dataset.bound ===
-            'true'
-        ) {
-            return;
-        }
+}
 
-
-        logoutBtn.dataset.bound =
-            'true';
-
-
-        logoutBtn.addEventListener(
-            'click',
-            async function (event) {
-
-                event.preventDefault();
-
-
-                try {
-
-                    const response =
-                        await fetch(
-                            '/api/auth/logout',
-                            {
-                                method: 'POST',
-
-                                credentials:
-                                    'same-origin',
-
-                                headers: {
-                                    'Accept':
-                                        'application/json'
-                                }
-                            }
-                        );
-
-
-                    if (response.ok) {
-
-                        window.location.href =
-                            '/';
-
-                        return;
-
-                    }
-
-                } catch (error) {
-
-                    console.error(
-                        'Logout error:',
-                        error
-                    );
-
-                }
-
-
-                window.location.href =
-                    '/';
-
-            }
-        );
-
-    }
 
 
     /* =========================================================

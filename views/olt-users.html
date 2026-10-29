@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/sidebar.css">
     <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -26,8 +27,8 @@
             overflow-x: clip;
             background: var(--olt-page-bg);
             color: var(--olt-text);
-            font-family: Arial, "Segoe UI", sans-serif;
-            font-size: 13px;
+            font-family: "Hind Siliguri", "Noto Sans Bengali", "Segoe UI", Arial, sans-serif;
+            font-size: 15px;
         }
         .main-content {
             min-width: 0; max-width: 100%; margin-left: 260px; margin-top: 70px;
@@ -96,37 +97,45 @@
             background: #297acb; border: 1px solid rgba(255,255,255,.4);
             border-radius: 6px; outline: none; font-size: 13px;
         }
+        .olt-search input { border: 0; }
         .olt-search input::placeholder { color: rgba(255,255,255,.8); }
         .olt-search input:focus { background: #fff; color: #333; border-color: #fff; }
         .olt-table-scroll { width: 100%; margin-top: 16px; overflow-x: auto; }
         .olt-table { width: 100%; margin: 0; border-collapse: collapse; }
+        .olt-table { --bs-table-bg: transparent; }
         .olt-table th {
-            padding: 12px 8px; color: #475467; background: #fff; font-size: 12px;
-            font-weight: 700; text-align: left; border-bottom: 2px solid #eaecf0; white-space: nowrap;
+            padding: 12px 8px; color: #444; background: #fff; font-size: 15px;
+            font-weight: 600; text-align: left; line-height: 1.6; border-bottom: 0;
+            vertical-align: bottom;
         }
-        .olt-table td { padding: 14px 8px; font-size: 12px; line-height: 1.45; vertical-align: middle; border-bottom: 1px solid #f2f4f7; }
-        .olt-table tbody tr { background: #fff; }
-        .olt-table tbody tr:nth-child(even) { background: #fbfcfe; }
-        .olt-table tbody tr:hover { background: #f0f7ff; }
+        .olt-table td {
+            padding: 12px 8px; font-size: 15px; line-height: 1.6; color: #555;
+            vertical-align: middle; border-bottom: 0; background: transparent;
+        }
+        .olt-table tbody tr:nth-child(odd) { background: #f2f2f2; }
+        .olt-table tbody tr:nth-child(even) { background: #fff; }
+        .olt-table tbody tr:hover { background: #e9f2fc; }
+        .olt-table td:first-child { text-align: center; }
         .olt-sort-button {
             border: 0; background: transparent; padding: 0; font: inherit; color: inherit;
             cursor: pointer; display: inline-flex; align-items: center; gap: 3px;
         }
-        .olt-sort-mark { color: #3288df; font-size: 11px; }
-        .olt-primary-text { display: block; color: #344054; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
-        .olt-sub-text { display: block; margin-top: 5px; color: #667085; font-size: 11px; overflow-wrap: anywhere; }
-        .olt-mac { display: block; color: #344054; font-size: 11px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+        .olt-sort-button { text-align: left; font-weight: 600; }
+        .olt-sort-mark { color: #3288df; font-size: 14px; white-space: nowrap; }
+        .olt-primary-text { display: block; color: inherit; font-size: inherit; font-weight: 400; overflow-wrap: anywhere; }
+        .olt-sub-text { display: block; margin-top: 0; color: inherit; font-size: inherit; white-space: nowrap; }
+        .olt-mac { display: block; color: inherit; font-size: inherit; font-family: inherit; white-space: nowrap; }
         .olt-field-label { display: inline-block; min-width: 54px; color: #98a2b3; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
-        .olt-metric { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
-        .olt-metric + .olt-metric { margin-top: 5px; }
-        .olt-metric-value { color: #344054; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .olt-metric { display: block; white-space: nowrap; }
+        .olt-metric + .olt-metric { margin-top: 0; }
+        .olt-metric-value { color: inherit; font-weight: 400; font-variant-numeric: tabular-nums; }
         .olt-unlinked { color: #b54708; background: #fffaeb; border: 1px solid #fedf89; border-radius: 5px; padding: 3px 6px; font-size: 10px; font-weight: 700; display: inline-block; }
         .olt-port-badge { display: inline-block; padding: 3px 7px; border-radius: 5px; background: #eff8ff; color: #175cd3; font-size: 11px; font-weight: 700; }
         .olt-status {
-            display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px;
+            display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px;
             font-weight: 700; margin-top: 4px; text-align: center; text-transform: lowercase;
         }
-        .olt-status.online { color: #fff; background: #12b76a; }
+        .olt-status.online { color: #fff; background: #198754; }
         .olt-status.offline { color: #fff; background: #f04438; }
         .olt-status.warning { color: #fff; background: #f79009; }
         .olt-status.unknown { color: #fff; background: #667085; }
@@ -147,7 +156,9 @@
         .olt-message.error { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
         .olt-message.info { color: #084298; background: #cfe2ff; border-color: #b6d4fe; }
         .olt-message.success { color: #0f5132; background: #d1e7dd; border-color: #a3cfbb; }
-        
+        .olt-ppp { display:block; color: inherit; font-size: inherit; white-space: nowrap; }
+        .olt-person + .olt-person { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #e4e7ec; }
+
 /* OLT Users Pagination */
 .olt-pagination {
     display: flex;
@@ -382,6 +393,7 @@ const columns = [
     ["power", "Rx & Tx Power"],
     ["distance", "Distance"],
     ["environment", "Voltage & Temperature"],
+    ["mapping", "ONU"],
     ["lastUpdate", "Last update"],
     ["action", "Action"]
 ];
@@ -393,6 +405,7 @@ let selectedOltId = "all";
 let oltList = [];
 let loading = false;
 let syncing = false;
+let mappingBusy = false;
 
 /* Pagination */
 let currentPage = 1;
@@ -440,6 +453,15 @@ function displayValue(value, suffix = "") {
     return value === null || value === undefined || value === ""
         ? "—"
         : `${value}${suffix}`;
+}
+
+// Plain numbers with two decimals (e.g. -21.14, 3.31, 50.00), no units.
+function fixed2(value) {
+    if (value === null || value === undefined || value === "") return "—";
+
+    const number = Number(value);
+
+    return Number.isFinite(number) ? number.toFixed(2) : String(value);
 }
 
 function showMessage(text, type = "info") {
@@ -519,6 +541,47 @@ async function apiPost(url, payload = {}) {
     });
 
     return parseResponse(response);
+}
+
+async function apiDelete(url) {
+    const token = await getCsrfToken();
+
+    const response = await fetch(url, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-CSRF-Token": token
+        },
+        body: JSON.stringify({ csrf_token: token })
+    });
+
+    return parseResponse(response);
+}
+
+function mappingSummary(m) {
+    if (!m) return "";
+    if (m.error) return ` Auto-map failed: ${m.error}`;
+
+    return ` Auto-map → ONU: ${m.totalOnu ?? 0}, ` +
+        `Linked: ${m.linked ?? m.wouldLink ?? 0}, ` +
+        `Already: ${m.alreadyLinked ?? 0}, ` +
+        `Manually unlinked: ${m.manuallyUnlinked ?? 0}, ` +
+        `No MAC: ${m.noMac ?? 0}, ` +
+        `Skipped: ${m.skippedAtWrite ?? 0}, ` +
+        `Switch customers: ${m.extraLinked ?? m.wouldExtra ?? 0}` +
+        (m.multiSupported === false ? " (run the onu_customer_links migration)" : "") +
+        ", " +
+        `Unmatched: ${m.unmatched ?? 0}, ` +
+        `Ambiguous: ${(m.ambiguous ?? 0) + (m.conflicts ?? 0)}. ` +
+        `PPP sessions: ${m.pppSessions ?? 0}` +
+        (m.pppInfoEnabled === false
+            ? " (run the onu_ppp_info migration to show caller-id MAC)"
+            : ` · MikroTik info saved: ${m.pppInfoSaved ?? 0}`) +
+        (m.pppErrors && m.pppErrors.length
+            ? ` (PPP error: ${m.pppErrors[0]})`
+            : ".");
 }
 
 function formatDate(value) {
@@ -613,10 +676,17 @@ function normalizeOnu(row, olt) {
         "";
 
     const ip =
+        row.ppp_ip ||
         row.ip_address ||
         row.ip ||
         row.customer_ip ||
         "";
+
+    const callerId = row.ppp_caller_id || "";
+
+    const extras = Array.isArray(row.extra_customers)
+        ? row.extra_customers
+        : [];
 
     const customerName =
         row.customer_name ||
@@ -629,7 +699,7 @@ function normalizeOnu(row, olt) {
         row.matched_customer_id ||
         "";
 
-    const customerLinked =
+    const primaryLinked =
         (
             row.matched_customer_id !== null &&
             row.matched_customer_id !== undefined &&
@@ -638,6 +708,9 @@ function normalizeOnu(row, olt) {
         row.is_linked === true ||
         row.linked === true ||
         Boolean(customerName);
+
+    const customerLinked = primaryLinked || extras.length > 0;
+    const customerCount = (primaryLinked ? 1 : 0) + extras.length;
 
     const name =
         customerName ||
@@ -709,8 +782,13 @@ function normalizeOnu(row, olt) {
         displayId: customerCode ? customerCode : row.id,
         customerName,
         customerLinked,
+        primaryLinked,
+        customerCount,
+        extras,
+        callerId,
+        mapping: customerCount > 1 ? "switch" : (customerLinked ? "linked" : "unlinked"),
         status: rawStatus,
-        alarm: String(alarm || "").replace(/[_-]+/g, " "),
+        alarm: String(alarm || "").replace(/_+/g, "-"),
         name,
         ip,
         routerMac,
@@ -722,33 +800,11 @@ function normalizeOnu(row, olt) {
             olt.vendor ||
             `OLT ${olt.id}`,
         port: pon,
-        rx: displayValue(
-            rx,
-            rx === null || rx === undefined || rx === ""
-                ? ""
-                : " dBm"
-        ),
-        tx: displayValue(
-            tx,
-            tx === null || tx === undefined || tx === ""
-                ? ""
-                : " dBm"
-        ),
+        rx: fixed2(rx),
+        tx: fixed2(tx),
         distance,
-        voltage: displayValue(
-            voltage,
-            voltage === null || voltage === undefined || voltage === ""
-                ? ""
-                : " V"
-        ),
-        temperature: displayValue(
-            temperature,
-            temperature === null ||
-            temperature === undefined ||
-            temperature === ""
-                ? ""
-                : " °C"
-        ),
+        voltage: fixed2(voltage),
+        temperature: fixed2(temperature),
         lastUpdate: lastUpdate
             ? formatDate(lastUpdate)
             : "—",
@@ -763,6 +819,11 @@ function normalizeOnu(row, olt) {
             mac,
             routerMac,
             serial,
+            callerId,
+            ...extras.flatMap(c => [
+                c.name, c.phone, c.pppoe_username,
+                c.customer_code, c.caller_id, c.ip
+            ]),
             pon,
             rawStatus,
             alarm,
@@ -781,7 +842,9 @@ function normalizeOnu(row, olt) {
 function renderHead() {
     head.innerHTML = `
         <tr>
-            ${columns.map(([key, label]) => `
+            ${columns.map(([key, label]) => key === "action"
+                ? `<th scope="col">${label}</th>`
+                : `
                 <th scope="col">
                     <button
                         type="button"
@@ -801,102 +864,152 @@ function renderHead() {
    TABLE CELLS
 -------------------------------------------------- */
 
+// Customers shown for one ONU row: the linked one plus every switch customer.
+function peopleOf(user) {
+    const people = [];
+
+    if (user.primaryLinked) {
+        people.push({
+            code: user.displayId,
+            name: user.customerName || user.name || "—",
+            ip: user.ip,
+            callerId: user.callerId
+        });
+    }
+
+    for (const extra of user.extras) {
+        people.push({
+            code: extra.customer_code || extra.id,
+            name: extra.name || extra.pppoe_username || "Customer",
+            ip: extra.ip,
+            callerId: extra.caller_id
+        });
+    }
+
+    return people;
+}
+
+// A switch ONU becomes one ordinary row per customer. Every row keeps the
+// ONU's master MAC and its shared readings (RX/TX, distance, ...).
+function expandSwitchRows(user) {
+    const people = peopleOf(user);
+
+    if (people.length < 2) return [user];
+
+    return people.map(person => ({
+        ...user,
+        displayId: person.code,
+        customerName: person.name,
+        name: person.name,
+        ip: person.ip || "",
+        callerId: person.callerId || "",
+        routerMac: "",
+        primaryLinked: true,
+        customerLinked: true,
+        customerCount: 1,
+        extras: [],
+        searchText: `${user.searchText} ${person.code} ${person.name} ${person.ip || ""} ${person.callerId || ""}`
+    }));
+}
+
 function getCell(user, key) {
     switch (key) {
-        case "customerId":
+        case "customerId": {
+            const people = peopleOf(user);
+            const badge = `
+                <span class="olt-status ${escapeHTML(user.status)}">
+                    ${escapeHTML(statusLabel(user.status))}
+                </span>`;
+
+            // Several customers (switch): each has its own ID, aligned with
+            // the name/IP block of the same customer.
+            if (people.length > 1) {
+                return people.map(person => `
+                    <div class="olt-person olt-person-id">
+                        <span class="olt-primary-text">
+                            ${escapeHTML(person.code)}
+                        </span>
+                        <span class="olt-sub-text">
+                            ${badge}
+                        </span>
+                    </div>
+                `).join("");
+            }
+
             return `
                 <div>
                     <span class="olt-primary-text">
                         ${escapeHTML(user.displayId)}
                     </span>
                 </div>
-                <span class="olt-status ${escapeHTML(user.status)}">
-                    ${escapeHTML(statusLabel(user.status))}
-                </span>
+                ${badge}
             `;
+        }
 
-        case "name":
-            return `
-                ${user.customerLinked
-                    ? `
-                        <strong class="olt-primary-text">
-                            ${escapeHTML(user.customerName || user.name || "—")}
-                        </strong>
-                    `
-                    : `
-                        <span class="olt-unlinked">
-                            Customer not linked
-                        </span>
-                    `
-                }
-                <span class="olt-sub-text">
-                    ${escapeHTML(user.ip || "—")}
-                </span>
-            `;
+        case "name": {
+            const people = peopleOf(user);
 
-        case "address": {
-            const routerMac = String(user.routerMac || "").trim();
-            const onuMac = String(user.onuMac || "").trim();
-
-            const sameMac =
-                routerMac &&
-                onuMac &&
-                routerMac.toLowerCase() === onuMac.toLowerCase();
-
-            if (sameMac) {
+            if (!people.length) {
                 return `
-                    <span class="olt-field-label">MAC</span>
-                    <span class="olt-mac">${escapeHTML(onuMac)}</span>
+                    <span class="olt-unlinked">Customer not linked</span>
+                    <span class="olt-sub-text">${escapeHTML(user.ip || "—")}</span>
                 `;
             }
 
-            if (!routerMac && !onuMac) {
-                return `<span class="olt-mac">—</span>`;
+            return people.map(person => `
+                <div class="olt-person">
+                    <strong class="olt-primary-text">${escapeHTML(person.name)}</strong>
+                    <span class="olt-sub-text">${escapeHTML(person.ip || "—")}</span>
+                </div>
+            `).join("");
+        }
+
+        case "address": {
+            const lines = [];
+            const seen = new Set();
+
+            const add = (value, cls = "olt-mac") => {
+                const text = String(value || "").trim();
+                const key = text.toLowerCase();
+
+                if (!text || seen.has(key)) return;
+
+                seen.add(key);
+                lines.push(`<span class="${cls}">${escapeHTML(text)}</span>`);
+            };
+
+            if (user.customerCount > 1) {
+                // Switch ONU: one master (ONU) MAC, then each customer's own.
+                add(user.onuMac);
+            } else {
+                add(user.routerMac);
+                add(user.onuMac);
             }
 
-            return `
-                ${routerMac ? `
-                    <div>
-                        <span class="olt-field-label">Router</span>
-                        <span class="olt-mac">${escapeHTML(routerMac)}</span>
-                    </div>
-                ` : ""}
+            // MikroTik caller-id MAC of every customer behind this ONU
+            add(user.callerId, "olt-ppp");
 
-                ${onuMac ? `
-                    <div class="olt-sub-text">
-                        <span class="olt-field-label">ONU</span>
-                        <span class="olt-mac">${escapeHTML(onuMac)}</span>
-                    </div>
-                ` : ""}
+            for (const extra of user.extras) {
+                add(extra.caller_id, "olt-ppp");
+            }
 
-                ${user.serial && user.serial !== onuMac ? `
-                    <span class="olt-sub-text">
-                        <span class="olt-field-label">S/N</span>
-                        ${escapeHTML(user.serial)}
-                    </span>
-                ` : ""}
-            `;
+            return lines.length
+                ? lines.join("")
+                : `<span class="olt-mac">—</span>`;
         }
 
         case "oltPort":
             return `
-                <span class="olt-primary-text">
-                    ${escapeHTML(user.oltPort)}
-                </span>
-                <span class="olt-sub-text">
-                    <span class="olt-field-label">Port</span>
-                    ${escapeHTML(user.port || "—")}
-                </span>
+                <span class="olt-primary-text">${escapeHTML(user.oltPort)}</span>
+                <span class="olt-sub-text">${escapeHTML(user.port || "—")}</span>
             `;
 
         case "power":
             return `
                 <div class="olt-metric">
-                    <span class="olt-field-label">RX</span>
                     <span class="olt-metric-value">${escapeHTML(user.rx)}</span>
                 </div>
                 <div class="olt-metric">
-                    <span class="olt-field-label">TX</span>
                     <span class="olt-metric-value">${escapeHTML(user.tx)}</span>
                 </div>
             `;
@@ -904,26 +1017,23 @@ function getCell(user, key) {
         case "distance":
             return `
                 <div class="olt-metric">
-                    <span class="olt-field-label">Range</span>
                     <span class="olt-metric-value">${escapeHTML(user.distance)}</span>
                 </div>
-                <div class="olt-sub-text">
-                    <span class="olt-field-label">Alarm</span>
-                    ${escapeHTML(user.alarm || "—")}
-                </div>
+                <div class="olt-sub-text">${escapeHTML(user.alarm || "")}</div>
             `;
 
         case "environment":
             return `
                 <div class="olt-metric">
-                    <span class="olt-field-label">Volt</span>
                     <span class="olt-metric-value">${escapeHTML(user.voltage)}</span>
                 </div>
                 <div class="olt-metric">
-                    <span class="olt-field-label">Temp</span>
                     <span class="olt-metric-value">${escapeHTML(user.temperature)}</span>
                 </div>
             `;
+
+        case "mapping":
+            return "";
 
         case "lastUpdate":
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
@@ -1229,7 +1339,8 @@ async function loadOnus(keepMessage = false) {
             .filter(item => item.status === "fulfilled")
             .map(item => item.value);
 
-        users = loaded.flatMap(item => item.rows);
+        users = loaded.flatMap(item => item.rows)
+            .flatMap(expandSwitchRows);
 
         currentPage = 1;
         renderRows();
@@ -1315,7 +1426,8 @@ async function syncSelectedOlt(button, targetOltId) {
             `${result.message || "ONU synchronization completed."} ` +
             `Inserted: ${details.inserted ?? 0}, ` +
             `Updated: ${details.updated ?? 0}, ` +
-            `Skipped: ${details.skipped ?? 0}.`,
+            `Skipped: ${details.skipped ?? 0}.` +
+            mappingSummary(details.mapping),
             "success"
         );
 
@@ -1332,6 +1444,10 @@ async function syncSelectedOlt(button, targetOltId) {
     }
 }
 
+
+/* --------------------------------------------------
+   MANUAL LINK / UNLINK AND AUTO MAP
+-------------------------------------------------- */
 
 /* --------------------------------------------------
    FILTER PANEL
@@ -1537,6 +1653,7 @@ body.addEventListener("click", async event => {
         !syncButton ||
         syncButton.disabled ||
         syncing ||
+        mappingBusy ||
         loading
     ) {
         return;
