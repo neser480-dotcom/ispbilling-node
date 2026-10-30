@@ -5,6 +5,7 @@ const db = require("../../config/database");
 const SYSTEM_PERMISSIONS = {
     customer_id_auto_generate: "Customer ID Auto Generate",
     bulk_area_edit: "Bulk Area Edit",
+    area_management: "Area Management",
     bulk_status_edit: "Bulk Status Edit",
     bulk_auto_disable_edit: "Bulk Auto Disable Edit",
     bulk_package_edit: "Bulk Package Edit",
@@ -43,8 +44,9 @@ const SYSTEM_PERMISSIONS = {
     interface_monitor: "Interface Monitor",
     pole_box: "Pole Box",
 
-    olt_add: "OLT Add",
-    olt_user_monitoring: "OLT User Monitoring",
+olt_add: "OLT Add",
+olt_delete: "OLT Delete",
+olt_user_monitoring: "OLT User Monitoring",
 
     reseller_add: "Reseller Add",
     multiple_manager: "Multiple Manager",

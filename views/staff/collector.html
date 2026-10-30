@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Collector</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/collector.css"
+    >
+
+</head>
+
+
+<body class="staff-page">
+
+
+<!-- SIDEBAR -->
+
+<div id="sidebarContainer"></div>
+
+
+<!-- TOPBAR -->
+
+<div id="topbarContainer"></div>
+
+
+<!-- MAIN -->
+
+<div class="main-content">
+
+
+    <!-- ==================================================
+         BLUE HEADER CARD
+    ================================================== -->
+
+    <div class="staff-header-card">
+
+        <h1>Collector</h1>
+
+        <div class="staff-header-actions">
+
+            <!-- RELOAD -->
+
+            <button
+                type="button"
+                class="staff-icon-btn"
+                id="reloadCollector"
+                title="Reload"
+            >
+                <i class="fa fa-rotate-right"></i>
+            </button>
+
+
+            <!-- ADD -->
+
+            <button
+                type="button"
+                class="staff-icon-btn"
+                id="addCollectorBtn"
+                title="Add Collector"
+            >
+                <i class="fa fa-user-plus"></i>
+            </button>
+
+
+            <!-- TUTORIAL -->
+
+            <button
+                type="button"
+                class="staff-icon-btn"
+                id="tutorialCollector"
+                title="Tutorial"
+            >
+                <i class="fa-regular fa-circle-play"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         WHITE BODY CARD
+    ================================================== -->
+
+    <div class="staff-body-card">
+
+
+        <!-- DATA STRIP -->
+
+        <div class="staff-strip">
+
+            <div class="staff-total">
+
+                <i class="fa fa-gear me-2"></i>
+
+                Total Data:
+
+                <span
+                    id="totalCollectorCount"
+                    class="staff-count-pill"
+                >0</span>
+
+            </div>
+
+
+            <div class="staff-search-wrap">
+
+                <input
+                    type="text"
+                    id="collectorSearch"
+                    class="form-control"
+                    placeholder="Search"
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </div>
+
+
+        <!-- TABLE -->
+
+        <div class="table-responsive">
+
+            <table
+                class="table staff-table align-middle mb-0"
+                id="collectorTable"
+            >
+
+                <thead>
+
+                    <tr>
+
+                        <th
+                            width="60"
+                            data-sort="id"
+                        >
+                            # <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th data-sort="name">
+                            Name <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th data-sort="mobile">
+                            Mobile <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th data-sort="email">
+                            E-mail <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th data-sort="address">
+                            Address <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th data-sort="status">
+                            Status <span class="sort-icon">⇅</span>
+                        </th>
+
+                        <th width="80">
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="collectorTableBody">
+
+                    <tr>
+
+                        <td
+                            colspan="7"
+                            class="text-center py-5 text-muted"
+                        >
+
+                            <i
+                                class="fa fa-spinner fa-spin fa-2x mb-2 d-block"
+                            ></i>
+
+                            Loading...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <div class="staff-footer">
+        &copy; Shunno IT - 2026
+    </div>
+
+
+</div>
+
+
+<!-- ==================================================
+     ADD / EDIT COLLECTOR MODAL  (একটাই মডাল, দুই কাজে)
+     Add  : Profile + Area
+     Edit : Profile + Area + Permissions
+================================================== -->
+
+<div
+    class="modal fade"
+    id="collectorModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-dialog-scrollable staff-modal-wide"
+    >
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="collectorModalTitle"
+                >
+                    Add New Collector
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <form
+                    id="collectorForm"
+                    novalidate
+                >
+
+                    <!-- TABS -->
+
+                    <ul
+                        class="nav nav-tabs"
+                        role="tablist"
+                    >
+
+                        <li class="nav-item">
+                            <button
+                                type="button"
+                                class="nav-link active"
+                                id="tabProfileBtn"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabProfile"
+                            >
+                                Profile
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button
+                                type="button"
+                                class="nav-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabArea"
+                            >
+                                Area
+                            </button>
+                        </li>
+
+                        <li
+                            class="nav-item d-none"
+                            id="permissionTabItem"
+                        >
+                            <button
+                                type="button"
+                                class="nav-link"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabPermissions"
+                            >
+                                Permissions
+                            </button>
+                        </li>
+
+                    </ul>
+
+
+                    <div class="tab-content pt-3">
+
+
+                        <!-- ========== PROFILE ========== -->
+
+                        <div
+                            class="tab-pane fade show active"
+                            id="tabProfile"
+                        >
+
+                            <div class="staff-form-wrap">
+
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label"
+                                        for="fName"
+                                    >
+                                        Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="fName"
+                                        autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label"
+                                        for="fMobile"
+                                    >
+                                        Mobile <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="fMobile"
+                                        autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label"
+                                        for="fNid"
+                                    >
+                                        NID No <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="fNid"
+                                        autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label"
+                                        for="fAddress"
+                                    >
+                                        Address <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="fAddress"
+                                        autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="mb-2">
+                                    <label
+                                        class="form-label"
+                                        for="fEmail"
+                                    >
+                                        E-mail <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        class="form-control"
+                                        id="fEmail"
+                                        autocomplete="off"
+                                    >
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label d-block mb-1">
+                                        Status <span class="text-danger">*</span>
+                                    </label>
+
+                                    <div class="d-flex gap-5">
+
+                                        <div class="form-check">
+                                            <input
+                                                class="form-check-input"
+                                                type="radio"
+                                                name="fStatus"
+                                                id="fStatusActive"
+                                                value="active"
+                                                checked
+                                            >
+                                            <label
+                                                class="form-check-label"
+                                                for="fStatusActive"
+                                            >
+                                                Active
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input
+                                                class="form-check-input"
+                                                type="radio"
+                                                name="fStatus"
+                                                id="fStatusInactive"
+                                                value="inactive"
+                                            >
+                                            <label
+                                                class="form-check-label"
+                                                for="fStatusInactive"
+                                            >
+                                                Inactive
+                                            </label>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <div class="mb-1">
+                                    <label class="form-label d-block mb-1">
+                                        Add Staff
+                                    </label>
+
+                                    <div class="form-check">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            id="fIsStaff"
+                                        >
+                                        <label
+                                            class="form-check-label"
+                                            for="fIsStaff"
+                                        >
+                                            Add Staff
+                                        </label>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ========== AREA ========== -->
+
+                        <div
+                            class="tab-pane fade"
+                            id="tabArea"
+                        >
+
+                            <div
+                                class="staff-area-box"
+                                id="areaGrid"
+                            ></div>
+
+                        </div>
+
+
+                        <!-- ========== PERMISSIONS (Edit only) ========== -->
+
+                        <div
+                            class="tab-pane fade"
+                            id="tabPermissions"
+                        >
+
+                            <div
+                                class="staff-perm-grid"
+                                id="permissionGrid"
+                            ></div>
+
+                        </div>
+
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    id="collectorSubmit"
+                >
+                    Submit
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ==================================================
+     RESET PASSWORD MODAL
+================================================== -->
+
+<div
+    class="modal fade"
+    id="resetPasswordModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog staff-modal-small">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Reset Password
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <div class="form-check mb-3">
+                    <input
+                        class="form-check-input"
+                        type="radio"
+                        name="resetMode"
+                        id="resetDefault"
+                        value="default"
+                        checked
+                    >
+                    <label
+                        class="form-check-label"
+                        for="resetDefault"
+                    >
+                        Default Password
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input
+                        class="form-check-input"
+                        type="radio"
+                        name="resetMode"
+                        id="resetMobile"
+                        value="mobile"
+                    >
+                    <label
+                        class="form-check-label"
+                        for="resetMobile"
+                    >
+                        Mobile number password
+                    </label>
+                </div>
+
+                <div class="form-check mb-1">
+                    <input
+                        class="form-check-input"
+                        type="radio"
+                        name="resetMode"
+                        id="resetManual"
+                        value="manual"
+                    >
+                    <label
+                        class="form-check-label"
+                        for="resetManual"
+                    >
+                        Manually Password
+                    </label>
+                </div>
+
+                <input
+                    type="text"
+                    class="form-control form-control-sm mt-2 d-none"
+                    id="resetPasswordInput"
+                    placeholder="New password (min 6 characters)"
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm"
+                    id="resetPasswordSave"
+                >
+                    Save
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- JS -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/sweetalert2@11"
+></script>
+
+<script src="/assets/js/sidebar-loader.js"></script>
+
+<script src="/assets/js/topbar-loader.js"></script>
+
+<script src="/assets/js/collector.js"></script>
+
+
+</body>
+
+</html>

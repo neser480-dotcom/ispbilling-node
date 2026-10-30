@@ -1,6 +1,0 @@
-===== [config] show ont register-statistics ? =====
-show ont register-statistics 
-  all  All port
-E08EP-4S+(config)# show ont register-statistics 
-% Command incomplete.
-E08EP-4S+(config)#

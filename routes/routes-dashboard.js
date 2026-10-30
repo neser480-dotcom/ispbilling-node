@@ -173,7 +173,7 @@ function monthRange(year, month) {
 
 router.get("/", (req, res) => {
 
-    res.sendFile("dashboard.html", {
+    res.sendFile("dashboard/dashboard.html", {
         root: path.join(
             __dirname,
             "..",

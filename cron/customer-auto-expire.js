@@ -14,7 +14,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const service = require("../services/customer-auto-expire.service");
+const service = require("../services/customers/customer-auto-expire.service");
 
 const LOCK_FILE = path.join(__dirname, "customer-auto-expire.lock");
 const LOG_FILE = path.join(__dirname, "customer-auto-expire.log");

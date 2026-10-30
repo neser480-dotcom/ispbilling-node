@@ -20,6 +20,10 @@ const SYSTEM_PERMISSIONS = {
         label: "Bulk Area Edit",
         category: "customer"
     },
+    area_management: {
+    label: "Area Management",
+    category: "customer"
+},
     bulk_status_edit: {
         label: "Bulk Status Edit",
         category: "customer"
@@ -152,14 +156,18 @@ const SYSTEM_PERMISSIONS = {
         category: "network"
     },
 
-    olt_add: {
-        label: "OLT Add",
-        category: "olt"
-    },
-    olt_user_monitoring: {
-        label: "OLT User Monitoring",
-        category: "olt"
-    },
+ olt_add: {
+    label: "OLT Add",
+    category: "olt"
+},
+olt_delete: {
+    label: "OLT Delete",
+    category: "olt"
+},
+olt_user_monitoring: {
+    label: "OLT User Monitoring",
+    category: "olt"
+},
 
     reseller_add: {
         label: "Reseller Add",

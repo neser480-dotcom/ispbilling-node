@@ -511,4 +511,18 @@
         );
         if (form) initForm(form);
     });
+// Initialise edit forms inserted into the modal later (for example the
+    // Update Profile panel inside the Profile popup).
+    function watchModalBody() {
+        const body = document.getElementById("customerActionModalBody");
+        if (!body || body.dataset.editWatch === "1") return;
+        body.dataset.editWatch = "1";
+        new MutationObserver(function () {
+            body.querySelectorAll("form.customer-edit-form").forEach(initForm);
+        }).observe(body, { childList: true, subtree: true });
+    }
+    watchModalBody();
+    document.addEventListener("DOMContentLoaded", watchModalBody);
+
+    
 })();

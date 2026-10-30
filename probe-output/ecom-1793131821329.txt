@@ -1,3 +1,0 @@
-===== [config] show ont basic-info 0/0 =====
-% Command incomplete.
-E08EP-4S+(config)#

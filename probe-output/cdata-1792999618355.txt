@@ -1,9 +1,0 @@
-===== [config] show mac-address ont 0/0/1 ? =====
-show mac-address ont 0/0/1 
- <1-64>               - ONT ID. <U><1-64>
-
-
-Modokande OLT(config)# show mac-address ont 0/0/1 
-Command incomplete.
-
-Modokande OLT(config)#

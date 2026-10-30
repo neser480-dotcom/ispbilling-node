@@ -4,7 +4,7 @@
 
 <head>
 
-```
+
 <meta charset="UTF-8">
 
 <meta
@@ -53,6 +53,7 @@
     rel="stylesheet"
     href="/assets/css/topbar.css"
 >
+<link rel="stylesheet" href="/assets/css/theme.css">
 
 
 <!-- =========================================
@@ -61,15 +62,15 @@
 
 <link
     rel="stylesheet"
-    href="/assets/css/monitoring.css?v=1.0.1"
+    href="/assets/css/monitoring.css?v=1.0.4"
 >
-```
+
 
 </head>
 
 <body>
 
-```
+
 <!-- =========================================
      SIDEBAR
 ========================================== -->
@@ -129,126 +130,58 @@
     </div>
 
 
-    <!-- =====================================
+        <!-- =====================================
          SUMMARY
     ====================================== -->
 
-    <div class="row g-3 mb-4">
+    <div class="row g-2 mb-4 summary-grid">
 
-
-        <!-- CRITICAL -->
-
-        <div class="col-md-3">
-
+        <div class="col-6 col-lg-3">
             <div class="card monitor-card bg-red">
-
                 <div class="card-body">
-
                     <div>
-
-                        <h6>
-                            Critical
-                        </h6>
-
-                        <h2 id="criticalCount">
-                            0
-                        </h2>
-
+                        <h6>Critical</h6>
+                        <h2 id="criticalCount">0</h2>
                     </div>
-
                     <i class="fa fa-circle-exclamation"></i>
-
                 </div>
-
             </div>
-
         </div>
 
-
-        <!-- WARNING -->
-
-        <div class="col-md-3">
-
+        <div class="col-6 col-lg-3">
             <div class="card monitor-card bg-orange">
-
                 <div class="card-body">
-
                     <div>
-
-                        <h6>
-                            Warning
-                        </h6>
-
-                        <h2 id="warningCount">
-                            0
-                        </h2>
-
+                        <h6>Warning</h6>
+                        <h2 id="warningCount">0</h2>
                     </div>
-
                     <i class="fa fa-triangle-exclamation"></i>
-
                 </div>
-
             </div>
-
         </div>
 
-
-        <!-- RECOVERED -->
-
-        <div class="col-md-3">
-
+        <div class="col-6 col-lg-3">
             <div class="card monitor-card bg-green">
-
                 <div class="card-body">
-
                     <div>
-
-                        <h6>
-                            Recovered
-                        </h6>
-
-                        <h2 id="recoveredCount">
-                            0
-                        </h2>
-
+                        <h6>Recovered</h6>
+                        <h2 id="recoveredCount">0</h2>
                     </div>
-
                     <i class="fa fa-circle-check"></i>
-
                 </div>
-
             </div>
-
         </div>
 
-
-        <!-- TOTAL -->
-
-        <div class="col-md-3">
-
+        <div class="col-6 col-lg-3">
             <div class="card monitor-card bg-blue">
-
                 <div class="card-body">
-
                     <div>
-
-                        <h6>
-                            Total Fault
-                        </h6>
-
-                        <h2 id="totalCount">
-                            0
-                        </h2>
-
+                        <h6>Total Fault</h6>
+                        <h2 id="totalCount">0</h2>
                     </div>
-
                     <i class="fa fa-list"></i>
-
                 </div>
-
             </div>
-
         </div>
 
     </div>
@@ -256,157 +189,59 @@
 
     <!-- =====================================
          FILTER
+    ====================================== --><!-- =====================================
+         FILTER
     ====================================== -->
 
     <div class="card monitor-card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap flex-lg-nowrap align-items-end gap-2">
 
-        <div class="card-body">
+            <div style="width:150px; flex:0 0 150px;">
+                <label for="severityFilter" class="form-label">Severity</label>
+                <select id="severityFilter" class="form-select">
+                    <option value="">All</option>
+                    <option value="critical">Critical</option>
+                    <option value="warning">Warning</option>
+                    <option value="recovered">Recovered</option>
+                </select>
+            </div>
 
-            <div class="row g-3 align-items-end">
+            <div style="width:85px; flex:0 0 85px;">
+                <label for="faultPerPage" class="form-label">Show</label>
+                <select id="faultPerPage" class="form-select">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+            </div>
 
+            <div style="flex:0 0 auto;">
+                <button type="button" id="clearFaultFilter" class="btn btn-secondary">
+                    <i class="fa fa-filter-circle-xmark"></i> Clear
+                </button>
+            </div>
 
-                <!-- SEARCH -->
-
-                <div class="col-md-5">
-
-                    <label
-                        for="faultSearch"
-                        class="form-label"
+            <div style="width:280px; flex:0 0 280px;">
+                <label for="faultSearch" class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa fa-search"></i></span>
+                    <input
+                        type="text"
+                        id="faultSearch"
+                        class="form-control"
+                        placeholder="Display ID, customer, ONU MAC..."
+                        autocomplete="off"
                     >
-                        Search
-                    </label>
-
-                    <div class="input-group">
-
-                        <span class="input-group-text">
-
-                            <i class="fa fa-search"></i>
-
-                        </span>
-
-                        <input
-                            type="text"
-                            id="faultSearch"
-                            class="form-control"
-                            placeholder="OLT, PON, fault type..."
-                            autocomplete="off"
-                        >
-
-                    </div>
-
                 </div>
-
-
-                <!-- SEVERITY -->
-
-                <div class="col-md-3">
-
-                    <label
-                        for="severityFilter"
-                        class="form-label"
-                    >
-                        Severity
-                    </label>
-
-                    <select
-                        id="severityFilter"
-                        class="form-select"
-                    >
-
-                        <option value="">
-                            All
-                        </option>
-
-                        <option value="critical">
-                            Critical
-                        </option>
-
-                        <option value="warning">
-                            Warning
-                        </option>
-
-                        <option value="recovered">
-                            Recovered
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <!-- PER PAGE -->
-
-                <div class="col-md-2">
-
-                    <label
-                        for="faultPerPage"
-                        class="form-label"
-                    >
-                        Show
-                    </label>
-
-                    <select
-                        id="faultPerPage"
-                        class="form-select"
-                    >
-
-                        <option value="10">
-                            10
-                        </option>
-
-                        <option
-                            value="25"
-                            selected
-                        >
-                            25
-                        </option>
-
-                        <option value="50">
-                            50
-                        </option>
-
-                        <option value="100">
-                            100
-                        </option>
-
-                        <option value="500">
-                            500
-                        </option>
-
-                        <option value="0">
-                            All
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <!-- CLEAR -->
-
-                <div class="col-md-2">
-
-                    <button
-                        type="button"
-                        id="clearFaultFilter"
-                        class="btn btn-secondary w-100"
-                    >
-
-                        <i class="fa fa-filter-circle-xmark"></i>
-                        Clear
-
-                    </button>
-
-                </div>
-
             </div>
 
         </div>
-
     </div>
+</div>
 
-
-    <!-- =====================================
+<!-- =====================================
          FAULT TABLE
     ====================================== -->
 
@@ -430,7 +265,7 @@
 
 
                 <small id="faultLastUpdate">
-                    —
+                    â€”
                 </small>
 
             </div>
@@ -448,52 +283,17 @@
             >
 
                 <thead>
-
-                    <tr>
-
-                        <th>
-                            Severity
-                        </th>
-
-                        <th>
-                            Fault Type
-                        </th>
-
-                        <th>
-                            OLT
-                        </th>
-
-                        <th>
-                            PON
-                        </th>
-
-                        <th>
-                            Affected ONU
-                        </th>
-
-                        <th>
-                            Estimated Fault Area
-                        </th>
-
-                        <th>
-                            RX Evidence
-                        </th>
-
-                        <th>
-                            Reason
-                        </th>
-
-                        <th>
-                            Detected
-                        </th>
-
-                        <th>
-                            Action
-                        </th>
-
-                    </tr>
-
-                </thead>
+    <tr>
+        <th>Display ID / OLT-PON</th>
+        <th>Customer Name</th>
+        <th>RX</th>
+        <th>TX</th>
+        <th>Distance</th>
+        <th>Detected</th>
+        <th>Fault Reason</th>
+        <th>Action</th>
+    </tr>
+</thead>
 
 
                 <tbody id="faultTableBody">
@@ -501,7 +301,7 @@
                     <tr>
 
                         <td
-                            colspan="10"
+                            colspan="8"
                             class="text-center py-5"
                         >
 
@@ -551,30 +351,22 @@
 <!-- =========================================
      SIDEBAR LOADER
 ========================================== -->
-
-<script
-    src="/assets/js/sidebar-loader.js"
-></script>
-
+<script src="/assets/js/sidebar-loader.js"></script>
 
 <!-- =========================================
      TOPBAR LOADER
 ========================================== -->
-
-<script
-    src="/assets/js/topbar-loader.js"
-></script>
-
+<script src="/assets/js/topbar-loader.js"></script>
 
 <!-- =========================================
      LIVE FAULT JS
 ========================================== -->
+<script src="/assets/js/monitoring.js?v=2.0.0"></script>
 
-<script
-    src="/assets/js/monitoring.js?v=1.0.1"
-></script>
-```
 
 </body>
 
 </html>
+
+
+

@@ -1,6 +1,0 @@
-===== [config] show epon ? =====
-show epon 
-% There is no matched command.
-E08EP-4S+(config)# show epon 
-% Unknown command.
-E08EP-4S+(config)#

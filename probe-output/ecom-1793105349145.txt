@@ -1,6 +1,0 @@
-===== [config] show ont basic-info 0/1 ? =====
-show ont basic-info 0/1 
-  PORTID  Pon Port ID. <U>
-E08EP-4S+(config)# show ont basic-info 0/1 
-% Command incomplete.
-E08EP-4S+(config)#

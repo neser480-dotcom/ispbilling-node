@@ -1,0 +1,552 @@
+/* ==================================================
+   STAFF PAGES (Collector / Manager / Reseller …)
+   এই CSS body.staff-page এ কাজ করে। অন্য staff পেজেও
+   <body class="staff-page"> দিয়ে একই CSS ব্যবহার করা যাবে।
+================================================== */
+
+:root {
+    --st-page-bg: #efefef;
+    --st-card-bg: #ffffff;
+    --st-text: #555555;
+    --st-head: #555555;
+    --st-muted: #666666;
+    --st-row-odd: #efefef;
+    --st-row-even: #ffffff;
+    --st-blue: #2f86e3;
+    --st-blue-2: #318de8;
+    --st-pill: #2a6fc6;
+    --st-search: #2b7ad6;
+    --st-accent: #2f86e3;
+    --st-icon-btn-bg: #ffffff;
+    --st-icon-btn-hover: #e6f0fd;
+    --st-line: #dee2e6;
+    --st-perm-bg: #e9f7fb;
+}
+
+[data-bs-theme="dark"],
+[data-theme="dark"],
+html.dark,
+body.dark,
+html.dark-mode,
+body.dark-mode,
+html.dark-theme,
+body.dark-theme,
+html.night,
+body.night {
+    --st-page-bg: #141922;
+    --st-card-bg: #1e2530;
+    --st-text: #cfd6e2;
+    --st-head: #e2e8f2;
+    --st-muted: #8f9bb0;
+    --st-row-odd: #262e3b;
+    --st-row-even: #1e2530;
+    --st-blue: #2467b8;
+    --st-blue-2: #2a6fc6;
+    --st-pill: #1d4f94;
+    --st-search: #1d4f94;
+    --st-accent: #5aa2f0;
+    --st-icon-btn-bg: #e6edf7;
+    --st-icon-btn-hover: #ffffff;
+    --st-line: #364050;
+    --st-perm-bg: #1f3a44;
+}
+
+body.staff-page {
+    background: var(--st-page-bg);
+    overflow-x: hidden;
+}
+
+.staff-page .main-content {
+    margin-left: 260px;
+    margin-top: 70px;
+    padding: 25px;
+    padding-bottom: 180px !important;
+    transition: .3s;
+}
+
+
+/* ---------- BLUE HEADER CARD ---------- */
+
+.staff-header-card {
+    background: var(--st-blue);
+    color: #fff;
+    border-radius: 6px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+}
+
+.staff-header-card h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 500;
+}
+
+.staff-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.staff-icon-btn {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--st-icon-btn-bg);
+    color: #2f86e3;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.staff-icon-btn:hover {
+    background: var(--st-icon-btn-hover);
+}
+
+
+/* ---------- WHITE BODY CARD ---------- */
+
+.staff-body-card {
+    background: var(--st-card-bg);
+    border-radius: 4px;
+    padding: 28px 20px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+}
+
+
+/* ---------- BLUE DATA STRIP ---------- */
+
+.staff-strip {
+    background: var(--st-blue-2);
+    color: #fff;
+    border-radius: 6px;
+    padding: 12px 12px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .15);
+}
+
+.staff-total {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.staff-count-pill {
+    display: inline-block;
+    min-width: 36px;
+    text-align: center;
+    background: var(--st-pill);
+    border-radius: 20px;
+    padding: 3px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.staff-search-wrap {
+    width: 346px;
+    max-width: 100%;
+}
+
+.staff-search-wrap input {
+    height: 34px;
+    border: 0;
+    border-radius: 3px;
+    background: var(--st-search);
+    color: #fff;
+    font-size: 14px;
+    padding: 0 10px;
+}
+
+.staff-search-wrap input::placeholder {
+    color: #fff;
+    opacity: .9;
+}
+
+.staff-search-wrap input:focus {
+    background: var(--st-search);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .45);
+}
+
+
+/* ---------- TABLE ---------- */
+
+.staff-page .table-responsive {
+    overflow: visible !important;
+}
+
+.staff-table {
+    --bs-table-bg: transparent;
+    margin-bottom: 0;
+}
+
+.staff-table thead th {
+    background: transparent;
+    border-bottom: 0;
+    padding: 12px 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--st-head);
+    white-space: nowrap;
+    text-align: center;
+    user-select: none;
+}
+
+.staff-table thead th[data-sort] {
+    cursor: pointer;
+}
+
+.sort-icon {
+    color: var(--st-accent);
+    font-size: 12px;
+    margin-left: 3px;
+}
+
+.staff-table tbody tr:nth-child(odd) {
+    --bs-table-bg: var(--st-row-odd);
+}
+
+.staff-table tbody tr:nth-child(even) {
+    --bs-table-bg: var(--st-row-even);
+}
+
+.staff-table tbody td {
+    padding: 10px 8px;
+    border: 0;
+    font-size: 14px;
+    color: var(--st-text);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.staff-table tbody td:first-child {
+    font-weight: 700;
+}
+
+
+/* ---------- STATUS BADGE ---------- */
+
+.staff-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 3px 9px;
+    border-radius: 6px;
+    color: #fff;
+}
+
+.staff-badge.active {
+    background: #0d6efd;
+}
+
+.staff-badge.inactive {
+    background: #dc3545;
+}
+
+
+/* ---------- ACTION "..." MENU (নীল ড্রপডাউন) ---------- */
+
+.staff-dots {
+    border: 0;
+    background: transparent;
+    color: var(--st-accent);
+    font-size: 16px;
+    padding: 0 6px;
+    line-height: 1;
+}
+
+.staff-dots:hover {
+    color: #1b5fb4;
+}
+
+.staff-menu {
+    background: var(--st-blue-2);
+    border: 0;
+    border-radius: 6px;
+    padding: 6px 0;
+    min-width: 195px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+
+.staff-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #fff;
+    font-size: 14px;
+    padding: 9px 18px;
+}
+
+.staff-menu .dropdown-item i {
+    width: 18px;
+    text-align: center;
+}
+
+.staff-menu .dropdown-item:hover,
+.staff-menu .dropdown-item:focus {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+
+
+/* ---------- FOOTER ---------- */
+
+.staff-footer {
+    text-align: center;
+    color: var(--st-muted);
+    font-size: 16px;
+    margin-top: 38px;
+}
+
+
+/* ==================================================
+   POPUPS (Add / Edit / Reset Password)
+================================================== */
+
+.staff-modal-wide {
+    --bs-modal-width: 910px;
+}
+
+.staff-modal-small {
+    --bs-modal-width: 380px;
+}
+
+.staff-page .modal-content {
+    border: 0;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
+}
+
+.staff-page .modal-header {
+    background: transparent;
+    border-bottom: 1px solid var(--st-line);
+    padding: 16px 18px;
+}
+
+.staff-page .modal-title {
+    font-size: 20px;
+    font-weight: 400;
+}
+
+.staff-page .modal-body {
+    font-size: 13px;
+    padding: 16px 18px;
+}
+
+.staff-page .modal-footer {
+    border-top: 1px solid var(--st-line);
+    padding: 12px 18px;
+}
+
+.staff-page .modal-footer .btn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 4px;
+}
+
+.staff-page .nav-tabs {
+    border-bottom: 1px solid var(--st-line);
+}
+
+.staff-page .nav-tabs .nav-link {
+    font-size: 13px;
+    padding: 8px 14px;
+    color: #0d6efd;
+}
+
+.staff-page .nav-tabs .nav-link.active {
+    color: var(--st-text);
+}
+
+
+/* ---------- PROFILE FORM ---------- */
+
+.staff-form-wrap {
+    max-width: 442px;
+    margin: 0 auto;
+}
+
+.staff-form-wrap .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.staff-form-wrap .form-control {
+    font-size: 13px;
+    padding: 7px 10px;
+}
+
+.staff-form-wrap .form-check-label {
+    font-size: 13px;
+}
+
+.staff-form-wrap .form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+
+/* ---------- AREA TAB ---------- */
+
+.staff-area-box {
+    border: 1px solid var(--st-line);
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 0;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.staff-area-col {
+    flex: 1 1 16.66%;
+    min-width: 150px;
+    padding-right: 10px;
+}
+
+.staff-area-parent,
+.staff-area-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.staff-area-parent {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--st-head);
+    padding-bottom: 6px;
+}
+
+.staff-area-child {
+    font-size: 13px;
+    color: var(--st-muted);
+    padding: 4px 0;
+}
+
+.staff-area-parent input,
+.staff-area-child input {
+    margin: 0;
+    flex: none;
+}
+
+.staff-area-child input {
+    width: 13px;
+    height: 13px;
+}
+
+
+/* ---------- PERMISSIONS TAB ---------- */
+
+.staff-perm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 8px;
+}
+
+.staff-perm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--st-perm-bg);
+    border-radius: 4px;
+    padding: 9px 10px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #00a65a;
+    cursor: pointer;
+}
+
+.staff-perm-item input {
+    margin: 0;
+    flex: none;
+}
+
+.staff-perm-item.all {
+    color: #17c1e8;
+}
+
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 992px) {
+
+    .staff-page .main-content {
+        margin-left: 0;
+    }
+
+    .staff-perm-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .staff-page .main-content {
+        margin-left: 0 !important;
+        margin-top: 65px !important;
+        padding: 10px !important;
+        padding-bottom: 140px !important;
+    }
+
+    .staff-strip {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .staff-search-wrap {
+        width: 100%;
+    }
+
+    .staff-page .table-responsive {
+        overflow-x: auto !important;
+    }
+
+    .staff-header-card h1 {
+        font-size: 22px;
+    }
+
+}
+
+@media (max-width: 576px) {
+
+    .staff-perm-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+/* ---------- NIGHT MODE – Bootstrap parts ---------- */
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .modal-content {
+    background: #1e2530;
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .form-control {
+    background-color: #141922;
+    border-color: #364050;
+    color: #cfd6e2;
+}
+
+:is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .btn-close {
+    filter: invert(1);
+}

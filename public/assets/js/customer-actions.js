@@ -466,45 +466,50 @@
 
 
             let confirmed = false;
-
+            let deleteMikrotik = false;
 
             if (window.Swal) {
 
                 const result =
                     await window.Swal.fire({
-
                         title:
-                            "Delete Customer?",
-
+                            escapeHtml(name) +
+                            " Customer Delete",
                         html:
                             `
-                                <div class="text-center">
-                                    <div class="mb-2">
-                                        Are you sure you want to delete
-                                        <strong>
-                                            ${escapeHtml(name)}
-                                        </strong>?
-                                    </div>
-
-                                    <div class="small text-danger">
-                                        This action cannot be undone.
-                                    </div>
-                                </div>
+                                <label class="cl-del-check">
+                                    <input type="checkbox" id="clDeleteMikrotik">
+                                    <span>Do you want to delete Mikrotik ?</span>
+                                </label>
                             `,
-
-                        icon: "warning",
-
+                        showCloseButton: true,
                         showCancelButton: true,
-
                         confirmButtonText:
-                            "Yes, Delete",
-
+                            "Delete",
                         cancelButtonText:
                             "Cancel",
-
-                        reverseButtons: true
+                        reverseButtons: true,
+                        buttonsStyling: false,
+                        width: 600,
+                        customClass: {
+                            popup: "cl-swal",
+                            title: "cl-swal-title",
+                            htmlContainer: "cl-swal-body",
+                            actions: "cl-swal-actions",
+                            confirmButton: "cl-swal-ok",
+                            cancelButton: "cl-swal-cancel",
+                            closeButton: "cl-swal-close"
+                        },
+                        preConfirm: function () {
+                            const box =
+                                document.getElementById(
+                                    "clDeleteMikrotik"
+                                );
+                            deleteMikrotik =
+                                !!(box && box.checked);
+                            return true;
+                        }
                     });
-
 
                 confirmed =
                     result.isConfirmed;
@@ -518,7 +523,6 @@
                         "?"
                     );
             }
-
 
             if (!confirmed) {
                 return;
@@ -537,6 +541,11 @@
                 formData.append(
                     "id",
                     String(id)
+                );
+
+                formData.append(
+                    "delete_mikrotik",
+                    deleteMikrotik ? "1" : "0"
                 );
 
 
@@ -636,6 +645,189 @@
         }
     );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROFILE POPUP - SIDE MENU
+    | Update Profile / Recharge swap inside the same right-hand panel.
+    |--------------------------------------------------------------------------
+    */
+    function profileSetActive(item) {
+        document
+            .querySelectorAll(".customer-profile-view .cp-setting")
+            .forEach(function (el) {
+                el.classList.toggle("active", el === item);
+            });
+    }
+
+    function profileShowPane(name) {
+        const update = document.getElementById("cpUpdatePane");
+        const recharge = document.getElementById("cpRechargePane");
+        const title = document.getElementById("cpPanelTitle");
+
+        if (update) update.hidden = name !== "update";
+        if (recharge) recharge.hidden = name !== "recharge";
+        if (title) {
+            title.textContent =
+                name === "recharge" ? "Recharge" : "Update Profile";
+        }
+    }
+
+    document.addEventListener(
+        "click",
+        async function (event) {
+
+            const item =
+                event.target.closest("[data-profile-action]");
+
+            if (!item) {
+                return;
+            }
+
+            const action = item.dataset.profileAction;
+            const id = item.dataset.id || "";
+
+            if (action === "update") {
+                event.preventDefault();
+                profileSetActive(item);
+                profileShowPane("update");
+                return;
+            }
+
+            if (action === "recharge") {
+
+                event.preventDefault();
+
+                const pane = document.getElementById("cpRechargePane");
+
+                if (!pane) {
+                    return;
+                }
+
+                profileSetActive(item);
+                profileShowPane("recharge");
+
+                pane.innerHTML =
+                    '<div class="text-center py-4 text-muted">' +
+                    '<div class="spinner-border spinner-border-sm"></div>' +
+                    '<div class="mt-2">Loading...</div></div>';
+
+                try {
+                    const response = await fetch(
+                        "/api/customers/recharge?id=" +
+                        encodeURIComponent(id),
+                        {
+                            credentials: "same-origin",
+                            headers: { "X-Requested-With": "XMLHttpRequest" }
+                        }
+                    );
+
+                    const html = await response.text();
+
+                    if (!response.ok) {
+                        throw new Error(
+                            stripHtml(html) || "Failed to load recharge form."
+                        );
+                    }
+
+                    pane.innerHTML = html;
+
+                } catch (error) {
+                    pane.innerHTML =
+                        '<div class="alert alert-danger mb-0">' +
+                        escapeHtml(error.message || "Failed to load recharge form.") +
+                        "</div>";
+                }
+
+                return;
+            }
+
+            if (action === "report") {
+
+                event.preventDefault();
+
+                // Reuse the existing Bill Report popup.
+                const proxy = document.createElement("a");
+
+                proxy.href = "#";
+                proxy.dataset.id = id;
+                proxy.className = "customer-bill-report-btn";
+                proxy.style.display = "none";
+
+                document.body.appendChild(proxy);
+                proxy.click();
+                proxy.remove();
+            }
+        }
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | RECHARGE FORM - live total (popup and profile panel)
+    |--------------------------------------------------------------------------
+    */
+    function rechargeRecalculate(form) {
+
+        const monthly = Number(form.dataset.monthlyBill || 0);
+        const previousDue = Number(form.dataset.previousDue || 0);
+
+        const typeSelect = form.querySelector("[data-recharge-billing-type]");
+        const monthSelect = form.querySelector("[data-recharge-month]");
+        const daySelect = form.querySelector("[data-recharge-days]");
+        const discountInput = form.querySelector("[data-recharge-discount]");
+
+        const daily = !!(typeSelect && typeSelect.value === "Daily");
+
+        const monthWrap = form.querySelector("[data-recharge-month-wrap]");
+        const dayWrap = form.querySelector("[data-recharge-day-wrap]");
+
+        if (monthWrap) monthWrap.classList.toggle("d-none", daily);
+        if (dayWrap) dayWrap.classList.toggle("d-none", !daily);
+        if (monthSelect) monthSelect.disabled = daily;
+        if (daySelect) daySelect.disabled = !daily;
+
+        const now = new Date();
+        const daysThisMonth =
+            new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+        const subtotal = daily
+            ? (monthly / daysThisMonth) * Number((daySelect && daySelect.value) || 1)
+            : monthly * Number((monthSelect && monthSelect.value) || 1);
+
+        const discount =
+            Math.max(0, Number((discountInput && discountInput.value) || 0));
+
+        const total = Math.max(0, subtotal - discount) + previousDue;
+
+        const fmt = function (n) { return "৳" + n.toFixed(2); };
+
+        const set = function (selector, text) {
+            const el = form.querySelector(selector);
+            if (el) el.textContent = text;
+        };
+
+        set("[data-recharge-subtotal]", fmt(subtotal));
+        set("[data-recharge-discount-label]", fmt(discount));
+        set("[data-recharge-total]", fmt(total));
+
+        const billInput = form.querySelector("[data-recharge-subtotal-input]");
+
+        if (billInput) {
+            billInput.value = String(Math.round(subtotal * 100) / 100);
+        }
+    }
+
+    ["change", "input"].forEach(function (type) {
+        document.addEventListener(type, function (event) {
+            const form =
+                event.target.closest &&
+                event.target.closest(".netfee-recharge-form");
+
+            if (form) {
+                rechargeRecalculate(form);
+            }
+        });
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -771,7 +963,7 @@
 
             const form =
                 event.target.closest(
-                    "#rechargeModalBody form"
+                    "#rechargeModalBody form, #cpRechargePane form"
                 );
 
 
@@ -864,22 +1056,54 @@
                 );
 
 
-                const modalEl =
-                    document.getElementById(
-                        "rechargeModal"
-                    );
+                const inProfile =
+                    !!form.closest("#cpRechargePane");
 
+                if (inProfile) {
 
-                if (
-                    modalEl &&
-                    window.bootstrap
-                ) {
+                    // Stay in the Profile popup and show fresh data.
+                    const idField =
+                        form.querySelector('[name="customer_id"]');
 
-                    window.bootstrap.Modal
-                        .getOrCreateInstance(
-                            modalEl
-                        )
-                        .hide();
+                    if (idField) {
+                        try {
+                            const profileResponse =
+                                await fetch(
+                                    "/api/customers/profile?id=" +
+                                    encodeURIComponent(idField.value),
+                                    {
+                                        credentials: "same-origin",
+                                        headers: {
+                                            "X-Requested-With": "XMLHttpRequest",
+                                            "Accept": "text/html"
+                                        }
+                                    }
+                                );
+
+                            const profileHtml =
+                                await profileResponse.text();
+
+                            const body =
+                                document.getElementById(
+                                    "customerActionModalBody"
+                                );
+
+                            if (profileResponse.ok && body) {
+                                body.innerHTML = profileHtml;
+                            }
+                        } catch (_) {}
+                    }
+
+                } else {
+
+                    const modalEl =
+                        document.getElementById("rechargeModal");
+
+                    if (modalEl && window.bootstrap) {
+                        window.bootstrap.Modal
+                            .getOrCreateInstance(modalEl)
+                            .hide();
+                    }
                 }
 
 

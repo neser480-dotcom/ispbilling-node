@@ -1,7 +1,0 @@
-===== [config] show ont info ? =====
-show ont info 
-  F/S  FrameID/SlotID. <S><0-0>/<0-0>
-  all  All ONTS in the port
-E08EP-4S+(config)# show ont info 
-% Command incomplete.
-E08EP-4S+(config)#

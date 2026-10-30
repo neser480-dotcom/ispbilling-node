@@ -1,326 +1,950 @@
-/* ==========================================
-NETWORK FAULT MONITORING
-========================================== */
-
-.main-content {
-margin-left: 260px;
-margin-top: 75px;
-padding: 20px;
-background: #f5f7fb;
-min-height: 100vh;
+﻿.main-content {
+    margin-left: 260px;
+    margin-top: 75px;
+    padding: 20px;
+    background: #f5f7fb;
+    min-height: 100vh;
+    color: #1f2937;
 }
 
-/* ==========================================
-HEADER
-========================================== */
-
 .monitor-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
 }
 
 .monitor-header h3 {
-font-size: 24px;
-font-weight: 700;
-color: #1f2937;
-margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 8px 0 4px;
 }
 
-.monitor-header small {
-color: #6b7280;
-}
+.monitor-header small { color: #6b7280; }
 
-/* ==========================================
-MONITOR CARDS
-========================================== */
+.back-button {
+    display: inline-block;
+    color: #2563eb;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+}
 
 .monitor-card {
-border: none;
-border-radius: 10px;
-overflow: hidden;
-box-shadow: 0 3px 10px rgba(0, 0, 0, .07);
-transition: .2s;
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,.07);
+    transition: .2s;
 }
 
-.monitor-card:hover {
-transform: translateY(-2px);
-}
+.monitor-card:hover { transform: translateY(-2px); }
 
 .monitor-card .card-body {
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
 }
 
 .monitor-card h6 {
-margin: 0;
-font-size: 13px;
-font-weight: 600;
-opacity: .9;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: .9;
 }
 
 .monitor-card h2 {
-margin: 5px 0 0;
-font-size: 25px;
-line-height: 1.1;
-font-weight: 700;
+    margin: 5px 0 0;
+    font-size: 25px;
+    line-height: 1.1;
+    font-weight: 700;
 }
 
-.monitor-card i {
-font-size: 30px;
-opacity: .25;
+.monitor-card i { font-size: 30px; opacity: .25; }
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 14px;
+    margin-bottom: 20px;
 }
 
-/* ==========================================
-SUMMARY CARDS
-3 CARDS IN ONE ROW
-========================================== */
-
-.main-content > .row.g-3.mb-4:first-of-type {
-display: grid;
-grid-template-columns: repeat(3, minmax(0, 1fr));
-gap: 14px;
-margin-left: 0;
-margin-right: 0;
+.summary-grid .monitor-card .card-body {
+    min-height: 78px;
+    padding: 12px 16px;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type > .col-md-3 {
-width: 100%;
-max-width: 100%;
-padding-left: 0;
-padding-right: 0;
+.bg-blue { background: linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; }
+.bg-green { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; }
+.bg-red { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; }
+.bg-orange { background: linear-gradient(135deg,#ea580c,#c2410c); color:#fff; }
+
+.system-card,.onu-card {
+    border: none;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(0,0,0,.07);
+    overflow: hidden;
+    margin-bottom: 20px;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type .monitor-card {
-min-height: 78px;
-margin-bottom: 0;
+.system-card .card-header,.onu-card .card-header {
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    padding: 11px 15px;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type .monitor-card .card-body {
-min-height: 78px;
-padding: 12px 16px;
+.analysis-body {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 16px;
+    padding: 18px;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type .monitor-card h6 {
-font-size: 13px;
+.analysis-body > div { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.analysis-body strong { font-size:13px; color:#6b7280; }
+.analysis-body span,.analysis-body p { font-size:14px; color:#1f2937; overflow-wrap:anywhere; }
+.analysis-body p { margin:0; }
+.reason-box { grid-column:1/-1; padding:12px; border-radius:8px; background:#f8fafc; }
+
+.onu-card .card-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type .monitor-card h2 {
-font-size: 24px;
-margin-top: 4px;
+.monitor-search {
+    width:260px;
+    max-width:100%;
+    min-height:36px;
+    border:1px solid #d1d5db;
+    border-radius:7px;
+    padding:7px 10px;
+    background:#fff;
+    color:#111827;
+    outline:none;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type .monitor-card i {
-font-size: 28px;
+.table-responsive { width:100%; overflow-x:auto; }
+
+.onu-card table {
+    width:100%;
+    min-width:1100px;
+    border-collapse:collapse;
+    margin:0;
 }
 
-/* ==========================================
-COLORS
-========================================== */
+.onu-card thead { background:#1e293b; color:#fff; }
+.onu-card th { font-size:12px; white-space:nowrap; padding:11px 12px; text-align:left; }
+.onu-card td { font-size:12px; padding:10px 12px; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
+.onu-card tbody tr:hover { background:#eef5ff; }
 
-.bg-blue {
-background: linear-gradient(
-135deg,
-#2563eb,
-#1d4ed8
-);
-color: #fff;
+.loading { text-align:center; padding:25px!important; color:#6b7280; }
+
+.status-online,.status-offline {
+    display:inline-block;
+    border-radius:20px;
+    padding:4px 9px;
+    font-size:11px;
+    font-weight:700;
 }
 
-.bg-green {
-background: linear-gradient(
-135deg,
-#16a34a,
-#15803d
-);
-color: #fff;
+.status-online { color:#15803d; background:#dcfce7; }
+.status-offline { color:#b91c1c; background:#fee2e2; }
+
+.otdr-notice {
+    padding:15px;
+    border-left:4px solid #2563eb;
+    border-radius:8px;
+    background:#eff6ff;
+    color:#1e3a8a;
+    margin-bottom:20px;
 }
 
-.bg-red {
-background: linear-gradient(
-135deg,
-#dc2626,
-#b91c1c
-);
-color: #fff;
+.otdr-notice strong { font-size:14px; }
+.otdr-notice p { font-size:13px; margin:6px 0 0; }
+
+.btn-monitor { border-radius:7px; font-size:13px; padding:7px 13px; }
+
+/* DARK MODE */
+
+body.dark-mode .main-content { background:#0f172a; color:#e5e7eb; }
+body.dark-mode .monitor-header h3 { color:#f1f5f9; }
+body.dark-mode .monitor-header small,
+body.dark-mode .analysis-body strong { color:#9ca3af; }
+
+body.dark-mode .system-card,
+body.dark-mode .onu-card { background:#1e293b; color:#e2e8f0; }
+
+body.dark-mode .analysis-body span,
+body.dark-mode .analysis-body p { color:#e2e8f0; }
+
+body.dark-mode .reason-box { background:#0f172a; }
+body.dark-mode .onu-card td { border-bottom-color:#334155; color:#e2e8f0; }
+body.dark-mode .onu-card tbody tr:hover { background:#334155; }
+
+body.dark-mode .monitor-search {
+    background:#0f172a;
+    border-color:#475569;
+    color:#f8fafc;
 }
 
-.bg-orange {
-background: linear-gradient(
-135deg,
-#ea580c,
-#c2410c
-);
-color: #fff;
+body.dark-mode .monitor-search::placeholder { color:#94a3b8; }
+body.dark-mode .otdr-notice { background:#172554; color:#bfdbfe; border-left-color:#3b82f6; }
+body.dark-mode .loading { color:#cbd5e1; }
+
+/* RESPONSIVE */
+
+@media (max-width:992px) {
+    .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
-/* ==========================================
-SYSTEM CARD
-========================================== */
-
-.system-card {
-border: none;
-border-radius: 10px;
-background: #fff;
-box-shadow: 0 3px 10px rgba(0, 0, 0, .07);
-overflow: hidden;
+@media (max-width:768px) {
+    .main-content { margin-left:0; padding:15px; }
+    .monitor-header { flex-direction:column; align-items:flex-start; gap:10px; }
+    .analysis-body { grid-template-columns:1fr; }
+    .reason-box { grid-column:auto; }
+    .onu-card .card-header { align-items:flex-start; flex-direction:column; }
+    .monitor-search { width:100%; }
 }
 
-.system-card .card-header {
-background: #2563eb;
-color: #fff;
-font-weight: 600;
-padding: 11px 15px;
+@media (max-width:480px) {
+    .summary-grid { grid-template-columns:1fr; gap:10px; }
+    .monitor-card .card-body { padding:12px 14px; }
+    .monitor-card h2 { font-size:22px; }
+    .monitor-card i { font-size:26px; }
+    .monitor-header h3 { font-size:21px; }
 }
 
-.system-card .card-header small {
-font-size: 12px;
-opacity: .9;
+
+/* =========================================
+   LIVE FAULT FIRST PAGE LAYOUT
+========================================= */
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
-.system-card table {
-margin: 0;
+.summary-grid > div {
+    min-width: 0;
 }
 
-/* ==========================================
-FAULT TABLE
-========================================== */
-
-.system-card thead {
-background: #1e293b;
-color: #fff;
+.summary-grid .monitor-card {
+    height: 100%;
+    border-radius: 9px;
 }
 
-.system-card th {
-font-size: 13px;
-white-space: nowrap;
-padding: 10px 12px;
+.summary-grid .monitor-card .card-body {
+    min-height: 76px;
+    padding: 11px 14px;
 }
 
-.system-card td {
-font-size: 13px;
-padding: 10px 12px;
+.summary-grid .monitor-card h6 {
+    font-size: 12px;
+    letter-spacing: .2px;
 }
 
-.system-card tbody tr:hover {
-background: #eef5ff;
+.summary-grid .monitor-card h2 {
+    font-size: 23px;
+    margin-top: 4px;
 }
 
-/* ==========================================
-FILTER CARD
-========================================== */
-
-.monitor-card .form-label {
-font-size: 13px;
-font-weight: 600;
-margin-bottom: 5px;
+.summary-grid .monitor-card i {
+    font-size: 25px;
 }
 
-.monitor-card .form-control,
-.monitor-card .form-select {
-font-size: 13px;
-min-height: 38px;
+#faultTable {
+    width: 100%;
+    min-width: 1150px;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-.monitor-card .input-group-text {
-font-size: 13px;
-min-height: 38px;
+#faultTable thead th {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+    padding: 12px 10px;
+    white-space: nowrap;
+    border-bottom: 1px solid #dbe2ea;
 }
 
-/* ==========================================
-BUTTONS
-========================================== */
-
-.btn-monitor {
-border-radius: 7px;
-font-size: 13px;
-padding: 7px 13px;
+#faultTable tbody td {
+    padding: 11px 10px;
+    font-size: 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #edf0f4;
 }
 
-.system-card .btn-sm {
-font-size: 12px;
-padding: 5px 9px;
+#faultTable tbody tr:hover {
+    background: #f8fafc;
 }
 
-/* ==========================================
-PAGINATION
-========================================== */
-
-.monitor-pagination {
-display: flex;
-justify-content: flex-end;
+.monitor-action-toggle {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    color: #475569;
 }
 
-.monitor-pagination .pagination {
-margin-bottom: 0;
+.monitor-action-toggle:hover,
+.monitor-action-toggle:focus {
+    background: #eaf1ff;
+    color: #2563eb;
 }
 
-.monitor-pagination .page-link {
-min-width: 34px;
-font-size: 12px;
-text-align: center;
-padding: 6px 9px;
+.monitor-action-menu {
+    min-width: 190px;
+    max-width: 280px;
+    padding: 6px;
+    z-index: 1085;
 }
 
-/* ==========================================
-CARD FOOTER
-========================================== */
-
-.system-card .card-footer {
-background: #fff;
-border-top: 1px solid #e5e7eb;
-padding: 10px 14px;
+.monitor-action-menu .dropdown-item {
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 5px;
 }
 
-/* ==========================================
-RESPONSIVE
-========================================== */
-
-@media (max-width: 768px) {
-
-
-.main-content {
-    margin-left: 0;
-    padding: 15px;
+.monitor-check-item {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+    color: #64748b;
 }
 
-.monitor-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+body.dark-mode #faultTable thead th {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-bottom-color: #334155;
 }
 
-.main-content > .row.g-3.mb-4:first-of-type {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+body.dark-mode #faultTable tbody td {
+    color: #e2e8f0;
+    border-bottom-color: #334155;
 }
 
+body.dark-mode #faultTable tbody tr:hover {
+    background: #263449;
+}
+
+body.dark-mode .monitor-action-toggle {
+    background: #1e293b;
+    border-color: #475569 !important;
+    color: #e2e8f0;
+}
+
+body.dark-mode .monitor-action-menu {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+body.dark-mode .monitor-action-menu .dropdown-item,
+body.dark-mode .monitor-action-menu .dropdown-item-text {
+    color: #e2e8f0;
+}
+
+body.dark-mode .monitor-action-menu .dropdown-item:hover {
+    background: #334155;
+}
+
+body.dark-mode .monitor-check-item {
+    color: #cbd5e1;
+}
+
+@media (max-width: 992px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 480px) {
+    .summary-grid {
+        gap: 9px;
+    }
 
-.main-content > .row.g-3.mb-4:first-of-type {
-    grid-template-columns: 1fr;
+    .summary-grid .monitor-card .card-body {
+        min-height: 68px;
+        padding: 10px 11px;
+    }
+
+    .summary-grid .monitor-card h2 {
+        font-size: 20px;
+    }
+
+    .summary-grid .monitor-card i {
+        font-size: 22px;
+    }
 }
 
-.monitor-card .card-body {
-    padding: 12px 14px;
+/* =========================================
+   LIVE FAULT — FIRST PAGE UI REFINEMENT
+   Scoped to Live Fault elements only
+========================================= */
+
+/* Summary cards: four equal columns on desktop */
+.summary-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
-.monitor-card h2 {
-    font-size: 22px;
+.summary-grid > div {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
-.monitor-card i {
-    font-size: 26px;
+.summary-grid .card {
+    height: 100%;
+    min-height: 104px;
+    border: 1px solid #e5eaf1;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .045);
+    overflow: hidden;
 }
 
-.system-card table {
+.summary-grid .card-body {
+    padding: 16px;
+}
+
+/* Fault table */
+#faultTable {
+    width: 100%;
+    min-width: 1250px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#faultTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+    padding: 13px 12px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #dce3ec;
+}
+
+#faultTable tbody td {
+    padding: 13px 12px;
+    vertical-align: middle;
+    font-size: 12px;
+    line-height: 1.55;
+    border-bottom: 1px solid #edf0f4;
+}
+
+#faultTable tbody tr {
+    transition: background-color .15s ease;
+}
+
+#faultTable tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Keep long fault descriptions readable */
+#faultTable td:nth-child(8) {
+    min-width: 230px;
+    max-width: 320px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+#faultTable td:nth-child(6),
+#faultTable td:nth-child(7) {
+    min-width: 145px;
+    white-space: normal;
+}
+
+/* Action control */
+#faultTable .monitor-action-toggle {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #fff;
+    color: #334155;
+}
+
+#faultTable .monitor-action-toggle:hover {
+    background: #f1f5f9;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .summary-grid {
+        gap: 9px;
+    }
+
+    .summary-grid .card {
+        min-height: 90px;
+    }
+
+    .summary-grid .card-body {
+        padding: 12px;
+    }
+
+    #faultTable {
+        min-width: 1250px;
+    }
+}
+
+/* =====================================================
+   LIVE FAULT TABLE + FILTER LAYOUT
+   Scoped overrides — summary cards remain untouched
+===================================================== */
+
+/* Filter: Severity, Show, Clear left; Search right */
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end {
+    display: grid;
+    grid-template-columns: max-content max-content max-content minmax(260px, 1fr);
+    gap: 10px;
+    align-items: end;
+    margin: 0;
+}
+
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end > [class*="col-"] {
+    width: auto;
+    max-width: none;
+    padding: 0;
+    min-width: 0;
+}
+
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(1) {
+    grid-column: 4;
+}
+
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(2) {
+    grid-column: 1;
+}
+
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(3) {
+    grid-column: 2;
+}
+
+.monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(4) {
+    grid-column: 3;
+}
+
+.monitor-card:has(#faultSearch) label {
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.monitor-card:has(#faultSearch) .form-control,
+.monitor-card:has(#faultSearch) .form-select,
+.monitor-card:has(#faultSearch) .btn {
+    min-height: 36px;
+    font-size: 13px;
+}
+
+/* Desktop: fit all 10 columns inside available width */
+#faultTable {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#faultTable th,
+#faultTable td {
+    padding: 9px 6px !important;
+    font-size: 12px;
+    line-height: 1.4;
+    vertical-align: middle;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+#faultTable thead th {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+#faultTable tbody tr {
+    border-bottom: 1px solid #e5e9f0;
+}
+
+#faultTable tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+#faultTable tbody tr:hover {
+    background: #eef4ff;
+}
+
+#faultTable tbody td .small {
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+#faultTable tbody td .mt-1,
+#faultTable tbody td .mt-2 {
+    margin-top: 3px !important;
+}
+
+/* Column widths */
+#faultTable th:nth-child(1),
+#faultTable td:nth-child(1) { width: 8%; }
+
+#faultTable th:nth-child(2),
+#faultTable td:nth-child(2) { width: 10%; }
+
+#faultTable th:nth-child(3),
+#faultTable td:nth-child(3) { width: 8%; }
+
+#faultTable th:nth-child(4),
+#faultTable td:nth-child(4) { width: 6%; }
+
+#faultTable th:nth-child(5),
+#faultTable td:nth-child(5) { width: 8%; }
+
+#faultTable th:nth-child(6),
+#faultTable td:nth-child(6) { width: 11%; }
+
+#faultTable th:nth-child(7),
+#faultTable td:nth-child(7) { width: 9%; }
+
+#faultTable th:nth-child(8),
+#faultTable td:nth-child(8) { width: 18%; }
+
+#faultTable th:nth-child(9),
+#faultTable td:nth-child(9) { width: 9%; }
+
+#faultTable th:nth-child(10),
+#faultTable td:nth-child(10) { width: 5%; }
+
+/* Single Details icon */
+#faultTable .monitor-details-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 13px;
+}
+
+/* Medium screens: filter wraps; table remains scrollable */
+@media (max-width: 1199.98px) {
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(1) {
+        grid-column: 1 / -1;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(2),
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(3),
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(4) {
+        grid-column: auto;
+    }
+}
+
+/* Mobile: horizontal scrolling only inside the table */
+@media (max-width: 767.98px) {
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(1) {
+        grid-column: 1 / -1;
+    }
+
+    .table-responsive:has(#faultTable) {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #faultTable {
+        min-width: 1100px !important;
+        table-layout: fixed;
+    }
+}
+
+/* Dark mode */
+[data-theme="dark"] #faultTable tbody tr {
+    border-bottom-color: #343b49;
+}
+
+[data-theme="dark"] #faultTable tbody tr:nth-child(even) {
+    background: #202735;
+}
+
+[data-theme="dark"] #faultTable tbody tr:hover {
+    background: #29364a;
+}
+
+
+/* =====================================================
+   FAULT DETAILS PAGE ONLY
+   Does not change the Live Fault main page
+===================================================== */
+
+.fault-details-page .summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fault-details-page .onu-card {
+    width: 100%;
+    overflow: hidden;
+}
+
+.fault-details-page .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.fault-details-page .onu-card table {
+    width: 100%;
     min-width: 1100px;
 }
 
+.fault-details-page .onu-card th,
+.fault-details-page .onu-card td {
+    white-space: nowrap;
+}
 
+.fault-details-page .status-online {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.fault-details-page .status-offline {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .fault-details-page .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+/* Fault Details only: unknown/stale status */
+.fault-details-page .status-unknown {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fef3c7;
+}
+
+body.dark-mode .fault-details-page .status-unknown {
+    color: #fde68a;
+    background: #78350f;
+}
+
+.fault-details-page .onu-card table {
+    min-width: 1250px;
+}
+
+.fault-details-page .onu-card th,
+.fault-details-page .onu-card td {
+    white-space: nowrap;
+}
+
+/* Live Fault ONU table and details modal */
+#faultTable { min-width: 1050px; }
+#faultTable th, #faultTable td { vertical-align: middle; }
+#faultTable tbody tr:hover { background: rgba(13,110,253,.045); }
+#faultPagination { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+
+.live-fault-modal { display:none; position:fixed; inset:0; z-index:20000; align-items:center; justify-content:center; padding:18px; }
+.live-fault-modal.show { display:flex; }
+.live-fault-modal-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.58); }
+.live-fault-modal-card { position:relative; width:min(680px,100%); max-height:85vh; overflow:auto; background:var(--bs-body-bg,#fff); color:var(--bs-body-color,#212529); border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+.live-fault-modal-card header { display:flex; align-items:center; justify-content:space-between; padding:15px 18px; border-bottom:1px solid var(--bs-border-color,#dee2e6); position:sticky; top:0; background:inherit; z-index:1; }
+.live-fault-modal-close { border:0; background:transparent; font-size:28px; line-height:1; cursor:pointer; }
+#liveFaultModalBody { padding:18px; }
+.live-fault-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+.live-fault-detail-grid > div { min-width:0; padding:10px; border:1px solid var(--bs-border-color,#dee2e6); border-radius:8px; }
+.live-fault-detail-grid small, .live-fault-description small { display:block; color:var(--bs-secondary-color,#6c757d); margin-bottom:4px; }
+.live-fault-detail-grid strong { display:block; overflow-wrap:anywhere; }
+.live-fault-description { margin-top:14px; padding:12px; background:var(--bs-tertiary-bg,#f8f9fa); border-radius:8px; }
+.live-fault-description p { margin:5px 0 0; }
+@media(max-width:576px) { .live-fault-detail-grid { grid-template-columns:1fr; } }
+/* Live Fault compact single-line filter bar */
+@media (min-width: 768px) {
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end {
+        display: grid;
+        grid-template-columns: 150px 100px 82px minmax(240px, 1fr);
+        gap: 8px;
+        align-items: end;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > [class*="col-"] {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        padding: 0;
+        margin: 0;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(1) {
+        grid-column: 4;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(2) {
+        grid-column: 1;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(3) {
+        grid-column: 2;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(4) {
+        grid-column: 3;
+    }
+}
+
+.monitor-card:has(#faultSearch) .form-label {
+    margin-bottom: 3px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.monitor-card:has(#faultSearch) .form-control,
+.monitor-card:has(#faultSearch) .form-select,
+.monitor-card:has(#faultSearch) .btn,
+.monitor-card:has(#faultSearch) .input-group-text {
+    min-height: 32px;
+    height: 32px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 12px;
+}
+
+.monitor-card:has(#faultSearch) #clearFaultFilter {
+    width: 100%;
+    white-space: nowrap;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+@media (max-width: 767.98px) {
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > [class*="col-"] {
+        width: auto;
+        max-width: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .monitor-card:has(#faultSearch) .row.g-3.align-items-end > :nth-child(1) {
+        grid-column: 1 / -1;
+    }
+}
+/* FINAL Live Fault filter layout */
+@media (min-width: 768px) {
+    .row.g-3.align-items-end:has(#faultSearch) {
+        display: grid !important;
+        grid-template-columns: 150px 100px 82px minmax(240px, 1fr) !important;
+        gap: 8px !important;
+        align-items: end !important;
+        margin: 0 !important;
+    }
+
+    .row.g-3.align-items-end:has(#faultSearch) > * {
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .row.g-3.align-items-end:has(#faultSearch) > :nth-child(1) { grid-column: 4 !important; }
+    .row.g-3.align-items-end:has(#faultSearch) > :nth-child(2) { grid-column: 1 !important; }
+    .row.g-3.align-items-end:has(#faultSearch) > :nth-child(3) { grid-column: 2 !important; }
+    .row.g-3.align-items-end:has(#faultSearch) > :nth-child(4) { grid-column: 3 !important; }
+}
+
+.row.g-3.align-items-end:has(#faultSearch) .form-label {
+    display: block;
+    margin-bottom: 3px !important;
+    font-size: 11px !important;
+    line-height: 1.2;
+}
+
+.row.g-3.align-items-end:has(#faultSearch) .form-control,
+.row.g-3.align-items-end:has(#faultSearch) .form-select,
+.row.g-3.align-items-end:has(#faultSearch) .btn,
+.row.g-3.align-items-end:has(#faultSearch) .input-group-text {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    font-size: 12px !important;
+}
+
+.row.g-3.align-items-end:has(#faultSearch) #clearFaultFilter {
+    width: 100%;
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .row.g-3.align-items-end:has(#faultSearch) {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 100px !important;
+        gap: 8px !important;
+        margin: 0 !important;
+    }
+
+    .row.g-3.align-items-end:has(#faultSearch) > * {
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .row.g-3.align-items-end:has(#faultSearch) > :nth-child(1) {
+        grid-column: 1 / -1 !important;
+    }
 }

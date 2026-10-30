@@ -27,8 +27,8 @@ function fakePool(db) {
                 id: o.id, legacy_customer_id: o.customer_id, mac: o.onu_mac || null
             }))];
         }
-        if (/FROM onu_user_mapping WHERE company_id = \?$/.test(q)) {
-            return [db.map.filter(m => m.company_id === p[0])];
+        if (/FROM onu_user_mapping AS m JOIN onu AS o ON o.id = m.onu_id WHERE m.company_id = \?$/.test(q)) {
+            return [db.map.filter(m => m.company_id === p[0] && db.onu.some(o => o.id === m.onu_id))];
         }
         if (/JOIN olts AS ol ON ol.id = o.olt_id WHERE ol.company_id = \? AND o.customer_id IS NOT NULL/.test(q)) {
             return [db.onu.filter(o => o.customer_id).map(o => ({ id: o.id, customer_id: o.customer_id }))];
@@ -45,8 +45,8 @@ function fakePool(db) {
         if (/^SELECT id FROM customers WHERE id = \?/.test(q)) {
             return [db.customers.filter(c => c.id === p[0] && c.company_id === p[1] && !c.deleted_at)];
         }
-        if (/^SELECT onu_id FROM onu_user_mapping WHERE company_id = \? AND customer_id = \?/.test(q)) {
-            return [db.map.filter(m => m.company_id === p[0] && m.customer_id === p[1])];
+        if (/^SELECT m.onu_id FROM onu_user_mapping AS m JOIN onu AS o/.test(q)) {
+            return [db.map.filter(m => m.company_id === p[0] && m.customer_id === p[1] && db.onu.some(o => o.id === m.onu_id))];
         }
         if (/^SELECT o.id FROM onu AS o JOIN olts/.test(q)) {
             return [db.onu.filter(o => o.customer_id === p[1])];
@@ -79,9 +79,14 @@ function fakePool(db) {
             db.extra.push({ company_id: p[0], olt_id: p[1], onu_id: p[2], customer_id: p[3] });
             return [{}];
         }
-        if (/^SELECT onu_id FROM onu_ppp_info WHERE company_id = \? AND customer_id = \?/.test(q)) {
+        if (/^SELECT p.onu_id FROM onu_ppp_info AS p JOIN onu AS o/.test(q)) {
             if (!db.ppp) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
-            return [db.ppp.filter(x => x.company_id === p[0] && x.customer_id === p[1])];
+            return [db.ppp.filter(x => x.company_id === p[0] && x.customer_id === p[1] && db.onu.some(o => o.id === x.onu_id))];
+        }
+        if (/^DELETE p FROM onu_ppp_info AS p LEFT JOIN onu/.test(q)) {
+            if (!db.ppp) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
+            db.ppp = db.ppp.filter(x => !(x.company_id === p[0] && x.customer_id === p[1] && !db.onu.some(o => o.id === x.onu_id)));
+            return [{}];
         }
         if (/^SELECT 1 FROM onu_ppp_info LIMIT 1/.test(q)) {
             if (!db.ppp) throw Object.assign(new Error('no table'), { code: 'ER_NO_SUCH_TABLE' });
@@ -601,4 +606,45 @@ test('other tenant PPP username cannot be stored', async () => {
     });
 
     assert.equal(db.ppp.length, 0);
+});
+
+/* ---------- OLT deleted and re-added: orphan links must not block mapping ---------- */
+
+test('orphan link from a deleted OLT does not block single-customer mapping', async () => {
+    const db = baseDb();
+    // stale link: customer 100 pointed at ONU 999 of an OLT that was deleted
+    db.map.push({ company_id: 10, olt_id: 77, onu_id: 999, customer_id: 100 });
+
+    const r = await autoMapOnus(fakePool(db), { companyId: 10, oltId: 1 });
+
+    assert.ok(db.map.some(m => m.onu_id === 1 && m.customer_id === 100));
+    assert.equal(r.linked >= 1, true);
+});
+
+test('orphan onu_ppp_info row of a deleted OLT is replaced for a switch customer', async () => {
+    const db = switchDb(3);
+    db.ppp.push({
+        company_id: 10, olt_id: 77, onu_id: 999, customer_id: 301,
+        pppoe_username: 'sw1', caller_id: 'AA:AA:AA:AA:AA:AA', ip_address: '1.1.1.1'
+    });
+
+    await autoMapOnus(fakePool(db), {
+        companyId: 10, oltId: 1,
+        entries: switchEntry(3), sessions: switchSessions(3)
+    });
+
+    const rows = db.ppp.filter(x => x.onu_id === 3);
+    assert.equal(rows.length, 3);
+    assert.ok(!db.ppp.some(x => x.onu_id === 999));
+});
+
+test('a live link on an existing ONU is still never moved', async () => {
+    const db = baseDb();
+    db.onu.push({ id: 50, olt_id: 1, onu_mac: '70:00:00:00:00:01', customer_id: null });
+    db.map.push({ company_id: 10, olt_id: 1, onu_id: 50, customer_id: 100 });
+
+    await autoMapOnus(fakePool(db), { companyId: 10, oltId: 1 });
+
+    assert.equal(db.map.filter(m => m.customer_id === 100).length, 1);
+    assert.equal(db.map.find(m => m.customer_id === 100).onu_id, 50);
 });

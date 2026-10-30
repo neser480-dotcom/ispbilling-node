@@ -26,10 +26,10 @@ const adminPermissionsRoutes =
     require("./routes/admin/permissions");
 
 const billingManualRoutes =
-    require("./routes/billingManual");
+    require("./routes/billing/billingManual");
 
 const billingRoutes =
-    require("./routes/billing");
+    require("./routes/billing/billing");
 
 
 /*
@@ -37,8 +37,8 @@ const billingRoutes =
 | staff routes|--------------------------------------------------------------------------
 */
 
-const staffRoutes = require("./routes/staff.routes");
-const salaryRoutes = require("./routes/salary.routes");
+const staffRoutes = require("./routes/staff/staff.routes");
+const salaryRoutes = require("./routes/staff/salary.routes");
 /*
 |--------------------------------------------------------------------------
 | AUTH / REGISTER
@@ -46,10 +46,10 @@ const salaryRoutes = require("./routes/salary.routes");
 */
 
 const authRoutes =
-    require("./routes/auth");
+    require("./routes/auth/auth");
 
 const registerRoutes =
-    require("./routes/register");
+    require("./routes/auth/register");
 
 
 /*
@@ -59,27 +59,27 @@ const registerRoutes =
 */
 
 const sidebarRoutes =
-    require("./routes/sidebar");
+    require("./routes/common/sidebar");
 
 const areaRoutes =
-    require("./routes/area");
+    require("./routes/area/area");
 
 const routerRoutes =
-    require("./routes/router");
+    require("./routes/mikrotik/router");
 
 const dashboardRoutes =
-    require("./routes/dashboard");
+    require("./routes/dashboard/dashboard");
 
 const reportsRoutes =
-    require("./routes/reports");
+    require("./routes/reports/reports");
 
 const activityLogRoutes =
-    require("./routes/activity-log");
+    require("./routes/activity/activity-log");
 
-const expenditureRoutes = require("./routes/expenditure.routes");
+const expenditureRoutes = require("./routes/billing/expenditure.routes");
 
-const oltRoutes = require("./routes/olt");
-const oltMonitorRoutes = require("./routes/olt-monitor");
+const oltRoutes = require("./routes/olt/olt");
+const oltMonitorRoutes = require("./routes/olt/olt-monitor");
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER ROUTES
@@ -87,19 +87,19 @@ const oltMonitorRoutes = require("./routes/olt-monitor");
 */
 
 const customerRoutes =
-    require("./routes/customers");
+    require("./routes/customers/customers");
 
 const customerAddRoutes =
-    require("./routes/customers-add");
+    require("./routes/customers/customers-add");
 
 const customerRechargeRoutes =
-    require("./routes/customers-recharge");
+    require("./routes/customers/customers-recharge");
 
 const customerManageRoutes =
-    require("./routes/customers-manage");
+    require("./routes/customers/customers-manage");
 
 const customerBulkRoutes =
-    require("./routes/customers-bulk");
+    require("./routes/customers/customers-bulk");
 
 /*
 |--------------------------------------------------------------------------
@@ -108,16 +108,16 @@ const customerBulkRoutes =
 */
 
 const customerBulkRechargeRoutes =
-    require("./routes/customers-bulk-recharge");
+    require("./routes/customers/customers-bulk-recharge");
 
 const customerCsvRoutes =
-    require("./routes/customers-csv");
+    require("./routes/customers/customers-csv");
 
 const { multipart } =
     require("./middleware/multipart");
 
 const activeCustomerRoutes =
-    require("./routes/activeCustomerRoutes");
+    require("./routes/customers/activeCustomerRoutes");
 
 
 /*
@@ -127,13 +127,13 @@ const activeCustomerRoutes =
 */
 
 const monitoringRoutes =
-    require("./routes/monitoring");
+    require("./routes/monitoring/monitoring");
 
 const interfaceMonitorRoutes =
-    require("./routes/interfaceMonitor");
+    require("./routes/monitoring/interfaceMonitor");
 
 const customerTrafficRoutes =
-    require("./routes/customerTraffic");
+    require("./routes/monitoring/customerTraffic");
 
 
 /*
@@ -143,14 +143,14 @@ const customerTrafficRoutes =
 */
 
 const softwareBillingRoutes =
-    require("./routes/softwareBilling");
+    require("./routes/software-billing/softwareBilling");
 
 const {
     requireSoftwareBilling
 } = require("./middleware/softwareBilling");
 
 const paymentGatewayRoutes =
-    require("./routes/paymentGateway");
+    require("./routes/billing/paymentGateway");
 
 
 /*
@@ -756,7 +756,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "login.html"
+                "auth", "login.html"
             )
         );
 
@@ -778,7 +778,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "register.html"
+                "auth", "register.html"
             )
         );
 
@@ -809,6 +809,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "software-billing",
                 "software-billing.html"
             )
         );
@@ -840,6 +841,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "software-billing",
                 "software-billing-receipt.html"
             )
         );
@@ -863,7 +865,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "dashboard.html"
+                "dashboard", "dashboard.html"
             )
         );
 
@@ -897,6 +899,7 @@ app.get(
                 path.join(
                     __dirname,
                     "views",
+                    "mikrotik",
                     "mikrotik-config.html"
                 )
             );
@@ -908,6 +911,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "mikrotik",
                 "router-index.html"
             )
         );
@@ -931,7 +935,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customers.html"
+                "customers", "customers.html"
             )
         );
 
@@ -954,7 +958,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customer-add.html"
+                "customers", "customer-add.html"
             )
         );
 
@@ -968,7 +972,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customer-add.html"
+                "customers", "customer-add.html"
             )
         );
     }
@@ -1074,6 +1078,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "olt",
                 "olt-list.html"
             )
         );
@@ -1088,6 +1093,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "olt",
                 "olt-users.html"
             )
         );
@@ -1101,6 +1107,7 @@ app.get(
             require("path").join(
                 __dirname,
                 "views",
+                "olt",
                 "olt_monitoring.html"
             )
         );
@@ -1141,7 +1148,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customers.html"
+                "customers", "customers.html"
             )
         );
 
@@ -1164,7 +1171,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customers.html"
+                "customers", "customers.html"
             )
         );
 
@@ -1217,6 +1224,8 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "staff",
+                "salary",
                 "employee-salary.html"
             )
         );
@@ -1236,11 +1245,11 @@ app.get(
 );
 
 app.get(
-    "/staff/employee",
+    ["/staff/employee", "/staff/employee/employee.html"],
     requireSoftwareBilling,
     (req, res) => {
         return res.sendFile(
-            path.join(__dirname, "views", "employee.html")
+            path.join(__dirname, "views", "staff", "employee", "employee.html")
         );
     }
 );
@@ -1397,7 +1406,7 @@ app.get(
 
 /*
 |--------------------------------------------------------------------------
-| ACCOUNTS → INVOICES
+| ACCOUNTS â†’ INVOICES
 |--------------------------------------------------------------------------
 */
 
@@ -1410,6 +1419,8 @@ app.get(
             path.join(
                 __dirname,
                 "views",
+                "billing",
+                "invoices",
                 "billing-invoices.html"
             )
         );
@@ -1463,19 +1474,19 @@ app.use((err, req, res, next) => {
 
     let status = Number(err.status || err.statusCode) || 500;
     let code = "INTERNAL_SERVER_ERROR";
-    let message = "সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
+    let message = "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦•à¦°à§à¦¨à¥¤";
 
     if (err.code === "ER_DUP_ENTRY") {
         status = 409;
         code = "DUPLICATE_ENTRY";
-        message = "এই তথ্যটি আগে থেকেই আছে।";
+        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à¦Ÿà¦¿ à¦†à¦—à§‡ à¦¥à§‡à¦•à§‡à¦‡ à¦†à¦›à§‡à¥¤";
     } else if (
         err.code === "ER_NO_REFERENCED_ROW_2" ||
         err.code === "ER_ROW_IS_REFERENCED_2"
     ) {
         status = 409;
         code = "DATABASE_RELATION_ERROR";
-        message = "এই তথ্যের সঙ্গে সম্পর্কিত অন্য রেকর্ড আছে।";
+        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à§‡à¦° à¦¸à¦™à§à¦—à§‡ à¦¸à¦®à§à¦ªà¦°à§à¦•à¦¿à¦¤ à¦…à¦¨à§à¦¯ à¦°à§‡à¦•à¦°à§à¦¡ à¦†à¦›à§‡à¥¤";
     } else if (
         err.code === "ECONNREFUSED" ||
         err.code === "PROTOCOL_CONNECTION_LOST" ||
@@ -1483,13 +1494,13 @@ app.use((err, req, res, next) => {
     ) {
         status = 503;
         code = "DATABASE_CONNECTION_ERROR";
-        message = "ডাটাবেজে সংযোগ করা যাচ্ছে না।";
+        message = "à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œà§‡ à¦¸à¦‚à¦¯à§‹à¦— à¦•à¦°à¦¾ à¦¯à¦¾à¦šà§à¦›à§‡ à¦¨à¦¾à¥¤";
     } else if (status === 401) {
-        message = "আবার লগইন করুন।";
+        message = "à¦†à¦¬à¦¾à¦° à¦²à¦—à¦‡à¦¨ à¦•à¦°à§à¦¨à¥¤";
     } else if (status === 403) {
-        message = "এই কাজ করার অনুমতি নেই।";
+        message = "à¦à¦‡ à¦•à¦¾à¦œ à¦•à¦°à¦¾à¦° à¦…à¦¨à§à¦®à¦¤à¦¿ à¦¨à§‡à¦‡à¥¤";
     } else if (status === 400) {
-        message = "আপনার দেওয়া তথ্য যাচাই করুন।";
+        message = "à¦†à¦ªà¦¨à¦¾à¦° à¦¦à§‡à¦“à§Ÿà¦¾ à¦¤à¦¥à§à¦¯ à¦¯à¦¾à¦šà¦¾à¦‡ à¦•à¦°à§à¦¨à¥¤";
     }
 
     if (status < 400 || status > 599) status = 500;
@@ -1506,17 +1517,17 @@ app.use((err, req, res, next) => {
 });
 
 
-// 404 HANDLER — সবশেষে
+// 404 HANDLER â€” à¦¸à¦¬à¦¶à§‡à¦·à§‡
 app.use((req, res) => {
     if (req.path.startsWith("/api/")) {
         return res.status(404).json({
             success: false,
             code: "API_ROUTE_NOT_FOUND",
-            message: "API endpoint পাওয়া যায়নি।"
+            message: "API endpoint à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤"
         });
     }
 
-    return res.status(404).send("এই পেজটি পাওয়া যায়নি।");
+    return res.status(404).send("à¦à¦‡ à¦ªà§‡à¦œà¦Ÿà¦¿ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤");
 });
 
 /*

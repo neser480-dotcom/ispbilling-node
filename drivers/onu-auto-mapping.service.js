@@ -319,9 +319,12 @@ async function loadContext(conn, company, olt, entries, sessions) {
     }));
 
     const [mappingRows] = await conn.execute(
-        `SELECT onu_id, customer_id
-           FROM onu_user_mapping
-          WHERE company_id = ?`,
+        // Join onu: links left behind by a deleted OLT (orphans) must not
+        // make a customer look "already linked" to an ONU that is gone.
+        `SELECT m.onu_id, m.customer_id
+           FROM onu_user_mapping AS m
+           JOIN onu AS o ON o.id = m.onu_id
+          WHERE m.company_id = ?`,
         [company]
     );
 
@@ -496,9 +499,10 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
     if (!customer.length) return 'customer_missing';
 
     const [taken] = await conn.execute(
-        `SELECT onu_id
-           FROM onu_user_mapping
-          WHERE company_id = ? AND customer_id = ?
+        `SELECT m.onu_id
+           FROM onu_user_mapping AS m
+           JOIN onu AS o ON o.id = m.onu_id
+          WHERE m.company_id = ? AND m.customer_id = ?
           LIMIT 1`,
         [company, customerId]
     );
@@ -623,9 +627,10 @@ async function writeOnuPppInfo(
         }
 
         const [existing] = await conn.execute(
-            `SELECT onu_id
-               FROM onu_ppp_info
-              WHERE company_id = ? AND customer_id = ?
+            `SELECT p.onu_id
+               FROM onu_ppp_info AS p
+               JOIN onu AS o ON o.id = p.onu_id
+              WHERE p.company_id = ? AND p.customer_id = ?
               LIMIT 1`,
             [company, item.customerId]
         );
@@ -643,6 +648,17 @@ async function writeOnuPppInfo(
             result.saved++;
             continue;
         }
+
+        // Cache row of a deleted ONU/OLT: drop it so the live session can
+        // be saved against the current ONU.
+        await conn.execute(
+            `DELETE p
+               FROM onu_ppp_info AS p
+               LEFT JOIN onu AS o ON o.id = p.onu_id
+              WHERE p.company_id = ? AND p.customer_id = ?
+                AND o.id IS NULL`,
+            [company, item.customerId]
+        );
 
         await conn.execute(
             `INSERT INTO onu_ppp_info

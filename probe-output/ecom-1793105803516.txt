@@ -1,6 +1,0 @@
-===== [config] show olt ? =====
-show olt 
-  reboot-records  Olt reboot records 
-E08EP-4S+(config)# show olt 
-% Command incomplete.
-E08EP-4S+(config)#

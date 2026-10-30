@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 (function () {
 
@@ -266,6 +266,100 @@
     |--------------------------------------------------------------------------
     */
 
+    function taka(value) {
+
+        return number(value).toLocaleString(
+            "en-IN",
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }
+        );
+    }
+
+
+    function dateTimeDisplay(value) {
+
+        if (!value) {
+            return "";
+        }
+
+        const date =
+            new Date(value);
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return escapeHtml(value);
+        }
+
+        const pad = function (n) {
+            return String(n).padStart(2, "0");
+        };
+
+        let hours =
+            date.getHours();
+
+        const suffix =
+            hours >= 12
+                ? "PM"
+                : "AM";
+
+        hours =
+            hours % 12 || 12;
+
+        return (
+            date.getFullYear() + "/" +
+            pad(date.getMonth() + 1) + "/" +
+            pad(date.getDate()) + " " +
+            pad(hours) + ":" +
+            pad(date.getMinutes()) + " " +
+            suffix
+        );
+    }
+
+
+    function isNewCustomer(customer) {
+
+        const flag =
+            customer.is_new ??
+            customer.isNew;
+
+        if (
+            flag !== undefined &&
+            flag !== null &&
+            flag !== ""
+        ) {
+
+            return (
+                flag === true ||
+                flag === 1 ||
+                flag === "1" ||
+                flag === "true"
+            );
+        }
+
+        const created =
+            customer.created_at ??
+            customer.createdAt;
+
+        if (!created) {
+            return false;
+        }
+
+        const time =
+            new Date(created).getTime();
+
+        return (
+            Number.isFinite(time) &&
+            (Date.now() - time) <
+            7 * 24 * 60 * 60 * 1000
+        );
+    }
+
+
     function statusBadge(customer) {
 
         const payment =
@@ -276,57 +370,46 @@
 
         const paymentClass =
             payment === "paid"
-                ? "bg-success"
-                : "bg-danger";
+                ? "cl-paid"
+                : "cl-unpaid";
 
         const paymentText =
             payment === "paid"
-                ? "Paid"
-                : "Unpaid";
+                ? "paid"
+                : "unpaid";
 
         let statusClass =
-            "bg-secondary";
-
+            "cl-inactive";
 
         switch (
             status.toLowerCase()
         ) {
 
             case "active":
-                statusClass = "bg-primary";
+                statusClass = "cl-active";
                 break;
 
             case "expired":
-                statusClass = "bg-danger";
-                break;
-
-            case "inactive":
-                statusClass = "bg-secondary";
+                statusClass = "cl-unpaid";
                 break;
 
             case "suspended":
-                statusClass = "bg-warning text-dark";
-                break;
-
-            case "disabled":
-                statusClass = "bg-secondary";
-                break;
-
             case "pending":
-                statusClass = "bg-warning text-dark";
+                statusClass = "cl-warn";
                 break;
         }
 
-
         return `
-            <div class="d-flex flex-column gap-1 align-items-start">
+            <div class="cl-badges">
 
-                <span class="badge ${paymentClass}">
+                <span class="cl-badge ${paymentClass}">
                     ${paymentText}
                 </span>
 
-                <span class="badge ${statusClass}">
-                    ${escapeHtml(status || "Unknown")}
+                <span class="cl-badge ${statusClass}">
+                    ${escapeHtml(
+                        (status || "unknown").toLowerCase()
+                    )}
                 </span>
 
             </div>
@@ -354,32 +437,25 @@
         ) {
 
             return `
-                <span class="cm-dayleft-na">
+                <span class="cl-dayleft-na">
                     N/A
                 </span>
             `;
         }
 
-
         const value =
             number(raw);
 
-
-        if (value < 0) {
-
-            return `
-                <span class="cm-dayleft cm-dayleft-over">
-                    ${Math.abs(value)} days overdue
-                </span>
-            `;
-        }
-
+        const title =
+            value < 0
+                ? Math.abs(value) + " days overdue"
+                : value + " day(s) left";
 
         return `
-            <span class="cm-dayleft">
-                ${value}
-                day${value === 1 ? "" : "s"}
-            </span>
+            <span
+                class="cl-dayleft${value <= 0 ? " cl-dayleft-over" : ""}"
+                title="${title}"
+            >${value}</span>
         `;
     }
 
@@ -393,7 +469,7 @@
     function dateDisplay(value) {
 
         if (!value) {
-            return "—";
+            return "-";
         }
 
 
@@ -427,34 +503,25 @@
             customer.promiseDate ??
             null;
 
-        const parts = [];
-
+        const lines = [];
 
         if (billing) {
 
-            parts.push(`
-                <div>
-                    <i class="fa-regular fa-calendar"></i>
-                    ${dateDisplay(billing)}
-                </div>
-            `);
+            lines.push(
+                `<div>${dateTimeDisplay(billing)}</div>`
+            );
         }
-
 
         if (promise) {
 
-            parts.push(`
-                <div class="small text-warning">
-                    <i class="fa-regular fa-clock"></i>
-                    Promise: ${dateDisplay(promise)}
-                </div>
-            `);
+            lines.push(
+                `<div>${dateTimeDisplay(promise)}</div>`
+            );
         }
 
-
-        return parts.length
-            ? parts.join("")
-            : "—";
+        return lines.length
+            ? `<div class="cl-dates">${lines.join("")}</div>`
+            : "-";
     }
 
 
@@ -472,37 +539,18 @@
         const customerAddress =
             address(customer);
 
-
         return `
-            <div class="small">
+            <div class="cl-contact">
 
-                ${
-                    mobile
-                        ? `
-                            <div>
-                                <i class="fa-solid fa-phone cm-ico-phone"></i>
-                                ${escapeHtml(mobile)}
-                            </div>
-                        `
-                        : ""
-                }
+                <div class="cl-line">
+                    <i class="fa-solid fa-mobile-screen-button cl-ico-phone"></i>
+                    ${escapeHtml(mobile || "N/A")}
+                </div>
 
-                ${
-                    customerAddress
-                        ? `
-                            <div class="text-muted">
-                                <i class="fa-solid fa-location-dot cm-ico-pin"></i>
-                                ${escapeHtml(customerAddress)}
-                            </div>
-                        `
-                        : ""
-                }
-
-                ${
-                    !mobile && !customerAddress
-                        ? "—"
-                        : ""
-                }
+                <div class="cl-line">
+                    <i class="fa-solid fa-location-dot cl-ico-pin"></i>
+                    ${escapeHtml(customerAddress || "N/A")}
+                </div>
 
             </div>
         `;
@@ -517,22 +565,20 @@
 
     function billBalanceDisplay(customer) {
 
+        const bal =
+            balance(customer);
+
         return `
             <div>
 
-                <div>
-                    <strong>
-                        ${money(
-                            monthlyBill(customer)
-                        )}
-                    </strong>
+                <div class="cl-bill">
+                    ${taka(
+                        monthlyBill(customer)
+                    )}
                 </div>
 
-                <div class="small text-muted">
-                    Balance:
-                    ${money(
-                        balance(customer)
-                    )}
+                <div class="cl-balance${bal < 0 ? " cl-balance-neg" : ""}">
+                    ${taka(bal)}
                 </div>
 
             </div>
@@ -591,7 +637,7 @@
 
 
         if (!id) {
-            return "—";
+            return "-";
         }
 
 
@@ -631,6 +677,7 @@
     class="btn btn-link customer-action-trigger"
     data-bs-toggle="dropdown"
     data-bs-auto-close="outside"
+    data-bs-popper-config='{"strategy":"fixed"}'
     aria-expanded="false"
     aria-label="Customer actions"
     title="Actions"
@@ -640,8 +687,7 @@
 
 
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-
-                    <li>
+<li>
                         <a
                             href="#"
                             class="dropdown-item customer-profile-btn"
@@ -651,9 +697,7 @@
                             <i class="fa-regular fa-user me-2"></i>
                             Profile
                         </a>
-                    </li>
-
-                    <li>
+                    </li><li>
                         <a
                             href="#"
                             class="dropdown-item recharge-single-btn"
@@ -669,9 +713,7 @@
                             <i class="fa-solid fa-money-bill-wave me-2"></i>
                             Recharge
                         </a>
-                    </li>
-
-                    <li>
+                    </li><li>
                         <a
                             href="#"
                             class="dropdown-item customer-edit-btn"
@@ -682,24 +724,16 @@
                             Edit
                         </a>
                     </li>
-
                     <li>
-                        <hr class="dropdown-divider">
+                        <a
+                            href="/reports/collection?customer_id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-bill-report-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-file-lines"></i>
+                            Report
+                        </a>
                     </li>
-
-                    
-
-<li>
-    <a
-        href="/reports/collection?customer_id=${encodeURIComponent(id)}"
-        class="dropdown-item customer-bill-report-btn"
-        data-id="${id}"
-    >
-        <i class="fa-solid fa-file-invoice-dollar me-2"></i>
-        Bill Report
-    </a>
-</li>
-
 
                     <li>
                         <a
@@ -707,30 +741,29 @@
                             class="dropdown-item customer-note-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-regular fa-note-sticky me-2"></i>
+                            <i class="fa-regular fa-note-sticky"></i>
                             Note
                         </a>
                     </li>
-
+<li>
+                        <a
+                            href="#"
+                            class="dropdown-item text-danger delete-customer-btn"
+                            data-id="${id}"
+                            data-name="${escapeHtml(name)}"
+                        >
+                            <i class="fa-regular fa-trash-can me-2"></i>
+                            Delete
+                        </a>
+                    </li>
                     <li>
                         <a
                             href="/customers/message?id=${encodeURIComponent(id)}"
                             class="dropdown-item customer-message-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-regular fa-comment-dots me-2"></i>
+                            <i class="fa-regular fa-comment-dots"></i>
                             Message
-                        </a>
-                    </li>
-
-                    <li>
-                        <a
-                            href="/customers/transfer?id=${encodeURIComponent(id)}"
-                            class="dropdown-item customer-transfer-btn"
-                            data-id="${id}"
-                        >
-                            <i class="fa-solid fa-right-left me-2"></i>
-                            Transfer
                         </a>
                     </li>
 
@@ -740,8 +773,8 @@
                             class="dropdown-item customer-reseller-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-solid fa-user-tag me-2"></i>
-                            Reseller
+                            <i class="fa-solid fa-right-long"></i>
+                            Transfer to Reseller
                         </a>
                     </li>
 
@@ -751,19 +784,19 @@
                             class="dropdown-item customer-ticket-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-solid fa-ticket me-2"></i>
-                            Support Ticket
+                            <i class="fa-regular fa-life-ring"></i>
+                            Open Support Ticket
                         </a>
                     </li>
 
                     <li>
                         <a
-                            href="/customers/reset_password?id=${encodeURIComponent(id)}"
-                            class="dropdown-item customer-reset-password-btn"
+                            href="/customers/invoices?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-invoice-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-solid fa-key me-2"></i>
-                            Reset Password
+                            <i class="fa-regular fa-file"></i>
+                            Invoices
                         </a>
                     </li>
 
@@ -773,13 +806,44 @@
                             class="dropdown-item customer-activity-log-btn"
                             data-id="${id}"
                         >
-                            <i class="fa-solid fa-clock-rotate-left me-2"></i>
+                            <i class="fa-regular fa-clock"></i>
                             Activity Log
                         </a>
                     </li>
 
                     <li>
-                        <hr class="dropdown-divider">
+                        <a
+                            href="/customers/data_usage?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-usage-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-regular fa-file-lines"></i>
+                            Data Usage Report
+                        </a>
+                    </li>
+
++                    <li><hr class="dropdown-divider"></li>
+
+                    <li>
+                        <a
+                            href="/customers/transfer?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-transfer-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-right-left"></i>
+                            Transfer
+                        </a>
+                    </li>
+
+                    <li>
+                        <a
+                            href="/customers/reset_password?id=${encodeURIComponent(id)}"
+                            class="dropdown-item customer-reset-password-btn"
+                            data-id="${id}"
+                        >
+                            <i class="fa-solid fa-key"></i>
+                            Reset Password
+                        </a>
                     </li>
 
                     ${
@@ -806,19 +870,6 @@
                                 </li>
                             `
                     }
-
-                    <li>
-                        <a
-                            href="#"
-                            class="dropdown-item text-danger delete-customer-btn"
-                            data-id="${id}"
-                            data-name="${escapeHtml(name)}"
-                        >
-                            <i class="fa-regular fa-trash-can me-2"></i>
-                            Delete
-                        </a>
-                    </li>
-
                 </ul>
             </div>
         `;
@@ -839,6 +890,18 @@
         const idString =
             String(id);
 
+        const packageName =
+            packageDisplay(customer);
+
+        const billingType =
+            String(
+                customer.billing_type ??
+                customer.billingType ??
+                ""
+            )
+                .trim()
+                .toLowerCase();
+
 
         return `
             <tr>
@@ -856,32 +919,47 @@
                             pppoeUsername(customer)
                         )}"
                         data-package="${escapeHtml(
-                            packageDisplay(customer)
+                            packageName
                         )}"
                         data-monthly="${monthlyBill(customer)}"
                         ${selectedCustomerIds.has(idString) ? "checked" : ""}
                     >
                 </td>
 
-                <td class="cm-id">
-                    ${escapeHtml(
+                <td class="cl-id">
+
+                    <a
+                        href="#"
+                        class="cl-id-link customer-profile-btn"
+                        data-id="${id}"
+                        data-name="${escapeHtml(
+                            customerName(customer)
+                        )}"
+                    >${escapeHtml(
                         customerId(customer)
-                    )}
+                    )}</a>
+
+                    ${
+                        isNewCustomer(customer)
+                            ? '<span class="cl-new">new</span>'
+                            : ""
+                    }
+
                 </td>
 
                 <td>
-                    <div class="fw-semibold">
+                    <div class="cl-name">
                         ${escapeHtml(
                             customerName(customer) ||
-                            "—"
+                            "-"
                         )}
                     </div>
 
-                    <div class="small text-muted">
+                    <div class="cl-sub">
                         ${escapeHtml(
                             pppoeUsername(customer) ||
                             customerId(customer) ||
-                            "—"
+                            "-"
                         )}
                     </div>
                 </td>
@@ -890,11 +968,19 @@
                     ${contactDisplay(customer)}
                 </td>
 
-                <td class="cm-package">
-                    ${escapeHtml(
-                        packageDisplay(customer) ||
-                        "—"
-                    )}
+                <td>
+                    <div class="cl-package">
+                        ${escapeHtml(
+                            packageName ||
+                            "-"
+                        )}
+                    </div>
+
+                    ${
+                        billingType
+                            ? `<span class="cl-tag">${escapeHtml(billingType)}</span>`
+                            : ""
+                    }
                 </td>
 
                 <td>
@@ -905,7 +991,7 @@
                     ${billingDateDisplay(customer)}
                 </td>
 
-                <td>
+                <td class="text-center">
                     ${dayLeftDisplay(customer)}
                 </td>
 
@@ -913,7 +999,7 @@
                     ${statusBadge(customer)}
                 </td>
 
-                <td>
+                <td class="text-center">
                     ${actionMenu(customer)}
                 </td>
 
@@ -1054,7 +1140,7 @@
         if (totalBill) {
 
             totalBill.textContent =
-                money(
+                taka(
                     summary.monthly_fee ??
                     summary.total_bill ??
                     summary.totalBill ??
@@ -1066,7 +1152,7 @@
         if (totalBalance) {
 
             totalBalance.textContent =
-                money(
+                taka(
                     summary.balance ??
                     summary.total_balance ??
                     summary.totalBalance ??
@@ -1204,7 +1290,7 @@
 
 
         info.textContent =
-            `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()} customers`;
+            `Showing ${start.toLocaleString()}-${end.toLocaleString()} of ${total.toLocaleString()} customers`;
     }
 
 
@@ -1221,64 +1307,49 @@
                 "customerPagination"
             );
 
-
         if (!container) {
             return;
         }
 
-
         container.innerHTML = "";
-
 
         const totalPages =
             number(
                 pagination.totalPages
             );
 
-
         if (totalPages <= 1) {
             return;
         }
 
-
         const current =
-            number(
-                pagination.page
-            ) || 1;
+            Math.min(
+                Math.max(
+                    number(pagination.page) || 1,
+                    1
+                ),
+                totalPages
+            );
 
 
-        function addPage(
-            page,
+        function addItem(
             label,
+            page,
             disabled,
-            active
+            active,
+            title
         ) {
 
             const li =
-                document.createElement(
-                    "li"
-                );
-
+                document.createElement("li");
 
             li.className =
                 "page-item" +
-                (
-                    disabled
-                        ? " disabled"
-                        : ""
-                ) +
-                (
-                    active
-                        ? " active"
-                        : ""
-                );
-
+                (disabled ? " disabled" : "") +
+                (active ? " active" : "");
 
             const button =
-                document.createElement(
-                    "button"
-                );
-
+                document.createElement("button");
 
             button.type =
                 "button";
@@ -1289,8 +1360,11 @@
             button.textContent =
                 label;
 
+            if (title) {
+                button.title = title;
+            }
 
-            if (!disabled) {
+            if (!disabled && !active) {
 
                 button.addEventListener(
                     "click",
@@ -1304,60 +1378,54 @@
                 );
             }
 
+            li.appendChild(button);
 
-            li.appendChild(
-                button
-            );
-
-            container.appendChild(
-                li
-            );
+            container.appendChild(li);
         }
 
 
-        addPage(
-            current - 1,
-            "Previous",
-            current <= 1,
-            false
-        );
+        function addText(label) {
 
+            const li =
+                document.createElement("li");
 
-        const start =
-            Math.max(
-                1,
-                current - 2
-            );
+            li.className =
+                "page-item cl-of";
 
+            const span =
+                document.createElement("span");
 
-        const end =
-            Math.min(
-                totalPages,
-                current + 2
-            );
+            span.className =
+                "page-link";
 
+            span.textContent =
+                label;
 
-        for (
-            let page = start;
-            page <= end;
-            page++
-        ) {
+            li.appendChild(span);
 
-            addPage(
-                page,
-                String(page),
-                false,
-                page === current
-            );
+            container.appendChild(li);
         }
 
 
-        addPage(
-            current + 1,
-            "Next",
-            current >= totalPages,
-            false
+        addItem("<<", 1, current <= 1, false, "First");
+
+        addItem("<", current - 1, current <= 1, false, "Previous");
+
+        addItem(String(current), current, false, true);
+
+        addText("of");
+
+        addItem(
+            String(totalPages),
+            totalPages,
+            false,
+            current === totalPages,
+            "Last page"
         );
+
+        addItem(">", current + 1, current >= totalPages, false, "Next");
+
+        addItem(">>", totalPages, current >= totalPages, false, "Last");
     }
 
 
@@ -2519,6 +2587,172 @@ formData.set("csrf_token", csrfToken);
     |--------------------------------------------------------------------------
     */
 
+
+// ============================================================
+// CUSTOMER FILTER DROPDOWN DATA LOADER
+// ============================================================
+
+async function customerFilterFetch(url, listKey) {
+    const response = await fetch(url, {
+        credentials: "same-origin",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Filter data load failed");
+    }
+
+    const rows = result[listKey] || result.data || [];
+
+    if (!Array.isArray(rows)) {
+        throw new Error("Invalid filter response: " + url);
+    }
+
+    return rows;
+}
+
+function customerFillFilter(select, rows, labelCallback) {
+    if (!select) return;
+
+    const placeholder = select.options[0]
+        ? select.options[0].cloneNode(true)
+        : new Option("-- Select --", "");
+
+    select.innerHTML = "";
+    select.appendChild(placeholder);
+
+    rows.forEach(row => {
+        const id = Number(row.id || 0);
+        const label = String(labelCallback(row) || "").trim();
+
+        if (id <= 0 || !label) return;
+
+        select.add(new Option(label, String(id)));
+    });
+}
+
+async function loadCustomerRouterFilter() {
+    const select = document.querySelector('[data-cf="router_id"]');
+    if (!select) return;
+
+    select.disabled = true;
+
+    try {
+        const rows = await customerFilterFetch(
+            "/api/router",
+            "routers"
+        );
+
+        customerFillFilter(select, rows, row => row.name);
+    } catch (error) {
+        console.error("Customer router filter:", error);
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function loadCustomerPackageFilter(routerId) {
+    const select = document.querySelector('[data-cf="package_id"]');
+    if (!select) return;
+
+    customerFillFilter(select, [], () => "");
+    select.disabled = true;
+
+    if (!routerId) {
+        select.disabled = false;
+        return;
+    }
+
+    try {
+        const rows = await customerFilterFetch(
+            "/api/router/" + encodeURIComponent(routerId) + "/packages",
+            "packages"
+        );
+
+        customerFillFilter(
+            select,
+            rows,
+            row => row.alias_name || row.package_name
+        );
+    } catch (error) {
+        console.error("Customer package filter:", error);
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function loadCustomerAreaFilter() {
+    const select = document.querySelector('[data-cf="area_id"]');
+    if (!select) return;
+
+    select.disabled = true;
+
+    try {
+        const rows = await customerFilterFetch(
+            "/areas/data",
+            "data"
+        );
+
+        customerFillFilter(select, rows, row => row.name);
+    } catch (error) {
+        console.error("Customer area filter:", error);
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function loadCustomerSubAreaFilter(areaId) {
+    const select = document.querySelector('[data-cf="sub_area_id"]');
+    if (!select) return;
+
+    customerFillFilter(select, [], () => "");
+    select.disabled = true;
+
+    if (!areaId) {
+        select.disabled = false;
+        return;
+    }
+
+    try {
+        const rows = await customerFilterFetch(
+            "/areas/sub-areas?area_id=" + encodeURIComponent(areaId),
+            "data"
+        );
+
+        customerFillFilter(select, rows, row => row.name);
+    } catch (error) {
+        console.error("Customer sub-area filter:", error);
+    } finally {
+        select.disabled = false;
+    }
+}
+
+async function initCustomerFilterOptions() {
+    const routerSelect = document.querySelector('[data-cf="router_id"]');
+    const areaSelect = document.querySelector('[data-cf="area_id"]');
+
+    if (routerSelect) {
+        routerSelect.addEventListener("change", function () {
+            loadCustomerPackageFilter(this.value);
+        });
+    }
+
+    if (areaSelect) {
+        areaSelect.addEventListener("change", function () {
+            loadCustomerSubAreaFilter(this.value);
+        });
+    }
+
+    await Promise.all([
+        loadCustomerRouterFilter(),
+        loadCustomerAreaFilter()
+    ]);
+}
+
     function initEvents() {
 
         if (initialized) {
@@ -3378,6 +3612,8 @@ formData.set("csrf_token", csrfToken);
 
     function init() {
 
+        initCustomerFilterOptions();
+
         initEvents();
 
         updateSelectedCount();
@@ -3440,3 +3676,8 @@ formData.set("csrf_token", csrfToken);
     };
 
 })();
+
+
+
+
+

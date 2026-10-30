@@ -1,388 +1,130 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fault Details</title>
 
-    <link
-        rel="stylesheet"
-        href="/css/monitoring.css"
-    >
-
+    <link rel="stylesheet" href="/assets/css/theme.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/monitoring.css">
 </head>
-
 <body>
 
-<div id="sidebar"></div>
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
 
-<div id="topbar"></div>
-
-
-<main class="main-content">
+<main class="main-content fault-details-page">
 
     <div class="monitor-header">
-
         <div>
-
-            <a
-                href="/monitoring"
-                class="back-button"
-            >
-                ← Back
-            </a>
-
-            <h3 id="pageTitle">
-                Fault Details
-            </h3>
-
-            <small id="oltPon">
-                Loading...
-            </small>
-
+            <a href="/monitoring" class="back-button">← Back</a>
+            <h3 id="pageTitle">Fault Details</h3>
+            <small id="oltPon">Loading...</small>
         </div>
 
+        <button type="button" class="btn btn-primary btn-monitor" id="refreshFaultDetails">
+            Refresh
+        </button>
     </div>
-
-
-    <!-- SUMMARY -->
 
     <div class="summary-grid">
 
         <div class="monitor-card bg-blue">
-
             <div class="card-body">
-
-                <div>
-
-                    <h6>
-                        Total ONU
-                    </h6>
-
-                    <h2 id="totalONU">
-                        0
-                    </h2>
-
-                </div>
-
-                <i>⌁</i>
-
+                <div><h6>Total Affected ONU</h6><h2 id="totalONU">0</h2></div>
+                <i>▤</i>
             </div>
-
         </div>
-
-
-        <div class="monitor-card bg-green">
-
-            <div class="card-body">
-
-                <div>
-
-                    <h6>
-                        Online
-                    </h6>
-
-                    <h2 id="onlineONU">
-                        0
-                    </h2>
-
-                </div>
-
-                <i>✓</i>
-
-            </div>
-
-        </div>
-
 
         <div class="monitor-card bg-red">
-
             <div class="card-body">
-
-                <div>
-
-                    <h6>
-                        Offline
-                    </h6>
-
-                    <h2 id="offlineONU">
-                        0
-                    </h2>
-
-                </div>
-
-                <i>⚠</i>
-
+                <div><h6>Offline ONU</h6><h2 id="offlineONU">0</h2></div>
+                <i>!</i>
             </div>
-
         </div>
-
 
         <div class="monitor-card bg-orange">
-
             <div class="card-body">
-
-                <div>
-
-                    <h6>
-                        Critical RX
-                    </h6>
-
-                    <h2 id="criticalRX">
-                        0
-                    </h2>
-
-                </div>
-
+                <div><h6>Weak RX ONU</h6><h2 id="weakRX">0</h2></div>
                 <i>!</i>
-
             </div>
+        </div>
 
+        <div class="monitor-card bg-red">
+            <div class="card-body">
+                <div><h6>Critical RX ONU</h6><h2 id="criticalRX">0</h2></div>
+                <i>!</i>
+            </div>
         </div>
 
     </div>
-
-
-    <!-- FAULT ANALYSIS -->
 
     <div class="system-card fault-analysis">
-
-        <div class="card-header">
-            Fault Analysis
-        </div>
+        <div class="card-header">Fault Analysis</div>
 
         <div class="analysis-body">
-
-            <div>
-
-                <strong>
-                    Fault Type
-                </strong>
-
-                <span id="faultType">
-                    -
-                </span>
-
-            </div>
-
-
-            <div>
-
-                <strong>
-                    Severity
-                </strong>
-
-                <span id="faultSeverity">
-                    -
-                </span>
-
-            </div>
-
-
-            <div>
-
-                <strong>
-                    Estimated Area
-                </strong>
-
-                <span id="faultArea">
-                    -
-                </span>
-
-            </div>
-
-
-            <div>
-
-                <strong>
-                    Confidence
-                </strong>
-
-                <span id="faultConfidence">
-                    -
-                </span>
-
-            </div>
-
+            <div><strong>Fault Type</strong><span id="faultType">-</span></div>
+            <div><strong>Severity</strong><span id="faultSeverity">-</span></div>
+            <div><strong>Estimated Area</strong><span id="faultArea">-</span></div>
+            <div><strong>Confidence</strong><span id="faultConfidence">-</span></div>
+            <div><strong>Likely Cause</strong><span id="likelyCause">-</span></div>
 
             <div class="reason-box">
-
-                <strong>
-                    Reason
-                </strong>
-
-                <p id="faultReason">
-                    -
-                </p>
-
+                <strong>Reason</strong>
+                <p id="faultReason">-</p>
             </div>
-
         </div>
-
     </div>
-
-
-    <!-- ONU -->
 
     <div class="onu-card">
-
         <div class="card-header">
-
-            <strong>
-                ONU Details
-            </strong>
-
-            <input
-                type="search"
-                id="onuSearch"
-                class="monitor-search"
-                placeholder="Search ONU..."
-            >
-
+            <strong>Affected ONU Details</strong>
+            <input type="search"
+                   id="onuSearch"
+                   class="monitor-search"
+                   placeholder="Search customer, PPPoE, serial, MAC...">
         </div>
-
 
         <div class="table-responsive">
-
             <table>
-
                 <thead>
-
                     <tr>
-
                         <th>#</th>
-                        <th>Customer</th>
-                        <th>Serial</th>
-                        <th>PON</th>
-                        <th>Status</th>
-                        <th>RX</th>
-                        <th>TX</th>
+                        <th>Customer ID</th>
+                        <th>Customer Name</th>
+                        <th>Phone</th>
+                        <th>ONU Serial Number</th>
+                        <th>Customer PPPoE ID</th>
+                        <th>OLT / PON</th>
+                        <th>RX Power</th>
+                        <th>TX Power</th>
                         <th>Distance</th>
-                        <th>Last Update</th>
-
+                        <th>Status</th>
+                        <th>Fault Reason</th>
                     </tr>
-
                 </thead>
 
-
                 <tbody id="onuBody">
-
                     <tr>
-
-                        <td
-                            colspan="9"
-                            class="loading"
-                        >
-                            Loading ONU...
-                        </td>
-
+                        <td colspan="12" class="loading">Loading affected ONU...</td>
                     </tr>
-
                 </tbody>
-
             </table>
-
         </div>
-
     </div>
 
-
     <div class="otdr-notice">
-
-        <strong>
-            OTDR / Fiber Analysis
-        </strong>
-
-        <p>
-            Estimated fault area is calculated from available
-            ONU distance data. For exact fiber fault location,
-            use OTDR measurement.
-        </p>
-
+        <strong>Fiber / Splitter Analysis</strong>
+        <p id="fiberAnalysis">Waiting for fault analysis...</p>
     </div>
 
 </main>
 
-
-<script>
-
-function getQuery(
-    name
-) {
-
-    return new URLSearchParams(
-        window.location.search
-    ).get(name);
-
-}
-
-
-async function loadPartial(
-    selector,
-    url
-) {
-
-    const element =
-        document.querySelector(selector);
-
-    if (!element) {
-        return;
-    }
-
-    try {
-
-        const response =
-            await fetch(url);
-
-        if (!response.ok) {
-            return;
-        }
-
-        element.innerHTML =
-            await response.text();
-
-    } catch (error) {
-
-        console.log(error);
-
-    }
-
-}
-
-
-document.addEventListener(
-    "DOMContentLoaded",
-    async function () {
-
-        await Promise.all([
-
-            loadPartial(
-                "#sidebar",
-                "/partials/sidebar.html"
-            ),
-
-            loadPartial(
-                "#topbar",
-                "/partials/topbar.html"
-            )
-
-        ]);
-
-    }
-);
-
-</script>
-
-
-<script src="/js/monitoring.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
+<script src="/assets/js/fault-details.js?v=20261030-details-fix1"></script>
 
 </body>
-
 </html>

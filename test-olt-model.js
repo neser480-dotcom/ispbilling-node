@@ -5,8 +5,7 @@ const path = require("path");
 
 const file = path.join(
     __dirname,
-    "services",
-    "olt-monitor.service.js"
+    "services", "olt", "olt-monitor.service.js"
 );
 
 const source = fs.readFileSync(file, "utf8");
