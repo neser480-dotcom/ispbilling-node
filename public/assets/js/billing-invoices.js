@@ -435,5 +435,11 @@
         }
     });
 
-    loadInvoices();
+    const detailMatch = window.location.pathname.match(/^\/billing\/invoice\/(\d+)\/?$/);
+
+    if (detailMatch) {
+        viewInvoice(detailMatch[1]);
+    } else {
+        loadInvoices();
+    }
 })();

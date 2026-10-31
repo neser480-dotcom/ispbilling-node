@@ -1,1817 +1,425 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - ISP Billing</title>
 
-
-    <!-- Bootstrap -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-
-    <!-- Font Awesome -->
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    >
-
-
-    <!-- Dashboard CSS -->
-    <link
-        rel="stylesheet"
-        href="/assets/css/dashboard.css"
-    >
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/dashboard.css?v=20261031">
 </head>
-
-
 <body>
 
-
-<!-- ==========================================================
-     SIDEBAR
-=========================================================== -->
-
 <div id="sidebarContainer"></div>
-
-
-
-<!-- ==========================================================
-     TOPBAR
-=========================================================== -->
-
 <div id="topbarContainer"></div>
-
-
-
-<!-- ==========================================================
-     MAIN CONTENT
-=========================================================== -->
 
 <main class="main-content">
 
+    <!-- software billing notice (filled by dashboard.js) -->
+    <div id="pendingBilling"></div>
 
-    <!-- ======================================================
-         DASHBOARD HEADING
-    ======================================================= -->
-
-    <div class="dashboard-heading mb-4">
-
-        <div>
-
-            <h2 id="dashboardTitle">
-                Dashboard
-            </h2>
-
-            <p id="dashboardSubtitle">
-                ISP Billing Management
-            </p>
-
+    <!-- =====================================================
+         SUPER ADMIN
+    ====================================================== -->
+    <div id="superAdminDashboard" style="display:none;">
+        <div class="dc-grid">
+            <div class="dc sa-card">
+                <div class="dc-title">Registered Users</div>
+                <div class="dc-main"><span class="dc-num" id="registeredUsers">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Active Users</div>
+                <div class="dc-main"><span class="dc-num" id="activeUsers">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Registration Invoices</div>
+                <div class="dc-main"><span class="dc-num" id="registrationInvoices">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Registration Collection</div>
+                <div class="dc-main"><span class="dc-num" id="registrationCollection">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Paid Registration</div>
+                <div class="dc-main"><span class="dc-num" id="paidRegistration">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Unpaid Registration</div>
+                <div class="dc-main"><span class="dc-num" id="unpaidRegistration">0</span></div>
+            </div>
+            <div class="dc sa-card">
+                <div class="dc-title">Software Payments</div>
+                <div class="dc-main"><span class="dc-num" id="softwarePayments">0</span></div>
+            </div>
         </div>
-
-
-        <span
-            id="roleBadge"
-            class="badge bg-secondary px-3 py-2"
-        >
-            Admin
-        </span>
-
     </div>
 
-
-
-    <!-- ======================================================
-         SOFTWARE BILLING NOTICE
-         dashboard.js creates the notice content here
-    ======================================================= -->
-
-    <div
-        id="pendingBilling"
-        class="mb-4"
-    >
-
-        <!-- JS generated billing notice -->
-
-    </div>
-
-
-
-    <!-- ======================================================
-         COMPANY DASHBOARD
-    ======================================================= -->
-
+    <!-- =====================================================
+         COMPANY / STAFF DASHBOARD
+         every block with data-perm is removed by dashboard.js
+         when the logged-in user does not have that permission
+    ====================================================== -->
     <div id="companyDashboard">
 
-
-        <!-- ==================================================
-             COLLECTION OVERVIEW
-             PHP reference style
-        =================================================== -->
-
-        <div class="card shadow-sm mb-4">
-
-            <div class="card-header bg-dark text-white">
-
-                <h5 class="mb-0">
-                    <i class="fa-solid fa-chart-pie me-2"></i>
-                    Collection Overview
-                </h5>
-
+        <!-- Expected / Collection circle -->
+        <div class="d-top" data-perm="dashboard.collection">
+            <div class="d-side">
+                Expected
+                <b id="expectedAmount">&#2547; 0</b>
             </div>
 
-
-            <div class="card-body">
-
-                <div class="row align-items-center g-4">
-
-
-                    <!-- ======================================
-                         COLLECTION CIRCLE
-                         No card around the circle
-                    ======================================= -->
-
-                    <div
-                        class="col-lg-5 col-md-5 col-12 text-center"
-                    >
-
-                        <div
-                            class="d-flex justify-content-center align-items-center"
-                        >
-
-                            <svg
-                                id="collectionCircle"
-                                width="170"
-                                height="170"
-                                viewBox="0 0 170 170"
-                            >
-
-                                <!-- Background -->
-                                <circle
-                                    cx="85"
-                                    cy="85"
-                                    r="70"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-opacity=".12"
-                                    stroke-width="12"
-                                ></circle>
-
-
-                                <!-- Progress -->
-                                <circle
-                                    id="collectionCircleProgress"
-                                    cx="85"
-                                    cy="85"
-                                    r="70"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="12"
-                                    stroke-linecap="round"
-                                    stroke-dasharray="439.823"
-                                    stroke-dashoffset="439.823"
-                                    transform="rotate(-90 85 85)"
-                                ></circle>
-
-
-                                <!-- Percentage -->
-                                <text
-                                    id="collectionCirclePercent"
-                                    x="85"
-                                    y="82"
-                                    text-anchor="middle"
-                                    dominant-baseline="middle"
-                                    font-size="27"
-                                    font-weight="700"
-                                    fill="currentColor"
-                                >
-                                    0%
-                                </text>
-
-
-                                <!-- Label -->
-                                <text
-                                    id="collectionCircleLabel"
-                                    x="85"
-                                    y="108"
-                                    text-anchor="middle"
-                                    font-size="11"
-                                    fill="currentColor"
-                                >
-                                    Collection
-                                </text>
-
-                            </svg>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- ======================================
-                         COLLECTION / EXPECTED
-                    ======================================= -->
-
-                    <div class="col-lg-7 col-md-7 col-12">
-
-                        <div class="row g-3">
-
-
-                            <!-- Collection -->
-
-                            <div class="col-md-6 col-12">
-
-                                <div
-                                    class="border rounded p-4 h-100"
-                                >
-
-                                    <div class="text-muted small mb-2">
-
-                                        <i class="fa-solid fa-money-bill-wave me-1"></i>
-
-                                        Collection
-
-                                    </div>
-
-
-                                    <div
-                                        id="totalCollection"
-                                        class="fs-3 fw-bold"
-                                    >
-                                        —
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-
-                            <!-- Expected -->
-
-                            <div class="col-md-6 col-12">
-
-                                <div
-                                    class="border rounded p-4 h-100"
-                                >
-
-                                    <div class="text-muted small mb-2">
-
-                                        <i class="fa-solid fa-file-invoice-dollar me-1"></i>
-
-                                        Expected
-
-                                    </div>
-
-
-                                    <div
-                                        id="totalBill"
-                                        class="fs-3 fw-bold"
-                                    >
-                                        —
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-                        </div>
-
-                    </div>
-
-
-                </div>
-
+            <div class="d-circle">
+                <svg viewBox="0 0 170 170">
+                    <circle class="track" cx="85" cy="85" r="74" fill="none" stroke-width="10"></circle>
+                    <circle class="bar" id="collectionCircleProgress" cx="85" cy="85" r="74" fill="none"
+                            stroke-width="10" stroke-dasharray="464.96" stroke-dashoffset="464.96"></circle>
+                </svg>
+                <div class="pct" id="collectionCirclePercent">0%</div>
             </div>
 
+            <div class="d-side right">
+                Collection
+                <b id="collectionAmount">&#2547; 0</b>
+            </div>
         </div>
 
-
-
-        <!-- ==================================================
-             CUSTOMER SUMMARY
-        =================================================== -->
-
-        <div class="row g-3 mb-4">
-
-
-            <!-- Total Customer -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-primary h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Total Customer
-                                </h6>
-
-                                <h2 id="totalCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-users"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Active -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-success h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Active Customer
-                                </h6>
-
-                                <h2 id="activeCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-user-check"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Inactive -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-secondary h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Inactive Customer
-                                </h6>
-
-                                <h2 id="inactiveCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-user-slash"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Expired -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-danger h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Expired Customer
-                                </h6>
-
-                                <h2 id="expiredCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-user-clock"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Paid -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-success h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Paid Customer
-                                </h6>
-
-                                <h2 id="paidCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-circle-check"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Unpaid -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-warning h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Unpaid Customer
-                                </h6>
-
-                                <h2 id="unpaidCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-circle-xmark"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Free -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-purple h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Free Customer
-                                </h6>
-
-                                <h2 id="freeCustomer">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-gift"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Total Bill -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-info h-100">
-
-                    <div class="card-body">
-
-                        <div class="card-flex">
-
-                            <div>
-
-                                <h6>
-                                    Total Bill
-                                </h6>
-
-                                <h2 id="totalBill2">
-                                    0
-                                </h2>
-
-                            </div>
-
-
-                            <div class="left-icon">
-
-                                <i class="fa-solid fa-file-invoice"></i>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-
-        <!-- ==================================================
-             COLLECTION / EXPENSE
-        =================================================== -->
-
-        <div class="row g-3 mb-4">
-
-
-            <!-- Total Collection -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-success h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Total Collection
-                        </h6>
-
-                        <h2 id="totalCollection2">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Today Collection -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-green h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Today Collection
-                        </h6>
-
-                        <h2 id="todayCollection">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Connection Fee -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-primary h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Connection Fee
-                        </h6>
-
-                        <h2 id="connectionFee">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Discount -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-warning h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Discount
-                        </h6>
-
-                        <h2 id="discount">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Expenditure -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-danger h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Expenditure
-                        </h6>
-
-                        <h2 id="expenditure">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Salary -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-info h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Salary
-                        </h6>
-
-                        <h2 id="salary">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Business Balance -->
-
-            <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                <div class="card bg-dark h-100">
-
-                    <div class="card-body">
-
-                        <h6>
-                            Business Balance
-                        </h6>
-
-                        <h2 id="businessBalance">
-                            0
-                        </h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-
-        <!-- ==================================================
-             MIKROTIK MONITORING
-        =================================================== -->
-
-        <div class="card shadow mb-4">
-
-            <div class="card-header bg-dark text-white">
-
-                <h5 class="mb-0">
-
-                    <i class="fa-solid fa-network-wired me-2"></i>
-
-                    MikroTik Monitoring
-
-                </h5>
-
-            </div>
-
-
-            <div class="card-body">
-
-                <div class="row g-3">
-
-
-                    <!-- Total MikroTik -->
-
-                    <div class="col-md-4 col-12">
-
-                        <div class="card bg-primary h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    MikroTik
-                                </h6>
-
-                                <h2 id="mikrotikTotal">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Online -->
-
-                    <div class="col-md-4 col-12">
-
-                        <div class="card bg-success h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Online User
-                                </h6>
-
-                                <h2 id="onlineUser">
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Offline -->
-
-                    <div class="col-md-4 col-12">
-
-                        <div class="card bg-danger h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Offline User
-                                </h6>
-
-                                <h2 id="offlineUser">
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- ==================================================
-             COLLECTION CHART
-        =================================================== -->
-
-        <div class="card shadow mb-4">
-
-            <div class="card-header bg-dark text-white">
-
-                <h5 class="mb-0">
-
-                    <i class="fa-solid fa-chart-column me-2"></i>
-
-                    Collection Chart
-
-                </h5>
-
-            </div>
-
-
-            <div class="card-body">
-
-                <div
-                    style="
-                        position:relative;
-                        width:100%;
-                        height:300px;
-                    "
-                >
-
-                    <canvas id="collectionChart"></canvas>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- ==================================================
-             REAL-TIME ROUTER STATUS
-        =================================================== -->
-
-        <div class="card shadow mb-4">
-
-            <div class="card-header bg-dark text-white">
-
-                <h5 class="mb-0">
-
-                    <i class="fa-solid fa-server me-2"></i>
-
-                    Real-time Router Status
-
-                </h5>
-
-            </div>
-
-
-            <div class="card-body">
-
-                <div class="row g-3">
-
-
-                    <!-- Router -->
-
-                    <div class="col-xl-4 col-md-6 col-12">
-
-                        <div class="card bg-primary h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Router
-                                </h6>
-
-                                <h2
-                                    id="routerName"
-                                    style="font-size:20px;"
-                                >
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- CPU -->
-
-                    <div class="col-xl-2 col-md-3 col-6">
-
-                        <div class="card bg-info h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    CPU
-                                </h6>
-
-                                <h2 id="cpu">
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- RAM -->
-
-                    <div class="col-xl-2 col-md-3 col-6">
-
-                        <div class="card bg-purple h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    RAM
-                                </h6>
-
-                                <h2 id="ram">
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Status -->
-
-                    <div class="col-xl-2 col-md-3 col-6">
-
-                        <div class="card bg-success h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Status
-                                </h6>
-
-                                <h2 id="status">
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Uptime -->
-
-                    <div class="col-xl-2 col-md-3 col-6">
-
-                        <div class="card bg-secondary h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Uptime
-                                </h6>
-
-                                <h2
-                                    id="uptime"
-                                    style="font-size:16px;"
-                                >
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Traffic -->
-
-                    <div class="col-12">
-
-                        <div class="card bg-dark h-100">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Traffic
-                                </h6>
-
-                                <h2
-                                    id="traffic"
-                                    style="font-size:18px;"
-                                >
-                                    —
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-
-    </div>
-    <!-- END COMPANY DASHBOARD -->
-
-
-
-    <!-- ======================================================
-         SUPER ADMIN DASHBOARD
-    ======================================================= -->
-
-    <div
-        id="superAdminDashboard"
-        style="display:none;"
-        class="mb-4"
-    >
-
-        <div class="card shadow">
-
-            <div class="card-header bg-dark text-white">
-
-                <h5 class="mb-0">
-
-                    <i class="fa-solid fa-user-shield me-2"></i>
-
-                    Super Admin Dashboard
-
-                </h5>
-
-            </div>
-
-
-            <div class="card-body">
-
-                <div class="row g-3">
-
-
-                    <div class="col-xl-3 col-md-6 col-12">
-
-                        <div class="card bg-primary">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Registered Users
-                                </h6>
-
-                                <h2 id="registeredUsers">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-3 col-md-6 col-12">
-
-                        <div class="card bg-success">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Active Users
-                                </h6>
-
-                                <h2 id="activeUsers">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-3 col-md-6 col-12">
-
-                        <div class="card bg-warning">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Registration Invoices
-                                </h6>
-
-                                <h2 id="registrationInvoices">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-3 col-md-6 col-12">
-
-                        <div class="card bg-info">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Registration Collection
-                                </h6>
-
-                                <h2 id="registrationCollection">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-4 col-md-6 col-12">
-
-                        <div class="card bg-success">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Paid Registration
-                                </h6>
-
-                                <h2 id="paidRegistration">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-4 col-md-6 col-12">
-
-                        <div class="card bg-danger">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Unpaid Registration
-                                </h6>
-
-                                <h2 id="unpaidRegistration">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <div class="col-xl-4 col-md-6 col-12">
-
-                        <div class="card bg-dark">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Software Payments
-                                </h6>
-
-                                <h2 id="softwarePayments">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ======================================================
-         ADMIN SUMMARY
-         MUST BE BEFORE FOOTER
-    ======================================================= -->
-
-    <div
-        id="adminSummaryCard"
-        class="card shadow mb-4"
-    >
-
-        <div
-            class="card-header bg-dark text-white d-flex justify-content-between align-items-center"
-        >
-
-            <h5 class="mb-0">
-                👨‍💼 Admin Summary
-            </h5>
-
-
-            <button
-                class="btn btn-light btn-sm"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#adminSummary"
-                aria-expanded="true"
-                aria-controls="adminSummary"
-            >
-
-                <i class="fa fa-angle-down"></i>
-
+        <!-- Month filter -->
+        <div class="d-filter">
+            <button type="button" class="d-icon-btn" id="dashRefreshBtn" title="Refresh">
+                <i class="fa-solid fa-rotate-right"></i>
             </button>
-
+            <input type="month" id="monthFilter" title="Month">
+            <button type="button" class="d-btn-blue" id="dashFilterBtn">Filter</button>
         </div>
 
+        <!-- Cards -->
+        <div class="dc-grid" id="mainCards">
+            <div class="dc dc-teal" data-perm="dashboard.customers">
+                <div class="dc-title">Total Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-group"></i></span>
+                    <span class="dc-num" id="v_total">0</span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_total">0</span></div>
+            </div>
+            <div class="dc dc-blue" data-perm="dashboard.customers">
+                <div class="dc-title">Active Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-check"></i></span>
+                    <span class="dc-num" id="v_active">0</span><span class="dc-amt" id="a_active"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_active">0</span></div>
+            </div>
+            <div class="dc dc-green" data-perm="dashboard.customers">
+                <div class="dc-title">Paid Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-plus"></i></span>
+                    <span class="dc-num" id="v_paid">0</span><span class="dc-amt" id="a_paid"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_paid">0</span></div>
+            </div>
+            <div class="dc dc-orange" data-perm="dashboard.customers">
+                <div class="dc-title">Unpaid Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-clock"></i></span>
+                    <span class="dc-num" id="v_unpaid">0</span><span class="dc-amt" id="a_unpaid"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_unpaid">0</span></div>
+            </div>
+            <div class="dc dc-red" data-perm="dashboard.customers">
+                <div class="dc-title">Expired Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-xmark"></i></span>
+                    <span class="dc-num" id="v_expired">0</span><span class="dc-amt" id="a_expired"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_expired">0</span></div>
+            </div>
+            <div class="dc dc-grey" data-perm="dashboard.customers">
+                <div class="dc-title">Inactive Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-lock"></i></span>
+                    <span class="dc-num" id="v_inactive">0</span><span class="dc-amt" id="a_inactive"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_inactive">0</span></div>
+            </div>
+            <div class="dc dc-steel" data-perm="dashboard.customers">
+                <div class="dc-title">Free Customer</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user"></i></span>
+                    <span class="dc-num" id="v_free">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-royal" data-perm="dashboard.finance">
+                <div class="dc-title">Total Connection Fee</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-sitemap"></i></span>
+                    <span class="dc-num" id="v_connfee">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Connection Fee</span><span id="f_connfee">0</span></div>
+            </div>
+            <div class="dc dc-olive" data-perm="dashboard.finance">
+                <div class="dc-title">Total Discount</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-percent"></i></span>
+                    <span class="dc-num" id="v_discount">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Discount</span><span id="f_discount">0</span></div>
+            </div>
+            <div class="dc dc-cyan" data-perm="dashboard.collection">
+                <div class="dc-title">Total Collection (With New)</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-simple"></i></span>
+                    <span class="dc-num" id="v_collnew">0</span><span class="dc-amt" id="a_collnew"></span>
+                </div>
+                <div class="dc-foot"><span>New Customer</span><span id="f_collnew">0</span></div>
+            </div>
+            <div class="dc dc-navy" data-perm="dashboard.collection">
+                <div class="dc-title">Total Bill &amp; Connection Fee</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-simple"></i></span>
+                    <span class="dc-num" id="v_billfee">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-slate" data-perm="dashboard.collection">
+                <div class="dc-title">Today Collection</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-money-bill-1"></i></span>
+                    <span class="dc-num" id="v_today">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-plum" data-perm="dashboard.finance">
+                <div class="dc-title">Total Expenditure</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-line"></i></span>
+                    <span class="dc-num" id="v_expend">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Expenditure</span><span id="f_expend">0</span></div>
+            </div>
+            <div class="dc dc-teal2" data-perm="dashboard.finance">
+                <div class="dc-title">Total Salary</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-money-bill-1"></i></span>
+                    <span class="dc-num" id="v_salary">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-emerald" data-perm="dashboard.finance">
+                <div class="dc-title">Business Balance</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-line"></i></span>
+                    <span class="dc-num" id="v_balance">0</span>
+                </div>
+                
+            </div>
+        </div>
 
-        <div
-            id="adminSummary"
-            class="collapse show"
-        >
-
-            <div class="card-body">
-
-                <div class="row g-3">
-
-
-                    <!-- Total Collection -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-success text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Total Collection
-                                </h6>
-
-                                <h2 id="adminTotalCollection">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
+        <!-- MikroTik monitoring -->
+        <div class="d-box" data-perm="dashboard.mikrotik">
+            <div class="d-box-head">MikroTik Monitoring</div>
+            <div class="d-box-body">
+                <div class="mk-row">
+                    <div class="mk-card dc-royal">
+                        <span class="dc-ico"><i class="fa-solid fa-user-group"></i></span>
+                        Total Customer <span class="mk-val" id="mkTotal">&mdash;</span>
                     </div>
-
-
-
-                    <!-- Connection Fee -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-primary text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Connection Fee
-                                </h6>
-
-                                <h2 id="adminConnectionFee">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
+                    <div class="mk-card dc-green">
+                        <span class="dc-ico"><i class="fa-solid fa-user-check"></i></span>
+                        Online <span class="mk-val" id="mkOnline">&mdash;</span>
                     </div>
-
-
-
-                    <!-- Expenditure -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-danger text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Expenditure
-                                </h6>
-
-                                <h2 id="adminExpenditure">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
+                    <div class="mk-card dc-red">
+                        <span class="dc-ico"><i class="fa-solid fa-user-xmark"></i></span>
+                        Offline <span class="mk-val" id="mkOffline">&mdash;</span>
                     </div>
+                </div>
+            </div>
+        </div>
 
+        <hr class="d-hr" data-perm="dashboard.chart">
 
+        <!-- Collection chart -->
+        <div class="d-box d-chart" data-perm="dashboard.chart">
+            <h4>Collection</h4>
 
-                    <!-- Discount -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-warning">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Discount
-                                </h6>
-
-                                <h2 id="adminDiscount">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
+            <div class="d-chart-controls">
+                <div class="radios">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="chartType" id="chartAmount" value="amount" checked>
+                        <label class="form-check-label" for="chartAmount">Amount</label>
                     </div>
-
-
-
-                    <!-- Salary -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-info text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Salary
-                                </h6>
-
-                                <h2 id="adminSalary">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="chartType" id="chartBill" value="bill">
+                        <label class="form-check-label" for="chartBill">Bill</label>
                     </div>
-
-
-
-                    <!-- Deposit -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-secondary text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Deposit
-                                </h6>
-
-                                <h2 id="adminDeposit">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Own Balance -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-dark text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Own Balance
-                                </h6>
-
-                                <h2 id="adminOwnBalance">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Messages -->
-
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-12">
-
-                        <div class="card bg-primary text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Messages
-                                </h6>
-
-                                <h2 id="adminMessages">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
                 </div>
 
+                <select id="chartCollector" class="form-select" style="max-width:190px">
+                    <option value="">Collectors</option>
+                </select>
+
+                <select id="chartYear" class="form-select" style="max-width:170px"></select>
+
+                <select id="chartMonth" class="form-select" style="max-width:170px">
+                    <option value="1">January</option><option value="2">February</option>
+                    <option value="3">March</option><option value="4">April</option>
+                    <option value="5">May</option><option value="6">June</option>
+                    <option value="7">July</option><option value="8">August</option>
+                    <option value="9">September</option><option value="10">October</option>
+                    <option value="11">November</option><option value="12">December</option>
+                </select>
+
+                <button type="button" class="btn btn-outline-primary" id="chartFilterBtn">Filter</button>
             </div>
 
+            <div class="d-chart-wrap"><canvas id="collectionChart"></canvas></div>
+        </div>
+
+        <!-- Admin -->
+        <div class="d-box collapsible" data-perm="dashboard.admin_summary">
+            <div class="d-box-head" data-bs-toggle="collapse" data-bs-target="#adminBody" aria-expanded="false">
+                <span>Admin</span><i class="fa-solid fa-chevron-up"></i>
+            </div>
+            <div id="adminBody" class="collapse">
+                <div class="d-box-body">
+                    <div class="dc-grid">
+            <div class="dc dc-cyan" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Total Collection</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-file-invoice"></i></span>
+                    <span class="dc-num" id="v_adm_collection">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Collection</span><span id="f_adm_collection">0</span></div>
+            </div>
+            <div class="dc dc-royal" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Connection Fee</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-sitemap"></i></span>
+                    <span class="dc-num" id="v_adm_connfee">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Connection Fee</span><span id="f_adm_connfee">0</span></div>
+            </div>
+            <div class="dc dc-steel" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Own Expenditure</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-line"></i></span>
+                    <span class="dc-num" id="v_adm_expend">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-brown" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Total Discount</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-percent"></i></span>
+                    <span class="dc-num" id="v_adm_discount">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Discount</span><span id="f_adm_discount">0</span></div>
+            </div>
+            <div class="dc dc-teal" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Salary</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-money-bill-1"></i></span>
+                    <span class="dc-num" id="v_adm_salary">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-emerald" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Deposit Collection</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-money-bill-1"></i></span>
+                    <span class="dc-num" id="v_adm_deposit">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-blue" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Own Balance</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-wallet"></i></span>
+                    <span class="dc-num" id="v_adm_balance">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-mixed" data-perm="dashboard.admin_summary">
+                <div class="dc-title">Message</div>
+                <div class="dc-main dc-msg">
+                    <span class="dc-ico"><i class="fa-solid fa-envelope-circle-check"></i></span>
+                    <div class="rows">
+                        <div><span>Masking</span><span id="m_masking">0</span></div>
+                        <div><span>Non Masking</span><span id="m_nonmasking">0</span></div>
+                        <div><span>Fixed Number</span><span id="m_fixed">0</span></div>
+                    </div>
+                </div>
+            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collector -->
+        <div class="d-box collapsible" data-perm="dashboard.collector_summary">
+            <div class="d-box-head" data-bs-toggle="collapse" data-bs-target="#collectorBody" aria-expanded="false">
+                <span>Collector</span><i class="fa-solid fa-chevron-up"></i>
+            </div>
+            <div id="collectorBody" class="collapse">
+                <div class="d-box-body">
+                    <div class="dc-grid">
+            <div class="dc dc-teal2" data-perm="dashboard.collector_summary">
+                <div class="dc-title">All Collector</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-user-group"></i></span>
+                    <span class="dc-num" id="v_col_all">0</span>
+                </div>
+                <div class="dc-foot"><span>Today Collection</span><span id="f_col_all">0</span></div>
+            </div>
+            <div class="dc dc-mixed" data-perm="dashboard.collector_summary">
+                <div class="dc-title">Connection Fee</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-sitemap"></i></span>
+                    <span class="dc-num" id="v_col_connfee">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-cyan" data-perm="dashboard.collector_summary">
+                <div class="dc-title">Deposit</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-money-bill-1"></i></span>
+                    <span class="dc-num" id="v_col_deposit">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-steel" data-perm="dashboard.collector_summary">
+                <div class="dc-title">Expenditure</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-chart-line"></i></span>
+                    <span class="dc-num" id="v_col_expend">0</span>
+                </div>
+                
+            </div>
+            <div class="dc dc-rose" data-perm="dashboard.collector_summary">
+                <div class="dc-title">Balance</div>
+                <div class="dc-main">
+                    <span class="dc-ico"><i class="fa-solid fa-wallet"></i></span>
+                    <span class="dc-num" id="v_col_balance">0</span>
+                </div>
+                
+            </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 
-
-
-    <!-- ======================================================
-         COLLECTOR SUMMARY
-         MUST BE THE LAST DASHBOARD SECTION
-         BEFORE FOOTER
-    ======================================================= -->
-
-    <div
-        id="collectorSummaryCard"
-        class="card shadow mb-4"
-    >
-
-        <div
-            class="card-header bg-success text-white d-flex justify-content-between align-items-center"
-        >
-
-            <h5 class="mb-0">
-                💰 Collector Summary
-            </h5>
-
-
-            <button
-                class="btn btn-light btn-sm"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#collectorSummary"
-                aria-expanded="false"
-                aria-controls="collectorSummary"
-            >
-
-                <i class="fa fa-angle-down"></i>
-
-            </button>
-
-        </div>
-
-
-        <div
-            id="collectorSummary"
-            class="collapse"
-        >
-
-            <div class="card-body">
-
-                <div class="row g-3">
-
-
-                    <!-- All Collector -->
-
-                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
-
-                        <div class="card bg-success text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    All Collector
-                                </h6>
-
-                                <h2 id="collectorTotal">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Connection Fee -->
-
-                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
-
-                        <div class="card bg-primary text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Connection Fee
-                                </h6>
-
-                                <h2 id="collectorConnectionFee">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Deposit -->
-
-                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
-
-                        <div class="card bg-warning">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Deposit
-                                </h6>
-
-                                <h2 id="collectorDeposit">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Expenditure -->
-
-                    <div class="col-xl-3 col-lg-3 col-md-6 col-12">
-
-                        <div class="card bg-danger text-white">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Expenditure
-                                </h6>
-
-                                <h2 id="collectorExpenditure">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- Collector Balance -->
-
-                    <div class="col-12">
-
-                        <div class="card bg-dark text-white text-center">
-
-                            <div class="card-body">
-
-                                <h6>
-                                    Collector Balance
-                                </h6>
-
-                                <h2 id="collectorBalance">
-                                    0
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ======================================================
-         FOOTER
-         Admin + Collector Summary-এর পরেই Footer
-    ======================================================= -->
-
-    <footer class="text-center text-muted py-4">
-
-        © ISP Billing. All rights reserved.
-
-    </footer>
-
-
+    <div class="d-footer">&copy; Shunno IT - <span id="footYear"></span></div>
 </main>
 
-
-
-<!-- ==========================================================
-     CHART.JS
-=========================================================== -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
-></script>
-
-
-
-<!-- ==========================================================
-     BOOTSTRAP
-=========================================================== -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
-
-
-
-<!-- ==========================================================
-     SIDEBAR LOADER
-=========================================================== -->
-
-<script
-    src="/assets/js/sidebar-loader.js"
-></script>
-
-
-
-<!-- ==========================================================
-     TOPBAR LOADER
-=========================================================== -->
-
-<script
-    src="/assets/js/topbar-loader.js"
-></script>
-
-
-
-<!-- ==========================================================
-     DASHBOARD JS
-=========================================================== -->
-
-<script
-    src="/assets/js/dashboard.js"
-></script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
+<script src="/assets/js/dashboard.js?v=20261031"></script>
 
 </body>
-
 </html>

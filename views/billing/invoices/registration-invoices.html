@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -56,6 +56,7 @@
         .registration-invoice-page {
 
             padding: 20px;
+            margin-top: 80px;
 
         }
 
@@ -332,7 +333,58 @@
 
         }
 
-    </style>
+    
+/* Registration invoice details popup */
+#registrationInvoiceDetailsModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200000;
+    background: rgba(15, 23, 42, .65);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+#registrationInvoiceDetailsModal.show {
+    display: flex;
+}
+#registrationInvoiceDetailsModal .registration-details-box {
+    background: #fff;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+#registrationInvoiceDetailsModal .registration-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e5e7eb;
+}
+#registrationInvoiceDetailsModal .registration-details-body {
+    padding: 22px;
+}
+#registrationInvoiceDetailsModal .registration-detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 11px 0;
+    border-bottom: 1px solid #edf0f3;
+}
+#registrationInvoiceDetailsModal .registration-detail-label {
+    color: #64748b;
+    font-weight: 500;
+}
+#registrationInvoiceDetailsModal .registration-detail-value {
+    color: #172033;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+</style>
 
 </head>
 
@@ -1293,7 +1345,119 @@
                 |--------------------------------------------------------------------------
                 */
 
-                loadRegistrationInvoices();
+                
+                // Open registration invoice details in an overlay on this page.
+                const registrationDetailsModal =
+                    document.getElementById("registrationInvoiceDetailsModal");
+
+                function closeRegistrationDetails() {
+                    if (registrationDetailsModal) {
+                        registrationDetailsModal.classList.remove("show");
+                        registrationDetailsModal.setAttribute("aria-hidden", "true");
+                    }
+                }
+
+                function setRegistrationDetail(id, value) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent =
+                            value === null || value === undefined || value === ""
+                                ? "—"
+                                : String(value);
+                    }
+                }
+
+                async function openRegistrationInvoiceDetails(invoiceId) {
+                    if (!registrationDetailsModal) return;
+
+                    const loading = document.getElementById("registrationInvoiceDetailsLoading");
+                    const content = document.getElementById("registrationInvoiceDetailsContent");
+                    const errorBox = document.getElementById("registrationInvoiceDetailsError");
+
+                    loading.style.display = "block";
+                    content.style.display = "none";
+                    errorBox.style.display = "none";
+
+                    registrationDetailsModal.classList.add("show");
+                    registrationDetailsModal.setAttribute("aria-hidden", "false");
+
+                    try {
+                        const response = await fetch(
+                            "/billing/data/" + encodeURIComponent(invoiceId),
+                            {
+                                method: "GET",
+                                credentials: "same-origin",
+                                cache: "no-store",
+                                headers: {
+                                    "Accept": "application/json",
+                                    "X-Requested-With": "XMLHttpRequest"
+                                }
+                            }
+                        );
+
+                        const result = await response.json();
+
+                        if (!response.ok || !result || !result.success || !result.invoice) {
+                            throw new Error(
+                                result && result.message
+                                    ? result.message
+                                    : "Invoice details could not be loaded."
+                            );
+                        }
+
+                        const invoice = result.invoice;
+
+                        setRegistrationDetail("regDetailInvoiceId", invoice.id);
+                        setRegistrationDetail("regDetailCustomerId", invoice.user_id);
+                        setRegistrationDetail("regDetailCustomerName", invoice.user_name);
+                        setRegistrationDetail("regDetailUsername", invoice.username);
+                        setRegistrationDetail("regDetailType", invoice.type);
+                        setRegistrationDetail("regDetailMessageType", invoice.message_type);
+                        setRegistrationDetail("regDetailAmount", invoice.amount);
+                        setRegistrationDetail("regDetailStatus", invoice.status);
+                        setRegistrationDetail("regDetailInvoiceDate", invoice.invoice_date);
+                        setRegistrationDetail("regDetailDueDate", invoice.due_date);
+                        setRegistrationDetail("regDetailPaidDate", invoice.paid_date);
+
+                        loading.style.display = "none";
+                        content.style.display = "block";
+                    } catch (error) {
+                        loading.style.display = "none";
+                        errorBox.textContent = error.message || "Failed to load invoice details.";
+                        errorBox.style.display = "block";
+                    }
+                }
+
+                // Intercept the existing View link; do not navigate to another page.
+                document.addEventListener("click", function (event) {
+                    const viewLink = event.target.closest('a[href*="/billing/invoice/"]');
+                    if (!viewLink) return;
+
+                    const match = viewLink.getAttribute("href").match(/\/billing\/invoice\/(\d+)/);
+                    if (!match) return;
+
+                    event.preventDefault();
+                    openRegistrationInvoiceDetails(match[1]);
+                });
+
+                document.getElementById("closeRegistrationInvoiceDetails")
+                    ?.addEventListener("click", closeRegistrationDetails);
+
+                document.getElementById("closeRegistrationInvoiceDetailsBottom")
+                    ?.addEventListener("click", closeRegistrationDetails);
+
+                registrationDetailsModal?.addEventListener("click", function (event) {
+                    if (event.target === registrationDetailsModal) {
+                        closeRegistrationDetails();
+                    }
+                });
+
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Escape" && registrationDetailsModal?.classList.contains("show")) {
+                        closeRegistrationDetails();
+                    }
+                });
+loadRegistrationInvoices();
 
             }
         );
@@ -1301,6 +1465,79 @@
     </script>
 
 
+
+<!-- Registration Invoice Details Popup -->
+<div id="registrationInvoiceDetailsModal" aria-hidden="true">
+    <div class="registration-details-box" role="dialog" aria-modal="true" aria-labelledby="registrationDetailsTitle">
+        <div class="registration-details-header">
+            <h5 id="registrationDetailsTitle" class="mb-0">
+                <i class="fa fa-file-invoice"></i> Invoice Details
+            </h5>
+            <button type="button" class="btn-close" id="closeRegistrationInvoiceDetails" aria-label="Close"></button>
+        </div>
+
+        <div class="registration-details-body">
+            <div id="registrationInvoiceDetailsLoading" class="text-center py-4">
+                <i class="fa fa-spinner fa-spin"></i> Loading invoice details...
+            </div>
+
+            <div id="registrationInvoiceDetailsContent" style="display:none">
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Invoice ID</span>
+                    <span class="registration-detail-value" id="regDetailInvoiceId">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Customer ID</span>
+                    <span class="registration-detail-value" id="regDetailCustomerId">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Customer Name</span>
+                    <span class="registration-detail-value" id="regDetailCustomerName">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Username</span>
+                    <span class="registration-detail-value" id="regDetailUsername">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Invoice Type</span>
+                    <span class="registration-detail-value" id="regDetailType">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Message Type</span>
+                    <span class="registration-detail-value" id="regDetailMessageType">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Amount</span>
+                    <span class="registration-detail-value" id="regDetailAmount">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Status</span>
+                    <span class="registration-detail-value" id="regDetailStatus">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Invoice Date</span>
+                    <span class="registration-detail-value" id="regDetailInvoiceDate">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Due Date</span>
+                    <span class="registration-detail-value" id="regDetailDueDate">—</span>
+                </div>
+                <div class="registration-detail-row">
+                    <span class="registration-detail-label">Paid Date</span>
+                    <span class="registration-detail-value" id="regDetailPaidDate">—</span>
+                </div>
+            </div>
+
+            <div id="registrationInvoiceDetailsError" class="alert alert-danger mt-3" style="display:none"></div>
+        </div>
+
+        <div class="d-flex justify-content-end p-3 border-top">
+            <button type="button" class="btn btn-secondary" id="closeRegistrationInvoiceDetailsBottom">Close</button>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>
+
+

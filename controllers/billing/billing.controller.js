@@ -185,7 +185,7 @@ function details(
 
     return res.sendFile(
         path.join(__dirname, "..", "..", "views",
-            "billing-invoice-details.html"
+            "billing/invoices/billing-invoices.html"
         )
     );
 

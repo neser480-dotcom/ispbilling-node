@@ -3,2189 +3,482 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     let collectionChart = null;
-    let dashboardTimer = null;
-    let mikrotikTimer = null;
-    let billingTimer = null;
-    let billingRefreshTimer = null;
-
-    let currentBilling = null;
-    let currentBillingExpiresAt = null;
-    let billingLoaded = false;
-
+    let permissions = new Set();
     let currentRouterId = null;
-    let mikrotikRequestInProgress = false;
+    let mikrotikBusy = false;
 
+    /* billing notice state */
+    let currentBilling = null;
+    let billingExpiresAt = null;
+    let billingLoaded = false;
+    let billingTimer = null;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers
-    |--------------------------------------------------------------------------
-    */
+    const $ = id => document.getElementById(id);
 
-    function number(value) {
+    /* ------------------------------------------------------------ helpers */
 
-        const n = Number(value);
+    const nf = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
 
-        if (!Number.isFinite(n)) {
-            return "0";
-        }
-
-        return new Intl.NumberFormat("en-US", {
-            maximumFractionDigits: 0
-        }).format(n);
+    function num(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? nf.format(n) : "0";
     }
 
-
-    function money(value) {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        const n = Number(value);
-
-        if (!Number.isFinite(n)) {
-            return "—";
-        }
-
-        return "৳ " + new Intl.NumberFormat("en-US", {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        }).format(n);
+    function taka(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? "৳ " + nf.format(n) : "—";
     }
 
+    function takaShort(v) {
+        const n = Number(v);
+        return Number.isFinite(n) ? "৳" + nf.format(n) : "";
+    }
 
     function setText(id, value) {
-
-        const element =
-            document.getElementById(id);
-
-        if (!element) {
-            return;
-        }
-
-        element.textContent =
-            value === null ||
-            value === undefined ||
-            value === ""
-                ? "—"
-                : value;
+        const el = $(id);
+        if (el) el.textContent = value === null || value === undefined || value === "" ? "—" : value;
     }
 
-
-    function escapeHtml(value) {
-
+    function esc(value) {
         return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
+            .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
     }
 
+    async function getJson(url) {
+        const response = await fetch(url, {
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: { Accept: "application/json" }
+        });
 
-    function parseDate(value) {
+        if (response.status === 402) { window.location.href = "/software-billing"; throw new Error("billing"); }
+        if (response.status === 401) { window.location.href = "/"; throw new Error("auth"); }
 
-        if (!value) {
-            return null;
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || data.success === false) {
+            throw new Error(data.message || `HTTP ${response.status}`);
         }
 
-        const date =
-            new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-            return null;
-        }
-
-        return date;
+        return data;
     }
 
+    /* ---------------------------------------------------------- permissions */
 
-    function formatCountdown(milliseconds) {
-
-        if (
-            !Number.isFinite(milliseconds) ||
-            milliseconds <= 0
-        ) {
-            return "00:00:00";
-        }
-
-        const totalSeconds =
-            Math.floor(
-                milliseconds / 1000
-            );
-
-        const hours =
-            Math.floor(
-                totalSeconds / 3600
-            );
-
-        const minutes =
-            Math.floor(
-                (totalSeconds % 3600) / 60
-            );
-
-        const seconds =
-            totalSeconds % 60;
-
-        return [
-            String(hours).padStart(2, "0"),
-            String(minutes).padStart(2, "0"),
-            String(seconds).padStart(2, "0")
-        ].join(":");
+    /* removes every block the logged-in user is not allowed to see */
+    function applyPermissions() {
+        document.querySelectorAll("[data-perm]").forEach(el => {
+            if (!permissions.has(el.dataset.perm)) el.remove();
+        });
     }
 
+    /* --------------------------------------------------------------- render */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Billing Notice CSS
-    |--------------------------------------------------------------------------
-    */
-
-    function installBillingNoticeStyles() {
-
-        if (
-            document.getElementById(
-                "softwareBillingNoticeStyles"
-            )
-        ) {
-            return;
-        }
-
-        const style =
-            document.createElement("style");
-
-        style.id =
-            "softwareBillingNoticeStyles";
-
-        style.textContent = `
-            .software-billing-notice {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 16px;
-                width: 100%;
-                padding: 10px 14px;
-                border-radius: 8px;
-                background: linear-gradient(
-                    135deg,
-                    #dc3545,
-                    #b02a37
-                );
-                color: #fff;
-                box-shadow: 0 3px 10px rgba(0,0,0,.08);
-            }
-
-            .software-billing-left {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                min-width: 0;
-            }
-
-            .software-billing-icon {
-                width: 34px;
-                height: 34px;
-                min-width: 34px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: rgba(255,255,255,.18);
-                font-size: 16px;
-            }
-
-            .software-billing-title {
-                font-size: 14px;
-                font-weight: 700;
-                line-height: 1.2;
-            }
-
-            .software-billing-details {
-                margin-top: 2px;
-                font-size: 12px;
-                opacity: .95;
-            }
-
-            .software-billing-right {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex-shrink: 0;
-            }
-
-            .software-billing-countdown {
-                min-width: 76px;
-                text-align: center;
-                padding: 5px 8px;
-                border-radius: 5px;
-                background: rgba(0,0,0,.18);
-                font-size: 13px;
-                font-weight: 700;
-                font-variant-numeric: tabular-nums;
-            }
-
-            .software-billing-notice .btn {
-                white-space: nowrap;
-            }
-
-            @media (max-width: 575.98px) {
-
-                .software-billing-notice {
-                    align-items: flex-start;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-
-                .software-billing-right {
-                    width: 100%;
-                    justify-content: space-between;
-                }
-
-                .software-billing-countdown {
-                    flex: 1;
-                }
-            }
-        `;
-
-        document.head.appendChild(style);
+    function newText(count, amount) {
+        return `${num(count)}/ ${takaShort(amount)}`;
     }
 
+    function renderCustomers(c) {
+        if (!c) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Billing Notice
-    |--------------------------------------------------------------------------
-    */
+        const k = c.counts, a = c.amounts, nc = c.new_counts, na = c.new_amounts;
 
-    function hideBillingNotice() {
+        setText("v_total", num(k.total));
+        setText("f_total", num(nc.total));
 
-        const box =
-            document.getElementById(
-                "pendingBilling"
-            );
-
-        if (!box) {
-            return;
+        for (const key of ["active", "paid", "unpaid", "expired", "inactive"]) {
+            setText("v_" + key, num(k[key]));
+            setText("a_" + key, takaShort(a[key]));
+            setText("f_" + key, newText(nc[key], na[key]));
         }
 
-        box.style.display =
-            "none";
+        setText("v_free", num(k.free));
     }
 
+    function renderCollection(c) {
+        if (!c) return;
 
-    function showBillingNotice() {
+        setText("expectedAmount", taka(c.expected));
+        setText("collectionAmount", taka(c.collection));
 
-        const box =
-            document.getElementById(
-                "pendingBilling"
-            );
+        const percent = Math.max(0, Math.min(100, Number(c.percent) || 0));
 
-        const details =
-            document.getElementById(
-                "billingDetails"
-            );
+        setText("collectionCirclePercent", `${Math.floor(percent)}%`);
 
-        const countdown =
-            document.getElementById(
-                "billingCountdown"
-            );
+        const bar = $("collectionCircleProgress");
 
-        const payButton =
-            document.getElementById(
-                "payNowButton"
-            );
-
-        if (!box) {
-
-            console.warn(
-                "[Dashboard Billing] #pendingBilling not found."
-            );
-
-            return;
+        if (bar) {
+            const r = Number(bar.getAttribute("r")) || 74;
+            const len = 2 * Math.PI * r;
+            bar.style.strokeDasharray = String(len);
+            bar.style.strokeDashoffset = String(len - (percent / 100) * len);
         }
 
-
-        box.style.display =
-            "block";
-
-
-        if (details) {
-
-            const amount =
-                currentBilling?.amount !== undefined
-                    ? money(
-                        currentBilling.amount
-                    )
-                    : "—";
-
-            const message =
-                currentBilling?.message
-                    ? String(
-                        currentBilling.message
-                    )
-                    : "";
-
-            const billingType =
-                currentBilling?.billing_type
-                    ? String(
-                        currentBilling.billing_type
-                    )
-                    : "registration";
-
-            details.innerHTML = `
-                <strong>Amount:</strong>
-                ${escapeHtml(amount)}
-
-                <span class="mx-1">•</span>
-
-                ${escapeHtml(billingType)}
-
-                ${
-                    message
-                        ? `
-                            <span class="mx-1">•</span>
-                            ${escapeHtml(message)}
-                        `
-                        : `
-                            <span class="mx-1">•</span>
-                            Trial active
-                        `
-                }
-            `;
-        }
-
-
-        if (payButton) {
-
-            payButton.href =
-                "/software-billing";
-
-            payButton.style.display =
-                "";
-        }
-
-
-        updateBillingCountdown();
+        setText("v_collnew", num(c.paid_count));
+        setText("a_collnew", takaShort(c.collection));
+        setText("f_collnew", newText(c.new_paid_count, c.new_paid_amount));
+        setText("v_billfee", num(c.bill_and_fee));
+        setText("v_today", num(c.today));
     }
 
+    function renderFinance(f) {
+        if (!f) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Billing Data Normalizer
-    |--------------------------------------------------------------------------
-    */
-
-    function normalizeBillingResponse(data) {
-
-        if (!data) {
-            return null;
-        }
-
-
-        if (
-            data.billing &&
-            typeof data.billing === "object"
-        ) {
-
-            return data.billing;
-        }
-
-
-        if (
-            data.data?.billing &&
-            typeof data.data.billing === "object"
-        ) {
-
-            return data.data.billing;
-        }
-
-
-        if (
-            data.current &&
-            typeof data.current === "object"
-        ) {
-
-            return data.current;
-        }
-
-
-        if (
-            data.data?.current &&
-            typeof data.data.current === "object"
-        ) {
-
-            return data.data.current;
-        }
-
-
-        if (
-            data.data &&
-            typeof data.data === "object" &&
-            (
-                data.data.id ||
-                data.data.amount ||
-                data.data.created_at ||
-                data.data.billing_type
-            )
-        ) {
-
-            return data.data;
-        }
-
-
-        if (
-            data.id ||
-            data.amount ||
-            data.created_at ||
-            data.billing_type
-        ) {
-
-            return data;
-        }
-
-
-        return null;
+        setText("v_connfee", num(f.connection_fee));
+        setText("f_connfee", num(f.today_connection_fee));
+        setText("v_discount", num(f.discount));
+        setText("f_discount", num(f.today_discount));
+        setText("v_expend", num(f.expenditure));
+        setText("f_expend", num(f.today_expenditure));
+        setText("v_salary", num(f.salary));
+        setText("v_balance", num(f.balance));
     }
 
+    function renderAdmin(a) {
+        if (!a) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Set Billing From Object
-    |--------------------------------------------------------------------------
-    */
+        setText("v_adm_collection", num(a.collection));
+        setText("f_adm_collection", num(a.today_collection));
+        setText("v_adm_connfee", num(a.connection_fee));
+        setText("f_adm_connfee", num(a.today_connection_fee));
+        setText("v_adm_expend", num(a.expenditure));
+        setText("v_adm_discount", num(a.discount));
+        setText("f_adm_discount", num(a.today_discount));
+        setText("v_adm_salary", num(a.salary));
+        setText("v_adm_deposit", num(a.deposit));
+        setText("v_adm_balance", num(a.balance));
+        setText("m_masking", num(a.messages?.masking));
+        setText("m_nonmasking", num(a.messages?.non_masking));
+        setText("m_fixed", num(a.messages?.fixed));
+    }
 
-    function setBillingFromObject(billing) {
+    function renderCollector(c) {
+        if (!c) return;
 
-        if (
-            !billing ||
-            typeof billing !== "object"
-        ) {
-            return false;
-        }
+        setText("v_col_all", num(c.total));
+        setText("a_col_all", "৳0");
+        setText("f_col_all", num(c.today_collection));
+        setText("v_col_connfee", num(c.connection_fee));
+        setText("v_col_deposit", num(c.deposit));
+        setText("v_col_expend", num(c.expenditure));
+        setText("v_col_balance", num(c.balance));
+    }
 
+    function renderSuperAdmin(d) {
+        $("companyDashboard").style.display = "none";
+        $("superAdminDashboard").style.display = "";
+        $("pendingBilling").style.display = "none";
 
-        if (
-            String(
-                billing.status || ""
-            ).toLowerCase() === "paid"
-        ) {
+        setText("registeredUsers", num(d.registered_users));
+        setText("activeUsers", num(d.active_users));
+        setText("registrationInvoices", num(d.registration_invoices));
+        setText("registrationCollection", taka(d.registration_collection));
+        setText("paidRegistration", num(d.paid_registration));
+        setText("unpaidRegistration", num(d.unpaid_registration));
+        setText("softwarePayments", taka(d.registration_paid_amount));
+    }
 
-            currentBilling =
-                null;
+    /* --------------------------------------------------------------- chart */
 
-            currentBillingExpiresAt =
-                null;
+    function drawChart(labels, values, type) {
+        const canvas = $("collectionChart");
 
-            billingLoaded =
-                true;
+        if (!canvas || typeof Chart === "undefined") return;
 
-            hideBillingNotice();
+        if (collectionChart) collectionChart.destroy();
 
-            return true;
-        }
-
-
-        currentBilling =
-            billing;
-
-
-        const serverRemaining =
-            Number(
-                billing.trial_remaining_seconds ??
-                billing.remaining_seconds ??
-                billing.remainingSeconds ??
-                0
-            );
-
-
-        if (
-            Number.isFinite(serverRemaining) &&
-            serverRemaining > 0
-        ) {
-
-            currentBillingExpiresAt =
-                Date.now() +
-                (
-                    serverRemaining *
-                    1000
-                );
-
-        } else {
-
-            const createdAt =
-                parseDate(
-                    billing.created_at ||
-                    billing.invoice_date ||
-                    billing.due_date
-                );
-
-
-            if (!createdAt) {
-
-                console.warn(
-                    "[Dashboard Billing] created_at not found.",
-                    billing
-                );
-
-                currentBillingExpiresAt =
-                    null;
-
-            } else {
-
-                currentBillingExpiresAt =
-                    createdAt.getTime() +
-                    (
-                        3 *
-                        60 *
-                        60 *
-                        1000
-                    );
+        collectionChart = new Chart(canvas, {
+            type: "line",
+            data: {
+                labels,
+                datasets: [{
+                    label: type === "bill" ? "Bill" : "Amount",
+                    data: values,
+                    borderColor: "#1a9ad6",
+                    backgroundColor: "rgba(120,120,120,.28)",
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: "#1a9ad6",
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { position: "top" } }
             }
-        }
-
-
-        if (
-            currentBillingExpiresAt &&
-            Date.now() >=
-            currentBillingExpiresAt
-        ) {
-
-            window.location.href =
-                "/software-billing";
-
-            return true;
-        }
-
-
-        billingLoaded =
-            true;
-
-        showBillingNotice();
-
-        return true;
+        });
     }
 
+    async function loadChart() {
+        if (!permissions.has("dashboard.chart") || !$("collectionChart")) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Load Software Billing
-    |--------------------------------------------------------------------------
-    */
+        const type = document.querySelector('input[name="chartType"]:checked')?.value || "amount";
 
-    async function loadSoftwareBilling() {
+        const params = new URLSearchParams({
+            year: $("chartYear").value,
+            month: $("chartMonth").value
+        });
+
+        if ($("chartCollector").value) params.set("collector_id", $("chartCollector").value);
 
         try {
-
-            const response =
-                await fetch(
-                    "/api/software-billing/current",
-                    {
-                        method: "GET",
-
-                        credentials:
-                            "same-origin",
-
-                        headers: {
-                            "Accept":
-                                "application/json"
-                        },
-
-                        cache:
-                            "no-store"
-                    }
-                );
-
-
-            if (
-                response.status === 401
-            ) {
-
-                return;
-            }
-
-
-            const data =
-                await response.json()
-                    .catch(() => null);
-
-
-            console.log(
-                "[Dashboard Billing] API:",
-                data
-            );
-
-
-            if (
-                response.status === 402 ||
-                response.status === 403
-            ) {
-
-                window.location.href =
-                    "/software-billing";
-
-                return;
-            }
-
-
-            if (!response.ok) {
-
-                console.warn(
-                    "[Dashboard Billing] HTTP:",
-                    response.status
-                );
-
-                return;
-            }
-
-
-            if (!data) {
-
-                console.warn(
-                    "[Dashboard Billing] Empty response."
-                );
-
-                return;
-            }
-
-
-            if (
-                data.type === "super_admin" ||
-                data.is_super_admin === true ||
-                data.super_admin === true
-            ) {
-
-                billingLoaded =
-                    true;
-
-                currentBilling =
-                    null;
-
-                currentBillingExpiresAt =
-                    null;
-
-                hideBillingNotice();
-
-                return;
-            }
-
-
-            const billing =
-                normalizeBillingResponse(
-                    data
-                );
-
-
-            if (billing) {
-
-                setBillingFromObject(
-                    billing
-                );
-
-                return;
-            }
-
-
-            if (
-                data.billing === null ||
-                data.data?.billing === null ||
-                data.current === null ||
-                data.data?.current === null
-            ) {
-
-                billingLoaded =
-                    true;
-
-                currentBilling =
-                    null;
-
-                currentBillingExpiresAt =
-                    null;
-
-                hideBillingNotice();
-
-                return;
-            }
-
-
-            console.warn(
-                "[Dashboard Billing] Billing object not found in API response."
-            );
-
-        } catch (error) {
-
-            console.warn(
-                "[Dashboard] Software billing:",
-                error.message
-            );
+            const d = await getJson(`/api/dashboard/chart?${params}`);
+            drawChart(d.labels, d[type] || [], type);
+        } catch (e) {
+            console.error("[Dashboard] chart:", e.message);
         }
     }
 
+    function setupChartControls(collectors) {
+        if (!$("chartYear")) return;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Billing Countdown
-    |--------------------------------------------------------------------------
-    */
+        const now = new Date();
 
-    function updateBillingCountdown() {
-
-        const countdown =
-            document.getElementById(
-                "billingCountdown"
-            );
-
-        if (!countdown) {
-            return;
-        }
-
-
-        if (!currentBillingExpiresAt) {
-
-            countdown.textContent =
-                "TRIAL";
-
-            return;
-        }
-
-
-        const remaining =
-            currentBillingExpiresAt -
-            Date.now();
-
-
-        if (remaining <= 0) {
-
-            countdown.textContent =
-                "00:00:00";
-
-
-            if (billingTimer) {
-
-                clearInterval(
-                    billingTimer
-                );
-
-                billingTimer =
-                    null;
+        if (!$("chartYear").options.length) {
+            for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
+                $("chartYear").appendChild(new Option(String(y), String(y)));
             }
-
-
-            window.location.href =
-                "/software-billing";
-
-            return;
+            $("chartMonth").value = String(now.getMonth() + 1);
         }
 
+        const select = $("chartCollector");
 
-        countdown.textContent =
-            formatCountdown(
-                remaining
-            );
+        if (select && select.options.length <= 1) {
+            (collectors || []).forEach(c => select.appendChild(new Option(c.name || `#${c.id}`, String(c.id))));
+        }
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Start Billing Countdown
-    |--------------------------------------------------------------------------
-    */
-
-    function startBillingCountdown() {
-
-        if (billingTimer) {
-
-            clearInterval(
-                billingTimer
-            );
-        }
-
-        billingTimer =
-            setInterval(
-                updateBillingCountdown,
-                1000
-            );
-
-        updateBillingCountdown();
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Chart
-    |--------------------------------------------------------------------------
-    */
-
-    function initializeChart(
-        labels = [],
-        values = []
-    ) {
-
-        const canvas =
-            document.getElementById(
-                "collectionChart"
-            );
-
-        if (
-            !canvas ||
-            typeof Chart === "undefined"
-        ) {
-            return;
-        }
-
-
-        if (collectionChart) {
-
-            collectionChart.destroy();
-
-            collectionChart =
-                null;
-        }
-
-
-        collectionChart =
-            new Chart(canvas, {
-
-                type: "bar",
-
-                data: {
-
-                    labels:
-                        labels,
-
-                    datasets: [{
-
-                        label:
-                            "Collection",
-
-                        data:
-                            values,
-
-                        borderWidth:
-                            1,
-
-                        borderRadius:
-                            8,
-
-                        maxBarThickness:
-                            45
-                    }]
-                },
-
-                options: {
-
-                    responsive:
-                        true,
-
-                    maintainAspectRatio:
-                        false,
-
-                    plugins: {
-
-                        legend: {
-                            display:
-                                false
-                        },
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label(context) {
-
-                                    return "৳ " +
-                                        new Intl.NumberFormat(
-                                            "en-US",
-                                            {
-                                                minimumFractionDigits: 0,
-                                                maximumFractionDigits: 2
-                                            }
-                                        ).format(
-                                            Number(
-                                                context.raw ||
-                                                0
-                                            )
-                                        );
-                                }
-                            }
-                        }
-                    },
-
-                    scales: {
-
-                        y: {
-
-                            beginAtZero:
-                                true,
-
-                            ticks: {
-
-                                callback(value) {
-
-                                    return "৳ " +
-                                        number(
-                                            value
-                                        );
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Pending Billing Fallback
-    |--------------------------------------------------------------------------
-    */
-
-    function renderPendingBilling(data) {
-
-        if (billingLoaded) {
-            return;
-        }
-
-
-        if (
-            !data ||
-            typeof data !== "object"
-        ) {
-
-            return;
-        }
-
-
-        console.log(
-            "[Dashboard Billing] Using pending_billing fallback:",
-            data
-        );
-
-
-        setBillingFromObject(
-            data
-        );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Super Admin
-    |--------------------------------------------------------------------------
-    */
-
-    function renderSuperAdmin(data) {
-
-        const company =
-            document.getElementById(
-                "companyDashboard"
-            );
-
-        const superAdmin =
-            document.getElementById(
-                "superAdminDashboard"
-            );
-
-
-        if (company) {
-
-            company.style.display =
-                "none";
-        }
-
-
-        if (superAdmin) {
-
-            superAdmin.style.display =
-                "";
-        }
-
-
-        hideBillingNotice();
-
-
-        setText(
-            "dashboardTitle",
-            "Super Admin Dashboard"
-        );
-
-        setText(
-            "dashboardSubtitle",
-            "Software & Company Management"
-        );
-
-        setText(
-            "roleBadge",
-            "Super Admin"
-        );
-
-
-        setText(
-            "registeredUsers",
-            number(
-                data.registered_users
-            )
-        );
-
-    setText(
-            "activeUsers",
-            number(
-                data.active_users
-            )
-        );
-
-        setText(
-            "registrationInvoices",
-            number(
-                data.registration_invoices
-            )
-        );
-
-        setText(
-            "registrationCollection",
-            money(
-                data.registration_collection
-            )
-        );
-
-        setText(
-            "paidRegistration",
-            number(
-                data.paid_registration
-            )
-        );
-
-        setText(
-            "unpaidRegistration",
-            number(
-                data.unpaid_registration
-            )
-        );
-
-        setText(
-            "softwarePayments",
-            money(
-                data.registration_paid_amount
-            )
-        );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MikroTik Basic Data Renderer
-    |--------------------------------------------------------------------------
-    */
-
-    function renderMikrotik(data) {
-
-        if (!data) {
-            return;
-        }
-
-        setText(
-            "routerName",
-            data.mikrotik_router_name ||
-            data.router_name ||
-            data.identity ||
-            "MikroTik"
-        );
-
-        setText(
-            "mikrotikTotal",
-            number(
-                data.mikrotik_total
-            )
-        );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MikroTik Real-Time Status
-    |--------------------------------------------------------------------------
-    |
-    | Existing Node API:
-    | GET /api/router/:id/check
-    |
-    */
+    /* ------------------------------------------------------------- mikrotik */
 
     async function loadMikrotik(routerId) {
+        if (!routerId || mikrotikBusy || !$("mkOnline")) return;
 
-        if (
-            !routerId ||
-            mikrotikRequestInProgress
-        ) {
+        mikrotikBusy = true;
+
+        try {
+            const data = await getJson(`/api/router/${encodeURIComponent(routerId)}/check`);
+
+            const total = Number(data.pppoe_total);
+            const active = Number(data.active_total);
+
+            if (Number.isFinite(total) && Number.isFinite(active)) {
+                setText("mkTotal", num(total));
+                setText("mkOnline", num(active));
+                setText("mkOffline", num(Math.max(0, total - active)));
+            }
+        } catch (e) {
+            ["mkTotal", "mkOnline", "mkOffline"].forEach(id => setText(id, "—"));
+        } finally {
+            mikrotikBusy = false;
+        }
+    }
+
+    /* -------------------------------------------------------- software billing */
+
+    function formatCountdown(ms) {
+        if (!Number.isFinite(ms) || ms <= 0) return "00:00:00";
+
+        const t = Math.floor(ms / 1000);
+
+        return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60]
+            .map(v => String(v).padStart(2, "0")).join(":");
+    }
+
+    function hideBillingNotice() {
+        const box = $("pendingBilling");
+        if (box) { box.innerHTML = ""; }
+    }
+
+    function showBillingNotice() {
+        const box = $("pendingBilling");
+        if (!box || !currentBilling) return;
+
+        const amount = currentBilling.amount !== undefined ? taka(currentBilling.amount) : "—";
+        const type = currentBilling.billing_type || "registration";
+        const message = currentBilling.message || "Trial active";
+
+        box.innerHTML = `
+            <div class="software-billing-notice">
+                <div>
+                    <div class="sb-title"><i class="fa-solid fa-triangle-exclamation me-1"></i> Software Billing</div>
+                    <div class="sb-details"><strong>Amount:</strong> ${esc(amount)} • ${esc(type)} • ${esc(message)}</div>
+                </div>
+                <div class="sb-right">
+                    <span class="sb-count" id="billingCountdown">TRIAL</span>
+                    <a class="btn btn-light btn-sm" href="/software-billing">Pay Now</a>
+                </div>
+            </div>`;
+
+        updateBillingCountdown();
+    }
+
+    function updateBillingCountdown() {
+        const el = $("billingCountdown");
+        if (!el) return;
+
+        if (!billingExpiresAt) { el.textContent = "TRIAL"; return; }
+
+        const remaining = billingExpiresAt - Date.now();
+
+        if (remaining <= 0) {
+            el.textContent = "00:00:00";
+            window.location.href = "/software-billing";
             return;
         }
 
-        mikrotikRequestInProgress =
-            true;
+        el.textContent = formatCountdown(remaining);
+    }
 
+    function setBilling(billing) {
+        if (!billing || typeof billing !== "object") return;
 
+        if (String(billing.status || "").toLowerCase() === "paid") {
+            currentBilling = null;
+            billingExpiresAt = null;
+            billingLoaded = true;
+            hideBillingNotice();
+            return;
+        }
+
+        currentBilling = billing;
+
+        const remaining = Number(
+            billing.trial_remaining_seconds ?? billing.remaining_seconds ?? billing.remainingSeconds ?? 0
+        );
+
+        if (Number.isFinite(remaining) && remaining > 0) {
+            billingExpiresAt = Date.now() + remaining * 1000;
+        } else {
+            const created = new Date(billing.created_at || billing.invoice_date || billing.due_date || "");
+            billingExpiresAt = Number.isNaN(created.getTime())
+                ? null
+                : created.getTime() + 3 * 60 * 60 * 1000;
+        }
+
+        if (billingExpiresAt && Date.now() >= billingExpiresAt) {
+            window.location.href = "/software-billing";
+            return;
+        }
+
+        billingLoaded = true;
+        showBillingNotice();
+    }
+
+    async function loadSoftwareBilling() {
         try {
+            const response = await fetch("/api/software-billing/current", {
+                credentials: "same-origin",
+                cache: "no-store",
+                headers: { Accept: "application/json" }
+            });
 
-            const response =
-                await fetch(
-                    `/api/router/${encodeURIComponent(routerId)}/check`,
-                    {
-                        method: "GET",
+            if (response.status === 401) return;
 
-                        credentials:
-                            "same-origin",
-
-                        headers: {
-                            "Accept":
-                                "application/json"
-                        },
-
-                        cache:
-                            "no-store"
-                    }
-                );
-
-
-            const data =
-                await response.json()
-                    .catch(() => ({}));
-
-
-            if (
-                !response.ok ||
-                !data.success
-            ) {
-
-                throw new Error(
-                    data.message ||
-                    `Router API error: ${response.status}`
-                );
+            if (response.status === 402 || response.status === 403) {
+                window.location.href = "/software-billing";
+                return;
             }
 
+            if (!response.ok) return;
 
-            const router =
-                data.router || {};
+            const data = await response.json().catch(() => null);
 
-            const resource =
-                data.resource || {};
+            if (!data) return;
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | Router Name
-            |--------------------------------------------------------------------------
-            */
-
-            setText(
-                "routerName",
-                router.name ||
-                data.identity ||
-                "MikroTik"
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | CPU
-            |--------------------------------------------------------------------------
-            */
-
-            const cpu =
-                Number(
-                    resource["cpu-load"] ??
-                    resource.cpu_load ??
-                    resource.cpu
-                );
-
-
-            setText(
-                "cpu",
-                Number.isFinite(cpu)
-                    ? `${cpu}%`
-                    : "—"
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | RAM
-            |--------------------------------------------------------------------------
-            */
-
-            const totalMemory =
-                Number(
-                    resource["total-memory"] ??
-                    resource.total_memory ??
-                    0
-                );
-
-
-            const freeMemory =
-                Number(
-                    resource["free-memory"] ??
-                    resource.free_memory ??
-                    0
-                );
-
-
-            if (
-                totalMemory > 0 &&
-                freeMemory >= 0 &&
-                freeMemory <= totalMemory
-            ) {
-
-                const usedMemory =
-                    totalMemory -
-                    freeMemory;
-
-
-                const ramPercent =
-                    (
-                        usedMemory /
-                        totalMemory
-                    ) * 100;
-
-
-                setText(
-                    "ram",
-                    `${ramPercent.toFixed(1)}%`
-                );
-
-            } else {
-
-                setText(
-                    "ram",
-                    "—"
-                );
+            if (data.type === "super_admin" || data.is_super_admin === true || data.super_admin === true) {
+                billingLoaded = true;
+                hideBillingNotice();
+                return;
             }
 
+            const billing =
+                data.billing || data.data?.billing || data.current || data.data?.current ||
+                ((data.data && (data.data.id || data.data.amount)) ? data.data : null) ||
+                ((data.id || data.amount) ? data : null);
 
-            /*
-            |--------------------------------------------------------------------------
-            | Uptime
-            |--------------------------------------------------------------------------
-            */
+            if (billing) { setBilling(billing); return; }
 
-            setText(
-                "uptime",
-                resource.uptime ||
-                data.uptime ||
-                "—"
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Traffic
-            |--------------------------------------------------------------------------
-            |
-            | Current /api/router/:id/check API does not return
-            | interface traffic yet.
-            |
-            */
-
-            setText(
-                "traffic",
-                data.traffic ||
-                "—"
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Online / Offline PPPoE
-            |--------------------------------------------------------------------------
-            |
-            | pppoe_total = all PPP secrets
-            | active_total = active PPP sessions
-            |
-            */
-
-            const totalPPPoE =
-                Number(
-                    data.pppoe_total
-                );
-
-
-            const activePPPoE =
-                Number(
-                    data.active_total
-                );
-
-
-            if (
-                Number.isFinite(totalPPPoE) &&
-                Number.isFinite(activePPPoE)
-            ) {
-
-                setText(
-                    "onlineUser",
-                    number(
-                        activePPPoE
-                    )
-                );
-
-
-                setText(
-                    "offlineUser",
-                    number(
-                        Math.max(
-                            0,
-                            totalPPPoE -
-                            activePPPoE
-                        )
-                    )
-                );
-
-            } else {
-
-                setText(
-                    "onlineUser",
-                    "—"
-                );
-
-                setText(
-                    "offlineUser",
-                    "—"
-                );
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Router Status
-            |--------------------------------------------------------------------------
-            */
-
-            setText(
-                "status",
-                "Online"
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "[Dashboard] MikroTik status failed:",
-                error.message
-            );
-
-
-            setText(
-                "routerName",
-                "Unavailable"
-            );
-
-            setText(
-                "cpu",
-                "—"
-            );
-
-            setText(
-                "ram",
-                "—"
-            );
-
-            setText(
-                "uptime",
-                "—"
-            );
-
-            setText(
-                "traffic",
-                "—"
-            );
-
-            setText(
-                "onlineUser",
-                "—"
-            );
-
-            setText(
-                "offlineUser",
-                "—"
-            );
-
-            setText(
-                "status",
-                "Offline"
-            );
-
-
-        } finally {
-
-            mikrotikRequestInProgress =
-                false;
+            billingLoaded = true;
+            hideBillingNotice();
+        } catch (e) {
+            console.warn("[Dashboard] software billing:", e.message);
         }
     }
 
+    /* ------------------------------------------------------------- loader */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Company Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    function renderCompany(data) {
-
-        const company =
-            document.getElementById(
-                "companyDashboard"
-            );
-
-        const superAdmin =
-            document.getElementById(
-                "superAdminDashboard"
-            );
-
-
-        if (superAdmin) {
-
-            superAdmin.style.display =
-                "none";
-        }
-
-
-        if (company) {
-
-            company.style.display =
-                "";
-        }
-
-
-        setText(
-            "dashboardTitle",
-            "Dashboard"
-        );
-
-        setText(
-            "dashboardSubtitle",
-            "ISP Billing Management"
-        );
-
-        setText(
-            "roleBadge",
-            data.role || "Admin"
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Financial
-        |--------------------------------------------------------------------------
-        */
-
-        setText(
-            "totalCollection",
-            money(
-                data.total_collection
-            )
-        );
-
-        setText(
-            "totalBill",
-            money(
-                data.total_bill
-            )
-        );
-
-        setText(
-            "totalCollection2",
-            money(
-                data.total_collection
-            )
-        );
-
-        setText(
-            "totalBill2",
-            money(
-                data.total_bill
-            )
-        );
-
-        setText(
-            "todayCollection",
-            money(
-                data.today_collection
-            )
-        );
-
-        setText(
-            "connectionFee",
-            money(
-                data.connection_fee
-            )
-        );
-
-        setText(
-            "discount",
-            money(
-                data.discount
-            )
-        );
-
-        setText(
-            "expenditure",
-            money(
-                data.expenditure
-            )
-        );
-
-        setText(
-            "salary",
-            money(
-                data.salary
-            )
-        );
-
-        setText(
-            "businessBalance",
-            money(
-                data.business_balance
-            )
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Customers
-        |--------------------------------------------------------------------------
-        */
-
-        setText(
-            "totalCustomer",
-            number(
-                data.total_customer
-            )
-        );
-
-        setText(
-            "activeCustomer",
-            number(
-                data.active_customer
-            )
-        );
-
-        setText(
-            "inactiveCustomer",
-            number(
-                data.inactive_customer
-            )
-        );
-
-        setText(
-            "expiredCustomer",
-            number(
-                data.expired_customer
-            )
-        );
-
-        setText(
-            "paidCustomer",
-            number(
-                data.paid_customer
-            )
-        );
-
-        setText(
-            "unpaidCustomer",
-            number(
-                data.unpaid_customer
-            )
-        );
-
-        setText(
-            "freeCustomer",
-            number(
-                data.free_customer
-            )
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | MikroTik
-        |--------------------------------------------------------------------------
-        */
-
-        renderMikrotik(
-            data
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Collection Circle
-        |--------------------------------------------------------------------------
-        */
-
-        const collectionPercent =
-            Number(
-                data.collection_percent ?? 0
-            );
-
-
-        const circlePercent =
-            Number.isFinite(
-                collectionPercent
-            )
-                ? Math.max(
-                    0,
-                    Math.min(
-                        100,
-                        collectionPercent
-                    )
-                )
-                : 0;
-
-
-        setText(
-            "collectionCirclePercent",
-            `${circlePercent.toFixed(1)}%`
-        );
-
-
-        setText(
-            "collectionCircleLabel",
-            `${money(data.total_collection)} / ${money(data.total_bill)}`
-        );
-
-
-        const circleProgress =
-            document.getElementById(
-                "collectionCircleProgress"
-            );
-
-
-        if (circleProgress) {
-
-            const radius =
-                Number(
-                    circleProgress.getAttribute(
-                        "r"
-                    )
-                ) || 70;
-
-
-            const circumference =
-                2 *
-                Math.PI *
-                radius;
-
-
-            const offset =
-                circumference -
-                (
-                    circlePercent /
-                    100
-                ) *
-                circumference;
-
-
-            circleProgress.style.strokeDasharray =
-                `${circumference}`;
-
-
-            circleProgress.style.strokeDashoffset =
-                `${offset}`;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Admin Summary
-        |--------------------------------------------------------------------------
-        */
-
-        setText(
-            "adminTotalCollection",
-            money(
-                data.admin_total_collection ??
-                data.total_collection
-            )
-        );
-
-
-        setText(
-            "adminConnectionFee",
-            money(
-                data.admin_connection_fee ??
-                data.connection_fee
-            )
-        );
-
-
-        setText(
-            "adminExpenditure",
-            money(
-                data.admin_expenditure ??
-                data.expenditure
-            )
-        );
-
-
-        setText(
-            "adminDiscount",
-            money(
-                data.admin_discount ??
-                data.discount
-            )
-        );
-
-
-        setText(
-            "adminSalary",
-            money(
-                data.admin_salary ??
-                data.salary
-            )
-        );
-
-
-        setText(
-            "adminDeposit",
-            money(
-                data.admin_deposit ??
-                data.deposit_collection
-            )
-        );
-
-
-        setText(
-            "adminOwnBalance",
-            money(
-                data.admin_own_balance ??
-                data.business_balance
-            )
-        );
-
-
-        setText(
-            "adminMessages",
-            number(
-                data.admin_messages ??
-                0
-            )
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Collector Summary
-        |--------------------------------------------------------------------------
-        */
-
-        setText(
-            "collectorTotal",
-            number(
-                data.collector_total ??
-                data.all_collector ??
-                0
-            )
-        );
-
-
-        setText(
-            "collectorConnectionFee",
-            money(
-                data.collector_connection_fee ??
-                0
-            )
-        );
-
-
-        setText(
-            "collectorDeposit",
-            money(
-                data.collector_deposit ??
-                0
-            )
-        );
-
-
-        setText(
-            "collectorExpenditure",
-            money(
-                data.collector_expenditure ??
-                data.collector_expense ??
-                0
-            )
-        );
-
-
-        setText(
-            "collectorBalance",
-            money(
-                data.collector_balance ??
-                0
-            )
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Chart
-        |--------------------------------------------------------------------------
-        */
-
-        if (data.chart) {
-
-            initializeChart(
-
-                Array.isArray(
-                    data.chart.labels
-                )
-                    ? data.chart.labels
-                    : [],
-
-                Array.isArray(
-                    data.chart.values
-                )
-                    ? data.chart.values
-                    : []
-            );
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Pending Software Billing Fallback
-        |--------------------------------------------------------------------------
-        */
-
-        renderPendingBilling(
-            data.pending_billing ||
-            null
-        );
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard Loader
-    |--------------------------------------------------------------------------
-    */
+    let firstLoad = true;
 
     async function loadDashboard() {
+        const monthValue = $("monthFilter")?.value || "";
 
         try {
-
-            const response =
-                await fetch(
-                    "/api/dashboard/data",
-                    {
-                        method:
-                            "GET",
-
-                        credentials:
-                            "same-origin",
-
-                        headers: {
-                            "Accept":
-                                "application/json"
-                        },
-
-                        cache:
-                            "no-store"
-                    }
-                );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Trial expired / billing gate
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                response.status === 402
-            ) {
-
-                window.location.href =
-                    "/software-billing";
-
-                return;
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Authentication
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                response.status === 401
-            ) {
-
-                window.location.href =
-                    "/";
-
-                return;
-            }
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-
-
-            const data =
-                await response.json();
-
-
-            if (!data.success) {
-
-                throw new Error(
-                    data.message ||
-                    "Dashboard data unavailable"
-                );
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Super Admin
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                data.type ===
-                "super_admin"
-            ) {
-
-                renderSuperAdmin(
-                    data
-                );
-
-
-                currentRouterId =
-                    null;
-
-
-                return;
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Company
-            |--------------------------------------------------------------------------
-            */
-
-            renderCompany(
-                data
+            const data = await getJson(
+                `/api/dashboard/data${monthValue ? `?month=${encodeURIComponent(monthValue)}` : ""}`
             );
 
-
-            currentRouterId =
-                data.mikrotik_router_id ||
-                null;
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Load Real-Time MikroTik Status
-            |--------------------------------------------------------------------------
-            */
-
-            if (currentRouterId) {
-
-                await loadMikrotik(
-                    currentRouterId
-                );
-
-            } else {
-
-                setText(
-                    "routerName",
-                    "Not Configured"
-                );
-
-                setText(
-                    "cpu",
-                    "—"
-                );
-
-                setText(
-                    "ram",
-                    "—"
-                );
-
-                setText(
-                    "status",
-                    "Offline"
-                );
-
-                setText(
-                    "uptime",
-                    "—"
-                );
-
-                setText(
-                    "traffic",
-                    "—"
-                );
-
-                setText(
-                    "onlineUser",
-                    "—"
-                );
-
-                setText(
-                    "offlineUser",
-                    "—"
-                );
+            if (data.type === "super_admin") {
+                renderSuperAdmin(data);
+                return;
             }
 
-        } catch (error) {
+            permissions = new Set(data.permissions || []);
 
-            console.error(
-                "[Dashboard] Load failed:",
-                error
-            );
+            if (firstLoad) {
+                applyPermissions();
+                setupChartControls(data.collectors);
+
+                if ($("monthFilter") && !$("monthFilter").value) $("monthFilter").value = data.month;
+
+                firstLoad = false;
+
+                loadChart();
+            }
+
+            renderCustomers(data.customers);
+            renderCollection(data.collection);
+            renderFinance(data.finance);
+            renderAdmin(data.admin);
+            renderCollector(data.collector);
+
+            if (data.mikrotik) {
+                setText("mkTotal", num(data.mikrotik.total));
+                currentRouterId = data.mikrotik.router_id || null;
+                loadMikrotik(currentRouterId);
+            }
+
+            if (data.pending_billing && !billingLoaded) setBilling(data.pending_billing);
+
+        } catch (e) {
+            console.error("[Dashboard] load failed:", e.message);
         }
     }
 
+    /* -------------------------------------------------------------- events */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Initial Setup
-    |--------------------------------------------------------------------------
-    */
+    $("dashRefreshBtn")?.addEventListener("click", loadDashboard);
+    $("dashFilterBtn")?.addEventListener("click", loadDashboard);
+    $("chartFilterBtn")?.addEventListener("click", loadChart);
 
-    installBillingNoticeStyles();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Initial Load
-    |--------------------------------------------------------------------------
-    */
-
-    loadDashboard();
-
-    loadSoftwareBilling();
-
-    startBillingCountdown();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard Refresh
-    |--------------------------------------------------------------------------
-    */
-
-    dashboardTimer =
-        setInterval(
-            loadDashboard,
-            30000
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Billing Refresh
-    |--------------------------------------------------------------------------
-    */
-
-    billingRefreshTimer =
-        setInterval(
-            loadSoftwareBilling,
-            30000
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MikroTik Live Status Refresh
-    |--------------------------------------------------------------------------
-    |
-    | Only MikroTik status is refreshed every 5 seconds.
-    | The complete dashboard is NOT reloaded here.
-    |
-    |--------------------------------------------------------------------------
-    */
-
-    mikrotikTimer =
-        setInterval(
-            () => {
-
-                const companyDashboard =
-                    document.getElementById(
-                        "companyDashboard"
-                    );
-
-
-                if (
-                    !companyDashboard ||
-                    companyDashboard.style.display ===
-                        "none"
-                ) {
-                    return;
-                }
-
-
-                if (currentRouterId) {
-
-                    loadMikrotik(
-                        currentRouterId
-                    );
-                }
-
-            },
-            5000
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cleanup
-    |--------------------------------------------------------------------------
-    */
-
-    window.addEventListener(
-        "beforeunload",
-        () => {
-
-            if (dashboardTimer) {
-
-                clearInterval(
-                    dashboardTimer
-                );
-            }
-
-
-            if (mikrotikTimer) {
-
-                clearInterval(
-                    mikrotikTimer
-                );
-            }
-
-
-            if (billingTimer) {
-
-                clearInterval(
-                    billingTimer
-                );
-            }
-
-
-            if (billingRefreshTimer) {
-
-                clearInterval(
-                    billingRefreshTimer
-                );
-            }
-        }
+    document.querySelectorAll('input[name="chartType"]').forEach(r =>
+        r.addEventListener("change", loadChart)
     );
 
+    setText("footYear", String(new Date().getFullYear()));
+
+    /* ---------------------------------------------------------------- init */
+
+    loadDashboard();
+    loadSoftwareBilling();
+
+    billingTimer = setInterval(updateBillingCountdown, 1000);
+    setInterval(loadDashboard, 30000);
+    setInterval(loadSoftwareBilling, 30000);
+    setInterval(() => { if (currentRouterId) loadMikrotik(currentRouterId); }, 5000);
+
+    window.addEventListener("beforeunload", () => { if (billingTimer) clearInterval(billingTimer); });
 });

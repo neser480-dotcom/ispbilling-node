@@ -1,899 +1,199 @@
-/* ===============================
-   FINAL NETFEE STYLE DASHBOARD CSS
-================================*/
+/* =========================================================
+   NETFEE DASHBOARD  (reference style)
+========================================================= */
+:root {
+    --d-bg: #efefef;
+    --d-card: #ffffff;
+    --d-text: #4b5563;
+    --d-strong: #374151;
+    --d-muted: #6b7280;
+    --d-border: #e3e6ea;
+    --d-blue: #1a73e8;
+    --d-soft: #e6f0fd;
+    --d-soft-text: #1a5fd0;
+}
 
+body { background: var(--d-bg); color: var(--d-text); overflow-x: hidden; margin: 0; }
+
+.main-content {
+    margin-left: 260px;
+    margin-top: 70px;
+    padding: 24px 22px 10px;
+    min-height: calc(100vh - 70px);
+}
+
+/* ---------- notices ---------- */
+#pendingBilling:empty { display: none; }
+.software-billing-notice {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 10px 14px; margin-bottom: 18px; border-radius: 6px; color: #fff;
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+}
+.software-billing-notice .sb-title { font-weight: 700; font-size: 14px; }
+.software-billing-notice .sb-details { font-size: 12px; opacity: .95; }
+.software-billing-notice .sb-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.software-billing-notice .sb-count {
+    min-width: 76px; text-align: center; padding: 5px 8px; border-radius: 5px;
+    background: rgba(0,0,0,.18); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+/* ---------- expected / circle / collection ---------- */
+.d-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 6px 70px 18px;
+}
+.d-top .d-side { font-size: 27px; line-height: 1.25; color: #5f6872; }
+.d-top .d-side b { display: block; font-size: 28px; font-weight: 500; }
+.d-top .d-side.right { text-align: left; }
+.d-circle { width: 170px; height: 170px; flex-shrink: 0; position: relative; }
+.d-circle svg { width: 100%; height: 100%; max-width: none; transform: rotate(-90deg); }
+.d-circle .track { stroke: #d9e3ec; }
+.d-circle .bar { stroke: #3b97c9; transition: stroke-dashoffset .8s ease; }
+.d-circle .pct {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: #3b97c9;
+}
+
+/* ---------- filter row ---------- */
+.d-filter { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 0 0 14px; }
+.d-filter .d-icon-btn {
+    width: 34px; height: 34px; border: 1px solid var(--d-border); background: #fff;
+    color: var(--d-blue); border-radius: 4px; cursor: pointer;
+}
+.d-filter input[type="month"] {
+    width: 160px; height: 36px; border: 1px solid var(--d-border); border-radius: 4px;
+    background: #e9ecef; color: var(--d-muted); padding: 0 10px; font-size: 14px;
+}
+.d-filter .d-btn-blue {
+    height: 36px; padding: 0 28px; border: 0; border-radius: 4px; background: #0d6efd; color: #fff; font-size: 14px;
+}
+
+/* ---------- cards ---------- */
+.dc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 20px; margin-bottom: 20px; }
+
+.dc {
+    color: #fff; border-radius: 5px; padding: 14px 20px 12px; min-height: 115px;
+    display: flex; flex-direction: column; justify-content: flex-start;
+    box-shadow: 0 2px 5px rgba(0,0,0,.22);
+}
+.dc-title { font-size: 14px; font-weight: 600; }
+.dc-main { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
+.dc-ico {
+    width: 36px; height: 36px; border-radius: 7px; background: rgba(255,255,255,.22);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.dc-num { font-size: 28px; font-weight: 500; line-height: 1; }
+.dc-amt { font-size: 13px; font-weight: 600; margin-left: 2px; align-self: flex-end; padding-bottom: 3px; }
+.dc-foot { margin-top: auto; display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.dc-foot:empty { display: none; }
+
+.dc-teal   { background: linear-gradient(135deg, #00a9a5, #0aa6b5); }
+.dc-blue   { background: linear-gradient(135deg, #1b7fe0, #2aa3e2); }
+.dc-green  { background: linear-gradient(135deg, #4aa564, #86d63b); }
+.dc-orange { background: linear-gradient(135deg, #ef8f10, #f3bd1c); }
+.dc-red    { background: linear-gradient(135deg, #ee3030, #e8585f); }
+.dc-grey   { background: linear-gradient(135deg, #8a8584, #a49d9d); }
+.dc-steel  { background: linear-gradient(135deg, #7e93b0, #9fb0c9); }
+.dc-royal  { background: linear-gradient(135deg, #3e6fb8, #2f8be0); }
+.dc-olive  { background: linear-gradient(135deg, #a89a24, #c9b92a); }
+.dc-cyan   { background: linear-gradient(135deg, #1bb8c9, #17dbd2); }
+.dc-navy   { background: linear-gradient(135deg, #0b5c88, #0a7298); }
+.dc-slate  { background: linear-gradient(135deg, #5f8fa5, #6ea1b6); }
+.dc-plum   { background: linear-gradient(135deg, #7b3f74, #8e4c75); }
+.dc-teal2  { background: linear-gradient(135deg, #2f4f5b, #34b3b8); }
+.dc-emerald{ background: linear-gradient(135deg, #0f6b45, #3f9b58); }
+.dc-indigo { background: linear-gradient(135deg, #4a56b4, #7a4fd6); }
+.dc-brown  { background: linear-gradient(135deg, #8d5a52, #b0823f); }
+.dc-mixed  { background: linear-gradient(135deg, #3aa8a2, #3a7fb0); }
+.dc-rose   { background: linear-gradient(135deg, #7a4a95, #b8479a); }
+
+/* message card */
+.dc-msg { align-items: center; gap: 14px; margin-top: 10px; }
+.dc-msg .rows { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.35; }
+.dc-msg .rows div { display: flex; justify-content: space-between; gap: 10px; }
+
+/* ---------- section boxes ---------- */
+.d-box { background: var(--d-card); border: 1px solid var(--d-border); border-radius: 4px; margin-bottom: 18px; }
+.d-box-head {
+    padding: 8px 14px; font-size: 14px; color: var(--d-muted);
+    border-bottom: 1px solid var(--d-border); background: #f8f9fa;
+}
+.d-box-body { padding: 10px 12px 12px; }
+
+.d-box.collapsible .d-box-head {
+    background: var(--d-soft); color: var(--d-soft-text); font-size: 20px; padding: 10px 18px;
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 0;
+}
+.d-box.collapsible .d-box-head i { font-size: 15px; transition: transform .2s; }
+.d-box.collapsible .d-box-head[aria-expanded="false"] i { transform: rotate(180deg); }
+.d-box.collapsible .d-box-body { padding: 16px; }
+.d-box.collapsible .dc-grid { margin-bottom: 0; gap: 16px; }
+
+/* mikrotik bars */
+.mk-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mk-card {
+    display: flex; align-items: center; gap: 12px; color: #fff; border-radius: 5px;
+    padding: 10px 14px; font-size: 17px; font-weight: 600;
+}
+.mk-card .dc-ico { width: 34px; height: 34px; }
+.mk-card .mk-val { margin-left: auto; font-size: 17px; }
+
+/* chart */
+.d-chart { padding: 14px 20px 20px; }
+.d-chart h4 { font-size: 22px; font-weight: 500; color: #5f6872; margin: 0 0 6px; }
+.d-chart-controls { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.d-chart-controls .radios { min-width: 120px; font-size: 14px; }
+.d-chart-controls select { height: 36px; min-width: 160px; font-size: 14px; }
+.d-chart-controls .btn { height: 36px; min-width: 112px; }
+.d-chart-wrap { position: relative; height: 320px; }
+.d-chart-wrap canvas { max-height: none; }
+
+.d-hr { border: 0; border-top: 1px solid #d8dbe0; margin: 6px 0 14px; }
+.d-footer { text-align: center; color: var(--d-muted); padding: 26px 0 18px; font-size: 14px; }
+
+/* super admin */
+.sa-card { background: linear-gradient(135deg, #2563eb, #38bdf8); }
+
+/* ---------- dark ---------- */
+body.dark-mode {
+    --d-bg: #0f172a; --d-card: #1e293b; --d-text: #cbd5e1; --d-strong: #f1f5f9;
+    --d-muted: #94a3b8; --d-border: #334155; --d-soft: #1d2f4d; --d-soft-text: #93c5fd;
+    background: var(--d-bg);
+}
+body.dark-mode .d-box-head { background: #172033; }
+body.dark-mode .d-top .d-side { color: #cbd5e1; }
+body.dark-mode .d-filter input[type="month"] { background: #172033; color: #cbd5e1; }
+body.dark-mode .d-filter .d-icon-btn { background: #1e293b; }
+body.dark-mode .d-chart h4 { color: #cbd5e1; }
 
 /* =========================================================
-   ROOT THEME VARIABLES
+   RESPONSIVE
 ========================================================= */
-
-:root{
-
-    --theme-primary:#2563eb;
-    --theme-primary-hover:#1d4ed8;
-    --theme-primary-soft:#dbeafe;
-
-    --theme-bg:#f6f8fc;
-    --theme-card:#ffffff;
-
-    --theme-text:#1f2937;
-    --theme-muted:#64748b;
-
-    --theme-border:#e5e7eb;
-
+@media (max-width: 1200px) {
+    .dc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .d-top { padding: 6px 20px 18px; }
 }
 
-
-/* =========================================================
-   BODY
-========================================================= */
-
-body{
-
-    background:var(--theme-bg);
-
-    color:var(--theme-text);
-
-    overflow-x:hidden;
-
-    transition:
-        background-color .25s ease,
-        color .25s ease;
-
+@media (max-width: 992px) {
+    .dc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-
-/* =========================================================
-   MAIN
-========================================================= */
-
-.main-content{
-
-    margin-left:260px;
-
-    margin-top:70px;
-
-    padding:25px;
-
-    transition:
-        .3s,
-        background-color .25s ease,
-        color .25s ease;
-
+@media (max-width: 850px) {
+    .main-content { margin-left: 0 !important; margin-top: 62px !important; padding: 10px 6px !important; }
+    .d-top { flex-direction: column; text-align: center; padding: 4px 0 14px; gap: 8px; }
+    .d-top .d-side, .d-top .d-side.right { text-align: center; font-size: 22px; }
+    .d-top .d-side b { font-size: 22px; }
+    .d-circle { width: 130px; height: 130px; }
+    .d-circle .pct { font-size: 24px; }
+    .mk-row { grid-template-columns: 1fr; }
+    .d-chart { padding: 10px 10px 14px; }
+    .d-chart-controls select { min-width: 0; flex: 1 1 130px; }
+    .d-chart-wrap { height: 260px; }
 }
 
-
-/* =========================================================
-   DASHBOARD HEADING
-========================================================= */
-
-.dashboard-heading{
-
-    background:var(--theme-card);
-
-    border-radius:18px;
-
-    padding:18px;
-
-    box-shadow:
-        0 5px 20px
-        rgba(0,0,0,.06);
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-    transition:
-        background-color .25s ease,
-        color .25s ease,
-        box-shadow .25s ease;
-
-}
-
-
-.dashboard-heading h2{
-
-    margin:0;
-
-    font-size:25px;
-
-    font-weight:800;
-
-    color:var(--theme-text);
-
-}
-
-
-.dashboard-heading p{
-
-    margin:4px 0 0;
-
-    color:var(--theme-muted);
-
-}
-
-
-/* =========================================================
-   TOP SUMMARY
-========================================================= */
-
-.main-content .row:first-child{
-
-    border-radius:18px;
-
-}
-
-
-/* =========================================================
-   CARDS
-========================================================= */
-
-.card{
-
-    border:none!important;
-
-    border-radius:16px!important;
-
-    overflow:hidden;
-
-    box-shadow:
-        0 6px 18px
-        rgba(0,0,0,.10)!important;
-
-    transition:
-        .25s,
-        background-color .25s ease,
-        color .25s ease,
-        box-shadow .25s ease;
-
-}
-
-
-.card:hover{
-
-    transform:translateY(-3px);
-
-}
-
-
-.card-body{
-
-    padding:16px!important;
-
-    min-height:100px;
-
-}
-
-
-/* =========================================================
-   CARD FLEX
-========================================================= */
-
-.card-flex{
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-}
-
-
-/* =========================================================
-   CARD ICON
-========================================================= */
-
-.left-icon i{
-
-    font-size:32px;
-
-    color:#fff;
-
-    opacity:.9;
-
-}
-
-
-/* =========================================================
-   CARD TEXT
-========================================================= */
-
-.card h6{
-
-    font-size:13px;
-
-    margin:0 0 5px;
-
-    color:#fff;
-
-}
-
-
-.card h2,
-.card h3,
-.card h4{
-
-    font-size:22px;
-
-    margin:0;
-
-    color:#fff;
-
-    font-weight:800;
-
-}
-
-
-/* =========================================================
-   COLORS
-   KEEP ORIGINAL DESIGN
-========================================================= */
-
-.bg-primary{
-
-    background:
-    linear-gradient(
-        135deg,
-        #2563eb,
-        #38bdf8
-    )!important;
-
-}
-
-
-.bg-success{
-
-    background:
-    linear-gradient(
-        135deg,
-        #10b981,
-        #14b8a6
-    )!important;
-
-}
-
-
-.bg-danger{
-
-    background:
-    linear-gradient(
-        135deg,
-        #ef4444,
-        #fb923c
-    )!important;
-
-}
-
-
-.bg-warning{
-
-    background:
-    linear-gradient(
-        135deg,
-        #f59e0b,
-        #f97316
-    )!important;
-
-}
-
-
-.bg-info{
-
-    background:
-    linear-gradient(
-        135deg,
-        #06b6d4,
-        #2563eb
-    )!important;
-
-}
-
-
-.bg-dark{
-
-    background:
-    linear-gradient(
-        135deg,
-        #334155,
-        #020617
-    )!important;
-
-}
-
-
-.bg-secondary{
-
-    background:
-    linear-gradient(
-        135deg,
-        #64748b,
-        #475569
-    )!important;
-
-}
-
-
-.bg-green{
-
-    background:
-    linear-gradient(
-        135deg,
-        #16a34a,
-        #22c55e
-    )!important;
-
-}
-
-
-.bg-purple{
-
-    background:
-    linear-gradient(
-        135deg,
-        #9333ea,
-        #6366f1
-    )!important;
-
-}
-
-
-/* =========================================================
-   CHART
-========================================================= */
-
-canvas{
-
-    max-height:300px;
-
-}
-
-
-svg{
-
-    max-width:160px;
-
-    height:auto;
-
-}
-
-
-/* =========================================================
-   COLLAPSE CARD
-========================================================= */
-
-.card-header{
-
-    font-weight:700;
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    border-color:var(--theme-border);
-
-}
-
-
-/* =========================================================
-   TABLE
-========================================================= */
-
-.table{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    border-radius:12px;
-
-    overflow:hidden;
-
-}
-
-
-.table th,
-.table td{
-
-    color:var(--theme-text);
-
-    border-color:var(--theme-border);
-
-}
-
-
-.table thead th{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-}
-
-
-/* =========================================================
-   PENDING BILLING
-========================================================= */
-
-#pendingBilling .card{
-
-    box-shadow:
-        0 6px 20px
-        rgba(239,68,68,.20)!important;
-
-}
-
-
-#billingDetails{
-
-    font-size:14px;
-
-}
-
-
-/* =========================================================
-   FORM ELEMENTS
-========================================================= */
-
-.main-content input,
-.main-content select,
-.main-content textarea{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    border-color:var(--theme-border);
-
-}
-
-
-.main-content input::placeholder,
-.main-content textarea::placeholder{
-
-    color:var(--theme-muted);
-
-}
-
-
-/* =========================================================
-   DROPDOWN
-========================================================= */
-
-.main-content .dropdown-menu{
-
-    background:var(--theme-card);
-
-    border-color:var(--theme-border);
-
-}
-
-
-.main-content .dropdown-item{
-
-    color:var(--theme-text);
-
-}
-
-
-.main-content .dropdown-item:hover{
-
-    background:var(--theme-primary-soft);
-
-    color:var(--theme-text);
-
-}
-
-
-/* =========================================================
-   DARK MODE
-========================================================= */
-
-body.dark-mode{
-
-    --theme-bg:#0f172a;
-
-    --theme-card:#1e293b;
-
-    --theme-text:#f1f5f9;
-
-    --theme-muted:#94a3b8;
-
-    --theme-border:#334155;
-
-}
-
-
-/* =========================================================
-   DARK BODY
-========================================================= */
-
-body.dark-mode{
-
-    background:var(--theme-bg);
-
-    color:var(--theme-text);
-
-}
-
-
-/* =========================================================
-   DARK MAIN
-========================================================= */
-
-body.dark-mode .main-content{
-
-    background:var(--theme-bg);
-
-    color:var(--theme-text);
-
-}
-
-
-/* =========================================================
-   DARK DASHBOARD HEADING
-========================================================= */
-
-body.dark-mode .dashboard-heading{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    box-shadow:
-        0 5px 20px
-        rgba(0,0,0,.30);
-
-}
-
-
-body.dark-mode .dashboard-heading h2{
-
-    color:var(--theme-text);
-
-}
-
-
-body.dark-mode .dashboard-heading p{
-
-    color:var(--theme-muted);
-
-}
-
-
-/* =========================================================
-   DARK NORMAL CARDS
-========================================================= */
-
-body.dark-mode .card:not(
-    .bg-primary,
-    .bg-success,
-    .bg-danger,
-    .bg-warning,
-    .bg-info,
-    .bg-dark,
-    .bg-secondary,
-    .bg-green,
-    .bg-purple
-){
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-}
-
-
-/* =========================================================
-   DARK CARD HEADER
-========================================================= */
-
-body.dark-mode .card-header{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    border-color:var(--theme-border);
-
-}
-
-
-/* =========================================================
-   DARK TABLE
-========================================================= */
-
-body.dark-mode .table{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-}
-
-
-body.dark-mode .table th,
-body.dark-mode .table td{
-
-    background:var(--theme-card);
-
-    color:var(--theme-text);
-
-    border-color:var(--theme-border);
-
-}
-
-
-body.dark-mode .table thead th{
-
-    background:#172033;
-
-    color:#f1f5f9;
-
-}
-
-
-/* =========================================================
-   DARK FORM
-========================================================= */
-
-body.dark-mode .main-content input,
-body.dark-mode .main-content select,
-body.dark-mode .main-content textarea{
-
-    background:#172033;
-
-    color:#f1f5f9;
-
-    border-color:#334155;
-
-}
-
-
-body.dark-mode .main-content input::placeholder,
-body.dark-mode .main-content textarea::placeholder{
-
-    color:#94a3b8;
-
-}
-
-
-/* =========================================================
-   DARK DROPDOWN
-========================================================= */
-
-body.dark-mode .main-content .dropdown-menu{
-
-    background:#1e293b;
-
-    border-color:#334155;
-
-}
-
-
-body.dark-mode .main-content .dropdown-item{
-
-    color:#f1f5f9;
-
-}
-
-
-body.dark-mode .main-content .dropdown-item:hover{
-
-    background:#334155;
-
-    color:#fff;
-
-}
-
-
-/* =========================================================
-   DARK LINKS
-========================================================= */
-
-body.dark-mode .main-content a{
-
-    color:#93c5fd;
-
-}
-
-
-/* =========================================================
-   DARK MUTED TEXT
-========================================================= */
-
-body.dark-mode .main-content .text-muted{
-
-    color:#94a3b8!important;
-
-}
-
-
-/* =========================================================
-   DARK BORDER
-========================================================= */
-
-body.dark-mode .main-content .border{
-
-    border-color:var(--theme-border)!important;
-
-}
-
-
-/* =========================================================
-   DARK SHADOW
-========================================================= */
-
-body.dark-mode .main-content .card{
-
-    box-shadow:
-        0 6px 18px
-        rgba(0,0,0,.30)!important;
-
-}
-
-
-/* =========================================================
-   TABLET
-========================================================= */
-
-@media(max-width:992px){
-
-    .main-content{
-
-        margin-left:0;
-
-    }
-
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media(max-width:768px){
-
-    .main-content{
-
-        margin-left:0!important;
-
-        margin-top:65px!important;
-
-        padding:10px!important;
-
-    }
-
-
-    .main-content .row:first-child{
-
-        padding:12px;
-
-    }
-
-
-    .col-md-3,
-    .col-md-4,
-    .col-md-6,
-    .col-md-12{
-
-        width:100%!important;
-
-        padding:6px!important;
-
-    }
-
-
-    .card{
-
-        border-radius:14px!important;
-
-    }
-
-
-    .card-body{
-
-        min-height:85px;
-
-        padding:14px!important;
-
-    }
-
-
-    .left-icon i{
-
-        font-size:26px;
-
-    }
-
-
-    .card h6{
-
-        font-size:12px;
-
-    }
-
-
-    .card h2{
-
-        font-size:19px;
-
-    }
-
-
-    svg{
-
-        width:120px;
-
-        height:120px;
-
-    }
-
-
-    .dashboard-heading{
-
-        padding:12px;
-
-    }
-
-
-    .dashboard-heading h2{
-
-        font-size:20px;
-
-    }
-
-}
-
-
-/* =========================================================
-   AREA PAGE FIX
-========================================================= */
-
-.main-content{
-
-    margin-left:260px;
-
-    margin-top:70px;
-
-    padding:25px;
-
-}
-
-
-/* =========================================================
-   SMALL PHONE
-========================================================= */
-
-@media(max-width:420px){
-
-    .main-content{
-
-        padding:6px!important;
-
-    }
-
-
-    .card-flex{
-
-        gap:8px;
-
-    }
-
-
-    .left-icon i{
-
-        font-size:23px;
-
-    }
-
-
-    .card h2{
-
-        font-size:17px;
-
-    }
-
+@media (max-width: 560px) {
+    .dc-grid { grid-template-columns: 1fr; gap: 12px; }
+    .d-filter input[type="month"] { flex: 1; width: auto; }
+    .software-billing-notice { flex-direction: column; align-items: flex-start; }
+    .software-billing-notice .sb-right { width: 100%; justify-content: space-between; }
 }
