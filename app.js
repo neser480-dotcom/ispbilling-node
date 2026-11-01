@@ -39,6 +39,7 @@ const billingRoutes =
 
 const staffRoutes = require("./routes/staff/staff.routes");
 const salaryRoutes = require("./routes/staff/salary.routes");
+const collectorRoutes = require("./routes/staff/collector/collector.routes");
 /*
 |--------------------------------------------------------------------------
 | AUTH / REGISTER
@@ -50,7 +51,7 @@ const authRoutes =
 
 const registerRoutes =
     require("./routes/auth/register");
-
+const noticeRoutes = require("./routes/notices/notices");
 
 /*
 |--------------------------------------------------------------------------
@@ -144,6 +145,8 @@ const customerTrafficRoutes =
 
 const softwareBillingRoutes =
     require("./routes/software-billing/softwareBilling");
+const billingExtendRoutes = require("./routes/software-billing/billingExtend");
+const monthlyBilling = require("./services/monthlyBilling");
 
 const {
     requireSoftwareBilling
@@ -406,6 +409,8 @@ app.use(
     "/api/software-billing",
     softwareBillingRoutes
 );
+
+app.use("/super-admin/billing-extend", requireSoftwareBilling, billingExtendRoutes);
 app.use(
     "/api/olt",
     requireSoftwareBilling,
@@ -742,6 +747,12 @@ app.use(
     salaryRoutes
 );
 
+app.use(
+    "/api/collectors",
+    requireSoftwareBilling,
+    collectorRoutes
+);
+
 /*
 |--------------------------------------------------------------------------
 | LOGIN PAGE
@@ -984,28 +995,17 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
-app.get(
+/* Notice Board (Super Admin) */
+app.use(
     "/super-admin/notices",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Notice Board module is not implemented yet."
-        );
-
-    }
+    noticeRoutes.admin
 );
 
-app.get(
-    "/super-admin/notices/add",
+app.use(
+    "/api/notices",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "New Notice module is not implemented yet."
-        );
-
-    }
+    noticeRoutes.active
 );
 
 app.get(
@@ -1236,11 +1236,15 @@ app.get(
     "/staff/collector",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Collector module is not implemented yet."
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "staff",
+                "collector",
+                "collector.html"
+            )
         );
-
     }
 );
 
@@ -1406,7 +1410,6 @@ app.get(
 
 /*
 |--------------------------------------------------------------------------
-| ACCOUNTS â†’ INVOICES
 |--------------------------------------------------------------------------
 */
 
@@ -1474,19 +1477,19 @@ app.use((err, req, res, next) => {
 
     let status = Number(err.status || err.statusCode) || 500;
     let code = "INTERNAL_SERVER_ERROR";
-    let message = "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦•à¦°à§à¦¨à¥¤";
+    let message = "সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
 
     if (err.code === "ER_DUP_ENTRY") {
         status = 409;
         code = "DUPLICATE_ENTRY";
-        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à¦Ÿà¦¿ à¦†à¦—à§‡ à¦¥à§‡à¦•à§‡à¦‡ à¦†à¦›à§‡à¥¤";
+        message = "এই তথ্যটি আগে থেকেই আছে।";
     } else if (
         err.code === "ER_NO_REFERENCED_ROW_2" ||
         err.code === "ER_ROW_IS_REFERENCED_2"
     ) {
         status = 409;
         code = "DATABASE_RELATION_ERROR";
-        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à§‡à¦° à¦¸à¦™à§à¦—à§‡ à¦¸à¦®à§à¦ªà¦°à§à¦•à¦¿à¦¤ à¦…à¦¨à§à¦¯ à¦°à§‡à¦•à¦°à§à¦¡ à¦†à¦›à§‡à¥¤";
+        message = "এই তথ্যের সঙ্গে সম্পর্কিত অন্য রেকর্ড আছে।";
     } else if (
         err.code === "ECONNREFUSED" ||
         err.code === "PROTOCOL_CONNECTION_LOST" ||
@@ -1494,13 +1497,13 @@ app.use((err, req, res, next) => {
     ) {
         status = 503;
         code = "DATABASE_CONNECTION_ERROR";
-        message = "à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œà§‡ à¦¸à¦‚à¦¯à§‹à¦— à¦•à¦°à¦¾ à¦¯à¦¾à¦šà§à¦›à§‡ à¦¨à¦¾à¥¤";
+        message = "ডাটাবেজে সংযোগ করা যাচ্ছে না।";
     } else if (status === 401) {
-        message = "à¦†à¦¬à¦¾à¦° à¦²à¦—à¦‡à¦¨ à¦•à¦°à§à¦¨à¥¤";
+        message = "আবার লগইন করুন।";
     } else if (status === 403) {
-        message = "à¦à¦‡ à¦•à¦¾à¦œ à¦•à¦°à¦¾à¦° à¦…à¦¨à§à¦®à¦¤à¦¿ à¦¨à§‡à¦‡à¥¤";
+        message = "এই কাজ করার অনুমতি নেই।";
     } else if (status === 400) {
-        message = "à¦†à¦ªà¦¨à¦¾à¦° à¦¦à§‡à¦“à§Ÿà¦¾ à¦¤à¦¥à§à¦¯ à¦¯à¦¾à¦šà¦¾à¦‡ à¦•à¦°à§à¦¨à¥¤";
+        message = "আপনার দেওয়া তথ্য যাচাই করুন।";
     }
 
     if (status < 400 || status > 599) status = 500;
@@ -1517,17 +1520,17 @@ app.use((err, req, res, next) => {
 });
 
 
-// 404 HANDLER â€” à¦¸à¦¬à¦¶à§‡à¦·à§‡
+// 404 HANDLER
 app.use((req, res) => {
     if (req.path.startsWith("/api/")) {
         return res.status(404).json({
             success: false,
             code: "API_ROUTE_NOT_FOUND",
-            message: "API endpoint à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤"
+            message: "API endpoint পাওয়া যায়নি।"
         });
     }
 
-    return res.status(404).send("à¦à¦‡ à¦ªà§‡à¦œà¦Ÿà¦¿ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤");
+    return res.status(404).send("এই পেজটি পাওয়া যায়নি।");
 });
 
 /*
@@ -1540,6 +1543,8 @@ const PORT =
     process.env.PORT ||
     3000;
 
+
+monthlyBilling.start();
 
 app.listen(
     PORT,

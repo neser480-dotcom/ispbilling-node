@@ -1,0 +1,35 @@
+ '                                                  |   70 [32m+[m
+ .bak' 'app.js' -Force                              |  132 [32m++[m
+ app.js                                             |   71 [32m+[m[31m-[m
+ controllers/softwareBilling.controller.js          | 1006 [32m+++++[m[31m---------[m
+ .../staff/collector/collector.controller.js        |   42 [32m+[m
+ debug-billing.js                                   |   48 [32m+[m
+ middleware/softwareBilling.js                      |  357 [32m++[m[31m---[m
+ monitoringindex.html'                              |   53 [32m+[m
+ public/assets/css/dashboard.css                    |   29 [32m+[m
+ public/assets/css/employee.css                     |   29 [32m+[m[31m-[m
+ public/assets/js/collector.js                      | 1454 [32m+++[m[31m-----------------[m
+ public/assets/js/dashboard.js                      |  115 [32m+[m[31m-[m
+ public/partials/sidebar.html                       |   10 [32m+[m[31m-[m
+ public/partials/sidebar.html.before-git-restore    |  962 [31m-------------[m
+ routes/area/area.js                                |    8 [32m+[m[31m-[m
+ routes/dashboard/dashboard route.js                | 1121 [31m---------------[m
+ routes/dashboard/dashboard.js                      |    6 [32m+[m[31m-[m
+ routes/notices/notices.js                          |  326 [32m+++++[m
+ routes/software-billing/billingExtend.js           |  160 [32m+++[m
+ routes/staff/collector/collector.routes.js         |   22 [32m+[m
+ services/monthlyBilling.js                         |  127 [32m++[m
+ services/staff/collector/collector.service.js      |  224 [32m+++[m
+ views/admin/profile.html                           |    2 [32m+[m[31m-[m
+ views/area/area.html                               |    2 [32m+[m[31m-[m
+ views/billing/billing-extend.html                  |  179 [32m+++[m
+ views/customers/customers.html                     |    2 [32m+[m[31m-[m
+ views/dashboard/dashboard.html                     |    5 [32m+[m[31m-[m
+ views/mikrotik/mikrotik-config.html                |    2 [32m+[m[31m-[m
+ views/mikrotik/router-index.html                   |    2 [32m+[m[31m-[m
+ views/monitoring/index.html                        |    5 [32m+[m[31m-[m
+ views/staff/collector/collector.html               |  716 [32m++[m[31m--------[m
+ views/staff/employee/employee.html                 |    2 [32m+[m[31m-[m
+ views/staff/salary/employee-salary.html            |    2 [32m+[m[31m-[m
+ views/super-admin/notices.html                     |  313 [32m+++++[m
+ 34 files changed, 2785 insertions(+), 4819 deletions(-)

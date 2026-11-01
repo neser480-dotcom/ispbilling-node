@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notice Board - Super Admin</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+
+    <style>
+        .notice-page { padding: 20px; margin-top: 80px; }
+        .notice-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .notice-head h3 { margin: 0; font-weight: 700; }
+        .notice-head p { margin: 4px 0 0; color: #6c757d; }
+        .notice-card { border: 0; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+        .notice-table { min-width: 980px; margin: 0; }
+        .notice-table th { white-space: nowrap; font-size: 13px; background: #f8f9fa; }
+        .notice-table td { vertical-align: middle; }
+        .notice-msg { max-width: 320px; white-space: pre-line; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .nb { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .nb-invoice { background: #ffe8cc; color: #d9480f; }
+        .nb-maintenance { background: #d0ebff; color: #1864ab; }
+        .nb-live { background: #d3f9d8; color: #2b8a3e; }
+        .nb-scheduled { background: #fff3bf; color: #e67700; }
+        .nb-expired { background: #e9ecef; color: #495057; }
+        .nb-inactive { background: #f8d7da; color: #c92a2a; }
+        @media (max-width: 768px) { .notice-page { padding: 12px; } }
+    </style>
+</head>
+<body>
+
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
+
+<div class="main-content">
+<main class="notice-page">
+
+    <div class="notice-head">
+        <div>
+            <h3><i class="fa fa-bullhorn"></i> Notice Board</h3>
+            <p>The notice floats at the bottom of every user's screen and scrolls right to left. It disappears automatically when the end time passes.</p>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="newNoticeBtn">
+            <i class="fa fa-plus"></i> New Notice
+        </button>
+    </div>
+
+    <div id="pageAlert" class="alert alert-danger" style="display:none"></div>
+
+    <div class="card notice-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover notice-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Type</th>
+                            <th>Title / Message</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Company</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="noticeBody">
+                        <tr><td colspan="8" class="text-center text-muted py-4">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+
+<!-- Add / Edit -->
+<div class="modal fade" id="noticeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" id="noticeForm" autocomplete="off">
+            <div class="modal-header">
+                <h5 class="modal-title" id="noticeModalTitle">New Notice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div id="formAlert" class="alert alert-danger" style="display:none"></div>
+
+                <input type="hidden" id="noticeId">
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="fType">Notice Type</label>
+                        <select id="fType" class="form-select" required>
+                            <option value="maintenance">Maintenance notice (floats at the bottom of the screen)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="fStatus">Status</label>
+                        <select id="fStatus" class="form-select">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive (hidden)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" for="fTitle">Title</label>
+                        <input type="text" id="fTitle" class="form-control" maxlength="190" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" for="fMessage">Message</label>
+                        <textarea id="fMessage" class="form-control" rows="4" maxlength="3000" required></textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="fStart">Start time</label>
+                        <input type="datetime-local" id="fStart" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="fEnd">End time</label>
+                        <input type="datetime-local" id="fEnd" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="fCompany">Company ID <span class="text-muted">(empty = all companies)</span></label>
+                        <input type="number" id="fCompany" class="form-control" min="1" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    "use strict";
+
+    const BASE = "/super-admin/notices/api";
+    const $ = id => document.getElementById(id);
+    const modal = new bootstrap.Modal($("noticeModal"));
+
+    let rows = [];
+    let csrfToken = "";
+
+    function esc(v) {
+        return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    async function getCsrf() {
+        if (!csrfToken) {
+            const r = await fetch("/api/csrf-token", { credentials: "same-origin" });
+            const d = await r.json().catch(() => ({}));
+            csrfToken = d.csrf_token || "";
+        }
+        return csrfToken;
+    }
+
+    async function api(method, url, body) {
+        const headers = { Accept: "application/json" };
+
+        if (body) headers["Content-Type"] = "application/json";
+        if (method !== "GET") headers["X-CSRF-Token"] = await getCsrf();
+
+        const r = await fetch(url, {
+            method, headers, credentials: "same-origin",
+            body: body ? JSON.stringify(body) : undefined
+        });
+
+        const d = await r.json().catch(() => ({}));
+
+        if (!r.ok || d.success === false) throw new Error(d.message || `HTTP ${r.status}`);
+
+        return d;
+    }
+
+    function toLocalInput(d) {
+        const p = n => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function load() {
+        api("GET", `${BASE}/list`).then(d => {
+            rows = d.rows || [];
+            $("pageAlert").style.display = "none";
+            render();
+        }).catch(e => {
+            $("pageAlert").textContent = e.message;
+            $("pageAlert").style.display = "block";
+            $("noticeBody").innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No data.</td></tr>`;
+        });
+    }
+
+    function render() {
+        if (!rows.length) {
+            $("noticeBody").innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No notices yet.</td></tr>`;
+            return;
+        }
+
+        $("noticeBody").innerHTML = rows.map((r, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><span class="nb nb-maintenance">Maintenance</span></td>
+                <td>
+                    <div class="fw-semibold">${esc(r.title)}</div>
+                    <div class="notice-msg text-muted small">${esc(r.message)}</div>
+                </td>
+                <td class="text-nowrap">${esc(r.starts_at)}</td>
+                <td class="text-nowrap">${esc(r.ends_at)}</td>
+                <td>${r.company_id ? "#" + esc(r.company_id) : "All"}</td>
+                <td><span class="nb nb-${esc(r.state)}">${esc(r.state)}</span></td>
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary" data-edit="${r.id}"><i class="fa fa-pen"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" data-del="${r.id}"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>`).join("");
+    }
+
+    function openForm(row) {
+        $("formAlert").style.display = "none";
+        $("noticeModalTitle").textContent = row ? "Edit Notice" : "New Notice";
+        $("noticeId").value = row ? row.id : "";
+        $("fType").value = "maintenance";
+        $("fStatus").value = row ? row.status : "active";
+        $("fTitle").value = row ? row.title : "";
+        $("fMessage").value = row ? row.message : "";
+        $("fCompany").value = row && row.company_id ? row.company_id : "";
+
+        if (row) {
+            $("fStart").value = row.starts_at.slice(0, 16).replace(" ", "T");
+            $("fEnd").value = row.ends_at.slice(0, 16).replace(" ", "T");
+        } else {
+            const now = new Date();
+            $("fStart").value = toLocalInput(now);
+            $("fEnd").value = toLocalInput(new Date(now.getTime() + 24 * 3600 * 1000));
+        }
+
+        modal.show();
+    }
+
+    $("newNoticeBtn").addEventListener("click", () => openForm(null));
+
+    $("noticeBody").addEventListener("click", async e => {
+        const edit = e.target.closest("[data-edit]");
+        const del = e.target.closest("[data-del]");
+
+        if (edit) {
+            openForm(rows.find(r => String(r.id) === edit.dataset.edit));
+        }
+
+        if (del && confirm("Delete this notice?")) {
+            try {
+                await api("DELETE", `${BASE}/${del.dataset.del}`);
+                load();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    });
+
+    $("noticeForm").addEventListener("submit", async e => {
+        e.preventDefault();
+
+        const id = $("noticeId").value;
+
+        const body = {
+            notice_type: $("fType").value,
+            status: $("fStatus").value,
+            title: $("fTitle").value,
+            message: $("fMessage").value,
+            starts_at: $("fStart").value,
+            ends_at: $("fEnd").value,
+            company_id: $("fCompany").value
+        };
+
+        $("saveBtn").disabled = true;
+
+        try {
+            await (id ? api("PUT", `${BASE}/${id}`, body) : api("POST", BASE, body));
+            modal.hide();
+            load();
+        } catch (err) {
+            $("formAlert").textContent = err.message;
+            $("formAlert").style.display = "block";
+        } finally {
+            $("saveBtn").disabled = false;
+        }
+    });
+
+    load();
+
+    /* /super-admin/notices/add opens the form directly */
+    if (location.pathname.replace(/\/+$/, "").endsWith("/add")) openForm(null);
+});
+</script>
+
+</body>
+</html>

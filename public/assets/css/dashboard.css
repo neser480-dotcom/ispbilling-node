@@ -197,3 +197,32 @@ body.dark-mode .d-chart h4 { color: #cbd5e1; }
     .software-billing-notice { flex-direction: column; align-items: flex-start; }
     .software-billing-notice .sb-right { width: 100%; justify-content: space-between; }
 }
+
+
+/* ---- monthly fee notice (yellow, red in last 3 days) ---- */
+.mf-notice { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:6px; margin-bottom:16px; border:1px solid; }
+.mf-warn { background:#f8da7e; border-color:#e8c25a; }
+.mf-danger { background:#f1c0c6; border-color:#e5848e; }
+.mf-ico { font-size:22px; }
+.mf-warn .mf-ico { color:#dc3545; }
+.mf-danger .mf-ico { color:#dc3545; }
+.mf-text { flex:1; font-size:16px; line-height:2; color:#212529; }
+.mf-chip { display:inline-block; padding:2px 12px; border-radius:6px; background:rgba(120,170,160,.55); color:#0d6efd; font-weight:700; }
+.mf-danger .mf-chip { background:rgba(150,170,190,.6); }
+.mf-pay { white-space:nowrap; }
+@media (max-width:560px) { .mf-notice { flex-wrap:wrap; align-items:flex-start; } .mf-text { flex-basis:calc(100% - 40px); } }
+
+/* ---- floating maintenance notice: fixed at the bottom, slides right -> left ---- */
+.nf-wrap { position:fixed; left:260px; right:0; bottom:0; z-index:1040; display:flex; flex-direction:column; pointer-events:none; }
+.nf-bar { display:flex; align-items:center; background:#1c2b4a; color:#fff; box-shadow:0 -2px 12px rgba(0,0,0,.18); pointer-events:auto; animation:nf-in .6s ease-out; }
+.nf-label { flex:none; padding:10px 14px; background:#0d6efd; font-weight:700; font-size:14px; white-space:nowrap; }
+.nf-viewport { flex:1; overflow:hidden; min-width:0; }
+.nf-track { display:inline-block; white-space:nowrap; padding:10px 0 10px 100%; font-size:15px; animation:nf-scroll 20s linear infinite; }
+.nf-track strong { margin-right:10px; color:#ffd43b; }
+.nf-track em { margin-left:14px; opacity:.75; font-size:13px; }
+.nf-bar:hover .nf-track { animation-play-state:paused; }
+body.has-nf .d-footer { margin-bottom:52px; }
+@keyframes nf-scroll { from { transform:translateX(0); } to { transform:translateX(-100%); } }
+@keyframes nf-in { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@media (max-width:850px) { .nf-wrap { left:0; } .nf-label { padding:8px 10px; font-size:13px; } .nf-track { font-size:14px; padding-top:8px; padding-bottom:8px; } }
+@media (prefers-reduced-motion:reduce) { .nf-track { animation-duration:60s !important; } .nf-bar { animation:none; } }

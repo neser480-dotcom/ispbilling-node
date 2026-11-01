@@ -297,6 +297,32 @@ document.addEventListener("DOMContentLoaded", () => {
         const box = $("pendingBilling");
         if (!box || !currentBilling) return;
 
+        if (String(currentBilling.billing_type || "").toLowerCase() === "monthly") {
+            const d = new Date(billingExpiresAt);
+            const p2 = n => String(n).padStart(2, "0");
+            const h12 = d.getHours() % 12 || 12;
+            const dueText = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()} ${p2(h12)}:${p2(d.getMinutes())} ${d.getHours() >= 12 ? "PM" : "AM"}`;
+
+            const daysLeft = (billingExpiresAt - Date.now()) / 86400000;
+            const level = daysLeft < 3 ? "danger" : "warn";   /* yellow, then red in the last 3 days */
+
+            box.innerHTML = `
+                <div class="mf-notice mf-${level}">
+                    <i class="fa-solid fa-triangle-exclamation mf-ico"></i>
+                    <div class="mf-text">
+                        AmaderISP Monthly Fee
+                        <span class="mf-chip">${esc(taka(currentBilling.amount || 0))} Tk</span>.
+                        Please make payment before
+                        <span class="mf-chip">${esc(dueText)}</span>
+                    </div>
+                    <span id="billingCountdown" style="display:none"></span>
+                    <a class="btn btn-primary btn-sm mf-pay" href="/software-billing">Pay Now</a>
+                </div>`;
+
+            updateBillingCountdown();
+            return;
+        }
+
         const amount = currentBilling.amount !== undefined ? taka(currentBilling.amount) : "—";
         const type = currentBilling.billing_type || "registration";
         const message = currentBilling.message || "Trial active";
@@ -330,10 +356,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        if (String(currentBilling?.billing_type || "").toLowerCase() === "monthly") {
+            const days = Math.floor(remaining / 86400000);
+            el.textContent = `${days}d ${formatCountdown(remaining % 86400000)}`;
+            return;
+        }
+
         el.textContent = formatCountdown(remaining);
     }
 
-    function setBilling(billing) {
+    function setBilling(billing, extra) {
         if (!billing || typeof billing !== "object") return;
 
         if (String(billing.status || "").toLowerCase() === "paid") {
@@ -345,6 +377,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         currentBilling = billing;
+
+        if (String(billing.billing_type || "").toLowerCase() === "monthly") {
+            const due = new Date(billing.due_date || "").getTime();
+
+            if (Number.isNaN(due)) { hideBillingNotice(); billingLoaded = true; return; }
+
+            billingExpiresAt = due;
+            billingLoaded = true;
+
+            /* shown only inside the 7-day window (server decides: monthly_notice) */
+            if (extra && extra.monthly_notice === false) { hideBillingNotice(); return; }
+
+            if (Date.now() >= due) { window.location.href = "/software-billing"; return; }
+
+            showBillingNotice();
+            return;
+        }
 
         const remaining = Number(
             billing.trial_remaining_seconds ?? billing.remaining_seconds ?? billing.remainingSeconds ?? 0
@@ -400,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ((data.data && (data.data.id || data.data.amount)) ? data.data : null) ||
                 ((data.id || data.amount) ? data : null);
 
-            if (billing) { setBilling(billing); return; }
+            if (billing) { setBilling(billing, data); return; }
 
             billingLoaded = true;
             hideBillingNotice();
@@ -470,14 +519,76 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText("footYear", String(new Date().getFullYear()));
 
+
+    /* ------------------------------------------------- super admin notices */
+
+    let noticeItems = [];
+    let noticeLoadedAt = 0;
+
+    function renderNotices() {
+        const wrap = $("noticeFloat");
+        if (!wrap) return;
+
+        const now = Date.now();
+        const live = noticeItems.filter(n => n.type === "maintenance" && n._expiresAt > now);
+        const key = live.map(n => n.id + ":" + n.title + ":" + n.message).join("|");
+
+        if (wrap.dataset.key === key) return;          /* nothing changed: keep animation running */
+        wrap.dataset.key = key;
+
+        document.body.classList.toggle("has-nf", live.length > 0);
+
+        wrap.innerHTML = live.map(n => `
+            <div class="nf-bar">
+                <span class="nf-label"><i class="fa-solid fa-screwdriver-wrench"></i> Notice</span>
+                <div class="nf-viewport">
+                    <div class="nf-track">
+                        <strong>${esc(n.title)}</strong>
+                        <span>${esc(String(n.message || "").replace(/\s*\n+\s*/g, "  •  "))}</span>
+                        <em>(until ${esc(n.ends_at)})</em>
+                    </div>
+                </div>
+            </div>`).join("");
+
+        /* speed: about 70px per second, whatever the screen or text length */
+        wrap.querySelectorAll(".nf-track").forEach(t => {
+            t.style.animationDuration = Math.max(10, t.offsetWidth / 70) + "s";
+        });
+    }
+
+    async function loadNotices() {
+        try {
+            const r = await fetch("/api/notices/active", { credentials: "same-origin", headers: { Accept: "application/json" } });
+            const d = await r.json();
+            const t = Date.now();
+
+            noticeItems = [];
+
+            ["invoice", "maintenance"].forEach(type => {
+                (d[type] || []).forEach(n => noticeItems.push({
+                    ...n,
+                    type,
+                    _expiresAt: t + Number(n.remaining_seconds || 0) * 1000
+                }));
+            });
+
+            renderNotices();
+        } catch (e) {
+            /* notices are optional; dashboard works without them */
+        }
+    }
+
     /* ---------------------------------------------------------------- init */
 
     loadDashboard();
     loadSoftwareBilling();
+    loadNotices();
 
     billingTimer = setInterval(updateBillingCountdown, 1000);
     setInterval(loadDashboard, 30000);
     setInterval(loadSoftwareBilling, 30000);
+    setInterval(renderNotices, 15000);
+    setInterval(loadNotices, 60000);
     setInterval(() => { if (currentRouterId) loadMikrotik(currentRouterId); }, 5000);
 
     window.addEventListener("beforeunload", () => { if (billingTimer) clearInterval(billingTimer); });

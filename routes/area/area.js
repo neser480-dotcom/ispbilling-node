@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 const express = require("express");
 const path = require("path");
@@ -622,7 +622,7 @@ async function syncMikroTikAreas(req) {
         | SAME NAME MANUAL AREA CHECK
         |--------------------------------------------------------------------------
         |
-        | Manual Area Ã Â¦Â¥Ã Â¦Â¾Ã Â¦â€¢Ã Â¦Â²Ã Â§â€¡ Ã Â¦Â¸Ã Â§â€¡Ã Â¦Å¸Ã Â¦Â¾Ã Â¦â€¢Ã Â§â€¡ MikroTik Area Ã Â¦Â¬Ã Â¦Â¾Ã Â¦Â¨Ã Â¦Â¾Ã Â¦Â¨Ã Â§â€¹ Ã Â¦Â¹Ã Â¦Â¬Ã Â§â€¡ Ã Â¦Â¨Ã Â¦Â¾Ã Â¥Â¤
+        | Manual Area থাকলে সেটাকে MikroTik Area বানানো হবে না।
         |
         */
 
@@ -2150,7 +2150,7 @@ router.post(
                 return jsonError(
                     res,
                     409,
-                    "Ã Â¦ÂÃ Â¦â€¡ Area-Ã Â¦ÂÃ Â¦Â° Ã Â¦Â­Ã Â¦Â¿Ã Â¦Â¤Ã Â¦Â°Ã Â§â€¡ Sub Area Ã Â¦â€¡Ã Â¦Â¤Ã Â¦Â¿Ã Â¦Â®Ã Â¦Â§Ã Â§ÂÃ Â¦Â¯Ã Â§â€¡ Ã Â¦â€ Ã Â¦â€ºÃ Â§â€¡Ã Â¥Â¤"
+                    "এই Area-এর ভিতরে Sub Area ইতিমধ্যে আছে।"
                 );
             }
 

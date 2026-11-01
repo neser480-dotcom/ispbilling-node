@@ -40,7 +40,7 @@ const ALL_PERMISSIONS = [
     "dashboard.collector_summary"
 ];
 
-const ADMIN_ROLES = ["super_admin", "admin", "company_admin", "owner"];
+const ADMIN_ROLES = ["superadmin", "admin", "companyadmin", "owner"];
 
 /* used ONLY when no permission list was saved for the staff member at all */
 const ROLE_DEFAULTS = {
@@ -155,13 +155,13 @@ async function resolvePermissions(req, userId, role) {
 async function getContext(req) {
     const userId = Number(req.session.user_id || req.session.userId || 0);
     const companyId = Number(req.session.company_id || req.session.companyId || 0);
-    const role = String(req.session.role || "").toLowerCase();
+    const role = String(req.session.role || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
 
     return {
         userId,
         companyId,
         role,
-        isSuperAdmin: role === "super_admin",
+        isSuperAdmin: role === "superadmin",
         permissions: await resolvePermissions(req, userId, role)
     };
 }

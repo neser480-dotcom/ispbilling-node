@@ -388,20 +388,20 @@ footer {
 
 /* ===== Employee page: align with global layout ===== */
 
+/* Sidebar is positioned by sidebar.css (.sidebar). The container must NOT be a
+   fixed 250px x 100vh box: it would sit above the topbar (z-index 1030 > 1020)
+   and swallow taps on the mobile menu button. */
 #sidebarContainer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 250px;
-    height: 100vh;
-    z-index: 1030;
+    position: static;
+    width: 0;
+    height: 0;
 }
 
 #mainContent {
-    margin-left: 250px;
+    margin-left: 260px;
     margin-top: 85px;
-    width: calc(100% - 250px);
-    max-width: calc(100% - 250px);
+    width: calc(100% - 260px);
+    max-width: calc(100% - 260px);
     min-width: 0;
     padding: 0;
     box-sizing: border-box;
@@ -410,7 +410,7 @@ footer {
 #mainContent > #topbarContainer {
     position: fixed;
     top: 0;
-    left: 250px;
+    left: 260px;
     right: 0;
     width: auto;
     z-index: 1020;
@@ -424,13 +424,8 @@ footer {
     box-sizing: border-box;
 }
 
-/* Tablet and mobile */
-@media (max-width: 991.98px) {
-    #sidebarContainer {
-        /* Preserve sidebar.css mobile behaviour */
-        width: 250px;
-    }
-
+/* Tablet and mobile (same 850px breakpoint as sidebar.css) */
+@media (max-width: 850px) {
     #mainContent {
         margin-left: 0;
         margin-top: 75px;
