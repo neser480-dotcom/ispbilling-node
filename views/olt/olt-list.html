@@ -373,13 +373,23 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltVendor">Select OLT Vendor <span class="text-danger">*</span></label>
-              <select class="form-select" id="oltVendor" required>
-                <option value="">Select OLT Vendor</option>
-                <option value="CData EPon">CData EPon</option>
-                <option value="ECom EPon">ECom EPon</option>
-                <option value="Other">Other</option>
-              </select>
+<label class="form-label fw-semibold" for="oltVendor">
+  Select OLT Vendor <span class="text-danger">*</span>
+</label>
+<select class="form-select" id="oltVendor" required>
+  <option value="">Select OLT Vendor</option>
+  <option value="CData EPon">CData</option>
+  <option value="ECom EPon">ECom</option>
+  <option value="V-SOL">V-SOL</option>
+  <option value="BDCOM">BDCOM</option>
+  <option value="Huawei">Huawei</option>
+  <option value="ZTE">ZTE</option>
+  <option value="FiberHome">FiberHome</option>
+  <option value="Raisecom">Raisecom</option>
+  <option value="Nokia">Nokia</option>
+  <option value="TP-Link">TP-Link</option>
+  <option value="Other">Other</option>
+</select>
             </div>
 
             <div class="mb-3">
@@ -590,20 +600,28 @@
     return data;
   }
 
-  function normalizeVendor(value) {
-    const raw = String(value ?? "").trim();
-    const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+function normalizeVendor(value) {
+  const raw = String(value ?? "").trim();
+  const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    const vendorMap = {
-      cdata: "CData EPon",
-      cdataepon: "CData EPon",
-      ecom: "ECom EPon",
-      ecomepon: "ECom EPon",
-      other: "Other"
-    };
+  const vendorMap = {
+    cdata: "CData EPon",
+    cdataepon: "CData EPon",
+    ecom: "ECom EPon",
+    ecomepon: "ECom EPon",
+    vsol: "V-SOL",
+    bdcom: "BDCOM",
+    huawei: "Huawei",
+    zte: "ZTE",
+    fiberhome: "FiberHome",
+    raisecom: "Raisecom",
+    nokia: "Nokia",
+    tplink: "TP-Link",
+    other: "Other"
+  };
 
-    return vendorMap[key] || "Other";
-  }
+  return vendorMap[key] || "Other";
+}
 
   function normalizeOlt(row) {
     return {

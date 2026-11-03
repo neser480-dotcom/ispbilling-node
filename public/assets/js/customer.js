@@ -1186,6 +1186,8 @@
         }
 
 
+        customerAdvancedFilters(params);
+
         const response =
             await fetch(
                 "/api/customers/summary?" +
@@ -1819,6 +1821,8 @@
                 );
             }
 
+
+            customerAdvancedFilters(params);
 
             const response =
                 await fetch(
@@ -2592,6 +2596,22 @@ formData.set("csrf_token", csrfToken);
 // CUSTOMER FILTER DROPDOWN DATA LOADER
 // ============================================================
 
+/*
+|--------------------------------------------------------------------------
+| ADVANCED FILTERS  (every select/input with data-cf in the filter bar)
+|--------------------------------------------------------------------------
+*/
+function customerAdvancedFilters(params) {
+    document.querySelectorAll("[data-cf]").forEach(function (el) {
+        const key = String(el.getAttribute("data-cf") || "").trim();
+        const value = String(el.value || "").trim();
+
+        if (key && value !== "") {
+            params.set(key, value);
+        }
+    });
+}
+
 async function customerFilterFetch(url, listKey) {
     const response = await fetch(url, {
         credentials: "same-origin",
@@ -3077,6 +3097,54 @@ async function initCustomerFilterOptions() {
                     currentPage =
                         1;
 
+
+                    loadCustomers();
+                }
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESET FILTER
+        |--------------------------------------------------------------------------
+        */
+
+        const resetFilter =
+            document.getElementById(
+                "resetCustomerFilter"
+            );
+
+        if (resetFilter) {
+
+            resetFilter.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    document
+                        .querySelectorAll("[data-cf]")
+                        .forEach(function (el) {
+
+                            el.value = "";
+
+                            if (
+                                el.classList.contains("cl-date")
+                            ) {
+                                el.type = "text";
+                            }
+                        });
+
+                    loadCustomerPackageFilter("");
+                    loadCustomerSubAreaFilter("");
+
+                    if (statusSelect) {
+                        statusSelect.value = "";
+                    }
+
+                    currentStatus = "";
+                    currentPage = 1;
 
                     loadCustomers();
                 }

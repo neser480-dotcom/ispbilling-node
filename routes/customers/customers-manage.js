@@ -11,6 +11,10 @@ const {
     requireAuth
 } = require("../../middleware/auth");
 
+const {
+    requirePermission
+} = require("../../middleware/permission");
+
 
 router.use(requireAuth);
 
@@ -23,6 +27,7 @@ router.use(requireAuth);
 
 router.get(
     "/profile",
+    requirePermission("customer_list"),
     controller.profile
 );
 
@@ -35,6 +40,7 @@ router.get(
 
 router.get(
     "/edit",
+    requirePermission("customer_edit"),
     controller.editForm
 );
 
@@ -47,6 +53,7 @@ router.get(
 
 router.post(
     "/update",
+    requirePermission("customer_edit"),
     controller.update
 );
 
@@ -59,6 +66,7 @@ router.post(
 
 router.post(
     "/delete",
+    requirePermission("customer_delete"),
     controller.remove
 );
 

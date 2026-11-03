@@ -1,327 +1,139 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="">
+    <title>Deposit</title>
 
-```
-<meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/theme.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <!-- নীল হেডার, স্ট্রিপ ও টেবিলের staff-* স্টাইল collector.css এ আছে। shared staff css থাকলে এখানে সেটা দিন -->
+    <link rel="stylesheet" href="/assets/css/collector.css">
 
-<title>Deposit Report - ISP Billing</title>
+    <style>
+        /* ফিল্টার সারি */
+        .rp-filter{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;margin:0 0 12px}
+        .rp-filter .form-control,.rp-filter .form-select{font-size:14px;min-width:0}
 
+        /* ট্যাব */
+        .rp-tabs{margin:0 0 12px}
+        .rp-tabs .nav-link{cursor:pointer}
 
-<!-- Bootstrap -->
-<link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
->
+        /* টেবিল */
+        .rp-table td,.rp-table th{vertical-align:middle}
+        .rp-table th[data-sort]{cursor:pointer;white-space:nowrap}
+        .rp-badge{display:inline-block;color:#fff;font-size:11px;font-weight:700;line-height:1.2;
+            padding:3px 9px;border-radius:4px;text-transform:capitalize}
+        .rp-badge.done{background:#198754}
+        .rp-badge.wait{background:#e08a00}
+        .rp-bold{font-weight:600}
+        .rp-notice{margin:0 0 12px}
 
+        /* পেজিনেশন */
+        .rp-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px 2px}
+        .rp-pager .btn{min-width:84px}
 
-<!-- Font Awesome -->
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
->
-
-
-<!-- Reports CSS -->
-<link
-    rel="stylesheet"
-    href="/assets/css/reports.css"
->
-```
-
+        @media (max-width:900px){.rp-filter{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    </style>
 </head>
-
-<body>
-
-<!-- ==========================================================
-     SIDEBAR
-=========================================================== -->
+<body class="staff-page">
 
 <div id="sidebarContainer"></div>
-
-<!-- ==========================================================
-     TOPBAR
-=========================================================== -->
-
 <div id="topbarContainer"></div>
 
-<!-- ==========================================================
-     MAIN CONTENT
-=========================================================== -->
+<div class="main-content">
 
-<main class="main-content report-main">
+    <div id="pageAlert" class="alert d-none" role="alert"></div>
 
-```
-<!-- ======================================================
-     REPORT HEADER
-======================================================= -->
+    <!-- BLUE HEADER -->
+    <div class="staff-header-card">
+        <h1>Deposit</h1>
+        <div class="staff-header-actions">
+            <button type="button" class="staff-icon-btn" id="filterToggle" title="Filter">
+                <i class="fa-solid fa-filter"></i>
+            </button>
+            <button type="button" class="staff-icon-btn" id="refreshBtn" title="Refresh">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <a class="staff-icon-btn" href="/tutorial" title="Tutorial">
+                <i class="fa-solid fa-circle-play"></i>
+            </a>
+            <button type="button" class="staff-icon-btn" id="printBtn" title="Print">
+                <i class="fa-solid fa-print"></i>
+            </button>
+        </div>
+    </div>
 
-<div class="report-header-bar">
+    <!-- WHITE BODY -->
+    <div class="staff-body-card">
 
-    <div>
+        <ul class="nav nav-tabs rp-tabs" role="tablist">
+            <li class="nav-item"><button type="button" class="nav-link active" id="tabDeposit" data-tab="deposit">Deposit</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" id="tabPending" data-tab="pending">Pending Deposit</button></li>
+        </ul>
 
-        <h1>
-            Deposit Report
-        </h1>
+        <div class="alert alert-warning rp-notice d-none" id="reportNotice"></div>
 
-        <div class="report-subtitle">
-            Deposit transaction report
+        <!-- ফিল্টার (শুধু Deposit ট্যাবে) -->
+        <div class="rp-filter" id="filterRow">
+            <input type="month" id="fMonth" class="form-control" title="Month">
+            <select id="fCollector" class="form-select"><option value="">Collectors</option></select>
+            <input type="date" id="fromDate" class="form-control" title="From">
+            <input type="date" id="toDate" class="form-control" title="To">
+            <button type="button" class="btn btn-outline-primary" id="filterBtn">Filter</button>
         </div>
 
+        <div class="staff-strip">
+            <div class="staff-total">
+                <i class="fa-solid fa-gear me-1"></i> Total Data:
+                <span class="staff-count-pill" id="totalData">0</span>
+                <span class="ms-3 d-none" id="totalWrap">Total: <span id="totalAmount">৳0</span></span>
+            </div>
+            <div class="staff-search-wrap">
+                <input type="search" id="search" class="form-control" placeholder="Search" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table staff-table rp-table">
+                <thead><tr id="headRow"></tr></thead>
+                <tbody id="reportBody">
+                    <tr><td colspan="8">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="rp-pager" id="pager">
+            <div class="d-flex align-items-center gap-2">
+                <label for="limit" class="mb-0 text-muted small">Show</label>
+                <select id="limit" class="form-select form-select-sm" style="width:auto">
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                    <option value="5000">5000</option>
+                    <option value="100000">All</option>
+                </select>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="prevBtn">Previous</button>
+                <span class="small text-muted" id="pageInfo">Page 1 of 1</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="nextBtn">Next</button>
+            </div>
+        </div>
     </div>
 
-
-    <div class="report-actions">
-
-        <button
-            type="button"
-            class="report-btn"
-            id="refreshBtn"
-        >
-            <i class="fa-solid fa-rotate"></i>
-            Refresh
-        </button>
-
-
-        <button
-            type="button"
-            class="report-btn"
-            id="printBtn"
-        >
-            <i class="fa-solid fa-print"></i>
-            Print
-        </button>
-
-    </div>
-
+    <div class="staff-footer">© Shunno IT - 2026</div>
 </div>
 
-
-
-<!-- ======================================================
-     SUMMARY
-======================================================= -->
-
-<div class="summary-sub-bar">
-
-    <div class="summary-info">
-
-        <span>
-            Total Data
-        </span>
-
-        <strong id="totalData">
-            0
-        </strong>
-
-    </div>
-
-
-    <div class="summary-info">
-
-        <span>
-            Total Deposit
-        </span>
-
-        <strong id="totalAmount">
-            0.00
-        </strong>
-
-    </div>
-
-</div>
-
-
-
-<!-- ======================================================
-     NOTICE
-======================================================= -->
-
-<div
-    class="report-notice"
-    id="reportNotice"
-    style="display:none"
-></div>
-
-
-
-<!-- ======================================================
-     FILTER
-======================================================= -->
-
-<div class="report-filter">
-
-    <input
-        type="text"
-        id="search"
-        placeholder="Search method, user, note..."
-    >
-
-
-    <input
-        type="date"
-        id="fromDate"
-    >
-
-
-    <input
-        type="date"
-        id="toDate"
-    >
-
-
-    <select id="limit">
-
-        <option value="100">
-            100
-        </option>
-
-        <option value="200">
-            200
-        </option>
-
-        <option value="500">
-            500
-        </option>
-
-        <option value="5000">
-            5000
-        </option>
-
-        <option value="100000">
-            All
-        </option>
-
-    </select>
-
-
-    <button
-        type="button"
-        class="report-btn primary"
-        id="filterBtn"
-    >
-        <i class="fa-solid fa-filter"></i>
-        Filter
-    </button>
-
-</div>
-
-
-
-<!-- ======================================================
-     TABLE
-======================================================= -->
-
-<div class="table-container">
-
-    <table class="custom-table">
-
-        <thead>
-
-            <tr>
-
-                <th>
-                    ID
-                </th>
-
-                <th>
-                    Amount
-                </th>
-
-                <th>
-                    Payment Method
-                </th>
-
-                <th>
-                    Created By
-                </th>
-
-                <th>
-                    Note
-                </th>
-
-                <th>
-                    Date
-                </th>
-
-            </tr>
-
-        </thead>
-
-
-        <tbody id="reportBody">
-
-            <tr>
-
-                <td
-                    colspan="6"
-                    class="loading"
-                >
-                    Loading...
-
-                </td>
-
-            </tr>
-
-        </tbody>
-
-    </table>
-
-</div>
-
-
-
-<!-- ======================================================
-     PAGINATION
-======================================================= -->
-
-<div
-    class="pagination"
-    id="pagination"
-></div>
-```
-
-</main>
-
-<!-- ==========================================================
-     BOOTSTRAP
-=========================================================== -->
-
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
-
-<!-- ==========================================================
-     SIDEBAR LOADER
-=========================================================== -->
-
-<script
-    src="/assets/js/sidebar-loader.js"
-></script>
-
-<!-- ==========================================================
-     TOPBAR LOADER
-=========================================================== -->
-
-<script
-    src="/assets/js/topbar-loader.js"
-></script>
-
-<!-- ==========================================================
-     DEPOSIT REPORT JS
-=========================================================== -->
-
-<script
-    src="/assets/js/report-deposit.js"
-></script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js?v=20261009"></script>
+<script src="/assets/js/topbar-loader.js?v=20261009"></script>
+<script src="/assets/js/report-deposit.js"></script>
 </body>
-
 </html>

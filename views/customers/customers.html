@@ -70,6 +70,20 @@
 <link rel="stylesheet" href="/assets/css/customer-add.css?v=20261025">
 <link rel="stylesheet" href="/assets/css/customer-bill-history.css">
 <link rel="stylesheet" href="/assets/css/customer-list.css?v=20261030">
+<style>
+/* Popup scroll: only the popup content scrolls, never the page behind it */
+body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+#customerActionModal { overflow-y: hidden !important; }
+#customerActionModal .modal-dialog { max-height: calc(100vh - 1.5rem); margin: .75rem auto; }
+#customerActionModal .modal-content { max-height: calc(100vh - 1.5rem); display: flex !important; flex-direction: column; overflow: hidden !important; }
+#customerActionModal .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#customerActionModalBody .cm-wrap,
+#customerActionModalBody .cm-page,
+#customerActionModalBody form { display: flex; flex-direction: column; min-height: 0; }
+#customerActionModalBody .cm-body { overflow-y: auto; min-height: 0; max-height: calc(100vh - 12rem); }
+#bulkFloatingPanel { max-height: calc(100vh - 90px); overflow-y: auto !important; overscroll-behavior: contain; }
+</style>
+
 
     <!-- =====================================================
          CSRF

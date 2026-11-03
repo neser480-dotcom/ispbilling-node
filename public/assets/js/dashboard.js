@@ -310,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="mf-notice mf-${level}">
                     <i class="fa-solid fa-triangle-exclamation mf-ico"></i>
                     <div class="mf-text">
-                        AmaderISP Monthly Fee
+                        NetFee Monthly Fee
                         <span class="mf-chip">${esc(taka(currentBilling.amount || 0))} Tk</span>.
                         Please make payment before
                         <span class="mf-chip">${esc(dueText)}</span>
@@ -536,23 +536,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (wrap.dataset.key === key) return;          /* nothing changed: keep animation running */
         wrap.dataset.key = key;
 
-        document.body.classList.toggle("has-nf", live.length > 0);
+        const item = n => `
+            <span class="nf-item">
+                <strong>${esc(n.title)}</strong>
+                <span>${esc(String(n.message || "").replace(/\s*\n+\s*/g, "  •  "))}</span>
+                <em>(until ${esc(n.ends_at)})</em>
+            </span>`;
 
         wrap.innerHTML = live.map(n => `
-            <div class="nf-bar">
+            <div class="nf-bar" data-id="${esc(n.id)}">
                 <span class="nf-label"><i class="fa-solid fa-screwdriver-wrench"></i> Notice</span>
                 <div class="nf-viewport">
-                    <div class="nf-track">
-                        <strong>${esc(n.title)}</strong>
-                        <span>${esc(String(n.message || "").replace(/\s*\n+\s*/g, "  •  "))}</span>
-                        <em>(until ${esc(n.ends_at)})</em>
-                    </div>
+                    <div class="nf-track">${item(n)}${item(n)}</div>
                 </div>
             </div>`).join("");
 
-        /* speed: about 70px per second, whatever the screen or text length */
-        wrap.querySelectorAll(".nf-track").forEach(t => {
-            t.style.animationDuration = Math.max(10, t.offsetWidth / 70) + "s";
+        document.body.classList.toggle("has-nf", live.length > 0);
+
+        /* seamless loop: repeat the text until one half is wider than the screen */
+        wrap.querySelectorAll(".nf-bar").forEach((bar, i) => {
+            const track = bar.querySelector(".nf-track");
+            const view = bar.querySelector(".nf-viewport");
+            const one = track.firstElementChild.offsetWidth || 1;
+            const per = Math.max(1, Math.ceil(view.offsetWidth / one));
+
+            if (per > 1) track.innerHTML = item(live[i]).repeat(per * 2);
+
+            /* about 70px per second, whatever the screen or text length */
+            track.style.animationDuration = Math.max(8, (track.scrollWidth / 2) / 70) + "s";
         });
     }
 

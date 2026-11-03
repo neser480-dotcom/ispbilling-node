@@ -210,8 +210,10 @@
             if (!response.ok) {
 
                 throw new Error(
-                    stripHtml(html) ||
-                    "Failed to load customer action."
+                    errorText(
+                        html,
+                        "Failed to load customer action."
+                    )
                 );
             }
 
@@ -254,6 +256,31 @@
             div.innerText ||
             ""
         ).trim();
+    }
+
+
+    /*
+    | Server errors (e.g. 403 permission) arrive as JSON.
+    | Show only the readable message, never the raw JSON.
+    */
+    function errorText(raw, fallback) {
+
+        const text = String(raw || "").trim();
+
+        if (text.charAt(0) === "{") {
+
+            try {
+
+                const data = JSON.parse(text);
+
+                if (data && data.message) {
+                    return String(data.message);
+                }
+
+            } catch (_) {}
+        }
+
+        return stripHtml(text) || fallback;
     }
 
 
@@ -726,7 +753,7 @@
 
                     if (!response.ok) {
                         throw new Error(
-                            stripHtml(html) || "Failed to load recharge form."
+                            errorText(html, "Failed to load recharge form.")
                         );
                     }
 
@@ -925,8 +952,10 @@
                 if (!response.ok) {
 
                     throw new Error(
-                        stripHtml(html) ||
-                        "Failed to load recharge form."
+                        errorText(
+                            html,
+                            "Failed to load recharge form."
+                        )
                     );
                 }
 

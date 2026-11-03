@@ -24,6 +24,7 @@ const ALLOWED_ROLES = [
     "manager",
     "collector",
     "staff",
+    "employee",
     "reseller"
 ];
 
@@ -1324,6 +1325,55 @@ router.get("/me", async (req, res) => {
             success: false,
             message:
                 "Unable to load current user."
+        });
+
+    }
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| MY PERMISSIONS
+|--------------------------------------------------------------------------
+*/
+
+router.get("/permissions", async (req, res) => {
+
+    try {
+
+        if (!req.session.user_id) {
+
+            return res.status(401).json({
+                success: false,
+                message: "Not authenticated."
+            });
+
+        }
+
+        const [rows] = await db.execute(
+            `
+            SELECT permission_key
+            FROM user_permissions
+            WHERE user_id = ?
+              AND allowed = 1
+            `,
+            [req.session.user_id]
+        );
+
+        return res.json({
+            success: true,
+            role: req.session.role,
+            permissions: rows.map((r) => r.permission_key)
+        });
+
+    } catch (error) {
+
+        console.error("My permissions error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to load permissions."
         });
 
     }

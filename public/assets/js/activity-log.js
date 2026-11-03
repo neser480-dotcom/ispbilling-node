@@ -2,1614 +2,488 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    /*
-    |--------------------------------------------------------------------------
-    | ELEMENTS
-    |--------------------------------------------------------------------------
-    */
+    const $ = (id) => document.getElementById(id);
 
-    const searchInput =
-        document.getElementById("search");
-
-    const fromDateInput =
-        document.getElementById("fromDate");
-
-    const toDateInput =
-        document.getElementById("toDate");
-
-    const limitInput =
-        document.getElementById("limit");
-
-    const filterBtn =
-        document.getElementById("filterBtn");
-
-    const refreshBtn =
-        document.getElementById("refreshBtn");
-
-    const csvBtn =
-        document.getElementById("csvBtn");
-
-    const printBtn =
-        document.getElementById("printBtn");
-
-    const activityBody =
-        document.getElementById("activityBody");
-
-    const pagination =
-        document.getElementById("pagination");
-
-    const pageInfo =
-        document.getElementById("pageInfo");
-
-    const totalData =
-        document.getElementById("totalData");
-
-    const companyBadge =
-        document.getElementById("companyBadge");
-
-    const companyHeader =
-        document.getElementById("companyHeader");
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATE
-    |--------------------------------------------------------------------------
-    */
+    const searchInput = $("search");
+    const fromDateInput = $("fromDate");
+    const toDateInput = $("toDate");
+    const limitInput = $("limit");
+    const createdBySel = $("createdBy");
+    const actionSel = $("actionFilter");
+    const filterBtn = $("filterBtn");
+    const resetBtn = $("resetBtn");
+    const toggleFilterBtn = $("toggleFilterBtn");
+    const filterCard = $("filterCard");
+    const refreshBtn = $("refreshBtn");
+    const csvBtn = $("csvBtn");
+    const printBtn = $("printBtn");
+    const activityBody = $("activityBody");
+    const pagination = $("pagination");
+    const pageInfo = $("pageInfo");
+    const totalData = $("totalData");
+    const companyBadge = $("companyBadge");
 
     let currentPage = 1;
-
     let currentLogs = [];
-
     let currentIsSuperAdmin = false;
+    let sortKey = null;
+    let sortDir = "asc";
+    let searchTimer = null;
 
+    /* ---------- helpers ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | HELPERS
-    |--------------------------------------------------------------------------
-    */
+    const pad = (v) => String(v).padStart(2, "0");
 
-    function pad(value) {
-
-        return String(value).padStart(2, "0");
-
-    }
-
-
-    function escapeHtml(value) {
-
-        if (
-            value === null ||
-            value === undefined
-        ) {
-            return "";
-        }
-
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
+    function escapeHtml(v) {
+        if (v === null || v === undefined) return "";
+        return String(v)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
-
     }
 
-
-    function safeValue(value, fallback = "N/A") {
-
-        if (
-            value === null ||
-            value === undefined ||
-            String(value).trim() === ""
-        ) {
-            return fallback;
-        }
-
-        return String(value);
-
+    function safeValue(v, fallback = "N/A") {
+        if (v === null || v === undefined || String(v).trim() === "") return fallback;
+        return String(v);
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATE FORMAT
-    |--------------------------------------------------------------------------
-    */
 
     function formatDate(value) {
+        if (!value) return "N/A";
+        let date = (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value))
+            ? new Date(value.replace(" ", "T"))
+            : new Date(value);
+        if (Number.isNaN(date.getTime())) return escapeHtml(value);
 
-        if (!value) {
-            return "N/A";
-        }
+        let h = date.getHours();
+        const ampm = h >= 12 ? "PM" : "AM";
+        h = h % 12 || 12;
 
-
-        let date;
-
-
-        /*
-         * MySQL DATETIME:
-         * 2026-10-03 16:30:00
-         */
-
-        if (
-            typeof value === "string" &&
-            /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value)
-        ) {
-
-            date =
-                new Date(
-                    value.replace(" ", "T")
-                );
-
-        } else {
-
-            date =
-                new Date(value);
-
-        }
-
-
-        if (
-            Number.isNaN(
-                date.getTime()
-            )
-        ) {
-
-            return escapeHtml(value);
-
-        }
-
-
-        let hours =
-            date.getHours();
-
-        const minutes =
-            pad(
-                date.getMinutes()
-            );
-
-        const seconds =
-            pad(
-                date.getSeconds()
-            );
-
-        const ampm =
-            hours >= 12
-                ? "PM"
-                : "AM";
-
-
-        hours =
-            hours % 12 || 12;
-
-
-        return (
-            date.getFullYear() +
-            "-" +
-            pad(
-                date.getMonth() + 1
-            ) +
-            "-" +
-            pad(
-                date.getDate()
-            ) +
-            " " +
-            pad(hours) +
-            ":" +
-            minutes +
-            ":" +
-            seconds +
-            " " +
-            ampm
-        );
-
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+               `${pad(h)}:${pad(date.getMinutes())} ${ampm}`;
     }
 
+    /* ---------- badges ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACTION BADGE
-    |--------------------------------------------------------------------------
-    */
-
-    function actionBadge(
-        action,
-        type
-    ) {
-
-        const text =
-            escapeHtml(
-                safeValue(
-                    action,
-                    "UNKNOWN"
-                )
-            );
-
-
-        let className =
-            "bg-primary";
-
-
-        const actionText =
-            String(
-                action || ""
-            ).toLowerCase();
-
-
-        const actionType =
-            String(
-                type || ""
-            ).toLowerCase();
-
-
-        if (
-            actionType === "danger" ||
-            actionText.includes("delete") ||
-            actionText.includes("remove")
-        ) {
-
-            className =
-                "bg-danger";
-
-        } else if (
-            actionType === "success" ||
-            actionText.includes("recharge") ||
-            actionText.includes("payment") ||
-            actionText.includes("paid")
-        ) {
-
-            className =
-                "bg-success";
-
-        } else if (
-            actionType === "warning" ||
-            actionText.includes("update") ||
-            actionText.includes("edit")
-        ) {
-
-            className =
-                "bg-warning text-dark";
-
-        }
-
-
-        return `
-            <span class="badge ${className}">
-                ${text}
-            </span>
-        `;
-
+    function moduleBadge(module) {
+        const m = String(module || "").toLowerCase();
+        let cls = "al-b-grey";
+        if (m.includes("report")) cls = "al-b-green";
+        else if (m.includes("customer")) cls = "al-b-cyan";
+        else if (m.includes("invoice")) cls = "al-b-green";
+        else if (m.includes("collector")) cls = "al-b-cyan";
+        else if (m.includes("payment") || m.includes("recharge") || m.includes("bill")) cls = "al-b-purple";
+        else if (m.includes("staff") || m.includes("user")) cls = "al-b-blue";
+        return `<span class="al-badge ${cls}">${escapeHtml(safeValue(module))}</span>`;
     }
 
+    function actionBadge(action, type) {
+        const a = String(action || "").toLowerCase();
+        const t = String(type || "").toLowerCase();
+        let cls = "al-b-blue";
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOADING
-    |--------------------------------------------------------------------------
-    */
+        if (t === "danger" || a.includes("delete") || a.includes("remove")) cls = "al-b-red";
+        else if (t === "success" || a.includes("create") || a.includes("add") ||
+                 a.includes("recharge") || a.includes("payment") || a.includes("paid")) cls = "al-b-green";
+        else if (t === "warning" || a.includes("update") || a.includes("edit")) cls = "al-b-orange";
+
+        return `<span class="al-badge ${cls}">${escapeHtml(safeValue(action, "UNKNOWN").toUpperCase())}</span>`;
+    }
+
+    /* ---------- states ---------- */
 
     function showLoading() {
-
-        if (!activityBody) {
-            return;
-        }
-
-
-        activityBody.innerHTML = `
-            <tr>
-                <td
-                    colspan="10"
-                    class="text-center py-5"
-                >
-                    <i class="fas fa-spinner fa-spin me-1"></i>
-                    Loading...
-                </td>
-            </tr>
-        `;
-
+        activityBody.innerHTML =
+            `<tr><td colspan="8" class="text-center py-5">
+                <i class="fas fa-spinner fa-spin me-1"></i> Loading...
+            </td></tr>`;
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ERROR
-    |--------------------------------------------------------------------------
-    */
 
     function showError(message) {
-
-        if (activityBody) {
-
-            activityBody.innerHTML = `
-                <tr>
-                    <td
-                        colspan="10"
-                        class="text-center text-danger py-5"
-                    >
-                        <i class="fas fa-circle-exclamation me-1"></i>
-                        ${escapeHtml(message)}
-                    </td>
-                </tr>
-            `;
-
-        }
-
-
-        if (pagination) {
-            pagination.innerHTML = "";
-        }
-
-
-        if (pageInfo) {
-            pageInfo.textContent = "";
-        }
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | RENDER ROWS
-    |--------------------------------------------------------------------------
-    */
-
-    function renderRows(
-        rows,
-        isSuperAdmin
-    ) {
-
-        if (!activityBody) {
-            return;
-        }
-
-
-        if (
-            !Array.isArray(rows) ||
-            rows.length === 0
-        ) {
-
-            activityBody.innerHTML = `
-                <tr>
-                    <td
-                        colspan="10"
-                        class="text-center py-5 text-muted"
-                    >
-                        <i class="fas fa-info-circle me-1"></i>
-                        No activity log found.
-                    </td>
-                </tr>
-            `;
-
-            return;
-        }
-
-
-        if (companyHeader) {
-
-            companyHeader.style.display =
-                isSuperAdmin
-                    ? ""
-                    : "none";
-
-        }
-
-
         activityBody.innerHTML =
-            rows.map((row) => {
-
-                const companyCell =
-                    isSuperAdmin
-                        ? `
-                            <td>
-                                ${
-                                    Number(
-                                        row.company_id || 0
-                                    ) > 0
-
-                                        ? `
-                                            <span
-                                                class="badge bg-info text-dark"
-                                            >
-                                                Company #${escapeHtml(
-                                                    row.company_id
-                                                )}
-                                            </span>
-                                        `
-
-                                        : `
-                                            <span
-                                                class="badge bg-secondary"
-                                            >
-                                                Global / Unassigned
-                                            </span>
-                                        `
-                                }
-                            </td>
-                        `
-                        : "";
-
-
-                const userName =
-                    safeValue(
-                        row.user_name,
-                        "N/A"
-                    );
-
-
-                const userId =
-                    Number(
-                        row.user_id || 0
-                    );
-
-
-                return `
-                    <tr>
-
-                        <td>
-                            ${escapeHtml(
-                                safeValue(
-                                    row.serial,
-                                    row.id || "-"
-                                )
-                            )}
-                        </td>
-
-
-                        ${companyCell}
-
-
-                        <td
-                            class="activity-description"
-                        >
-                            <strong>
-                                ${escapeHtml(
-                                    safeValue(
-                                        row.description
-                                    )
-                                )}
-                            </strong>
-                        </td>
-
-
-                        <td
-                            class="activity-module"
-                        >
-                            <span
-                                class="badge
-                                       bg-light
-                                       text-dark
-                                       border"
-                            >
-                                ${escapeHtml(
-                                    safeValue(
-                                        row.module
-                                    )
-                                )}
-                            </span>
-                        </td>
-
-
-                        <td
-                            class="activity-ip"
-                        >
-                            ${escapeHtml(
-                                safeValue(
-                                    row.ip_address
-                                )
-                            )}
-                        </td>
-
-
-                        <td
-                            class="activity-user"
-                        >
-
-                            <div class="fw-bold">
-                                ${escapeHtml(
-                                    userName
-                                )}
-                            </div>
-
-                            ${
-                                userId > 0
-                                    ? `
-                                        <small
-                                            class="text-muted"
-                                        >
-                                            User #${userId}
-                                        </small>
-                                    `
-                                    : ""
-                            }
-
-                        </td>
-
-
-                        <td>
-
-                            <span
-                                class="badge bg-secondary"
-                            >
-                                ${escapeHtml(
-                                    safeValue(
-                                        row.role_name
-                                    )
-                                )}
-                            </span>
-
-                        </td>
-
-
-                        <td
-                            class="activity-action"
-                        >
-                            ${actionBadge(
-                                row.action,
-                                row.action_type
-                            )}
-                        </td>
-
-
-                        <td
-                            class="activity-date"
-                        >
-                            <small>
-                                ${formatDate(
-                                    row.created_at
-                                )}
-                            </small>
-                        </td>
-
-
-                        <td
-                            class="text-center"
-                        >
-
-                            <button
-                                type="button"
-                                class="btn
-                                       btn-sm
-                                       btn-outline-primary"
-                                data-log-id="${Number(
-                                    row.id || 0
-                                )}"
-                                title="View"
-                            >
-
-                                <i
-                                    class="fas fa-eye"
-                                ></i>
-
-                            </button>
-
-                        </td>
-
-                    </tr>
-                `;
-
-            }).join("");
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | VIEW BUTTONS
-        |--------------------------------------------------------------------------
-        */
-
-        activityBody
-            .querySelectorAll(
-                "[data-log-id]"
-            )
-            .forEach((button) => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const id =
-                            Number(
-                                button.dataset.logId
-                            );
-
-
-                        const row =
-                            currentLogs.find(
-                                (item) =>
-                                    Number(
-                                        item.id
-                                    ) === id
-                            );
-
-
-                        if (row) {
-
-                            viewActivityLog(row);
-
-                        }
-
-                    }
-                );
-
-            });
-
+            `<tr><td colspan="8" class="text-center text-danger py-5">
+                <i class="fas fa-circle-exclamation me-1"></i> ${escapeHtml(message)}
+            </td></tr>`;
+        pagination.innerHTML = "";
+        pageInfo.textContent = "";
     }
 
+    /* ---------- sorting (current page) ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | PAGINATION
-    |--------------------------------------------------------------------------
-    */
+    function sortedLogs() {
+        if (!sortKey) return currentLogs;
+
+        const rows = [...currentLogs];
+        rows.sort((a, b) => {
+            let x = a[sortKey], y = b[sortKey];
+            if (sortKey === "serial" || sortKey === "id") {
+                x = Number(x || 0); y = Number(y || 0);
+            } else if (sortKey === "created_at") {
+                x = new Date(String(x).replace(" ", "T")).getTime() || 0;
+                y = new Date(String(y).replace(" ", "T")).getTime() || 0;
+            } else {
+                x = String(x || "").toLowerCase();
+                y = String(y || "").toLowerCase();
+            }
+            if (x < y) return sortDir === "asc" ? -1 : 1;
+            if (x > y) return sortDir === "asc" ? 1 : -1;
+            return 0;
+        });
+        return rows;
+    }
+
+    function updateSortHeaders() {
+        document.querySelectorAll("th.sortable").forEach((th) => {
+            th.classList.remove("sort-asc", "sort-desc");
+            if (th.dataset.sort === sortKey) {
+                th.classList.add(sortDir === "asc" ? "sort-asc" : "sort-desc");
+            }
+        });
+    }
+
+    document.querySelectorAll("th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+            const key = th.dataset.sort;
+            if (sortKey === key) {
+                sortDir = sortDir === "asc" ? "desc" : "asc";
+            } else {
+                sortKey = key;
+                sortDir = "asc";
+            }
+            updateSortHeaders();
+            renderRows(sortedLogs());
+        });
+    });
+
+    /* ---------- render rows ---------- */
+
+    function renderRows(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) {
+            activityBody.innerHTML =
+                `<tr><td colspan="8" class="text-center py-5 text-muted">
+                    <i class="fas fa-info-circle me-1"></i> No activity log found.
+                </td></tr>`;
+            return;
+        }
+
+        activityBody.innerHTML = rows.map((row) => `
+            <tr>
+                <td class="fw-bold">${escapeHtml(safeValue(row.serial, row.id || "-"))}</td>
+
+                <td class="activity-description">${escapeHtml(safeValue(row.description))}</td>
+
+                <td class="activity-module">${moduleBadge(row.module)}</td>
+
+                <td class="activity-ip">${escapeHtml(safeValue(row.ip_address))}</td>
+
+                <td class="activity-user">
+                    <div class="al-user">${escapeHtml(safeValue(row.user_name))}</div>
+                    <span class="al-badge al-b-blue">${escapeHtml(safeValue(row.role_name))}</span>
+                    ${currentIsSuperAdmin && Number(row.company_id || 0) > 0
+                        ? `<div class="al-user mt-1">Company #${escapeHtml(row.company_id)}</div>` : ""}
+                </td>
+
+                <td class="activity-action">${actionBadge(row.action, row.action_type)}</td>
+
+                <td class="activity-date">${formatDate(row.created_at)}</td>
+
+                <td class="text-center">
+                    <button type="button" class="al-view-btn" data-log-id="${Number(row.id || 0)}" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join("");
+
+        activityBody.querySelectorAll("[data-log-id]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const id = Number(btn.dataset.logId);
+                const row = currentLogs.find((r) => Number(r.id) === id);
+                if (row) viewActivityLog(row);
+            });
+        });
+    }
+
+    /* ---------- pagination ---------- */
 
     function renderPagination(info) {
-
-        if (!pagination) {
-            return;
-        }
-
-
         pagination.innerHTML = "";
+        pageInfo.textContent = "";
+        if (!info) return;
 
+        const page = Number(info.page || 1);
+        const total = Number(info.total || 0);
+        const totalPages = Number(info.totalPages || info.total_pages || 1);
+        const limit = Number(info.limit || 100);
 
-        if (pageInfo) {
-            pageInfo.textContent = "";
+        if (total > 0) {
+            const start = (page - 1) * limit + 1;
+            const end = Math.min(page * limit, total);
+            pageInfo.textContent = `Showing ${start}-${end} of ${total}`;
         }
 
+        if (totalPages <= 1) return;
 
-        if (!info) {
-            return;
+        function addButton(label, target, disabled, active = false) {
+            const li = document.createElement("li");
+            li.className = "page-item" + (disabled ? " disabled" : "") + (active ? " active" : "");
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "page-link";
+            b.textContent = label;
+            if (!disabled) b.addEventListener("click", () => loadLogs(target));
+            li.appendChild(b);
+            pagination.appendChild(li);
         }
 
-
-        const page =
-            Number(
-                info.page || 1
-            );
-
-
-        const total =
-            Number(
-                info.total || 0
-            );
-
-
-        const totalPages =
-            Number(
-                info.totalPages ||
-                info.total_pages ||
-                1
-            );
-
-
-        const limit =
-            Number(
-                info.limit || 100
-            );
-
-
-        if (
-            total > 0 &&
-            pageInfo
-        ) {
-
-            const start =
-                ((page - 1) * limit) + 1;
-
-
-            const end =
-                Math.min(
-                    page * limit,
-                    total
-                );
-
-
-            pageInfo.textContent =
-                `Showing ${start}-${end} of ${total}`;
-
+        function dots() {
+            const li = document.createElement("li");
+            li.className = "page-item disabled";
+            li.innerHTML = `<span class="page-link">...</span>`;
+            pagination.appendChild(li);
         }
 
+        addButton("Previous", page - 1, page <= 1);
 
-        if (
-            totalPages <= 1
-        ) {
-
-            return;
-
-        }
-
-
-        function addButton(
-            label,
-            targetPage,
-            disabled,
-            active = false
-        ) {
-
-            const li =
-                document.createElement(
-                    "li"
-                );
-
-
-            li.className =
-                "page-item";
-
-
-            if (disabled) {
-
-                li.classList.add(
-                    "disabled"
-                );
-
-            }
-
-
-            if (active) {
-
-                li.classList.add(
-                    "active"
-                );
-
-            }
-
-
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-
-            button.type =
-                "button";
-
-
-            button.className =
-                "page-link";
-
-
-            button.textContent =
-                label;
-
-
-            if (!disabled) {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        loadLogs(
-                            targetPage
-                        );
-
-                    }
-                );
-
-            }
-
-
-            li.appendChild(
-                button
-            );
-
-
-            pagination.appendChild(
-                li
-            );
-
-        }
-
-
-        addButton(
-            "Previous",
-            page - 1,
-            page <= 1
-        );
-
-
-        const startPage =
-            Math.max(
-                1,
-                page - 2
-            );
-
-
-        const endPage =
-            Math.min(
-                totalPages,
-                page + 2
-            );
-
+        const startPage = Math.max(1, page - 2);
+        const endPage = Math.min(totalPages, page + 2);
 
         if (startPage > 1) {
-
-            addButton(
-                "1",
-                1,
-                false,
-                page === 1
-            );
-
-
-            if (startPage > 2) {
-
-                const li =
-                    document.createElement(
-                        "li"
-                    );
-
-
-                li.className =
-                    "page-item disabled";
-
-
-                li.innerHTML =
-                    `
-                        <span class="page-link">
-                            ...
-                        </span>
-                    `;
-
-
-                pagination.appendChild(
-                    li
-                );
-
-            }
-
+            addButton("1", 1, false, page === 1);
+            if (startPage > 2) dots();
+        }
+        for (let i = startPage; i <= endPage; i++) addButton(String(i), i, false, i === page);
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) dots();
+            addButton(String(totalPages), totalPages, false, page === totalPages);
         }
 
-
-        for (
-            let i = startPage;
-            i <= endPage;
-            i++
-        ) {
-
-            addButton(
-                String(i),
-                i,
-                false,
-                i === page
-            );
-
-        }
-
-
-        if (
-            endPage < totalPages
-        ) {
-
-            if (
-                endPage < totalPages - 1
-            ) {
-
-                const li =
-                    document.createElement(
-                        "li"
-                    );
-
-
-                li.className =
-                    "page-item disabled";
-
-
-                li.innerHTML =
-                    `
-                        <span class="page-link">
-                            ...
-                        </span>
-                    `;
-
-
-                pagination.appendChild(
-                    li
-                );
-
-            }
-
-
-            addButton(
-                String(totalPages),
-                totalPages,
-                false,
-                page === totalPages
-            );
-
-        }
-
-
-        addButton(
-            "Next",
-            page + 1,
-            page >= totalPages
-        );
-
+        addButton("Next", page + 1, page >= totalPages);
     }
 
+    /* ---------- view modal ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | VIEW MODAL
-    |--------------------------------------------------------------------------
-    */
+    function parseState(value) {
+        if (value === null || value === undefined || value === "") return null;
+        if (typeof value === "object") return value;
+        try {
+            const parsed = JSON.parse(value);
+            return (parsed && typeof parsed === "object") ? parsed : { value: parsed };
+        } catch (e) {
+            return { value: String(value) };
+        }
+    }
+
+    function renderState(targetId, value) {
+        const el = $(targetId);
+        const data = parseState(value);
+
+        if (!data || Object.keys(data).length === 0) {
+            el.innerHTML = `<span class="text-muted">-</span>`;
+            return;
+        }
+
+        el.innerHTML = Object.entries(data).map(([k, v]) => `
+            <div class="al-state-row">
+                <div class="al-state-key">${escapeHtml(k)}</div>
+                <div class="al-state-val">${escapeHtml(
+                    v !== null && typeof v === "object" ? JSON.stringify(v) : v
+                )}</div>
+            </div>
+        `).join("");
+    }
 
     function viewActivityLog(row) {
-
-        const fields = {
-
-            viewUser:
-                row.user_name,
-
-            viewUserId:
-                Number(
-                    row.user_id || 0
-                ) > 0
-                    ? `User #${row.user_id}`
-                    : "N/A",
-
-            viewModule:
-                row.module,
-
-            viewAction:
-                row.action,
-
-            viewDescription:
-                row.description,
-
-            viewIp:
-                row.ip_address,
-
-            viewRole:
-                row.role_name,
-
-            viewCompany:
-                Number(
-                    row.company_id || 0
-                ) > 0
-                    ? `Company #${row.company_id}`
-                    : "Global / Unassigned",
-
-            viewDate:
-                formatDate(
-                    row.created_at
-                )
-
-        };
-
-
-        Object.entries(fields)
-            .forEach(
-                ([id, value]) => {
-
-                    const element =
-                        document.getElementById(
-                            id
-                        );
-
-
-                    if (element) {
-
-                        element.textContent =
-                            safeValue(
-                                value
-                            );
-
-                    }
-
-                }
-            );
-
-
-        const modalElement =
-            document.getElementById(
-                "activityViewModal"
-            );
-
-
-        if (
-            !modalElement
-        ) {
-
+        const modalEl = $("activityViewModal");
+        if (!modalEl || typeof bootstrap === "undefined" || !bootstrap.Modal) {
+            console.error("Bootstrap JS is not loaded.");
             return;
         }
 
+        const action = safeValue(row.action, "UNKNOWN");
+        const moduleName = safeValue(row.module);
 
-        if (
-            typeof bootstrap === "undefined" ||
-            !bootstrap.Modal
-        ) {
+        $("viewModule").textContent = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+        $("viewActionBadge").innerHTML = actionBadge(row.action, row.action_type);
+        $("viewByLabel").textContent =
+            action.charAt(0).toUpperCase() + action.slice(1).toLowerCase() + " by";
+        $("viewRoleBadge").innerHTML =
+            `<span class="al-badge al-b-blue">${escapeHtml(safeValue(row.role_name))}</span>`;
 
-            console.error(
-                "Bootstrap JS is not loaded."
-            );
+        $("viewIp").textContent = safeValue(row.ip_address);
+        $("viewDate").textContent = formatDate(row.created_at);
 
-            return;
-        }
+        $("viewDescription").value = safeValue(row.description, "");
 
+        const hasState = parseState(row.old_data) || parseState(row.new_data);
+        $("stateRow").style.display = hasState ? "" : "none";
+        renderState("viewOldState", row.old_data);
+        renderState("viewNewState", row.new_data);
 
-        bootstrap.Modal
-            .getOrCreateInstance(
-                modalElement
-            )
-            .show();
+        $("viewUserAgent").textContent = safeValue(row.user_agent, "-");
 
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 
+    /* ---------- filter dropdown options ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD ACTIVITY LOGS
-    |--------------------------------------------------------------------------
-    */
+    async function loadFilterOptions() {
+        try {
+            const res = await fetch("/activity/api/filters", {
+                credentials: "same-origin",
+                headers: { Accept: "application/json" }
+            });
+            const data = await res.json();
+            if (!res.ok || data.status !== true) return;
 
-    async function loadLogs(
-        page = 1
-    ) {
+            (data.users || []).forEach((u) => {
+                const o = document.createElement("option");
+                o.value = u.key;
+                o.textContent = u.name;
+                createdBySel.appendChild(o);
+            });
+        } catch (e) {
+            console.error("Filter options error:", e);
+        }
+    }
 
-        currentPage =
-            Number(page) || 1;
+    /* ---------- build query ---------- */
 
+    function buildParams(page) {
+        const p = new URLSearchParams();
+        p.set("page", String(page));
+        p.set("limit", String(limitInput.value || "100"));
 
+        const search = searchInput.value.trim();
+        if (search) p.set("search", search);
+        if (fromDateInput.value) p.set("from_date", fromDateInput.value);
+        if (toDateInput.value) p.set("to_date", toDateInput.value);
+        if (createdBySel.value) p.set("created_by", createdBySel.value);
+        if (actionSel.value) p.set("action", actionSel.value);
+
+        return p;
+    }
+
+    /* ---------- load logs ---------- */
+
+    async function loadLogs(page = 1) {
+        currentPage = Number(page) || 1;
         showLoading();
 
-
-        const params =
-            new URLSearchParams();
-
-
-        const search =
-            searchInput
-                ? searchInput.value.trim()
-                : "";
-
-
-        const fromDate =
-            fromDateInput
-                ? fromDateInput.value
-                : "";
-
-
-        const toDate =
-            toDateInput
-                ? toDateInput.value
-                : "";
-
-
-        const limit =
-            limitInput
-                ? limitInput.value
-                : "100";
-
-
-        params.set(
-            "page",
-            String(currentPage)
-        );
-
-
-        params.set(
-            "limit",
-            String(limit)
-        );
-
-
-        if (search) {
-
-            params.set(
-                "search",
-                search
-            );
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | DATE PARAMETERS
-        |--------------------------------------------------------------------------
-        | Backend supports both names.
-        | Current frontend uses from_date / to_date.
-        |--------------------------------------------------------------------------
-        */
-
-        if (fromDate) {
-
-            params.set(
-                "from_date",
-                fromDate
-            );
-
-        }
-
-
-        if (toDate) {
-
-            params.set(
-                "to_date",
-                toDate
-            );
-
-        }
-
-
         try {
-
-            /*
-            |--------------------------------------------------------------------------
-            | IMPORTANT API PATH
-            |--------------------------------------------------------------------------
-            |
-            | app.js:
-            |
-            | app.use(
-            |     "/activity",
-            |     requireSoftwareBilling,
-            |     activityLogRoutes
-            | );
-            |
-            | Therefore:
-            |
-            | /activity/api
-            |
-            |--------------------------------------------------------------------------
-            */
-
-            const response =
-                await fetch(
-                    `/activity/api?${params.toString()}`,
-                    {
-                        method: "GET",
-
-                        credentials:
-                            "same-origin",
-
-                        headers: {
-                            "Accept":
-                                "application/json"
-                        }
-                    }
-                );
-
+            const response = await fetch(`/activity/api?${buildParams(currentPage).toString()}`, {
+                method: "GET",
+                credentials: "same-origin",
+                headers: { Accept: "application/json" }
+            });
 
             let result;
-
-
             try {
-
-                result =
-                    await response.json();
-
-            } catch (jsonError) {
-
-                throw new Error(
-                    `Server returned invalid JSON (HTTP ${response.status}).`
-                );
-
+                result = await response.json();
+            } catch (e) {
+                throw new Error(`Server returned invalid JSON (HTTP ${response.status}).`);
             }
 
-
-            if (
-                !response.ok ||
-                result.status !== true
-            ) {
-
-                throw new Error(
-                    result.message ||
-                    `Failed to load activity log. HTTP ${response.status}`
-                );
-
+            if (!response.ok || result.status !== true) {
+                throw new Error(result.message || `Failed to load activity log. HTTP ${response.status}`);
             }
 
+            const summary = result.summary || {};
+            const pg = result.pagination || {};
+            const total = Number(summary.total_data ?? pg.total ?? 0);
+            totalData.textContent = total.toLocaleString();
 
-            /*
-            |--------------------------------------------------------------------------
-            | SUMMARY
-            |--------------------------------------------------------------------------
-            */
+            currentIsSuperAdmin = Boolean(result.is_super_admin);
+            companyBadge.textContent = currentIsSuperAdmin ? "Super Admin" : "";
 
-            const summary =
-                result.summary || {};
-
-
-            const paginationData =
-                result.pagination || {};
-
-
-            const total =
-                Number(
-                    summary.total_data ??
-                    paginationData.total ??
-                    0
-                );
-
-
-            if (totalData) {
-
-                totalData.textContent =
-                    total.toLocaleString();
-
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | COMPANY BADGE
-            |--------------------------------------------------------------------------
-            */
-
-            currentIsSuperAdmin =
-                Boolean(
-                    result.is_super_admin
-                );
-
-
-            if (companyBadge) {
-
-                if (
-                    currentIsSuperAdmin
-                ) {
-
-                    companyBadge.className =
-                        "badge bg-danger p-2 ms-1";
-
-                    companyBadge.textContent =
-                        "Super Admin";
-
-                } else {
-
-                    companyBadge.className =
-                        "badge bg-success p-2 ms-1";
-
-                    companyBadge.textContent =
-                        `Company #${
-                            result.company_id || 0
-                        }`;
-
-                }
-
-            }
-
-
-            if (companyHeader) {
-
-                companyHeader.style.display =
-                    currentIsSuperAdmin
-                        ? ""
-                        : "none";
-
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | LOG DATA
-            |--------------------------------------------------------------------------
-            */
-
-            currentLogs =
-                Array.isArray(
-                    result.logs
-                )
-                    ? result.logs
-                    : [];
-
-
-            renderRows(
-                currentLogs,
-                currentIsSuperAdmin
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | PAGINATION
-            |--------------------------------------------------------------------------
-            */
-
-            renderPagination(
-                paginationData
-            );
+            currentLogs = Array.isArray(result.logs) ? result.logs : [];
+            renderRows(sortedLogs());
+            renderPagination(pg);
 
         } catch (error) {
-
-            console.error(
-                "Activity Log Error:",
-                error
-            );
-
-
-            showError(
-                error.message ||
-                "Failed to load activity log."
-            );
-
+            console.error("Activity Log Error:", error);
+            showError(error.message || "Failed to load activity log.");
         }
-
     }
 
+    /* ---------- events ---------- */
 
-    /*
-    |--------------------------------------------------------------------------
-    | FILTER
-    |--------------------------------------------------------------------------
-    */
+    toggleFilterBtn.addEventListener("click", () => {
+        filterCard.classList.toggle("al-hidden");
+    });
 
-    if (filterBtn) {
+    filterBtn.addEventListener("click", () => loadLogs(1));
 
-        filterBtn.addEventListener(
-            "click",
-            () => {
+    resetBtn.addEventListener("click", () => {
+        createdBySel.value = "";
+        actionSel.value = "";
+        fromDateInput.value = "";
+        toDateInput.value = "";
+        searchInput.value = "";
+        sortKey = null;
+        updateSortHeaders();
+        loadLogs(1);
+    });
 
-                loadLogs(1);
+    refreshBtn.addEventListener("click", () => loadLogs(currentPage));
 
-            }
-        );
+    searchInput.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => loadLogs(1), 400);
+    });
 
+    searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            clearTimeout(searchTimer);
+            loadLogs(1);
+        }
+    });
+
+    limitInput.addEventListener("change", () => loadLogs(1));
+    createdBySel.addEventListener("change", () => loadLogs(1));
+    actionSel.addEventListener("change", () => loadLogs(1));
+
+    /* ---------- CSV ---------- */
+
+    function csvEscape(v) {
+        const t = v === null || v === undefined ? "" : String(v);
+        return `"${t.replace(/"/g, '""')}"`;
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REFRESH
-    |--------------------------------------------------------------------------
-    */
-
-    if (refreshBtn) {
-
-        refreshBtn.addEventListener(
-            "click",
-            () => {
-
-                loadLogs(
-                    currentPage
-                );
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SEARCH ENTER
-    |--------------------------------------------------------------------------
-    */
-
-    if (searchInput) {
-
-        searchInput.addEventListener(
-            "keydown",
-            (event) => {
-
-                if (
-                    event.key === "Enter"
-                ) {
-
-                    loadLogs(1);
-
-                }
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LIMIT
-    |--------------------------------------------------------------------------
-    */
-
-    if (limitInput) {
-
-        limitInput.addEventListener(
-            "change",
-            () => {
-
-                loadLogs(1);
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CSV EXPORT
-    |--------------------------------------------------------------------------
-    */
-
-    function csvEscape(value) {
-
-        const text =
-            value === null ||
-            value === undefined
-                ? ""
-                : String(value);
-
-
-        return `"${text.replace(
-            /"/g,
-            '""'
-        )}"`;
-
-    }
-
 
     function exportCsv(rows) {
-
-        if (
-            !Array.isArray(rows) ||
-            rows.length === 0
-        ) {
-
-            alert(
-                "No activity data to export."
-            );
-
+        if (!Array.isArray(rows) || rows.length === 0) {
+            alert("No activity data to export.");
             return;
         }
 
+        const headers = ["#", "Company", "User ID", "User", "Description", "Module",
+                         "IP Address", "Role", "Action", "Date"];
+        const lines = [headers.map(csvEscape).join(",")];
 
-        const headers = [
-
-            "#",
-            "Company",
-            "User ID",
-            "User",
-            "Description",
-            "Module",
-            "IP Address",
-            "Role",
-            "Action",
-            "Date"
-
-        ];
-
-
-        const lines = [
-
-            headers
-                .map(csvEscape)
-                .join(",")
-
-        ];
-
-
-        rows.forEach((row) => {
-
-            lines.push(
-
-                [
-
-                    row.serial,
-
-                    row.company_id,
-
-                    row.user_id,
-
-                    row.user_name,
-
-                    row.description,
-
-                    row.module,
-
-                    row.ip_address,
-
-                    row.role_name,
-
-                    row.action,
-
-                    formatDate(
-                        row.created_at
-                    )
-
-                ]
-                .map(csvEscape)
-                .join(",")
-
-            );
-
+        rows.forEach((r) => {
+            lines.push([
+                r.serial, r.company_id, r.user_id, r.user_name, r.description,
+                r.module, r.ip_address, r.role_name, r.action, formatDate(r.created_at)
+            ].map(csvEscape).join(","));
         });
 
-
-        const blob =
-            new Blob(
-                [
-                    "\uFEFF" +
-                    lines.join("\r\n")
-                ],
-                {
-                    type:
-                        "text/csv;charset=utf-8;"
-                }
-            );
-
-
-        const url =
-            URL.createObjectURL(
-                blob
-            );
-
-
-        const link =
-            document.createElement(
-                "a"
-            );
-
-
-        link.href =
-            url;
-
-
-        link.download =
-            "activity_log.csv";
-
-
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-        link.remove();
-
-
-        URL.revokeObjectURL(
-            url
-        );
-
+        const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "activity_log.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
     }
 
+    csvBtn.addEventListener("click", () => exportCsv(currentLogs));
+    printBtn.addEventListener("click", () => window.print());
 
-    if (csvBtn) {
+    filterCard.classList.add("al-hidden");
 
-        csvBtn.addEventListener(
-            "click",
-            () => {
+    /* ---------- init ---------- */
 
-                exportCsv(
-                    currentLogs
-                );
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PRINT
-    |--------------------------------------------------------------------------
-    */
-
-    if (printBtn) {
-
-        printBtn.addEventListener(
-            "click",
-            () => {
-
-                window.print();
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | INITIAL LOAD
-    |--------------------------------------------------------------------------
-    */
-
+    loadFilterOptions();
     loadLogs(1);
-
 });

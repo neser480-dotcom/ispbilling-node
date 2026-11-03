@@ -15,6 +15,11 @@ const {
 } =
     require("../../middleware/auth");
 
+const {
+    requirePermission
+} =
+    require("../../middleware/permission");
+
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +45,7 @@ router.use(
 
 router.get(
     "/bulk-recharge",
+    requirePermission("bulk_customer_recharge"),
     controller.form
 );
 
@@ -57,6 +63,7 @@ router.get(
 
 router.post(
     "/bulk-recharge",
+    requirePermission("bulk_customer_recharge"),
     controller.process
 );
 

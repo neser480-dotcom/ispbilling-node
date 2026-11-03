@@ -14,12 +14,31 @@ function normalizeRole(role) {
 }
 
 
+const ADMIN_ROLES = [
+    "superadmin",
+    "admin",
+    "companyadmin",
+    "owner"
+];
+
+
 function isSuperAdmin(req) {
 
     return (
         normalizeRole(
             req.session?.role
         ) === "superadmin"
+    );
+
+}
+
+
+function isAdmin(req) {
+
+    return ADMIN_ROLES.includes(
+        normalizeRole(
+            req.session?.role
+        )
     );
 
 }
@@ -38,7 +57,7 @@ async function hasPermission(
     }
 
 
-    if (isSuperAdmin(req)) {
+    if (isAdmin(req)) {
         return true;
     }
 
@@ -53,6 +72,14 @@ async function hasPermission(
     ) {
         return false;
     }
+
+
+    const companyId =
+        Number(
+            req.session.company_id ||
+            req.session.companyId ||
+            0
+        );
 
 
     const key =
@@ -75,11 +102,13 @@ async function hasPermission(
                         allowed
                     FROM user_permissions
                     WHERE user_id = ?
+                      AND company_id = ?
                       AND permission_key = ?
                     LIMIT 1
                 `,
                 [
                     userId,
+                    companyId,
                     key
                 ]
             );
@@ -110,6 +139,94 @@ async function hasPermission(
 }
 
 
+const LABEL_OVERRIDES = {
+    olt: "OLT",
+    sms: "SMS",
+    ipn: "IPN",
+    mikrotik: "MikroTik",
+    pppoe: "PPPoE"
+};
+
+
+function permissionLabel(key) {
+
+    return String(key || "")
+        .split("_")
+        .filter(Boolean)
+        .map((w) =>
+            LABEL_OVERRIDES[w.toLowerCase()] ||
+            w.charAt(0).toUpperCase() + w.slice(1)
+        )
+        .join(" ");
+
+}
+
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+}
+
+
+function wantsHtmlPage(req) {
+
+    const accept =
+        String(req.headers.accept || "");
+
+    const mode =
+        String(
+            req.headers["sec-fetch-mode"] ||
+            "navigate"
+        );
+
+    return (
+        req.method === "GET" &&
+        accept.includes("text/html") &&
+        req.headers["x-requested-with"] !== "XMLHttpRequest" &&
+        mode === "navigate"
+    );
+
+}
+
+
+function deniedPage(label) {
+
+    return `<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>অনুমতি নেই</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6fb;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#1f2937}
+.box{background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.08);padding:36px 32px;max-width:420px;width:calc(100% - 32px);text-align:center}
+.icon{font-size:48px;line-height:1}
+h1{font-size:20px;margin:14px 0 8px}
+p{margin:6px 0;color:#4b5563;font-size:15px}
+.key{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:13px;font-weight:600}
+button{margin-top:22px;border:0;border-radius:8px;background:#2563eb;color:#fff;padding:10px 22px;font-size:15px;cursor:pointer}
+button:hover{background:#1d4ed8}
+</style>
+</head>
+<body>
+<div class="box">
+<div class="icon">&#128274;</div>
+<h1>আপনার এই কাজের অনুমতি নেই</h1>
+<p>এই পেইজ বা কাজ ব্যবহার করতে হলে অ্যাডমিনের কাছ থেকে অনুমতি নিতে হবে।</p>
+<span class="key">প্রয়োজন: ${escapeHtml(label)}</span><br>
+<button onclick="if(history.length>1){history.back()}else{location.href='/'}">পেছনে ফিরে যান</button>
+</div>
+</body>
+</html>`;
+
+}
+
+
 function requirePermission(
     permissionKey
 ) {
@@ -132,7 +249,7 @@ function requirePermission(
                 status: false,
 
                 message:
-                    "Authentication required."
+                    "আপনি লগইন করা নেই। অনুগ্রহ করে আবার লগইন করুন।"
 
             });
 
@@ -148,6 +265,20 @@ function requirePermission(
 
         if (!allowed) {
 
+            const label =
+                permissionLabel(
+                    permissionKey
+                );
+
+            if (wantsHtmlPage(req)) {
+
+                return res
+                    .status(403)
+                    .type("html")
+                    .send(deniedPage(label));
+
+            }
+
             return res.status(403).json({
 
                 success: false,
@@ -155,7 +286,7 @@ function requirePermission(
                 status: false,
 
                 message:
-                    "You do not have permission to perform this action.",
+                    `আপনার এই কাজের অনুমতি নেই। (প্রয়োজন: ${label})`,
 
                 permission:
                     permissionKey
@@ -178,6 +309,8 @@ module.exports = {
 
     requirePermission,
 
-    isSuperAdmin
+    isSuperAdmin,
+
+    isAdmin
 
 };

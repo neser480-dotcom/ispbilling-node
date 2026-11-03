@@ -1,0 +1,47 @@
+"use strict";
+
+const service = require("../../../services/staff/manager/manager.service");
+
+function csrfOk(req, res) {
+    const s = String(req.session?.csrf_token || "").trim();
+    const t = String(req.get("X-CSRF-Token") || req.body?.csrf_token || req.body?._csrf || "").trim();
+    if (!s || !t || s !== t) {
+        res.status(403).json({ success: false, message: "Invalid CSRF token." });
+        return false;
+    }
+    return true;
+}
+
+function fail(res, error) {
+    const status = Number(error?.httpCode) || 500;
+    if (status >= 500) console.error("MANAGER MODULE ERROR:", error);
+    return res.status(status).json({
+        success: false,
+        message: status >= 500 ? "An unexpected server error occurred." : error.message
+    });
+}
+
+const read = (fn) => async (req, res) => {
+    try { res.json({ success: true, ...(await fn(req)) }); } catch (e) { fail(res, e); }
+};
+
+const write = (fn, message) => async (req, res) => {
+    if (!csrfOk(req, res)) return;
+    try { res.json({ success: true, message, ...(await fn(req)) }); } catch (e) { fail(res, e); }
+};
+
+module.exports = {
+    getList: read((req) => service.list(req, req.query || {})),
+    getProfile: read((req) => service.profile(req, req.params.id)),
+    getEditData: read((req) => service.editData(req, req.params.id)),
+    resetPassword: write((req) => service.resetPassword(req, req.params.id, req.body || {}),
+        "পাসওয়ার্ড সফলভাবে রিসেট হয়েছে!"),
+    getAreas: read((req) => service.areasList(req)),
+    create: write((req) => service.create(req, req.body || {}),
+        "নতুন ম্যানেজার সফলভাবে যোগ করা হয়েছে!"),
+    getActivity: read((req) => service.activity(req, req.params.id)),
+    update: write((req) => service.update(req, req.params.id, req.body || {}),
+        "ম্যানেজারের তথ্য সফলভাবে আপডেট হয়েছে!"),
+    remove: write(async (req) => { await service.remove(req, req.params.id); return {}; },
+        "ম্যানেজার সফলভাবে ডিলিট হয়েছে!")
+};

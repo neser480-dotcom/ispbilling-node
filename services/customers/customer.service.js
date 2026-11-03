@@ -237,7 +237,7 @@ function buildAdvancedFilterScope(filters = {}, alias = "c") {
     } else if (customerType === "expired") {
         clauses.push(` AND LOWER(COALESCE(${alias}.status, '')) = 'expired' `);
     } else if (customerType === "due") {
-        clauses.push(` AND (COALESCE(${alias}.balance, 0) > 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
+        clauses.push(` AND (COALESCE(${alias}.balance, 0) < 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
     }
 
     const billDateLeft = String(filters.bill_date_left ?? "").trim();

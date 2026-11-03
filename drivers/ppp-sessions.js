@@ -4,56 +4,101 @@
 |--------------------------------------------------------------------------
 | MikroTik PPPoE sessions (read-only)
 |--------------------------------------------------------------------------
-| /ppp/active rows carry the client MAC in "caller-id", the PPPoE name in
-| "name" and the assigned IP in "address". The router ids come from the
-| company's own customers, so no other tenant's router is ever contacted.
-| Failures are non-fatal: auto-mapping then simply works without sessions.
+| Prefer the MikroTik router assigned to the OLT.
+| Customer mikrotik_id is used only as a fallback when no OLT router exists.
 |--------------------------------------------------------------------------
 */
 
-async function collectPppSessions(pool, companyId, mikrotik) {
+async function collectPppSessions(
+    pool,
+    companyId,
+    mikrotik,
+    preferredRouterId = null
+) {
     const result = { sessions: [], routers: 0, errors: [] };
 
-    if (!mikrotik || typeof mikrotik.router !== 'function' ||
-        typeof mikrotik.active !== 'function') {
+    if (
+        !mikrotik ||
+        typeof mikrotik.router !== 'function' ||
+        typeof mikrotik.active !== 'function'
+    ) {
         result.errors.push('mikrotik service unavailable');
         return result;
     }
 
-    const [rows] = await pool.execute(
-        `SELECT DISTINCT mikrotik_id
-           FROM customers
-          WHERE company_id = ?
-            AND deleted_at IS NULL
-            AND mikrotik_id IS NOT NULL
-            AND mikrotik_id <> ''`,
-        [Number(companyId)]
-    );
+    let routerIds = [];
 
-    for (const row of rows) {
+    if (
+        preferredRouterId !== null &&
+        preferredRouterId !== undefined &&
+        String(preferredRouterId).trim() !== ''
+    ) {
+        const routerId = Number(preferredRouterId);
+
+        if (!Number.isInteger(routerId) || routerId <= 0) {
+            result.errors.push('Invalid OLT MikroTik router ID');
+            return result;
+        }
+
+        const [rows] = await pool.execute(
+            `SELECT id
+               FROM mikrotik_servers
+              WHERE id = ?
+                AND company_id = ?
+                AND deleted_at IS NULL
+              LIMIT 1`,
+            [routerId, Number(companyId)]
+        );
+
+        if (!rows.length) {
+            result.errors.push(
+                `OLT MikroTik router ${routerId} not found for company`
+            );
+            return result;
+        }
+
+        routerIds = [routerId];
+    } else {
+        const [rows] = await pool.execute(
+            `SELECT DISTINCT mikrotik_id
+               FROM customers
+              WHERE company_id = ?
+                AND deleted_at IS NULL
+                AND mikrotik_id IS NOT NULL
+                AND mikrotik_id <> ''`,
+            [Number(companyId)]
+        );
+
+        routerIds = rows
+            .map(row => Number(row.mikrotik_id))
+            .filter(id => Number.isInteger(id) && id > 0);
+    }
+
+    for (const routerId of routerIds) {
         try {
-            const router = await mikrotik.router(row.mikrotik_id);
+            const router = await mikrotik.router(routerId);
             const active = await mikrotik.active(router);
 
             result.routers++;
 
-            for (const item of active) {
-  result.sessions.push({
-    mac: item['caller-id'] || item.callerId || "",
-    username: item.name || item.username || "",
-    address: item.address || "",
-    routerId: String(row.mikrotik_id)
-});
+            for (const item of active || []) {
+                result.sessions.push({
+                    mac: item['caller-id'] || item.callerId || '',
+                    username: item.name || item.username || '',
+                    address: item.address || '',
+                    routerId: String(routerId)
+                });
             }
         } catch (error) {
-            result.errors.push(`router ${row.mikrotik_id}: ${error.message}`);
+            result.errors.push(
+                `router ${routerId}: ${error.message}`
+            );
         }
     }
 
     return result;
 }
 
-// The MikroTik service path differs per project layout; stay optional.
 function loadMikrotikService() {
     for (const path of [
         '../services/mikrotik.service',
@@ -63,8 +108,10 @@ function loadMikrotikService() {
         try {
             return require(path);
         } catch (error) {
-            if (error.code !== 'MODULE_NOT_FOUND' ||
-                !String(error.message).includes(path.replace('../', ''))) {
+            if (
+                error.code !== 'MODULE_NOT_FOUND' ||
+                !String(error.message).includes(path.replace('../', ''))
+            ) {
                 throw error;
             }
         }
@@ -73,4 +120,7 @@ function loadMikrotikService() {
     return null;
 }
 
-module.exports = { collectPppSessions, loadMikrotikService };
+module.exports = {
+    collectPppSessions,
+    loadMikrotikService
+};

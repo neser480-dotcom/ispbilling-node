@@ -1,11 +1,7 @@
-
-* {
-    box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
 
 /* =========================================================
-   EXPENDITURE PAGE
+   EXPENDITURE PAGE  (Activity Log design)
 ========================================================= */
 
 .expenditure-page {
@@ -13,46 +9,45 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    background: #f5f7fb;
-    color: #1f2937;
+    background: transparent;
+    color: #333;
     font-family: Arial, "Noto Sans Bengali", sans-serif;
 }
 
+/* keep dashboard topbar spacing */
+.main-content.ex-page.expenditure-page {
+    margin-top: 70px;
+    padding-top: 20px;
+}
 
 /* =========================================================
    HEADER
 ========================================================= */
 
 .blue-bar {
-    background: #2563eb;
+    background: linear-gradient(90deg, #2f86e0, #3a8fe6);
     color: #fff;
-    border-radius: 12px;
-    padding: 14px 18px;
+    border-radius: 6px;
+    padding: 18px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 0;
+    box-shadow: 0 2px 6px rgba(47,134,224,.25);
 }
 
-.blue-bar h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-}
+.blue-bar h2 { margin: 0; font-size: 30px; font-weight: 700; }
 
-.blue-actions {
-    display: flex;
-    gap: 8px;
-}
+.blue-actions { display: flex; gap: 8px; }
 
 .blue-btn {
     border: 0;
-    background: rgba(255,255,255,.18);
-    color: #fff;
+    background: #fff;
+    color: #2f86e0;
     width: 38px;
     height: 38px;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 17px;
     display: inline-flex;
@@ -61,40 +56,7 @@
     text-decoration: none;
     line-height: 1;
 }
-
-.blue-btn:hover {
-    background: rgba(255,255,255,.28);
-}
-
-
-/* =========================================================
-   TABS
-========================================================= */
-
-.tab-bar {
-    display: flex;
-    gap: 22px;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 15px;
-    padding: 0 4px;
-}
-
-.tab-btn {
-    border: 0;
-    background: transparent;
-    padding: 10px 2px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #2563eb;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-}
-
-.tab-btn.active {
-    color: #1f2937;
-    border-bottom-color: #2563eb;
-}
-
+.blue-btn:hover { background: #eaf3fd; color: #2f86e0; }
 
 /* =========================================================
    FILTER
@@ -103,105 +65,134 @@
 .filter-box {
     display: none;
     background: #fff;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 15px;
-    box-shadow: 0 3px 14px rgba(0,0,0,.06);
+    border: 1px solid #e3e6ea;
+    border-top: 0;
+    padding: 14px 16px;
+    margin-bottom: 0;
 }
-
-.filter-box.show {
-    display: block;
-}
+.filter-box.show { display: block; }
 
 .filter-grid {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
-    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
 }
 
+.field { margin: 0; }
 .field label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #374151;
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
 }
-
 .field select,
 .field input {
-    width: 100%;
-    height: 42px;
-    border: 1px solid #dbe2ea;
-    border-radius: 8px;
-    padding: 0 11px;
+    width: 190px;
+    height: 44px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0 12px;
     background: #fff;
+    font-size: 16px;
     outline: none;
 }
-
 .field select:focus,
-.field input:focus {
-    border-color: #2563eb;
-}
+.field input:focus { border-color: #2f86e0; }
+
+.filter-actions { display: flex; gap: 8px; }
 
 .filter-submit {
-    height: 42px;
-    border: 0;
-    border-radius: 8px;
-    background: #2563eb;
-    color: #fff;
+    height: 44px;
+    border: 1px solid #0d6efd;
+    border-radius: 6px;
+    background: #fff;
+    color: #0d6efd;
     padding: 0 22px;
     cursor: pointer;
-    font-weight: 600;
+    font-size: 16px;
 }
+.filter-submit:hover { background: #0d6efd; color: #fff; }
 
-.filter-submit:hover {
-    background: #1d4ed8;
+.filter-actions .btn-cancel {
+    height: 44px;
+    border: 1px solid #6c757d;
+    background: #fff;
+    color: #6c757d;
+    padding: 0 22px;
+    font-size: 16px;
+    border-radius: 6px;
 }
-
+.filter-actions .btn-cancel:hover { background: #6c757d; color: #fff; }
 
 /* =========================================================
-   SUMMARY
+   TABS
+========================================================= */
+
+.tab-bar {
+    display: flex;
+    gap: 22px;
+    margin: 14px 0 12px;
+    padding: 0 4px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.tab-btn {
+    border: 0;
+    background: transparent;
+    padding: 10px 2px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #2f86e0;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+.tab-btn.active { color: #1f2937; border-bottom-color: #2f86e0; }
+
+/* =========================================================
+   SUMMARY BAR  (Total Data + search)
 ========================================================= */
 
 .summary-strip {
-    background: #2563eb;
+    background: #2f86e0;
     color: #fff;
-    border-radius: 10px;
-    padding: 11px 16px;
+    border-radius: 6px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-bottom: 0;
     flex-wrap: wrap;
+    box-shadow: 0 3px 6px rgba(47,134,224,.3);
 }
-
 .summary-left {
     display: flex;
     align-items: center;
     gap: 18px;
     flex-wrap: wrap;
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 600;
 }
-
 .summary-left b {
-    background: rgba(255,255,255,.2);
-    padding: 3px 9px;
-    border-radius: 6px;
+    background: #1f6fc4;
+    padding: 2px 12px;
+    border-radius: 14px;
     margin-left: 4px;
+    font-weight: 600;
 }
-
 .summary-search {
-    height: 38px;
-    border: 0;
-    border-radius: 8px;
-    padding: 0 12px;
-    min-width: 220px;
+    height: 40px;
+    width: 335px;
+    font-size: 16px;
+    max-width: 100%;
+    border: 1px solid #5aa3ee;
+    border-radius: 4px;
+    padding: 0 10px;
+    background: #3a8fe6;
+    color: #fff;
     outline: none;
 }
-
+.summary-search::placeholder { color: #dbeafc; }
 
 /* =========================================================
    TABLE CARD
@@ -209,90 +200,88 @@
 
 .section-card {
     background: #fff;
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 0 0 6px 6px;
+    padding: 4px 0 8px;
     margin-bottom: 20px;
-    box-shadow: 0 3px 14px rgba(0,0,0,.06);
 }
-
 .table-wrap {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    margin-top: 12px;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 760px;
-}
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
 
 th {
-    background: #f8fafc;
-    color: #475569;
-    font-size: 13px;
+    background: transparent;
+    color: #333;
+    font-size: 16px;
     font-weight: 700;
-    padding: 12px 10px;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 14px 10px;
+    border-bottom: 0;
     text-align: left;
     white-space: nowrap;
 }
-
-th.sortable {
-    cursor: pointer;
-    user-select: none;
-}
-
-th.sortable .sort-icon {
-    color: #94a3b8;
-    font-size: 11px;
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable::after {
+    content: "\2193\2191";
+    font-size: 12px;
     margin-left: 4px;
+    color: #2f86e0;
+    letter-spacing: -2px;
 }
+th.sortable.sort-asc::after  { content: "\2191"; }
+th.sortable.sort-desc::after { content: "\2193"; }
 
 td {
     padding: 12px 10px;
-    border-bottom: 1px solid #eef2f7;
-    font-size: 14px;
+    border: 0;
+    font-size: 16px;
+    color: #555;
     vertical-align: middle;
 }
+tbody tr:nth-child(odd) td  { background: #ececec; }
+tbody tr:nth-child(even) td { background: #fff; }
+tbody tr:hover td { background: #e2edf9; }
 
-tr:hover td {
-    background: #fafcff;
-}
+.ex-desc { max-width: 320px; word-break: break-word; }
+.ex-name { font-size: 14px; color: #333; margin-bottom: 3px; }
+.amount { font-weight: 700; white-space: nowrap; color: #333; }
+.empty { text-align: center; padding: 30px !important; color: #94a3b8; }
 
-.amount {
+/* badges */
+.ex-badge {
+    display: inline-block;
+    font-size: 12px;
     font-weight: 700;
-    white-space: nowrap;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 4px;
+    line-height: 1.3;
 }
-
-.empty {
-    text-align: center;
-    padding: 30px !important;
-    color: #94a3b8;
-}
-
+.ex-b-cyan { background: #17c1e8; }
+.ex-b-blue { background: #0d6efd; }
 
 /* =========================================================
    ACTION
 ========================================================= */
 
-.action-wrap {
-    position: relative;
-}
+.action-wrap { position: relative; display: inline-block; }
 
 .action-btn {
     width: 34px;
     height: 34px;
-    border: 0;
-    border-radius: 7px;
-    background: #f1f5f9;
+    border: 1px solid #0d6efd;
+    border-radius: 5px;
+    background: #fff;
+    color: #0d6efd;
     cursor: pointer;
     font-size: 19px;
+    line-height: 1;
+    padding: 0;
 }
-
-.action-btn:hover {
-    background: #e2e8f0;
-}
+.action-btn:hover { background: #0d6efd; color: #fff; }
 
 .action-menu {
     display: none;
@@ -300,52 +289,33 @@ tr:hover td {
     right: 0;
     top: 38px;
     z-index: 20;
-    width: 125px;
+    width: 135px;
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 9px;
+    border-radius: 8px;
     box-shadow: 0 8px 25px rgba(0,0,0,.13);
     overflow: hidden;
 }
-
-.action-menu.show {
-    display: block;
-}
-
+.action-menu.show { display: block; }
 .action-menu button {
     width: 100%;
     border: 0;
     background: #fff;
-    padding: 10px 12px;
+    padding: 11px 14px;
     text-align: left;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 15px;
 }
+.action-menu button:hover { background: #f1f6fc; }
+.delete-item { color: #dc3545 !important; }
 
-.action-menu button:hover {
-    background: #f8fafc;
-}
+#statusMessage { margin: 0 0 8px; font-size: 15px; color: #dc3545; }
+#statusMessage.success { color: #198754; }
 
-.delete-item {
-    color: #dc2626 !important;
-}
-
+.page-footer { text-align: center; color: #94a3b8; font-size: 13px; padding: 14px 0 4px; }
 
 /* =========================================================
-   FOOTER
-========================================================= */
-
-.page-footer {
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-    padding: 14px 0 4px;
-}
-
-
-/* =========================================================
-   EXPENDITURE MODAL
-   Bootstrap .modal conflict fixed
+   MODAL
 ========================================================= */
 
 .modal-overlay {
@@ -358,471 +328,67 @@ tr:hover td {
     justify-content: center;
     padding: 15px;
 }
-
-.modal-overlay.show {
-    display: flex;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| IMPORTANT
-| Bootstrap 5 also uses .modal.
-| Custom modal renamed to .expenditure-modal.
-|--------------------------------------------------------------------------
-*/
+.modal-overlay.show { display: flex; }
 
 .expenditure-modal {
     width: 100%;
     max-width: 520px;
     background: #fff;
-    border-radius: 13px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 15px 45px rgba(0,0,0,.25);
 }
-
 .modal-head {
-    background: #2563eb;
-    color: #fff;
-    padding: 14px 17px;
+    background: #fff;
+    color: #222;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    border-bottom: 1px solid #dee2e6;
 }
+.modal-head h3 { margin: 0; font-size: 20px; font-weight: 500; }
+.modal-close { border: 0; background: transparent; color: #666; font-size: 26px; cursor: pointer; }
 
-.modal-head h3 {
-    margin: 0;
-    font-size: 17px;
-}
-
-.modal-close {
-    border: 0;
-    background: transparent;
-    color: #fff;
-    font-size: 23px;
-    cursor: pointer;
-}
-
-.modal-body {
-    padding: 18px;
-}
-
-.modal-field {
-    margin-bottom: 13px;
-}
-
-.modal-field label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
+.modal-body { padding: 18px; }
+.modal-field { margin-bottom: 13px; }
+.modal-field label { display: block; margin-bottom: 6px; font-size: 15px; color: #555; }
 .modal-field input,
 .modal-field select {
     width: 100%;
-    height: 42px;
-    border: 1px solid #dbe2ea;
-    border-radius: 8px;
-    padding: 0 11px;
+    height: 44px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 16px;
     outline: none;
 }
-
 .modal-field textarea {
     width: 100%;
-    min-height: 85px;
+    min-height: 95px;
+    font-size: 16px;
     resize: vertical;
-    border: 1px solid #dbe2ea;
-    border-radius: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
     padding: 10px 11px;
     outline: none;
 }
+.modal-field input:focus,
+.modal-field select:focus,
+.modal-field textarea:focus { border-color: #2f86e0; }
 
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding-top: 8px;
-}
-
-.btn-cancel,
-.btn-submit {
-    border: 0;
-    border-radius: 8px;
-    padding: 10px 17px;
-    cursor: pointer;
-}
-
-.btn-cancel {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.btn-submit {
-    background: #2563eb;
-    color: #fff;
-}
-
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
+.btn-cancel, .btn-submit { border: 0; border-radius: 6px; padding: 10px 22px; cursor: pointer; font-size: 16px; }
+.btn-cancel { background: #e5e7eb; color: #374151; }
+.btn-submit { background: #2f86e0; color: #fff; }
 
 /* =========================================================
-   TABLET
+   TABLET / MOBILE
 ========================================================= */
 
 @media (max-width: 900px) {
-
-    .filter-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-width: 600px) {
-
-    .expenditure-page {
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        padding: 8px;
-    }
-
-    .blue-bar {
-        width: 100%;
-        padding: 9px 10px;
-        margin-bottom: 9px;
-        border-radius: 8px;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .blue-bar h2 {
-        font-size: 15px;
-        line-height: 1.2;
-    }
-
-    .blue-actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 4px;
-    }
-
-    .blue-btn {
-        width: 100%;
-        min-width: 0;
-        height: 33px;
-        border-radius: 6px;
-        font-size: 14px;
-    }
-
-
-    /* Filter */
-
-    .filter-box {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 9px;
-        border-radius: 8px;
-    }
-
-    .filter-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .field label {
-        font-size: 12px;
-        margin-bottom: 4px;
-    }
-
-    .field select,
-    .field input {
-        height: 36px;
-        font-size: 13px;
-        padding: 0 8px;
-    }
-
-    .filter-submit {
-        width: 100%;
-        height: 36px;
-        padding: 0;
-        font-size: 13px;
-    }
-
-
-    /* Tabs */
-
-    .tab-bar {
-        width: 100%;
-        display: flex;
-        gap: 0;
-        margin-bottom: 9px;
-        padding: 0;
-    }
-
-    .tab-btn {
-        flex: 1;
-        padding: 8px 4px;
-        font-size: 12px;
-        text-align: center;
-    }
-
-
-    /* Summary */
-
-    .summary-strip {
-        width: 100%;
-        padding: 9px 10px;
-        margin-bottom: 9px;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 7px;
-    }
-
-    .summary-left {
-        width: 100%;
-        display: flex;
-        gap: 6px;
-        font-size: 11px;
-        flex-wrap: wrap;
-    }
-
-    .summary-left b {
-        padding: 2px 6px;
-    }
-
-    .summary-search {
-        width: 100%;
-        min-width: 0;
-        height: 35px;
-        font-size: 12px;
-    }
-
-
-    /* Table */
-
-    .section-card {
-        width: 100%;
-        padding: 7px;
-        margin-bottom: 10px;
-        border-radius: 8px;
-    }
-
-    .table-wrap {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    table {
-        min-width: 760px;
-    }
-
-    th {
-        padding: 8px 8px;
-        font-size: 11px;
-    }
-
-    td {
-        padding: 8px;
-        font-size: 12px;
-    }
-
-
-    /* Action */
-
-    .action-btn {
-        width: 29px;
-        height: 29px;
-        font-size: 17px;
-    }
-
-    .action-menu {
-        top: 32px;
-        right: 0;
-        width: 105px;
-    }
-
-    .action-menu button {
-        padding: 8px 10px;
-        font-size: 12px;
-    }
-
-
-    /* Modal */
-
-    .modal-overlay {
-        padding: 8px;
-        align-items: flex-start;
-        overflow-y: auto;
-    }
-
-    .expenditure-modal {
-        width: 100%;
-        max-width: 100%;
-        margin-top: 25px;
-        border-radius: 9px;
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
-    }
-
-    .modal-head {
-        padding: 11px 12px;
-    }
-
-    .modal-head h3 {
-        font-size: 14px;
-    }
-
-    .modal-close {
-        font-size: 20px;
-    }
-
-    .modal-body {
-        padding: 12px;
-    }
-
-    .modal-field {
-        margin-bottom: 10px;
-    }
-
-    .modal-field label {
-        font-size: 12px;
-        margin-bottom: 5px;
-    }
-
-    .modal-field input,
-    .modal-field select {
-        height: 36px;
-        font-size: 13px;
-        padding: 0 8px;
-    }
-
-    .modal-field textarea {
-        min-height: 75px;
-        font-size: 13px;
-        padding: 8px;
-    }
-
-    .modal-footer {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 7px;
-    }
-
-    .btn-cancel,
-    .btn-submit {
-        width: 100%;
-        padding: 9px;
-        font-size: 12px;
-    }
-
-    .page-footer {
-        font-size: 11px;
-        padding: 10px 0 4px;
-    }
-}
-
-
-/* =========================================================
-   VERY SMALL MOBILE
-========================================================= */
-
-@media (max-width: 380px) {
-
-    .expenditure-page {
-        padding: 6px;
-    }
-
-    .blue-bar {
-        padding: 8px;
-    }
-
-    .blue-bar h2 {
-        font-size: 14px;
-    }
-
-    .blue-actions {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 3px;
-    }
-
-    .blue-btn {
-        height: 30px;
-        font-size: 12px;
-    }
-
-    .tab-btn {
-        padding: 7px 2px;
-        font-size: 11px;
-    }
-
-    .summary-left {
-        font-size: 10px;
-    }
-
-    .summary-search {
-        height: 33px;
-    }
-
-    .section-card {
-        padding: 5px;
-    }
-
-    th {
-        padding: 7px;
-        font-size: 10px;
-    }
-
-    td {
-        padding: 7px;
-        font-size: 11px;
-    }
-
-    .expenditure-modal {
-        margin-top: 15px;
-    }
-}
-
-
-/* =========================================================
-   PRINT
-========================================================= */
-
-@media print {
-
-    .blue-bar,
-    .tab-bar,
-    .filter-box,
-    .summary-search,
-    .action-wrap,
-    th:last-child,
-    td:last-child {
-        display: none !important;
-    }
-
-    .expenditure-page {
-        max-width: 100%;
-        padding: 0;
-        background: #fff;
-    }
-
-    .section-card {
-        box-shadow: none;
-        padding: 0;
-    }
-}
-/* Expenditure page: preserve dashboard topbar spacing */
-.main-content.ex-page.expenditure-page {
-    margin-top: 70px;
-    padding-top: 20px;
+    .field select, .field input { width: 100%; }
+    .field { flex: 1 1 45%; }
 }
 
 @media (max-width: 768px) {
@@ -830,4 +396,41 @@ tr:hover td {
         margin-top: 65px !important;
         padding-top: 10px !important;
     }
+}
+
+@media (max-width: 600px) {
+    .expenditure-page { max-width: 100%; margin: 0; padding: 8px; }
+
+    .blue-bar { padding: 12px; }
+    .blue-bar h2 { font-size: 22px; }
+    .blue-btn { width: 34px; height: 34px; }
+
+    .field { flex: 1 1 100%; }
+    .filter-actions { width: 100%; }
+    .filter-actions button { flex: 1; }
+
+    .tab-btn { flex: 1; padding: 8px 4px; font-size: 15px; text-align: center; }
+    .tab-bar { gap: 0; }
+
+    .summary-search { width: 100%; }
+    .summary-left { font-size: 14px; gap: 10px; }
+
+    th { padding: 10px 8px; font-size: 14px; }
+    td { padding: 10px 8px; font-size: 14px; }
+
+    .modal-overlay { padding: 8px; align-items: flex-start; overflow-y: auto; }
+    .expenditure-modal { margin-top: 25px; max-height: calc(100vh - 40px); overflow-y: auto; }
+    .modal-footer { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+    .blue-actions, .tab-bar, .filter-box, .summary-search,
+    .action-wrap, th:last-child, td:last-child { display: none !important; }
+    .expenditure-page { max-width: 100%; padding: 0; }
+    .summary-strip { box-shadow: none; }
+    tbody tr:nth-child(odd) td { background: #ececec !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

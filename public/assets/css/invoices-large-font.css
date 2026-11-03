@@ -1,0 +1,64 @@
+/* =========================================================
+   INVOICES — LARGER FONT (overrides)
+   billing-invoices.html + registration-invoices.html
+   Load AFTER the page's own css / <style>.
+========================================================= */
+
+/* ---------- BILLING INVOICES ---------- */
+
+.inv-header-bar h4 { font-size: 26px !important; }
+.inv-header-bar .btn-icon { width: 40px !important; height: 40px !important; font-size: 17px !important; }
+
+.summary-sub-bar { font-size: 17px !important; }
+.summary-sub-bar .summary-badge { font-size: 16px !important; padding: 3px 13px !important; }
+.summary-sub-bar .search-box input,
+.summary-sub-bar input[type="search"] { font-size: 16px !important; height: 42px !important; }
+
+.custom-table thead th { font-size: 16px !important; padding: 14px 10px !important; }
+.custom-table tbody td { font-size: 16px !important; padding: 12px 10px !important; }
+.custom-table .badge,
+.custom-table [class*="status"],
+.custom-table [class*="badge"] { font-size: 13px !important; padding: 4px 10px !important; }
+.custom-table .btn,
+.custom-table button { font-size: 15px !important; }
+
+.invoice-modal-header h5 { font-size: 20px !important; }
+.invoice-info-label { font-size: 14px !important; }
+.invoice-info-value { font-size: 17px !important; }
+.invoice-print-btn { font-size: 16px !important; padding: 10px 20px !important; }
+
+/* ---------- REGISTRATION INVOICES ---------- */
+
+.registration-invoice-header h1,
+.registration-invoice-header h2,
+.registration-invoice-header h3,
+.registration-invoice-header h4,
+.registration-invoice-header h5 { font-size: 26px !important; }
+.registration-invoice-header p,
+.registration-invoice-header small { font-size: 15px !important; }
+.registration-invoice-header .btn { font-size: 16px !important; padding: 9px 18px !important; }
+
+.registration-summary-title { font-size: 16px !important; }
+.registration-summary-value { font-size: 30px !important; }
+
+.registration-invoice-table thead th { font-size: 16px !important; padding: 14px 10px !important; }
+.registration-invoice-table tbody td { font-size: 16px !important; padding: 12px 10px !important; }
+.registration-invoice-status { font-size: 13px !important; padding: 4px 11px !important; }
+.registration-invoice-number { font-size: 16px !important; }
+.registration-invoice-table .btn { font-size: 15px !important; }
+
+.registration-details-header h5 { font-size: 20px !important; }
+.registration-detail-label { font-size: 15px !important; }
+.registration-detail-value { font-size: 17px !important; }
+
+@media (max-width: 600px) {
+    .inv-header-bar h4,
+    .registration-invoice-header h1,
+    .registration-invoice-header h2,
+    .registration-invoice-header h3,
+    .registration-invoice-header h4,
+    .registration-invoice-header h5 { font-size: 21px !important; }
+    .custom-table thead th, .custom-table tbody td,
+    .registration-invoice-table thead th, .registration-invoice-table tbody td { font-size: 14px !important; }
+    .registration-summary-value { font-size: 24px !important; }
+}

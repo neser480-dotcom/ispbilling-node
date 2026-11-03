@@ -543,11 +543,12 @@ async function syncOnus(pool, olt) {
                 let ppp = { sessions: [], errors: [] };
 
                 try {
-                    ppp = await collectPppSessions(
-                        pool,
-                        olt.company_id,
-                        loadMikrotikService()
-                    );
+ppp = await collectPppSessions(
+    pool,
+    olt.company_id,
+    loadMikrotikService(),
+    olt.mikrotik_id
+);
                 } catch (error) {
                     ppp.errors.push(error.message);
                 }
@@ -563,6 +564,7 @@ async function syncOnus(pool, olt) {
                 mapping.learnedMacErrors = (learned.errors || []).slice(0, 10);
                 mapping.pppSessions = ppp.sessions.length;
                 mapping.pppErrors = (ppp.errors || []).slice(0, 10);
+console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
             } catch (error) {
                 console.error('[ONU AUTO MAP]', error);
                 mapping = { error: error.message };

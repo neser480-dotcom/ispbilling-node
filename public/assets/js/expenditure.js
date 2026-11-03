@@ -30,9 +30,12 @@
 
         const date = new Date(String(value).replace(" ", "T"));
 
-        return Number.isNaN(date.getTime())
-            ? String(value)
-            : date.toLocaleDateString();
+        if (Number.isNaN(date.getTime())) return String(value);
+        const p = n => String(n).padStart(2, "0");
+        let hr = date.getHours();
+        const ampm = hr >= 12 ? "PM" : "AM";
+        hr = hr % 12 || 12;
+        return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(hr)}:${p(date.getMinutes())} ${ampm}`;
     };
 
     async function getCsrfToken() {
@@ -196,17 +199,13 @@
             ? rows.map(row => `
                 <tr>
                     <td>${escapeHtml(row.serial_no ?? "")}</td>
-                    <td>${escapeHtml(row.expenditure_type ?? "")}</td>
-                    <td>${escapeHtml(row.expense_definition ?? "")}</td>
+                    <td><span class="ex-badge ex-b-cyan">${escapeHtml(row.expenditure_type ?? "")}</span></td>
+                    <td class="ex-desc">${escapeHtml(row.expense_definition ?? "")}</td>
                     <td>
-                        ${escapeHtml(row.name ?? "")}
-                        ${row.user_role ? `
-                            <small class="text-muted d-block">
-                                ${escapeHtml(row.user_role)}
-                            </small>
-                        ` : ""}
+                        <div class="ex-name">${escapeHtml(row.name ?? "")}</div>
+                        ${row.user_role ? `<span class="ex-badge ex-b-blue">${escapeHtml(row.user_role)}</span>` : ""}
                     </td>
-                    <td class="amount">${money(row.amount)}</td>
+                    <td class="amount">${money(row.amount)} Tk</td>
                     <td>${escapeHtml(dateText(row.created_at))}</td>
                     <td>
                         <div class="action-wrap">
@@ -593,9 +592,19 @@
                 sortDirection = 1;
             }
 
+            updateSortHeaders();
             renderExpenditures();
         });
     });
+
+    function updateSortHeaders() {
+        $("expenditureTable").querySelectorAll("th[data-sort]").forEach(th => {
+            th.classList.remove("sort-asc", "sort-desc");
+            if (th.dataset.sort === sortKey) {
+                th.classList.add(sortDirection === 1 ? "sort-asc" : "sort-desc");
+            }
+        });
+    }
 
     // Edit and Delete actions
     document.addEventListener("click", event => {

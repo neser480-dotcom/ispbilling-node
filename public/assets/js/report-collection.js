@@ -1,568 +1,273 @@
 "use strict";
 
-document.addEventListener("DOMContentLoaded", () => {
+(() => {
+    const API = "/reports/api/collection";
+    const $ = (id) => document.getElementById(id);
 
-    const searchInput = document.getElementById("search");
-    const fromDateInput = document.getElementById("fromDate");
-    const toDateInput = document.getElementById("toDate");
-    const limitInput = document.getElementById("limit");
+    /* অন্য পেইজ (যেমন কাস্টমার) থেকে ?customer_id=.. দিয়ে এলে শুধু ওই কাস্টমারের বিল */
+    const rawCustomerId = new URLSearchParams(location.search).get("customer_id");
+    const customerId = rawCustomerId && /^\d+$/.test(rawCustomerId) ? rawCustomerId : "";
 
-    const filterBtn = document.getElementById("filterBtn");
-    const refreshBtn = document.getElementById("refreshBtn");
-    const csvBtn = document.getElementById("csvBtn");
-    const printBtn = document.getElementById("printBtn");
-
-    const reportBody = document.getElementById("reportBody");
-    const pagination = document.getElementById("pagination");
-    const totalData = document.getElementById("totalData");
-    const totalBill = document.getElementById("totalBill");
-
-    let currentPage = 1;
-
-    /*
-    |--------------------------------------------------------------------------
-    | CUSTOMER-SPECIFIC REPORT
-    |--------------------------------------------------------------------------
-    */
-
-    const pageParams = new URLSearchParams(
-        window.location.search
-    );
-
-    const rawCustomerId = pageParams.get("customer_id");
-
-    const customerId =
-        rawCustomerId && /^\d+$/.test(rawCustomerId)
-            ? Number(rawCustomerId)
-            : 0;
-
-    const isCustomerReport = customerId > 0;
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAGE TITLE
-    |--------------------------------------------------------------------------
-    */
-
-    if (isCustomerReport) {
-
-        const title = document.querySelector(
-            ".report-header-bar h1"
-        );
-
-        const subtitle = document.querySelector(
-            ".report-subtitle"
-        );
-
-        if (title) {
-            title.textContent = "Customer Bill Report";
-        }
-
-        if (subtitle) {
-            subtitle.textContent =
-                `Bill and collection history · Customer ID: ${customerId}`;
-        }
-
+    /* কাস্টমারের রিপোর্ট হলে হেডারের নাম বদলায় */
+    if (customerId) {
+        const title = document.querySelector(".staff-header-card h1");
+        if (title) title.textContent = "Customer Bill Report";
+        document.title = "Customer Bill Report";
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DATE HELPERS
-    |--------------------------------------------------------------------------
-    */
+    let rows = [];
+    let page = 1;
+    let totalPages = 1;
+    let sortKey = "";
+    let sortDir = 1;
+    let timer = null;
 
-    function pad(value) {
-        return String(value).padStart(2, "0");
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
+
+    const notify = (msg, type = "success") => {
+        if (window.AppToast?.[type]) return window.AppToast[type](msg);
+        const box = $("pageAlert");
+        box.className = `alert alert-${type === "error" ? "danger" : "success"}`;
+        box.textContent = msg;
+        clearTimeout(box._t);
+        box._t = setTimeout(() => box.classList.add("d-none"), 4000);
+    };
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const taka = (n) => "৳" + Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
+    const CONN = { pppoe: "PPPoE", static: "Static", hotspot: "Hotspot" };
+
+    function fmtDate(v) {
+        const d = v ? new Date(v) : null;
+        if (!d || Number.isNaN(d.getTime())) return "";
+        let h = d.getHours();
+        const ap = h >= 12 ? "PM" : "AM";
+        h = h % 12 || 12;
+        return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(h)}:${pad(d.getMinutes())} ${ap}`;
     }
 
-    function formatDateInput(date) {
+    /* ---------- তারিখ: ডিফল্ট = এই মাসের ১ তারিখ থেকে আজ রাত ১১:৫৯ ---------- */
 
-        return (
-            date.getFullYear() +
-            "-" +
-            pad(date.getMonth() + 1) +
-            "-" +
-            pad(date.getDate())
-        );
+    const toInput = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+    function setDefaultRange() {
+        const n = new Date();
+        $("fMonth").value = `${n.getFullYear()}-${pad(n.getMonth() + 1)}`;
+        $("fromDt").value = toInput(new Date(n.getFullYear(), n.getMonth(), 1, 0, 0));
+        $("toDt").value = toInput(new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59));
     }
 
-    function setCurrentMonth() {
+    $("fMonth").addEventListener("change", () => {
+        const v = $("fMonth").value;
+        if (!v) return;
+        const [y, m] = v.split("-").map(Number);
+        $("fromDt").value = toInput(new Date(y, m - 1, 1, 0, 0));
+        $("toDt").value = toInput(new Date(y, m, 0, 23, 59));
+    });
 
-        const now = new Date();
+    /* ---------- ফিল্টারের তালিকা ---------- */
 
-        const firstDay = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            1
-        );
-
-        const lastDay = new Date(
-            now.getFullYear(),
-            now.getMonth() + 1,
-            0
-        );
-
-        if (fromDateInput) {
-            fromDateInput.value = formatDateInput(firstDay);
-        }
-
-        if (toDateInput) {
-            toDateInput.value = formatDateInput(lastDay);
-        }
-
+    function fillSelect(id, label, values) {
+        const el = $(id);
+        const cur = el.value;
+        el.innerHTML = `<option value="">${esc(label)}</option>` +
+            (values || []).map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+        if (cur && (values || []).includes(cur)) el.value = cur;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | NUMBER
-    |--------------------------------------------------------------------------
-    */
-
-    function number(value) {
-
-        const n = Number(value || 0);
-
-        return n.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-
+    /* items = [{ value, label }]; তালিকা না থাকলে বা কলাম না মিললে বন্ধ থাকে */
+    function fillPairs(id, label, items, available, reason) {
+        const el = $(id);
+        const cur = el.value;
+        el.innerHTML = `<option value="">${esc(label)}</option>` +
+            (items || []).map((i) => `<option value="${esc(i.value)}">${esc(i.label)}</option>`).join("");
+        if (cur && (items || []).some((i) => String(i.value) === cur)) el.value = cur;
+        const on = !!available && (items || []).length > 0;
+        el.disabled = !on;
+        el.title = on ? "" : reason;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | HTML ESCAPE
-    |--------------------------------------------------------------------------
-    */
-
-    function escapeHtml(value) {
-
-        if (value === null || value === undefined) {
-            return "";
-        }
-
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATE FORMAT
-    |--------------------------------------------------------------------------
-    */
-
-    function formatDate(value) {
-
-        if (!value) {
-            return "";
-        }
-
-        const date = new Date(value);
-
-        if (Number.isNaN(date.getTime())) {
-            return escapeHtml(value);
-        }
-
-        return (
-            pad(date.getDate()) +
-            "-" +
-            pad(date.getMonth() + 1) +
-            "-" +
-            date.getFullYear()
-        );
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMMON FILTER PARAMS
-    |--------------------------------------------------------------------------
-    */
-
-    function buildReportParams() {
-
-        const params = new URLSearchParams();
-
-        const search = searchInput?.value.trim() || "";
-        const fromDate = fromDateInput?.value || "";
-        const toDate = toDateInput?.value || "";
-
-        if (search) {
-            params.set("search", search);
-        }
-
-        if (fromDate) {
-            params.set("from_date", fromDate);
-        }
-
-        if (toDate) {
-            params.set("to_date", toDate);
-        }
-
-        /*
-        | Customer ID থাকলে শুধু ওই customer-এর report চাইবে।
-        | Normal collection report-এ এই parameter থাকবে না।
-        */
-
-        if (isCustomerReport) {
-            params.set("customer_id", String(customerId));
-        }
-
-        return params;
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD REPORT
-    |--------------------------------------------------------------------------
-    */
-
-    async function loadReport(page = 1) {
-
-        currentPage = page;
-
-        if (!reportBody) {
-            return;
-        }
-
-        reportBody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center py-4">
-                    Loading...
-                </td>
-            </tr>
-        `;
-
+    async function loadFilters() {
         try {
+            const r = await fetch(`${API}/filters`, { credentials: "same-origin", headers: { Accept: "application/json" } });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || !d.status) throw new Error(d.message || "ফিল্টার লোড করা যায়নি।");
+            fillSelect("fPackage", "Package", d.packages);
+            fillSelect("fArea", "All Area", d.areas);
+            fillSelect("fCollector", "Collected By", d.collectors);
+            fillSelect("fBillType", "Bill Type", d.bill_types);
+            fillSelect("fMedium", "Medium", d.mediums);
 
-            const params = buildReportParams();
-
-            params.set("page", String(page));
-            params.set("limit", limitInput?.value || "100");
-
-            const response = await fetch(
-                `/reports/api/collection?${params.toString()}`,
-                {
-                    method: "GET",
-                    credentials: "same-origin",
-                    headers: {
-                        "Accept": "application/json"
-                    }
-                }
-            );
-
-            let result;
-
-            try {
-                result = await response.json();
-            } catch (jsonError) {
-                throw new Error(
-                    `Server returned invalid JSON (${response.status}).`
-                );
-            }
-
-            if (!response.ok || result.status !== true) {
-                throw new Error(
-                    result.message ||
-                    `Failed to load report. HTTP ${response.status}`
-                );
-            }
-
-            /*
-            | SUMMARY
-            */
-
-            if (totalData) {
-                totalData.textContent = Number(
-                    result.summary?.total_data || 0
-                ).toLocaleString();
-            }
-
-            if (totalBill) {
-                totalBill.textContent = number(
-                    result.summary?.total_bill || 0
-                );
-            }
-
-            /*
-            | TABLE & PAGINATION
-            */
-
-            renderRows(result.collections || []);
-            renderPagination(result.pagination);
-
-        } catch (error) {
-
-            console.error("Collection report:", error);
-
-            reportBody.innerHTML = `
-                <tr>
-                    <td colspan="9"
-                        class="text-center text-danger py-4">
-                        ${escapeHtml(error.message)}
-                    </td>
-                </tr>
-            `;
-
-            if (totalData) {
-                totalData.textContent = "0";
-            }
-
-            if (totalBill) {
-                totalBill.textContent = "0.00";
-            }
-
-            if (pagination) {
-                pagination.innerHTML = "";
-            }
-
-        }
-
+            const av = d.available || {};
+            fillPairs("fMikrotik", "Mikrotik",
+                (d.mikrotiks || []).map((m) => ({ value: m.id, label: m.name })),
+                av.mikrotik, "Mikrotik তালিকা বা customers এর router কলাম পাওয়া যায়নি");
+            fillPairs("fSubArea", "Sub Area",
+                (d.sub_areas || []).map((s) => ({ value: s.id, label: s.name })),
+                av.sub_area, "Sub Area তালিকা বা customers এর sub_area কলাম পাওয়া যায়নি");
+            fillPairs("fBillingType", "Billing Type",
+                (d.billing_types || []).map((b) => ({ value: b, label: b })),
+                av.billing_type, "customers টেবিলে billing_type কলাম পাওয়া যায়নি");
+        } catch (e) { notify(e.message, "error"); }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RENDER ROWS
-    |--------------------------------------------------------------------------
-    */
+    /* ---------- ডাটা লোড ---------- */
 
-    function renderRows(rows) {
+    function query(extra = {}) {
+        const p = new URLSearchParams();
+        const set = (k, v) => { if (v) p.set(k, v); };
+        set("search", $("search").value.trim());
+        set("from_dt", $("fromDt").value);
+        set("to_dt", $("toDt").value);
+        set("package", $("fPackage").value);
+        set("area", $("fArea").value);
+        set("collected_by", $("fCollector").value);
+        set("bill_type", $("fBillType").value);
+        set("medium", $("fMedium").value);
+        set("mikrotik", $("fMikrotik").value);
+        set("sub_area", $("fSubArea").value);
+        set("billing_type", $("fBillingType").value);
+        set("customer_id", customerId);
+        Object.entries(extra).forEach(([k, v]) => p.set(k, v));
+        return p;
+    }
 
-        if (!rows || !rows.length) {
+    async function load() {
+        try {
+            const r = await fetch(`${API}?${query({ page, limit: $("limit").value })}`, {
+                credentials: "same-origin", headers: { Accept: "application/json" }
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || !d.status) throw new Error(d.message || "রিপোর্ট লোড করা যায়নি।");
+            rows = d.collections || [];
+            totalPages = Math.max(1, Number(d.pagination?.totalPages || 1));
+            $("totalData").textContent = Number(d.summary?.total_data || 0);
+            $("totalBill").textContent = taka(d.summary?.total_bill);
+            render();
+            renderPager();
+        } catch (e) {
+            $("reportBody").innerHTML = `<tr><td colspan="10">${esc(e.message)}</td></tr>`;
+            notify(e.message, "error");
+        }
+    }
 
-            reportBody.innerHTML = `
-                <tr>
-                    <td colspan="9"
-                        class="text-center text-muted py-4">
-                        No collection found for this period.
-                    </td>
-                </tr>
-            `;
+    /* ---------- টেবিল ---------- */
 
-            return;
+    const sortValue = {
+        id: (c) => c.id,
+        name: (c) => c.customer_name,
+        bill: (c) => Number(c.bill_amount || 0),
+        discount: (c) => Number(c.discount || 0),
+        due: (c) => Number(c.due_amount || 0),
+        medium: (c) => c.medium,
+        collected_by: (c) => c.collected_by,
+        note: (c) => c.note,
+        date: (c) => new Date(c.created_at).getTime() || 0
+    };
+
+    function render() {
+        let list = [...rows];
+        if (sortKey && sortValue[sortKey]) {
+            list.sort((a, b) => sortDir * String(sortValue[sortKey](a) ?? "")
+                .localeCompare(String(sortValue[sortKey](b) ?? ""), undefined, { numeric: true }));
         }
 
-        reportBody.innerHTML = rows.map(row => {
-
-            const name = escapeHtml(row.customer_name);
-            const pppoe = escapeHtml(row.pppoe_username);
-            const packageName = escapeHtml(row.package_name);
-            const medium = escapeHtml(row.medium);
-            const billType = escapeHtml(row.bill_type);
-            const collector = escapeHtml(row.collected_by);
-            const note = escapeHtml(row.note);
-
+        $("reportBody").innerHTML = list.length ? list.map((c) => {
+            const conn = CONN[String(c.connection_type || "").toLowerCase()] || c.connection_type || "";
+            const nameLine = [c.customer_name, c.area_name].filter(Boolean).map(esc).join(" / ");
             return `
-                <tr>
-                    <td>${escapeHtml(row.id)}</td>
-
-                    <td>
-                        <div class="fw-semibold">${name}</div>
-                        <div class="text-muted small">${pppoe}</div>
-                    </td>
-
-                    <td>
-                        <div>${packageName}</div>
-                        <div class="text-muted small">
-                            Bill: ${number(row.bill_amount)}
-                        </div>
-                    </td>
-
-                    <td>${number(row.discount)}</td>
-
-                    <td>${number(row.due_amount)}</td>
-
-                    <td>
-                        <div>${medium}</div>
-                        <div class="text-muted small">${billType}</div>
-                    </td>
-
-                    <td class="fw-semibold">
-                        ${number(row.collected_amount)}
-                    </td>
-
-                    <td>
-                        <div>${note}</div>
-
-                        ${
-                            collector
-                                ? `
-                                    <div class="text-muted small">
-                                        ${collector}
-                                    </div>
-                                `
-                                : ""
-                        }
-                    </td>
-
-                    <td>${formatDate(row.created_at)}</td>
-                </tr>
-            `;
-
-        }).join("");
-
+            <tr>
+                <td class="rp-id">${esc(c.id)}${conn ? `<br><span class="rp-badge">${esc(conn)}</span>` : ""}</td>
+                <td class="rp-name">${nameLine}<span class="rp-sub">${esc(c.pppoe_username)}</span></td>
+                <td>${esc(c.package_name)}<span class="rp-bold d-block">${taka(c.bill_amount)}</span></td>
+                <td>${esc(c.discount ?? 0)}</td>
+                <td>${esc(c.due_amount ?? 0)}</td>
+                <td>${esc(c.medium)}${c.bill_type ? `<br><span class="rp-badge">${esc(c.bill_type)}</span>` : ""}</td>
+                <td>${esc(c.collected_by)}${c.collector_role ? `<br><span class="rp-badge">${esc(c.collector_role)}</span>` : ""}</td>
+                <td>${esc(c.note)}</td>
+                <td>${esc(fmtDate(c.created_at))}</td>
+                <td>
+                    <div class="dropdown">
+                        <button class="staff-dots" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
+                        <ul class="dropdown-menu dropdown-menu-end staff-menu">
+                            <li><a class="dropdown-item" href="#" data-act="edit" data-id="${esc(c.bill_report_id)}"><i class="fa-solid fa-pen"></i>Edit</a></li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>`;
+        }).join("") : `<tr><td colspan="10">No Data Found !</td></tr>`;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | PAGINATION
-    |--------------------------------------------------------------------------
-    */
-
-    function renderPagination(info) {
-
-        if (!pagination) {
-            return;
-        }
-
-        pagination.innerHTML = "";
-
-        if (!info) {
-            return;
-        }
-
-        const page = Number(info.page || 1);
-
-        const totalPages = Number(
-            info.totalPages ||
-            info.total_pages ||
-            1
-        );
-
-        if (totalPages <= 1) {
-            return;
-        }
-
-        function addButton(label, targetPage, disabled = false) {
-
-            const li = document.createElement("li");
-
-            li.className = `page-item ${disabled ? "disabled" : ""}`;
-
-            const button = document.createElement("button");
-
-            button.className = "page-link";
-            button.type = "button";
-            button.textContent = label;
-            button.disabled = disabled;
-
-            if (!disabled) {
-                button.addEventListener(
-                    "click",
-                    () => loadReport(targetPage)
-                );
-            }
-
-            li.appendChild(button);
-            pagination.appendChild(li);
-
-        }
-
-        addButton("Previous", page - 1, page <= 1);
-
-        const start = Math.max(1, page - 2);
-        const end = Math.min(totalPages, page + 2);
-
-        for (let i = start; i <= end; i++) {
-
-            const li = document.createElement("li");
-
-            li.className = `page-item ${i === page ? "active" : ""}`;
-
-            const button = document.createElement("button");
-
-            button.type = "button";
-            button.className = "page-link";
-            button.textContent = String(i);
-            button.disabled = i === page;
-
-            button.addEventListener(
-                "click",
-                () => loadReport(i)
-            );
-
-            li.appendChild(button);
-            pagination.appendChild(li);
-
-        }
-
-        addButton("Next", page + 1, page >= totalPages);
-
+    function renderPager() {
+        $("pageInfo").textContent = `Page ${page} of ${totalPages}`;
+        $("prevBtn").disabled = page <= 1;
+        $("nextBtn").disabled = page >= totalPages;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | FILTER
-    |--------------------------------------------------------------------------
-    */
+    /* ---------- ইভেন্ট ---------- */
 
-    filterBtn?.addEventListener("click", () => {
-        loadReport(1);
+    document.addEventListener("click", (ev) => {
+        const el = ev.target.closest("[data-act]");
+        if (!el) return;
+        ev.preventDefault();
+        if (el.dataset.act === "edit") notify("Edit ফিচার এখনো যুক্ত করা হয়নি।", "error");
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | REFRESH
-    |--------------------------------------------------------------------------
-    */
+    document.querySelectorAll("th[data-sort]").forEach((th) => th.addEventListener("click", () => {
+        sortDir = sortKey === th.dataset.sort ? -sortDir : 1;
+        sortKey = th.dataset.sort;
+        render();
+    }));
 
-    refreshBtn?.addEventListener("click", () => {
-        loadReport(currentPage);
+    $("filterToggle").addEventListener("click", () => $("filterPanel").classList.toggle("d-none"));
+
+    $("filterBtn").addEventListener("click", () => { page = 1; load(); });
+
+    $("resetBtn").addEventListener("click", () => {
+        setDefaultRange();
+        ["fPackage", "fArea", "fCollector", "fBillType", "fMedium", "fMikrotik", "fSubArea", "fBillingType"].forEach((id) => { $(id).value = ""; });
+        $("search").value = "";
+        page = 1;
+        load();
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | ENTER SEARCH
-    |--------------------------------------------------------------------------
-    */
+    $("csvBtn").addEventListener("click", () => {
+        location.href = `${API}/csv?${query()}`;
+    });
 
-    searchInput?.addEventListener("keydown", event => {
-
-        if (event.key === "Enter") {
-            loadReport(1);
+    $("refreshBtn").addEventListener("click", async () => {
+        const btn = $("refreshBtn");
+        const icon = btn.querySelector("i");
+        btn.disabled = true;
+        icon.classList.add("fa-spin");
+        try {
+            await Promise.all([loadFilters(), load()]);
+        } finally {
+            icon.classList.remove("fa-spin");
+            btn.disabled = false;
         }
-
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | CSV EXPORT
-    |--------------------------------------------------------------------------
-    */
-
-    csvBtn?.addEventListener("click", () => {
-
-        const params = buildReportParams();
-
-        window.location.href =
-            `/reports/api/collection/csv?${params.toString()}`;
-
+    $("backBtn").addEventListener("click", () => {
+        if (history.length > 1) history.back();
+        else location.href = "/dashboard";
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | PRINT
-    |--------------------------------------------------------------------------
-    */
-
-    printBtn?.addEventListener("click", () => {
-        window.print();
+    $("search").addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { page = 1; load(); }, 300);
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | INITIAL LOAD
-    |--------------------------------------------------------------------------
-    */
+    $("limit").addEventListener("change", () => { page = 1; load(); });
+    $("prevBtn").addEventListener("click", () => { if (page > 1) { page -= 1; load(); } });
+    $("nextBtn").addEventListener("click", () => { if (page < totalPages) { page += 1; load(); } });
 
-    setCurrentMonth();
-    loadReport(1);
+    /* ---------- শুরু ---------- */
 
-});
+    setDefaultRange();
+    loadFilters();
+    load();
+})();

@@ -137,6 +137,257 @@ function getCustomerId(req, res, csv = false) {
 
 /*
 |--------------------------------------------------------------------------
+| CUSTOMER-BASED FILTER DETECTION (Mikrotik / Sub Area / Billing Type)
+|--------------------------------------------------------------------------
+| customers টেবিলের কলাম information_schema থেকে খুঁজে নেয়,
+| তাই কলামের নাম আলাদা হলেও এক জায়গায় বদলালেই চলে।
+|--------------------------------------------------------------------------
+*/
+
+const schemaCache = {};
+
+async function columnsOf(table) {
+    if (schemaCache[table] && schemaCache[table].length) {
+        return schemaCache[table];
+    }
+
+    const [rows] = await pool.query(
+        `
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = ?
+          AND TABLE_NAME = ?
+        `,
+        [process.env.DB_NAME || "ispbilling", table]
+    );
+
+    const cols = rows.map(row => row.COLUMN_NAME);
+
+    if (cols.length) {
+        schemaCache[table] = cols;
+    }
+
+    return cols;
+}
+
+const pickColumn = (cols, names) =>
+    names.find(name => cols.includes(name)) || null;
+
+async function detectCustomerFilters() {
+    const cols = await columnsOf("customers");
+
+    return {
+        sub_area: pickColumn(cols, ["sub_area_id", "subarea_id"]),
+        billing_type: pickColumn(cols, ["billing_type"]),
+        router: pickColumn(cols, ["router_id", "mikrotik_id", "mikrotik_router_id"])
+    };
+}
+
+async function detectRouterTable() {
+    const candidates = [
+        "routers",
+        "mikrotik_routers",
+        "mikrotiks",
+        "mikrotik",
+        "router"
+    ];
+
+    for (const table of candidates) {
+        const cols = await columnsOf(table);
+
+        if (!cols.length || !cols.includes("id")) {
+            continue;
+        }
+
+        const nameColumn = pickColumn(
+            cols,
+            ["name", "router_name", "identity", "title", "host", "ip_address"]
+        );
+
+        if (nameColumn) {
+            return {
+                table,
+                nameColumn,
+                hasCompany: cols.includes("company_id")
+            };
+        }
+    }
+
+    return null;
+}
+
+async function customerFilterOptions(req) {
+    const result = {
+        mikrotiks: [],
+        sub_areas: [],
+        billing_types: [],
+        available: {
+            mikrotik: false,
+            sub_area: false,
+            billing_type: false
+        }
+    };
+
+    try {
+        const det = await detectCustomerFilters();
+
+        if (det.sub_area) {
+            const sc = getCompanyScope(req, "s");
+
+            const [rows] = await pool.query(
+                `
+                SELECT s.id, s.area_id, s.name
+                FROM sub_areas s
+                WHERE ${sc.sql}
+                ORDER BY s.name ASC
+                `,
+                sc.params
+            );
+
+            result.sub_areas = rows;
+            result.available.sub_area = true;
+        }
+
+        if (det.billing_type) {
+            const sc = getCompanyScope(req, "cc");
+
+            const [rows] = await pool.query(
+                `
+                SELECT DISTINCT cc.\`${det.billing_type}\` AS v
+                FROM customers cc
+                WHERE ${sc.sql}
+                  AND cc.\`${det.billing_type}\` IS NOT NULL
+                  AND cc.\`${det.billing_type}\` <> ''
+                ORDER BY v ASC
+                `,
+                sc.params
+            );
+
+            result.billing_types = rows.map(row => row.v);
+            result.available.billing_type = true;
+        }
+
+        if (det.router) {
+            const rt = await detectRouterTable();
+
+            if (rt) {
+                const sc = rt.hasCompany
+                    ? getCompanyScope(req, "r")
+                    : { sql: "1=1", params: [] };
+
+                const [rows] = await pool.query(
+                    `
+                    SELECT r.id, r.\`${rt.nameColumn}\` AS name
+                    FROM \`${rt.table}\` r
+                    WHERE ${sc.sql}
+                    ORDER BY name ASC
+                    `,
+                    sc.params
+                );
+
+                result.mikrotiks = rows;
+                result.available.mikrotik = true;
+            }
+        }
+
+    } catch (error) {
+        console.error("Collection customer filter options error:", error);
+    }
+
+    return result;
+}
+
+/*
+|--------------------------------------------------------------------------
+| COLLECTION EXTRA FILTERS
+|--------------------------------------------------------------------------
+| from_dt / to_dt  : "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" (T allowed)
+| package, area, collected_by, bill_type, medium : exact match
+|--------------------------------------------------------------------------
+*/
+
+async function collectionExtraFilters(req, alias = "b") {
+    const where = [];
+    const params = [];
+
+    const fromDt = clean(req.query.from_dt).replace("T", " ");
+    const toDt = clean(req.query.to_dt).replace("T", " ");
+    const dtOk = /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$/;
+
+    if (fromDt && dtOk.test(fromDt)) {
+        where.push(`${alias}.created_at >= ?`);
+        params.push(
+            fromDt.length === 10 ? `${fromDt} 00:00:00`
+                : fromDt.length === 16 ? `${fromDt}:00`
+                : fromDt
+        );
+    }
+
+    if (toDt && dtOk.test(toDt)) {
+        where.push(`${alias}.created_at <= ?`);
+        params.push(
+            toDt.length === 10 ? `${toDt} 23:59:59`
+                : toDt.length === 16 ? `${toDt}:59`
+                : toDt
+        );
+    }
+
+    const exact = [
+        ["package", "package_name"],
+        ["area", "area_name"],
+        ["collected_by", "collected_by"],
+        ["bill_type", "bill_type"],
+        ["medium", "medium"]
+    ];
+
+    for (const [query, column] of exact) {
+        const value = clean(req.query[query]);
+
+        if (value !== "") {
+            where.push(`${alias}.${column} = ?`);
+            params.push(value);
+        }
+    }
+
+    /* Mikrotik / Sub Area / Billing Type: customer এর তথ্য দিয়ে */
+    const mikrotik = Number(req.query.mikrotik);
+    const subArea = Number(req.query.sub_area);
+    const billingType = clean(req.query.billing_type);
+
+    if (mikrotik > 0 || subArea > 0 || billingType !== "") {
+        const det = await detectCustomerFilters();
+
+        const addCustomerFilter = (column, value) => {
+            where.push(`
+                EXISTS (
+                    SELECT 1
+                    FROM payments px
+                    INNER JOIN customers cx ON cx.id = px.customer_id
+                    WHERE px.id = ${alias}.payment_id
+                      AND cx.\`${column}\` = ?
+                )
+            `);
+            params.push(value);
+        };
+
+        if (Number.isSafeInteger(mikrotik) && mikrotik > 0 && det.router) {
+            addCustomerFilter(det.router, mikrotik);
+        }
+
+        if (Number.isSafeInteger(subArea) && subArea > 0 && det.sub_area) {
+            addCustomerFilter(det.sub_area, subArea);
+        }
+
+        if (billingType !== "" && det.billing_type) {
+            addCustomerFilter(det.billing_type, billingType);
+        }
+    }
+
+    return { where, params };
+}
+
+/*
+|--------------------------------------------------------------------------
 | PAGE ROUTES
 |--------------------------------------------------------------------------
 */
@@ -719,7 +970,12 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
         }
 
         // Default date range: current month
-        if (fromDate === "" && toDate === "") {
+        if (
+            fromDate === "" &&
+            toDate === "" &&
+            clean(req.query.from_dt) === "" &&
+            clean(req.query.to_dt) === ""
+        ) {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -799,6 +1055,10 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
             where.push("DATE(b.created_at) <= ?");
             params.push(toDate);
         }
+
+        const extra = await collectionExtraFilters(req, "b");
+        where.push(...extra.where);
+        params.push(...extra.params);
 
         const whereSql = where.join(" AND ");
 
@@ -897,6 +1157,57 @@ router.get("/api/collection", requireLoginApi, async (req, res) => {
 });      
 /*
 |--------------------------------------------------------------------------
+| COLLECTION FILTER OPTIONS
+|--------------------------------------------------------------------------
+| Distinct values used by the filter dropdowns of the Bill Report page.
+|--------------------------------------------------------------------------
+*/
+
+router.get("/api/collection/filters", requireLoginApi, async (req, res) => {
+    try {
+        const scope = getCompanyScope(req, "b");
+
+        const distinct = async (column) => {
+            const [rows] = await pool.query(
+                `
+                SELECT DISTINCT b.\`${column}\` AS v
+                FROM bill_reports b
+                WHERE ${scope.sql}
+                  AND b.payment_id IS NOT NULL
+                  AND b.\`${column}\` IS NOT NULL
+                  AND b.\`${column}\` <> ''
+                ORDER BY v ASC
+                `,
+                scope.params
+            );
+
+            return rows.map(row => row.v);
+        };
+
+        const customerOptions = await customerFilterOptions(req);
+
+        return res.json({
+            status: true,
+            packages: await distinct("package_name"),
+            areas: await distinct("area_name"),
+            collectors: await distinct("collected_by"),
+            bill_types: await distinct("bill_type"),
+            mediums: await distinct("medium"),
+            ...customerOptions
+        });
+
+    } catch (error) {
+        console.error("Collection filters error:", error);
+
+        return res.status(500).json({
+            status: false,
+            message: "Unable to load report filters."
+        });
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
 | RESELLER LIST
 |--------------------------------------------------------------------------
 */
@@ -971,6 +1282,13 @@ router.get(
 
             const where = [scope.sql];
             const params = [...scope.params];
+
+            /*
+             * শুধু রিসেলারের কাস্টমার (রিসেলারের যোগ করা বা রিসেলারকে ট্রান্সফার করা)।
+             * Admin-এর নিজের কাস্টমারের আদায় এই রিপোর্টে আসবে না।
+             */
+            where.push("c.reseller_id IS NOT NULL");
+            where.push("c.reseller_id > 0");
 
             if (resellerId > 0) {
                 where.push("c.reseller_id = ?");
@@ -1071,6 +1389,7 @@ router.get(
             const collections = rows.map(row => ({
                 id: row.id,
                 payment_id: row.payment_id,
+                connection_type: row.connection_type || "",
                 customer_id: row.software_customer_id,
                 database_customer_id: row.database_customer_id,
 
@@ -1461,6 +1780,245 @@ router.get("/api/deposit", requireLoginApi, async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
+| COLLECTOR DEPOSIT REPORT (Deposit / Pending Deposit)
+|--------------------------------------------------------------------------
+| collector_deposit টেবিলে company_id নেই, তাই staff টেবিলের সাথে জোড়া লাগিয়ে
+| company স্কোপ নেওয়া হয়। কলামের নাম information_schema থেকে খুঁজে নেয়।
+|--------------------------------------------------------------------------
+*/
+
+const emptyDepositResponse = (message, page = 1, limit = 100) => ({
+    status: true,
+    available: false,
+    message,
+    summary: { total_data: 0, total_amount: 0 },
+    pagination: { page, limit, total: 0, totalPages: 0 },
+    deposits: []
+});
+
+router.get(
+    "/api/collector-deposit/collectors",
+    requireLoginApi,
+    async (req, res) => {
+        try {
+            const scope = getCompanyScope(req, "s");
+
+            const [rows] = await pool.query(
+                `
+                SELECT s.id, s.name
+                FROM staff s
+                WHERE ${scope.sql}
+                  AND LOWER(COALESCE(s.role, '')) = 'collector'
+                  AND s.name IS NOT NULL
+                  AND s.name <> ''
+                ORDER BY s.name ASC
+                `,
+                scope.params
+            );
+
+            return res.json({ status: true, collectors: rows });
+
+        } catch (error) {
+            console.error("Deposit collectors error:", error);
+
+            return res.status(500).json({
+                status: false,
+                message: "Unable to load collectors."
+            });
+        }
+    }
+);
+
+router.get(
+    "/api/collector-deposit",
+    requireLoginApi,
+    async (req, res) => {
+        try {
+            const page = Math.max(1, Math.floor(number(req.query.page, 1)));
+            const limit = Math.min(
+                100000,
+                Math.max(10, Math.floor(number(req.query.limit, 100)))
+            );
+            const offset = (page - 1) * limit;
+
+            const cols = await columnsOf("collector_deposit");
+
+            if (!cols.length) {
+                return res.json(emptyDepositResponse(
+                    "collector_deposit টেবিল পাওয়া যায়নি।", page, limit
+                ));
+            }
+
+            const amountCol = pickColumn(cols, ["amount", "deposit_amount", "total_amount"]);
+            const dateCol = pickColumn(cols, ["deposit_date", "created_at", "date"]);
+
+            if (!cols.includes("collector_id") || !amountCol || !dateCol) {
+                return res.json(emptyDepositResponse(
+                    "collector_deposit টেবিলে collector_id / amount / date কলাম পাওয়া যায়নি।",
+                    page, limit
+                ));
+            }
+
+            const idCol = pickColumn(cols, ["id", "deposit_id"]);
+            const statusCol = pickColumn(cols, ["status", "deposit_status"]);
+            const noteCol = pickColumn(cols, ["note", "comments", "description", "remarks"]);
+            const receivedCol = pickColumn(
+                cols,
+                ["received_by", "received_by_id", "received_by_user_id", "receiver_id", "approved_by"]
+            );
+
+            const scope = getCompanyScope(req, "s");
+            const where = [scope.sql];
+            const params = [...scope.params];
+
+            /* Deposit ট্যাব = pending বাদে সব, Pending ট্যাব = শুধু pending */
+            const tab = clean(req.query.tab).toLowerCase() === "pending"
+                ? "pending"
+                : "deposit";
+
+            if (statusCol) {
+                where.push(
+                    tab === "pending"
+                        ? `LOWER(COALESCE(d.\`${statusCol}\`, '')) = 'pending'`
+                        : `LOWER(COALESCE(d.\`${statusCol}\`, '')) <> 'pending'`
+                );
+            } else if (tab === "pending") {
+                where.push("1=0");
+            }
+
+            const collectorId = Number(req.query.collector_id);
+
+            if (Number.isSafeInteger(collectorId) && collectorId > 0) {
+                where.push("d.collector_id = ?");
+                params.push(collectorId);
+            }
+
+            const fromDate = clean(req.query.from_date);
+            const toDate = clean(req.query.to_date);
+
+            if (fromDate !== "") {
+                where.push(`DATE(d.\`${dateCol}\`) >= ?`);
+                params.push(fromDate);
+            }
+
+            if (toDate !== "") {
+                where.push(`DATE(d.\`${dateCol}\`) <= ?`);
+                params.push(toDate);
+            }
+
+            const search = clean(req.query.search);
+
+            if (search !== "") {
+                const parts = [
+                    "s.name LIKE ?",
+                    `CAST(d.\`${amountCol}\` AS CHAR) LIKE ?`
+                ];
+
+                params.push(`%${search}%`, `%${search}%`);
+
+                if (noteCol) {
+                    parts.push(`d.\`${noteCol}\` LIKE ?`);
+                    params.push(`%${search}%`);
+                }
+
+                where.push(`(${parts.join(" OR ")})`);
+            }
+
+            const whereSql = where.join(" AND ");
+
+            const baseFrom = `
+                FROM collector_deposit d
+                INNER JOIN staff s ON s.id = d.collector_id
+            `;
+
+            const [[summary]] = await pool.query(
+                `
+                SELECT
+                    COUNT(*) AS total_data,
+                    COALESCE(SUM(d.\`${amountCol}\`), 0) AS total_amount
+                ${baseFrom}
+                WHERE ${whereSql}
+                `,
+                params
+            );
+
+            const receivedSql = receivedCol
+                ? `COALESCE(
+                       NULLIF(ru.fullname, ''),
+                       NULLIF(ru.name, ''),
+                       NULLIF(ru.username, ''),
+                       CAST(d.\`${receivedCol}\` AS CHAR)
+                   )`
+                : "NULL";
+
+            const receivedJoin = receivedCol
+                ? `LEFT JOIN users ru ON ru.id = d.\`${receivedCol}\``
+                : "";
+
+            const [rows] = await pool.query(
+                `
+                SELECT
+                    ${idCol ? `d.\`${idCol}\`` : "NULL"} AS id,
+                    d.\`${amountCol}\` AS amount,
+                    d.\`${dateCol}\` AS deposit_date,
+                    s.id AS collector_id,
+                    s.name AS deposit_by,
+                    ${statusCol ? `d.\`${statusCol}\`` : "NULL"} AS status,
+                    ${noteCol ? `d.\`${noteCol}\`` : "NULL"} AS note,
+                    ${receivedSql} AS received_by
+                ${baseFrom}
+                ${receivedJoin}
+                WHERE ${whereSql}
+                ORDER BY d.\`${dateCol}\` DESC${idCol ? `, d.\`${idCol}\` DESC` : ""}
+                LIMIT ? OFFSET ?
+                `,
+                [...params, limit, offset]
+            );
+
+            const total = Number(summary.total_data || 0);
+
+            return res.json({
+                status: true,
+                available: true,
+                tab,
+                summary: {
+                    total_data: total,
+                    total_amount: Number(summary.total_amount || 0)
+                },
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit)
+                },
+                deposits: rows.map(row => ({
+                    id: row.id,
+                    amount: Number(row.amount || 0),
+                    deposit_date: row.deposit_date,
+                    collector_id: row.collector_id,
+                    deposit_by: row.deposit_by || "",
+                    status: row.status || "",
+                    note: row.note || "",
+                    received_by: row.received_by || ""
+                }))
+            });
+
+        } catch (error) {
+            console.error("Collector deposit report error:", error);
+
+            return res.status(500).json({
+                status: false,
+                message: "Unable to load deposit report.",
+                error: process.env.NODE_ENV === "development"
+                    ? error.message
+                    : undefined
+            });
+        }
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
 | COLLECTION CSV EXPORT
 |--------------------------------------------------------------------------
 | Supports customer_id while preserving the normal CSV export.
@@ -1543,6 +2101,10 @@ router.get(
                 where.push("DATE(b.created_at) <= ?");
                 params.push(toDate);
             }
+
+            const extra = await collectionExtraFilters(req, "b");
+            where.push(...extra.where);
+            params.push(...extra.params);
 
             const [rows] = await pool.query(
                 `

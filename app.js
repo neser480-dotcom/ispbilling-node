@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 const express = require("express");
 const session = require("express-session");
@@ -36,10 +36,11 @@ const billingRoutes =
 |--------------------------------------------------------------------------
 | staff routes|--------------------------------------------------------------------------
 */
-
+   const customerAutoExpireJob = require("./services/customers/customerAutoExpireJob");
 const staffRoutes = require("./routes/staff/staff.routes");
 const salaryRoutes = require("./routes/staff/salary.routes");
 const collectorRoutes = require("./routes/staff/collector/collector.routes");
+const managerRoutes = require("./routes/staff/manager/manager.routes");
 /*
 |--------------------------------------------------------------------------
 | AUTH / REGISTER
@@ -69,13 +70,13 @@ const routerRoutes =
     require("./routes/mikrotik/router");
 
 const dashboardRoutes =
-    require("./routes/dashboard/dashboard");
+    require("./routes/dashboard/dashboard.route");
 
 const reportsRoutes =
     require("./routes/reports/reports");
 
 const activityLogRoutes =
-    require("./routes/activity/activity-log");
+    require("./routes/activity/activity-log.server");
 
 const expenditureRoutes = require("./routes/billing/expenditure.routes");
 
@@ -752,7 +753,11 @@ app.use(
     requireSoftwareBilling,
     collectorRoutes
 );
-
+app.use(
+    "/api/managers",
+    requireSoftwareBilling,
+    managerRoutes
+);
 /*
 |--------------------------------------------------------------------------
 | LOGIN PAGE
@@ -1202,11 +1207,15 @@ app.get(
     "/staff/manager",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Manager module is not implemented yet."
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "staff",
+                "manager",
+                "manager.html"
+            )
         );
-
     }
 );
 /*
@@ -1478,11 +1487,10 @@ app.use((err, req, res, next) => {
     let status = Number(err.status || err.statusCode) || 500;
     let code = "INTERNAL_SERVER_ERROR";
     let message = "সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
-
     if (err.code === "ER_DUP_ENTRY") {
         status = 409;
         code = "DUPLICATE_ENTRY";
-        message = "এই তথ্যটি আগে থেকেই আছে।";
+        message = "এই তথ্যটি আগেই রয়েছে।";
     } else if (
         err.code === "ER_NO_REFERENCED_ROW_2" ||
         err.code === "ER_ROW_IS_REFERENCED_2"
@@ -1545,6 +1553,8 @@ const PORT =
 
 
 monthlyBilling.start();
+customerAutoExpireJob.start();     // <-- এই লাইনটা নতুন
+
 
 app.listen(
     PORT,
@@ -1577,3 +1587,4 @@ app.listen(
 
     }
 );
+

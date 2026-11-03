@@ -16,7 +16,8 @@ router.use(requireAuth);
 |
 | Admin (company owner) sees everything.
 | Manager / Collector / Employee / Staff see only the dashboard blocks that
-| were ticked on the Staff Add / Edit page.
+| match the permissions ticked on the Manager / Collector Add / Edit page
+| (stored in user_permissions; see DASHBOARD_FROM_KEYS below).
 |
 | Keys (put these as checkboxes on the staff add page):
 |
@@ -42,7 +43,7 @@ const ALL_PERMISSIONS = [
 
 const ADMIN_ROLES = ["superadmin", "admin", "companyadmin", "owner"];
 
-/* used ONLY when no permission list was saved for the staff member at all */
+/* used ONLY when the user_permissions table cannot be read */
 const ROLE_DEFAULTS = {
     manager: [
         "dashboard.customers",
@@ -101,32 +102,35 @@ async function safeQuery(sql, params = [], fallback = []) {
 }
 
 /*
- * null      -> nothing saved (use role defaults)
- * []        -> saved, but empty (no access)
- * [ ... ]   -> saved list
+ * Staff (manager / collector / staff / employee) এর Permission আসে user_permissions
+ * টেবিল থেকে (Manager ও Collector পেইজে যা টিক দেওয়া হয়)। নিচের তালিকা বলে
+ * কোন Permission থাকলে কোন Dashboard ব্লক দেখাবে (যেকোনো একটা থাকলেই চলবে)।
+ *
+ * dashboard.mikrotik ও dashboard.admin_summary শুধু Admin দেখবে।
  */
-function parsePermissions(value) {
-    if (value === undefined || value === null) return null;
+const DASHBOARD_FROM_KEYS = {
+    "dashboard.customers": [
+        "customer_list", "customer_add", "customer_edit", "customer_delete",
+        "customer_activate", "customer_deactivate", "customer_invoice"
+    ],
+    "dashboard.collection": ["dashboard_collection_data"],
+    "dashboard.chart": ["dashboard_collection_data"],
+    "dashboard.collector_summary": ["dashboard_collection_data", "view_collector_report"],
+    "dashboard.finance": [
+        "expenditure", "expenditure_update", "expenditure_delete",
+        "connection_fee", "bill_discount", "staff_salary"
+    ]
+};
 
-    if (Array.isArray(value)) return value.map(String);
+function dashboardFromGranted(granted) {
+    const have = new Set(granted);
+    const out = new Set();
 
-    const text = String(value).trim();
-
-    if (text === "") return null;
-
-    try {
-        const parsed = JSON.parse(text);
-
-        if (Array.isArray(parsed)) return parsed.map(String);
-
-        if (parsed && typeof parsed === "object") {
-            return Object.keys(parsed).filter(k => parsed[k]);
-        }
-    } catch (e) {
-        /* not JSON – comma list */
+    for (const [block, keys] of Object.entries(DASHBOARD_FROM_KEYS)) {
+        if (keys.some(k => have.has(k))) out.add(block);
     }
 
-    return text.split(",").map(s => s.trim()).filter(Boolean);
+    return out;
 }
 
 async function resolvePermissions(req, userId, role) {
@@ -134,22 +138,22 @@ async function resolvePermissions(req, userId, role) {
         return new Set(ALL_PERMISSIONS);
     }
 
-    let list = parsePermissions(req.session.permissions);
+    const companyId = Number(req.session.company_id || req.session.companyId || 0);
 
-    if (list === null) {
-        const rows = await safeQuery(
-            "SELECT permissions FROM users WHERE id = ? LIMIT 1",
-            [userId]
+    /* null = টেবিল পড়া যায়নি (তখন role-এর ডিফল্ট); [] = কোনো Permission নেই (কিছুই দেখাবে না) */
+    const rows = await safeQuery(
+        "SELECT permission_key FROM user_permissions WHERE user_id = ? AND company_id = ? AND allowed = 1",
+        [userId, companyId],
+        null
+    );
+
+    if (rows === null) {
+        return new Set(
+            (ROLE_DEFAULTS[role] || ["dashboard.customers"]).filter(p => ALL_PERMISSIONS.includes(p))
         );
-
-        list = parsePermissions(rows[0]?.permissions);
     }
 
-    if (list === null) {
-        list = ROLE_DEFAULTS[role] || ["dashboard.customers"];
-    }
-
-    return new Set(list.filter(p => ALL_PERMISSIONS.includes(p)));
+    return dashboardFromGranted(rows.map(r => String(r.permission_key)));
 }
 
 async function getContext(req) {
@@ -334,7 +338,11 @@ router.get("/data", async (req, res) => {
                 const isActive = String(r.status || "") === "Active";
                 const isPaid = Number(r.paid) === 1;
                 const paidAmount = toNumber(r.paid_amount);
-                const isExpired = r.promise_date && new Date(r.promise_date) < now;
+                /* expired = status is "Expired", OR still Active but the promise date has passed */
+                const statusText = String(r.status || "").trim().toLowerCase();
+                const isExpired =
+                    statusText === "expired" ||
+                    (isActive && r.promise_date && new Date(r.promise_date) < now);
                 const isFree = bill === 0;
 
                 const created = r.created_at ? new Date(r.created_at) : null;

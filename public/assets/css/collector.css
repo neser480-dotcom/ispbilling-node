@@ -485,11 +485,15 @@ body.staff-page {
 
 /* ---------- RESPONSIVE ---------- */
 
-@media (max-width: 992px) {
+@media (max-width: 850px) {
 
     .staff-page .main-content {
         margin-left: 0;
     }
+
+}
+
+@media (max-width: 992px) {
 
     .staff-perm-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -550,3 +554,66 @@ body.staff-page {
 :is([data-theme="dark"], html.dark, body.dark, html.dark-mode, body.dark-mode, html.dark-theme, body.dark-theme, html.night, body.night) .btn-close {
     filter: invert(1);
 }
+
+
+/* ==================================================
+   POPUPS ABOVE SIDEBAR + TOPBAR
+   sidebar.css = 100000, topbar.css = 99999 / 100001,
+   Bootstrap default modal = 1055 (so popups went underneath).
+================================================== */
+
+body.staff-page .modal-backdrop {
+    --bs-backdrop-zindex: 1000000;
+    z-index: 1000000 !important;
+}
+
+body.staff-page .modal {
+    --bs-modal-zindex: 1000010;
+    z-index: 1000010 !important;
+}
+
+
+/* ---------- Popup sizes / details taken from the screenshots ---------- */
+
+.staff-modal-mid {
+    --bs-modal-width: 640px;
+}
+
+.staff-page #balanceModal .modal-title {
+    font-size: 20px;
+    font-weight: 400;
+    color: #333;
+}
+
+.staff-page #balanceModal .modal-body {
+    padding: 34px 26px 36px;
+}
+
+.staff-table-left thead th,
+.staff-table-left tbody td {
+    text-align: left;
+}
+
+.staff-table-left thead th {
+    padding-left: 6px;
+}
+
+.staff-table-left thead th[data-bsort] {
+    cursor: pointer;
+}
+
+.staff-table-left tbody td {
+    padding-left: 6px;
+    font-weight: 400;
+}
+
+.staff-table-left tbody td:first-child {
+    font-weight: 700;
+}
+
+.staff-page .modal-title.green {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1db97a;
+}
+

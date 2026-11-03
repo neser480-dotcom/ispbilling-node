@@ -123,6 +123,10 @@ function normalizeVendor(value) {
         huaweiolt: "huawei",
         zte: "zte",
         zteolt: "zte",
+        fiberhome: "fiberhome",
+        raisecom: "raisecom",
+        nokia: "nokia",
+        tplink: "tplink",
         other: "other",
         generic: "other",
         unknown: "other"
@@ -147,6 +151,16 @@ function validateInput(body, editing = false) {
     const password = String(body.password ?? "");
     const port = Number(body.port || 23);
     const ponPorts = Number(body.pon_ports || 4);
+const mikrotikId = body.mikrotik_id
+    ? Number(body.mikrotik_id)
+    : null;
+
+if (
+    mikrotikId !== null &&
+    (!Number.isInteger(mikrotikId) || mikrotikId < 1)
+) {
+    throw new OltError("Invalid MikroTik router.");
+}
 
     const snmpVersion = clean(
         body.snmp_version || "v2c",
@@ -192,6 +206,7 @@ function validateInput(body, editing = false) {
 
     return {
         vendor,
+mikrotik_id: mikrotikId,
         name,
         ip,
         port,
@@ -399,7 +414,24 @@ exports.create = async (req, res) => {
 
         const data = validateInput(req.body || {});
         const company = companyId(req);
+if (data.mikrotik_id !== null) {
+    const [routers] = await getPool().execute(
+        `SELECT id
+         FROM mikrotik_servers
+         WHERE id = ?
+           AND company_id = ?
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        [data.mikrotik_id, company]
+    );
 
+    if (!routers.length) {
+        throw new OltError(
+            "Selected MikroTik router not found in this company.",
+            400
+        );
+    }
+}
         if (!isSuperAdmin(req) && !company) {
             throw new OltError(
                 "Company scope is missing.",
@@ -429,17 +461,18 @@ exports.create = async (req, res) => {
 
         const [result] = await connection.execute(
             `INSERT INTO olts (
-                company_id, created_by, vendor, name, ip, port,
+                company_id, mikrotik_id, created_by, vendor, name, ip, port,
                 username, password, snmp_version, community,
                 pon_ports, remarks, status, onu_total,
                 onu_online, onu_offline, created_at
             )
             VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                'unknown', 0, 0, 0, NOW()
+ ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+'unknown', 0, 0, 0, NOW()
             )`,
             [
                 company,
+data.mikrotik_id,
                 userId(req),
                 data.vendor,
                 data.name,
@@ -492,7 +525,8 @@ exports.update = async (req, res) => {
 
         await getPool().execute(
             `UPDATE olts AS ol
-                SET vendor = ?,
+                SET mikrotik_id = ?,
+                    vendor = ?,
                     name = ?,
                     ip = ?,
                     port = ?,
@@ -505,6 +539,7 @@ exports.update = async (req, res) => {
                     updated_at = NOW()
               WHERE ol.id = ? ${scope.sql}`,
             [
+		data.mikrotik_id,
                 data.vendor,
                 data.name,
                 data.ip,
@@ -804,11 +839,12 @@ exports.autoMap = async (req, res) => {
         let ppp = { sessions: [], errors: [] };
 
         try {
-            ppp = await collectPppSessions(
-                getPool(),
-                olt.company_id,
-                loadMikrotikService()
-            );
+ppp = await collectPppSessions(
+    getPool(),
+    olt.company_id,
+    loadMikrotikService(),
+    olt.mikrotik_id
+);
         } catch (pppError) {
             ppp.errors.push(pppError.message);
         }

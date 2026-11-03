@@ -16,6 +16,11 @@
     <link rel="stylesheet" href="/assets/css/collector.css">
 
     <style>
+        /* form, modal-content এর সরাসরি সন্তান না হওয়ায় body স্ক্রল করত না; এখানে ঠিক করা হলো */
+        .modal-dialog-scrollable .modal-content>form{display:flex;flex-direction:column;min-height:0;max-height:100%;overflow:hidden}
+        .modal-dialog-scrollable .modal-content>form>.modal-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+
+        .pf-avatar svg{display:block}
         .pf-avatar{width:96px;height:96px;margin:0 auto 14px;border-radius:50%;border:1px solid #333;
             background:#e9ecef;color:#9aa0a6;font-size:46px;display:flex;align-items:flex-end;
             justify-content:center;overflow:hidden}
@@ -25,6 +30,8 @@
         .pf-table td:first-child{color:#2a8bb5;font-weight:600;width:35%}
         .pf-table td:last-child{font-weight:700;color:#222}
         .modal-title.green{color:#1db97a}
+        .col-form{max-width:440px;margin:0 auto}
+        .col-form .form-label{font-size:13px;margin-bottom:4px}
     </style>
 </head>
 <body class="staff-page">
@@ -43,6 +50,12 @@
             <button type="button" class="staff-icon-btn" id="refreshBtn" title="Refresh">
                 <i class="fa-solid fa-rotate-right"></i>
             </button>
+            <button type="button" class="staff-icon-btn" id="addBtn" title="Add Collector">
+                <i class="fa-solid fa-user-plus"></i>
+            </button>
+            <a class="staff-icon-btn" href="/tutorial" title="Tutorial">
+                <i class="fa-solid fa-circle-play"></i>
+            </a>
         </div>
     </div>
 
@@ -92,7 +105,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="pf-avatar"><i class="fa-solid fa-user"></i></div>
+                <div class="pf-avatar"><svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true"><rect width="100" height="100" fill="#ececec"/><circle cx="50" cy="38" r="17" fill="#9b9b9b"/><path d="M14 100c0-22 16-34 36-34s36 12 36 34z" fill="#9b9b9b"/></svg></div>
                 <div class="pf-name text-center" id="pf_name"></div>
                 <table class="pf-table w-100">
                     <tr><td>Mobile :</td><td id="pf_mobile"></td></tr>
@@ -110,7 +123,7 @@
 <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable staff-modal-wide">
         <div class="modal-content">
-            <form id="editForm">
+            <form id="editForm" novalidate>
                 <input type="hidden" id="ed_id">
                 <div class="modal-header">
                     <h5 class="modal-title"><span id="ed_title"></span> 's Profile Edit</h5>
@@ -124,23 +137,29 @@
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="tabProfile">
-                            <div class="staff-form-wrap">
-                                <div class="mb-3"><label class="form-label">Name *</label><input id="ed_name" class="form-control" required></div>
-                                <div class="mb-3"><label class="form-label">Mobile *</label><input id="ed_mobile" class="form-control" required></div>
-                                <div class="mb-3"><label class="form-label">E-mail</label><input id="ed_email" type="email" class="form-control"></div>
-                                <div class="mb-3"><label class="form-label">Address</label><input id="ed_address" class="form-control"></div>
-                                <div class="mb-3"><label class="form-label">Status</label>
-                                    <select id="ed_status" class="form-select">
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                    </select>
+                            <div class="col-form">
+                                <div class="mb-3"><label class="form-label">Name <span class="text-danger">*</span></label><input id="ed_name" class="form-control" required></div>
+                                <div class="mb-3"><label class="form-label">Mobile <span class="text-danger">*</span></label><input id="ed_mobile" class="form-control" required></div>
+                                <div class="mb-3"><label class="form-label">NID No <span class="text-danger">*</span></label><input id="ed_nid" class="form-control" placeholder="e.g. 10,13 or 17 digits" required></div>
+                                <div class="mb-3"><label class="form-label">Address <span class="text-danger">*</span></label><input id="ed_address" class="form-control" required></div>
+                                <div class="mb-3"><label class="form-label">E-mail <span class="text-danger">*</span></label><input id="ed_email" type="email" class="form-control" placeholder="***@mail.com" required></div>
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Status <span class="text-danger">*</span></label>
+                                    <div class="d-flex flex-wrap gap-5">
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ed_status" id="edSt_active" value="active" checked><label class="form-check-label" for="edSt_active">Active</label></div>
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ed_status" id="edSt_inactive" value="inactive"><label class="form-check-label" for="edSt_inactive">Inactive</label></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label d-block">Add Staff</label>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" id="ed_add_staff"><label class="form-check-label" for="ed_add_staff">Add Staff</label></div>
                                 </div>
                             </div>
                         </div>
                         <div class="tab-pane fade" id="tabArea"><div class="staff-area-box" id="areaList"></div></div>
                         <div class="tab-pane fade" id="tabPerm">
                             <div class="alert alert-warning d-none" id="noLoginNote">
-                                এই কালেক্টরের জন্য users টেবিলে লগইন অ্যাকাউন্ট পাওয়া যায়নি, তাই Permission সেভ হবে না।
+                                এই কালেক্টরের লগইন নেই। Profile ট্যাবে <b>Add Staff</b> টিক দিলে লগইন তৈরি হবে এবং Permission সেভ হবে।
                             </div>
                             <div class="staff-perm-grid" id="permList"></div>
                         </div>
@@ -155,7 +174,161 @@
     </div>
 </div>
 
-<!-- ACTIVITY LOG MODAL -->
+<!-- ADD COLLECTOR MODAL -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable staff-modal-wide">
+        <div class="modal-content">
+            <form id="addForm" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Collector</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="tab" data-bs-target="#addTabProfile">Profile</button></li>
+                        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#addTabArea">Area</button></li>
+                        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="tab" data-bs-target="#addTabPerm">Permissions</button></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="addTabProfile">
+                            <div class="col-form">
+                                <div class="mb-3"><label class="form-label">Name <span class="text-danger">*</span></label><input id="ad_name" class="form-control" placeholder="e.g. Name" required></div>
+                                <div class="mb-3"><label class="form-label">Mobile <span class="text-danger">*</span></label><input id="ad_mobile" class="form-control" placeholder="e.g. 01XXXXXXXXX" required></div>
+                                <div class="mb-3"><label class="form-label">NID No <span class="text-danger">*</span></label><input id="ad_nid" class="form-control" placeholder="e.g. 10,13 or 17 digits" required></div>
+                                <div class="mb-3"><label class="form-label">Address <span class="text-danger">*</span></label><input id="ad_address" class="form-control" required></div>
+                                <div class="mb-3"><label class="form-label">E-mail <span class="text-danger">*</span></label><input id="ad_email" type="email" class="form-control" placeholder="***@mail.com" required></div>
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Status <span class="text-danger">*</span></label>
+                                    <div class="d-flex flex-wrap gap-5">
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ad_status" id="adSt_active" value="active" checked><label class="form-check-label" for="adSt_active">Active</label></div>
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ad_status" id="adSt_inactive" value="inactive"><label class="form-check-label" for="adSt_inactive">Inactive</label></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label d-block">Add Staff</label>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" id="ad_add_staff"><label class="form-check-label" for="ad_add_staff">Add Staff</label></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="addTabArea"><div class="staff-area-box" id="addAreaList"></div></div>
+                        <div class="tab-pane fade" id="addTabPerm">
+                            <div class="alert alert-warning d-none" id="addNoLoginNote">
+                                Permission সেভ করতে Profile ট্যাবে <b>Add Staff</b> টিক দিন।
+                            </div>
+                            <div class="staff-perm-grid" id="addPermList"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MESSAGE MODAL -->
+<div class="modal fade" id="smsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable staff-modal-wide">
+        <div class="modal-content">
+            <form id="smsForm">
+                <input type="hidden" id="sms_id">
+                <div class="modal-header">
+                    <h5 class="modal-title"><span id="sms_name"></span> to send message</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-bold">Message</label>
+                    <div class="text-end small text-muted mb-1">Letter: <span id="sms_letters">0</span> | SMS: <span id="sms_count">0</span></div>
+                    <textarea id="sms_text" rows="4" class="form-control mb-3" placeholder="Write Message ...." required></textarea>
+                    <label class="form-label fw-bold">Sending Message Type</label>
+                    <div class="form-check"><input class="form-check-input" type="radio" name="sms_type" value="non_masking" id="smsNon" checked><label class="form-check-label" for="smsNon">Non Masking</label></div>
+                    <div class="form-check"><input class="form-check-input" type="radio" name="sms_type" value="masking" id="smsMask"><label class="form-check-label" for="smsMask">Masking</label></div>
+                    <div class="form-check"><input class="form-check-input" type="radio" name="sms_type" value="fixed_number" id="smsFixed"><label class="form-check-label" for="smsFixed">Fixed Number</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Send Message</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- PREVIOUS BALANCE MODAL -->
+<div class="modal fade" id="balanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable staff-modal-mid">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Previous Balance <small class="text-muted fs-6" id="bal_name"></small></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="staff-strip">
+                    <div class="staff-total"><i class="fa-solid fa-gear me-1"></i> Total Data:
+                        <span class="staff-count-pill" id="bal_total">0</span></div>
+                    <div class="staff-search-wrap"><input type="search" id="bal_search" class="form-control" placeholder="Search" autocomplete="off"></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table staff-table staff-table-left">
+                        <thead><tr><th data-bsort="idx"># <span class="sort-icon">↓↑</span></th><th data-bsort="mo">Month <span class="sort-icon">↓↑</span></th><th data-bsort="year">Year <span class="sort-icon">↓↑</span></th><th data-bsort="deposit">Deposit <span class="sort-icon">↓↑</span></th><th data-bsort="bill_report">Bill Report <span class="sort-icon">↓↑</span></th><th data-bsort="balance">Balance <span class="sort-icon">↓↑</span></th></tr></thead>
+                        <tbody id="bal_body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:500px">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Collector</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">Do you want to delete collector <b id="del_name"></b> ?</div>
+            <div class="modal-footer">
+                <input type="hidden" id="del_id">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="del_confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RESET PASSWORD MODAL -->
+<div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+        <div class="modal-content">
+            <form id="resetForm" autocomplete="off">
+                <input type="hidden" id="rs_id">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reset Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="px-3">
+                        <div class="form-check mb-3"><input class="form-check-input" type="radio" name="rs_mode" id="rsDefault" value="default" checked><label class="form-check-label" for="rsDefault">Default Password</label></div>
+                        <div class="form-check mb-3"><input class="form-check-input" type="radio" name="rs_mode" id="rsMobile" value="mobile"><label class="form-check-label" for="rsMobile">Mobile number password</label></div>
+                        <div class="form-check mb-2"><input class="form-check-input" type="radio" name="rs_mode" id="rsManual" value="manual"><label class="form-check-label" for="rsManual">Manually Password</label></div>
+                        <div class="d-none mt-2" id="rs_manual_box">
+                            <input id="rs_password" type="text" class="form-control" placeholder="New password (min 8 characters)" minlength="8" maxlength="72" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-outline-success">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ACTIVITY LOG MODAL (আলাদা পেজ পরের ধাপে) -->
 <div class="modal fade" id="activityModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable staff-modal-wide">
         <div class="modal-content">

@@ -73,7 +73,7 @@
                     <div class="field">
                         <label for="filterType">Expenditure Type</label>
                         <select id="filterType" name="expenditure_type">
-                            <option value="">All Types</option>
+                            <option value="">Expenditure Type</option>
                         </select>
                     </div>
 
@@ -127,27 +127,26 @@
 
                 <div class="summary-left">
                     <span>
-                        Total Records
+                        <i class="fas fa-gear"></i>
+                        Total Data:
                         <b id="totalRows">0</b>
                     </span>
 
                     <span>
-                        Total Expenditure
-                        <b id="totalAmount">0.00</b> Tk
+                        Total Expenditure:
+                        <b><span id="totalAmount">0.00</span> Tk</b>
                     </span>
                 </div>
 
                 <input type="search"
                        id="tableSearch"
                        class="summary-search"
-                       placeholder="Search..."
+                       placeholder="Search"
                        aria-label="Search expenditure">
             </div>
 
             <!-- TABLE -->
             <div class="section-card">
-
-                <h3>Expenditure List</h3>
 
                 <div class="table-wrap">
                     <table id="expenditureTable">
@@ -181,17 +180,14 @@
             <div class="summary-strip">
                 <div class="summary-left">
                     <span>
-                        Total Expenditure Types
+                        <i class="fas fa-gear"></i>
+                        Total Data:
                         <b id="totalTypes">0</b>
                     </span>
                 </div>
             </div>
 
             <div class="section-card">
-
-                <div class="section-toolbar">
-                    <h3>Expenditure Types</h3>
-                </div>
 
                 <div class="table-wrap">
                     <table id="typeTable">

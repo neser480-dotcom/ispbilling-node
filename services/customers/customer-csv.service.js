@@ -1015,55 +1015,99 @@ async function importCsv({
     |----------------------------------------------------------------------
     */
 
+    const columnCache = {};
+
+    const hasColumn =
+        async (table, column) => {
+
+            const key = `${table}.${column}`;
+
+            if (!(key in columnCache)) {
+
+                try {
+                    const [found] = await db.query(
+                        `SHOW COLUMNS FROM \`${table}\` LIKE ?`,
+                        [column]
+                    );
+
+                    columnCache[key] = found.length > 0;
+
+                } catch (_) {
+                    columnCache[key] = false;
+                }
+            }
+
+            return columnCache[key];
+        };
+
+    const lookupCache = new Map();
+
+    /*
+     * Same name (case / extra spaces ignored) -> same existing record.
+     * A sub-area is searched only inside the customer's own area,
+     * so equal sub-area names in different areas never get mixed up.
+     */
     const lookup =
         async (
             table,
-            value
+            value,
+            parentAreaId = 0
         ) => {
 
-            if (!value) {
+            const clean = String(value ?? "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            if (!clean) {
                 return null;
             }
 
-            if (
-                ![
-                    "areas",
-                    "sub_areas"
-                ].includes(table)
-            ) {
-
+            if (!["areas", "sub_areas"].includes(table)) {
                 return null;
             }
+
+            const useParent =
+                table === "sub_areas" &&
+                parentAreaId > 0 &&
+                await hasColumn("sub_areas", "area_id");
+
+            const key =
+                `${table}|${useParent ? parentAreaId : 0}|${clean.toLowerCase()}`;
+
+            if (lookupCache.has(key)) {
+                return lookupCache.get(key);
+            }
+
+            const params = [companyId];
+
+            if (useParent) {
+                params.push(parentAreaId);
+            }
+
+            params.push(clean, clean);
 
             const [result] =
                 await db.query(
-                    `
-                        SELECT id
-                        FROM \`${table}\`
-                        WHERE company_id = ?
-
-                        AND (
-                            CAST(id AS CHAR) = ?
-                            OR LOWER(
-                                TRIM(name)
-                            ) =
-                            LOWER(
-                                TRIM(?)
-                            )
-                        )
-
-                        LIMIT 1
-                    `,
-                    [
-                        companyId,
-                        value,
-                        value
-                    ]
+                    `SELECT id
+                     FROM \`${table}\`
+                     WHERE company_id = ?
+                     ${useParent ? "AND area_id = ?" : ""}
+                     AND (
+                        CAST(id AS CHAR) = ?
+                        OR LOWER(TRIM(name)) = LOWER(TRIM(?))
+                     )
+                     ORDER BY id ASC
+                     LIMIT 1`,
+                    params
                 );
 
-            return result[0]
+            const found = result[0]
                 ? Number(result[0].id)
                 : null;
+
+            lookupCache.set(key, found);
+
+            return found;
         };
 
     const conn =
@@ -1295,23 +1339,36 @@ async function importCsv({
             |----------------------------------------------------------------
             */
 
+            const areaText =
+                get(row, "area");
+
+            const subAreaText =
+                get(row, "sub_area");
+
             const areaId =
                 await lookup(
                     "areas",
-                    get(
-                        row,
-                        "area"
-                    )
+                    areaText
                 );
 
             const subAreaId =
                 await lookup(
                     "sub_areas",
-                    get(
-                        row,
-                        "sub_area"
-                    )
+                    subAreaText,
+                    areaId || 0
                 );
+
+            if (areaText && !areaId) {
+                report.messages.push(
+                    `Line ${line}: area "${areaText}" not found - customer added without area.`
+                );
+            }
+
+            if (subAreaText && !subAreaId) {
+                report.messages.push(
+                    `Line ${line}: sub-area "${subAreaText}" not found - customer added without sub-area.`
+                );
+            }
 
             /*
             |----------------------------------------------------------------

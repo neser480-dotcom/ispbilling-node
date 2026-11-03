@@ -1455,18 +1455,64 @@ actions.message = {
         return popup({
             action: "message",
             ids,
-            body: field(
-                "Message",
-                `
-                <textarea
-                    name="message"
-                    class="form-control form-control-sm"
-                    rows="4"
-                    required
-                ></textarea>
-                `,
-                true
-            )
+            submitLabel: "Send Message",
+            body: `
+                <div class="mb-2">
+                    <div
+                        class="d-flex justify-content-between align-items-center mb-1"
+                    >
+                        <label class="form-label small fw-bold mb-0">
+                            Message
+                        </label>
+                        <span class="small fw-bold">
+                            Letter :
+                            <span data-msg-letters>0</span>
+                            &nbsp;&nbsp;
+                            SMS :
+                            <span data-msg-sms>0</span>
+                        </span>
+                    </div>
+                    <textarea
+                        name="message"
+                        class="form-control form-control-sm"
+                        rows="4"
+                        placeholder="Write Message ..."
+                        data-msg-count
+                        required
+                    ></textarea>
+                </div>
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1">
+                        Sending Message Type
+                    </div>
+                    <div class="row g-1 small">
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="sending_type" id="bulkMsgNon"
+                                       value="non_masking" checked>
+                                <label class="form-check-label" for="bulkMsgNon">Non Masking</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="sending_type" id="bulkMsgMask"
+                                       value="masking">
+                                <label class="form-check-label" for="bulkMsgMask">Masking</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="sending_type" id="bulkMsgFixed"
+                                       value="fixed_number">
+                                <label class="form-check-label" for="bulkMsgFixed">Fixed Number</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
         });
     },
 
@@ -2205,45 +2251,45 @@ actions.status = {
         const options =
             await allowedStatuses();
 
+        const keys =
+            ["Active", "Inactive"].filter(
+                key => Object.prototype.hasOwnProperty.call(options, key)
+            );
+
+        const list =
+            keys.length
+                ? keys
+                : ["Active", "Inactive"];
+
         return popup({
             action: "status",
             ids,
-            body: field(
-                "Status",
-                `
-                <select
-                    name="status"
-                    class="form-select form-select-sm"
-                    required
-                >
-
+            body: `
+                <div class="mb-3">
                     ${
-                        Object.entries(
-                            options
-                        ).map(
-                            ([value, label]) => `
-                            <option
-                                value="${esc(value)}"
-                            >
-                                ${esc(label)}
-                            </option>
+                        list.map(
+                            (key, index) => `
+                            <div class="form-check form-check-inline">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="status"
+                                    id="bulkStatus${esc(key)}"
+                                    value="${esc(key)}"
+                                    ${index === 0 ? "required" : ""}
+                                >
+                                <label
+                                    class="form-check-label small"
+                                    for="bulkStatus${esc(key)}"
+                                >
+                                    ${esc(key)}
+                                </label>
+                            </div>
                             `
                         ).join("")
                     }
-
-                </select>
-
-                <small
-                    class="text-muted d-block mt-1"
-                >
-                    Expired = PPPoE goes to the
-                    Block profile.
-                    Active = PPPoE returns to the
-                    customer's own package profile.
-                </small>
-                `,
-                true
-            )
+                </div>
+            `
         });
     },
 
@@ -2472,7 +2518,7 @@ actions.delete = {
             action: "delete",
             ids,
             submitLabel: "Delete",
-            submitClass: "btn-danger",
+            submitClass: "btn-success",
             body: `
                 <div class="mb-3">
 
@@ -2494,13 +2540,6 @@ actions.delete = {
                             Do you want to delete Mikrotik ?
                         </label>
 
-                    </div>
-
-                    <div
-                        class="alert alert-warning py-2 small mt-2 mb-0"
-                    >
-                        Customers with payment or billing
-                        history cannot be deleted.
                     </div>
 
                 </div>
@@ -2811,57 +2850,34 @@ actions.area = {
                     : "id, name"
             );
 
-        const groups =
-            areas.map(area => {
-
-                const own =
-                    subs.filter(
-                        sub =>
-                            !hasAreaColumn ||
-                            Number(sub.area_id) ===
-                            Number(area.id)
-                    );
-
-                if (!own.length) {
-                    return "";
-                }
-
-                return `
-                    <optgroup
-                        label="${esc(area.name)}"
-                    >
-                        ${
-                            own.map(
-                                sub => `
-                                <option
-                                    value="${Number(sub.id)}"
-                                >
-                                    ${esc(sub.name)}
-                                </option>
-                                `
-                            ).join("")
-                        }
-                    </optgroup>
-                `;
-            }).join("");
+        const subOptions =
+            subs.map(
+                sub => `
+                <option
+                    value="${Number(sub.id)}"
+                    data-parent="${Number(sub.area_id || 0)}"
+                >
+                    ${esc(sub.name)}
+                </option>
+                `
+            ).join("");
 
         return popup({
             action: "area",
             ids,
             body:
-
                 field(
-                    "Area",
+                    "Select Area",
                     `
                     <select
                         name="new_area_id"
                         class="form-select form-select-sm"
+                        data-dep-parent="area"
                         required
                     >
                         <option value="">
                             Select Area
                         </option>
-
                         ${
                             areas.map(
                                 area => `
@@ -2873,28 +2889,25 @@ actions.area = {
                                 `
                             ).join("")
                         }
-
                     </select>
                     `,
-                    true
+                    false
                 ) +
-
                 field(
-                    "Sub Area (must belong to the selected area)",
+                    "Select Sub-Area",
                     `
                     <select
                         name="new_sub_area_id"
                         class="form-select form-select-sm"
+                        data-dep-child="area"
                     >
-
                         <option value="">
-                            No sub area
+                            Select Sub-Area
                         </option>
-
-                        ${groups}
-
+                        ${subOptions}
                     </select>
-                    `
+                    `,
+                    false
                 )
         });
     },
@@ -3058,72 +3071,67 @@ const packageAction = {
         const packages =
             await packagesFor(user);
 
-        const groups =
-            routers.map(router => {
-
-                const own =
-                    packages.filter(
-                        pkg =>
-                            Number(
-                                pkg.router_id
-                            ) ===
-                            Number(router.id)
-                    );
-
-                if (!own.length) {
-                    return "";
-                }
-
-                return `
-                    <optgroup
-                        label="${esc(router.name)} - ${esc(router.ip)}"
-                    >
-                        ${
-                            own.map(
-                                pkg => `
-                                <option
-                                    value="${Number(pkg.id)}"
-                                >
-                                    ${esc(pkg.package_name)}
-                                    (৳${esc(pkg.price)})
-                                </option>
-                                `
-                            ).join("")
-                        }
-                    </optgroup>
-                `;
-            }).join("");
+        const packageOptions =
+            packages.map(
+                pkg => `
+                <option
+                    value="${Number(pkg.id)}"
+                    data-parent="${Number(pkg.router_id || 0)}"
+                >
+                    ${esc(pkg.package_name)}
+                    (৳${esc(pkg.price)})
+                </option>
+                `
+            ).join("");
 
         return popup({
             action: "package",
             ids,
-            body: field(
-                "Package",
-                `
-                <select
-                    name="package_id"
-                    class="form-select form-select-sm"
-                    required
-                >
-
-                    <option value="">
-                        Select Package
-                    </option>
-
-                    ${groups}
-
-                </select>
-
-                <small
-                    class="text-muted d-block mt-1"
-                >
-                    The customers' PPPoE profile is changed
-                    on the package's MikroTik, and their
-                    monthly bill is set to the package price.
-                </small>
-                `,
-                true
-            )
+            body:
+                field(
+                    "Mikrotik",
+                    `
+                    <select
+                        name="mikrotik_id"
+                        class="form-select form-select-sm"
+                        data-dep-parent="router"
+                        required
+                    >
+                        <option value="">
+                            Select Mikrotik
+                        </option>
+                        ${
+                            routers.map(
+                                router => `
+                                <option
+                                    value="${Number(router.id)}"
+                                >
+                                    ${esc(router.name)}
+                                </option>
+                                `
+                            ).join("")
+                        }
+                    </select>
+                    `,
+                    true
+                ) +
+                field(
+                    "Package",
+                    `
+                    <select
+                        name="package_id"
+                        class="form-select form-select-sm"
+                        data-dep-child="router"
+                        required
+                    >
+                        <option value="">
+                            Select Package
+                        </option>
+                        ${packageOptions}
+                    </select>
+                    `,
+                    true
+                )
         });
     },
 

@@ -5,7 +5,17 @@ const express = require('express');
 const controller =
     require('../../controllers/customers/customers-add.controller');
 
+const {
+    requireAuth
+} = require('../../middleware/auth');
+
+const {
+    requirePermission
+} = require('../../middleware/permission');
+
 const router = express.Router();
+
+router.use(requireAuth);
 
 
 /*
@@ -130,6 +140,7 @@ router.get(
 
 router.post(
     '/',
+    requirePermission('customer_add'),
     controller.save
 );
 

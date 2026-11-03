@@ -213,16 +213,28 @@ body.dark-mode .d-chart h4 { color: #cbd5e1; }
 @media (max-width:560px) { .mf-notice { flex-wrap:wrap; align-items:flex-start; } .mf-text { flex-basis:calc(100% - 40px); } }
 
 /* ---- floating maintenance notice: fixed at the bottom, slides right -> left ---- */
+
+/* ---- floating maintenance notice (bottom bar) ---- */
 .nf-wrap { position:fixed; left:260px; right:0; bottom:0; z-index:1040; display:flex; flex-direction:column; pointer-events:none; }
-.nf-bar { display:flex; align-items:center; background:#1c2b4a; color:#fff; box-shadow:0 -2px 12px rgba(0,0,0,.18); pointer-events:auto; animation:nf-in .6s ease-out; }
-.nf-label { flex:none; padding:10px 14px; background:#0d6efd; font-weight:700; font-size:14px; white-space:nowrap; }
+.nf-bar { position:relative; display:flex; align-items:center; overflow:hidden; pointer-events:auto; color:#fff;
+    background:linear-gradient(90deg,#9f1239,#e11d48,#f97316,#e11d48,#9f1239); background-size:300% 100%;
+    box-shadow:0 -4px 18px rgba(225,29,72,.35);
+    animation:nf-in .8s cubic-bezier(.2,.9,.3,1.1) both, nf-bg 8s linear infinite; }
+.nf-label { position:relative; z-index:1; flex:none; display:flex; align-items:center; gap:8px; padding:11px 16px; font-weight:800; font-size:14px; letter-spacing:.3px; white-space:nowrap;
+    background:#111827; color:#fde047; overflow:hidden; }
+.nf-label i { animation:nf-wiggle 1.6s ease-in-out infinite; transform-origin:50% 80%; }
+.nf-label::after { content:""; position:absolute; top:0; bottom:0; width:40%; left:-60%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent); animation:nf-shine 3.2s ease-in-out infinite; }
 .nf-viewport { flex:1; overflow:hidden; min-width:0; }
-.nf-track { display:inline-block; white-space:nowrap; padding:10px 0 10px 100%; font-size:15px; animation:nf-scroll 20s linear infinite; }
-.nf-track strong { margin-right:10px; color:#ffd43b; }
-.nf-track em { margin-left:14px; opacity:.75; font-size:13px; }
+.nf-track { display:flex; width:max-content; animation:nf-scroll 20s linear infinite; }
+.nf-item { flex:none; display:inline-block; white-space:nowrap; padding:11px 60px 11px 0; font-size:15px; }
+.nf-item strong { margin-right:10px; color:#fde047; }
+.nf-item em { margin-left:14px; opacity:.85; font-size:13px; }
 .nf-bar:hover .nf-track { animation-play-state:paused; }
 body.has-nf .d-footer { margin-bottom:52px; }
-@keyframes nf-scroll { from { transform:translateX(0); } to { transform:translateX(-100%); } }
+@keyframes nf-scroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
 @keyframes nf-in { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
-@media (max-width:850px) { .nf-wrap { left:0; } .nf-label { padding:8px 10px; font-size:13px; } .nf-track { font-size:14px; padding-top:8px; padding-bottom:8px; } }
-@media (prefers-reduced-motion:reduce) { .nf-track { animation-duration:60s !important; } .nf-bar { animation:none; } }
+@keyframes nf-bg { to { background-position:300% 0; } }
+@keyframes nf-shine { 0%,55% { left:-60%; } 100% { left:130%; } }
+@keyframes nf-wiggle { 0%,60%,100% { transform:rotate(0); } 70% { transform:rotate(-18deg); } 80% { transform:rotate(14deg); } 90% { transform:rotate(-8deg); } }
+@media (max-width:850px) { .nf-wrap { left:0; } .nf-label { padding:9px 10px; font-size:13px; } .nf-item { padding-top:9px; padding-bottom:9px; font-size:14px; } }
+@media (prefers-reduced-motion:reduce) { .nf-bar, .nf-label i, .nf-label::after { animation:none !important; } .nf-track { animation-duration:60s !important; } }

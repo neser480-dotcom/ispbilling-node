@@ -89,7 +89,7 @@ function nullable(value) {
 
 async function getStaff(req, filters = {}) {
     const staffScope = scope(req, "s");
-    const where = [staffScope.sql];
+    const where = [staffScope.sql, "LOWER(s.role) = 'staff'"];
     const params = [...staffScope.params];
 
     const search = clean(filters.search).slice(0, 150);
@@ -233,6 +233,8 @@ async function addStaff(req, body) {
     return { id: result.insertId };
 }
 
+const STAFF_STATUSES = ["new", "active", "inactive", "banned", "deleted"];
+
 async function updateStaff(req, rawId, body) {
     const id = positiveId(rawId, "staff ID");
     const staffScope = scope(req, "s");
@@ -240,13 +242,10 @@ async function updateStaff(req, rawId, body) {
     const name = clean(body.name);
     const mobile = clean(body.mobile);
     const salary = salaryValue(body.salary);
-    const address = nullable(body.address);
+    const email = clean(body.email);
 
-    const status = ["active", "inactive"].includes(
-        clean(body.status).toLowerCase()
-    )
-        ? clean(body.status).toLowerCase()
-        : "active";
+    const wanted = clean(body.status).toLowerCase();
+    const status = STAFF_STATUSES.includes(wanted) ? wanted : "active";
 
     if (!name || !mobile) {
         throw new StaffError(
@@ -254,22 +253,45 @@ async function updateStaff(req, rawId, body) {
         );
     }
 
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new StaffError("Invalid e-mail address.");
+    }
+
     const [result] = await db.execute(
         `UPDATE staff AS s
          SET
             name = ?,
             mobile = ?,
-            salary = ?,
+            nid_no = ?,
             address = ?,
-            status = ?
+            email = ?,
+            parent_name = ?,
+            salary = ?,
+            status = ?,
+            ref_name = ?,
+            ref_mobile = ?,
+            ref_email = ?,
+            ref_nid = ?,
+            ref_address = ?,
+            ref_relation = ?
          WHERE s.id = ?
+           AND LOWER(s.role) = 'staff'
            AND ${staffScope.sql}`,
         [
             name,
             mobile,
+            nullable(body.nid_no),
+            nullable(body.address),
+            nullable(email),
+            nullable(body.parent_name),
             salary,
-            address,
             status,
+            nullable(body.ref_name),
+            nullable(body.ref_mobile),
+            nullable(body.ref_email),
+            nullable(body.ref_nid),
+            nullable(body.ref_address),
+            nullable(body.ref_relation),
             id,
             ...staffScope.params
         ]
@@ -281,6 +303,7 @@ async function updateStaff(req, rawId, body) {
             `SELECT s.id
              FROM staff AS s
              WHERE s.id = ?
+               AND LOWER(s.role) = 'staff'
                AND ${staffScope.sql}
              LIMIT 1`,
             [id, ...staffScope.params]

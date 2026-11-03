@@ -13,9 +13,14 @@ router.use((req, res, next) => {
 });
 
 router.get("/data", controller.getList);
+router.get("/areas", controller.getAreas);
+router.post("/", controller.create);
+router.post("/sms", controller.sms);
 router.get("/:id/profile", controller.getProfile);
 router.get("/:id/edit-data", controller.getEditData);
 router.get("/:id/activity", controller.getActivity);
+router.get("/:id/balance", controller.getBalance);
+router.put("/:id/password", controller.resetPassword);
 router.put("/:id", controller.update);
 router.delete("/:id", controller.remove);
 
