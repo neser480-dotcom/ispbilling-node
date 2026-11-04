@@ -1,0 +1,443 @@
+"use strict";
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER EXTRAS (row menu popups)
+|--------------------------------------------------------------------------
+| Note, Activity Log and Transfer to Reseller.
+| Opens inside the same #customerActionModal used by Add / Edit / Bulk.
+| File: public/assets/js/customer-extras.js   (load after customer.js)
+|--------------------------------------------------------------------------
+*/
+
+(function () {
+
+    const MODAL_ID = "customerActionModal";
+
+    function modalParts() {
+        const element = document.getElementById(MODAL_ID);
+
+        if (!element || !window.bootstrap) return null;
+
+        return {
+            element,
+            modal: window.bootstrap.Modal.getOrCreateInstance(element),
+            title: document.getElementById("customerActionModalLabel"),
+            body: document.getElementById("customerActionModalBody")
+        };
+    }
+
+    function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.content) return meta.content;
+
+        const input = document.getElementById("csrfTokenInput");
+        return input && input.value ? input.value : "";
+    }
+
+    function plainText(html) {
+        const div = document.createElement("div");
+        div.innerHTML = String(html || "");
+        return (div.textContent || "").trim();
+    }
+
+    function notify(message, type) {
+        if (window.Swal) {
+            window.Swal.fire({
+                icon: type || "info",
+                text: message,
+                timer: type === "success" ? 1200 : undefined,
+                showConfirmButton: type !== "success"
+            });
+        } else {
+            window.alert(message);
+        }
+    }
+
+    function idFrom(link) {
+        const id = link.dataset.id ||
+            new URL(link.getAttribute("href") || "", location.origin).searchParams.get("id") ||
+            "";
+        return String(id).trim();
+    }
+
+    /* Load a fragment into the modal body (show = open the modal first) */
+    async function load(url, title, show) {
+
+        const parts = modalParts();
+        if (!parts) return;
+
+        if (show) {
+            if (parts.title) parts.title.textContent = title || "Customer Action";
+
+            parts.body.innerHTML =
+                '<div class="text-center py-5">' +
+                '<div class="spinner-border text-primary" role="status"></div>' +
+                '<div class="mt-3 text-muted">Loading...</div></div>';
+
+            parts.modal.show();
+        }
+
+        try {
+            const response = await fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest", Accept: "text/html" }
+            });
+
+            const html = await response.text();
+
+            if (!response.ok) {
+                throw new Error(plainText(html) || "Failed to load.");
+            }
+
+            parts.body.innerHTML = html;
+
+            const root = parts.body.firstElementChild &&
+                parts.body.querySelector("[data-title]");
+
+            if (root && parts.title && root.dataset.title) {
+                parts.title.textContent = root.dataset.title;
+            }
+
+            parts.element.classList.toggle("nf-ex-nohead", !!(root && root.dataset.nohead));
+
+            const dialog = parts.element.querySelector(".modal-dialog");
+
+            if (dialog) {
+                dialog.classList.toggle("modal-xl", !!(root && root.dataset.wide));
+            }
+
+        } catch (error) {
+            parts.body.innerHTML =
+                '<div class="alert alert-danger m-3"></div>';
+            parts.body.firstElementChild.textContent =
+                error.message || "Failed to load.";
+        }
+    }
+
+    function reloadOpenFragment() {
+        const parts = modalParts();
+        const root = parts && parts.body.querySelector("[data-customer-id]");
+
+        if (!root) return;
+
+        const id = encodeURIComponent(root.dataset.customerId);
+
+        if (root.classList.contains("nf-note-wrap")) {
+            load("/api/customers/note?id=" + id, "", false);
+        } else if (root.classList.contains("nf-act")) {
+            load("/api/customers/activity?id=" + id, "", false);
+        }
+    }
+
+    /* ---------- open popups from the row menu ---------- */
+
+    document.addEventListener("click", function (event) {
+
+        const note = event.target.closest(".customer-note-btn");
+        const activity = event.target.closest(".customer-activity-log-btn");
+        const transfer = event.target.closest(".customer-transfer-btn");
+        const reset = event.target.closest(".customer-reset-password-btn");
+
+        const link = note || activity || transfer || reset;
+
+        if (!link) return;
+
+        event.preventDefault();
+
+        const id = idFrom(link);
+
+        if (!id) return;
+
+        if (note) {
+            load("/api/customers/note?id=" + encodeURIComponent(id), "Note", true);
+        } else if (activity) {
+            load("/api/customers/activity?id=" + encodeURIComponent(id), "Activity Log", true);
+        } else if (reset) {
+            load("/api/customers/reset-password?id=" + encodeURIComponent(id),
+                "Reset Password", true);
+        } else {
+            load("/api/customers/bulk/reseller?ids=" + encodeURIComponent(id),
+                "Transfer to Reseller", true);
+        }
+    });
+
+    /* ---------- note submit ---------- */
+
+    document.addEventListener("submit", async function (event) {
+
+        const form = event.target.closest("#customerActionModalBody form.nf-note-form");
+
+        if (!form) return;
+
+        event.preventDefault();
+
+        const wrap = form.closest(".nf-note-wrap");
+        const button = form.querySelector('[type="submit"]');
+        const text = String(form.elements.note.value || "").trim();
+
+        if (!text) return;
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch("/api/customers/note", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-CSRF-Token": csrfToken()
+                },
+                body: JSON.stringify({
+                    customer_id: wrap.dataset.customerId,
+                    note: text,
+                    csrf_token: csrfToken()
+                })
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok || result.success === false) {
+                throw new Error(result.message || "Failed to save note.");
+            }
+
+            reloadOpenFragment();
+
+        } catch (error) {
+            button.disabled = false;
+            notify(error.message || "Failed to save note.", "error");
+        }
+    });
+
+
+    /* ---------- bulk popups: dependent selects (Area->Sub-Area, Mikrotik->Package) ---------- */
+
+    function syncDependent(parent) {
+
+        const key = parent.getAttribute("data-dep-parent");
+        const scope = parent.closest("form") || document;
+        const child = scope.querySelector('[data-dep-child="' + key + '"]');
+
+        if (!child) return;
+
+        const value = String(parent.value || "");
+
+        Array.prototype.forEach.call(child.options, function (option) {
+
+            const owner = String(option.getAttribute("data-parent") || "");
+            const show = !option.value || owner === "" || owner === "0" || owner === value;
+
+            option.hidden = !show;
+            option.disabled = !show;
+        });
+
+        if (child.selectedOptions[0] && child.selectedOptions[0].disabled) {
+            child.value = "";
+        }
+    }
+
+    document.addEventListener("change", function (event) {
+
+        const parent = event.target.closest("[data-dep-parent]");
+
+        if (parent) syncDependent(parent);
+    });
+
+    /* ---------- bulk message: Letter / SMS counter ---------- */
+
+    document.addEventListener("input", function (event) {
+
+        const box = event.target.closest("textarea[data-msg-count]");
+
+        if (!box) return;
+
+        const text = String(box.value || "");
+        const length = text.length;
+        const unicode = /[^\x00-\x7F]/.test(text);
+        const single = unicode ? 70 : 160;
+        const multi = unicode ? 67 : 153;
+        const sms = !length ? 0 : (length <= single ? 1 : Math.ceil(length / multi));
+
+        const form = box.closest("form") || document;
+        const letters = form.querySelector("[data-msg-letters]");
+        const count = form.querySelector("[data-msg-sms]");
+
+        if (letters) letters.textContent = String(length);
+        if (count) count.textContent = String(sms);
+    });
+
+    /* ---------- reset password ---------- */
+
+    document.addEventListener("change", function (event) {
+
+        const radio = event.target.closest("#customerActionModalBody .nf-rp-form input[name='type']");
+
+        if (!radio) return;
+
+        const box = radio.closest(".nf-rp-form").querySelector(".nf-rp-manual");
+
+        box.classList.toggle("open", radio.value === "manual" && radio.checked);
+    });
+
+    document.addEventListener("submit", async function (event) {
+
+        const form = event.target.closest("#customerActionModalBody form.nf-rp-form");
+
+        if (!form) return;
+
+        event.preventDefault();
+
+        const wrap = form.closest(".nf-rp-wrap");
+        const button = form.querySelector('[type="submit"]');
+        const type = form.querySelector("input[name='type']:checked").value;
+        const password = String(form.elements.password.value || "").trim();
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch("/api/customers/reset-password", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-CSRF-Token": csrfToken()
+                },
+                body: JSON.stringify({
+                    customer_id: wrap.dataset.customerId,
+                    type: type,
+                    password: password,
+                    csrf_token: csrfToken()
+                })
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok || result.success === false) {
+                throw new Error(result.message || "Failed to reset password.");
+            }
+
+            const parts = modalParts();
+
+            if (parts) parts.modal.hide();
+
+            notify(result.message || "Password reset successfully.", "success");
+
+        } catch (error) {
+            button.disabled = false;
+            notify(error.message || "Failed to reset password.", "error");
+        }
+    });
+
+    /* ---------- activity log: filter / search / view ---------- */
+
+    function applyActivityFilter(root) {
+
+        const by = root.querySelector(".nf-act-by").value.trim().toLowerCase();
+        const act = root.querySelector(".nf-act-act").value.trim().toLowerCase();
+        const q = root.querySelector(".nf-act-search").value.trim().toLowerCase();
+
+        let shown = 0;
+        let number = 0;
+
+        root.querySelectorAll("tbody tr").forEach(function (row) {
+
+            const ok =
+                (!by || String(row.dataset.author || "").toLowerCase() === by) &&
+                (!act || String(row.dataset.action || "").toLowerCase() === act) &&
+                (!q || row.textContent.toLowerCase().includes(q));
+
+            row.style.display = ok ? "" : "none";
+
+            if (ok) {
+                shown++;
+                number++;
+                const cell = row.querySelector(".nf-act-no");
+                if (cell) cell.textContent = String(number);
+            }
+        });
+
+        root.querySelector(".nf-act-count").textContent = String(shown);
+        root.querySelector(".nf-act-empty").style.display = shown ? "none" : "block";
+    }
+
+    document.addEventListener("click", function (event) {
+
+        const root = event.target.closest(".nf-act");
+
+        if (!root) return;
+
+        if (event.target.closest(".nf-act-toggle")) {
+            root.querySelector(".nf-act-filter").classList.toggle("open");
+            return;
+        }
+
+        if (event.target.closest(".nf-act-apply")) {
+            applyActivityFilter(root);
+            return;
+        }
+
+        if (event.target.closest(".nf-act-reset")) {
+            root.querySelector(".nf-act-by").value = "";
+            root.querySelector(".nf-act-act").value = "";
+            root.querySelector(".nf-act-search").value = "";
+            applyActivityFilter(root);
+            return;
+        }
+
+        if (event.target.closest(".nf-act-refresh")) {
+            reloadOpenFragment();
+            return;
+        }
+
+        const view = event.target.closest(".nf-act-view");
+
+        if (view) {
+            const lines = [
+                view.dataset.desc,
+                "Action: " + String(view.dataset.action || "").toUpperCase(),
+                "By: " + view.dataset.author,
+                "IP: " + view.dataset.ip,
+                "Date: " + view.dataset.date
+            ].join("\n");
+
+            if (window.Swal) {
+                window.Swal.fire({
+                    title: "Activity",
+                    html: "",
+                    didOpen: function (popup) {
+                        const box = popup.querySelector(".swal2-html-container");
+                        box.style.whiteSpace = "pre-wrap";
+                        box.textContent = lines;
+                    }
+                });
+            } else {
+                window.alert(lines);
+            }
+        }
+    });
+
+    document.addEventListener("input", function (event) {
+
+        const search = event.target.closest(".nf-act-search");
+
+        if (search) {
+            applyActivityFilter(search.closest(".nf-act"));
+        }
+    });
+
+    /* ---------- cleanup when the modal closes ---------- */
+
+    document.addEventListener("hidden.bs.modal", function (event) {
+
+        if (!event.target || event.target.id !== MODAL_ID) return;
+
+        event.target.classList.remove("nf-ex-nohead");
+
+        const dialog = event.target.querySelector(".modal-dialog");
+
+        if (dialog) dialog.classList.remove("modal-xl");
+    });
+
+})();

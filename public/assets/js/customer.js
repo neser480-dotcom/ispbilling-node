@@ -1134,6 +1134,9 @@
                     summary.totalCustomers ??
                     0
                 ).toLocaleString();
+
+            totalCustomers.dataset.total = totalCustomers.textContent;
+            updateSelectedCount();
         }
 
 
@@ -1566,6 +1569,25 @@
                 }
             );
 
+
+        const totalPill =
+            document.getElementById(
+                "totalCustomers"
+            );
+
+        if (totalPill) {
+
+            const total =
+                totalPill.dataset.total ||
+                String(totalPill.textContent).split("/")[0].trim();
+
+            totalPill.dataset.total = total;
+
+            totalPill.textContent =
+                count > 0
+                    ? total + " / " + count
+                    : total;
+        }
 
         const toggle =
             document.getElementById(
@@ -3511,7 +3533,7 @@ async function initCustomerFilterOptions() {
 
                     await loadActionHtml(
                         urlObject.toString(),
-                        "Bulk Delete Customers"
+                        selectedIds.length + " Customer Delete"
                     );
 
                 } catch (error) {

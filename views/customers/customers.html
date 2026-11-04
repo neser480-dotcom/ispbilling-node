@@ -71,17 +71,149 @@
 <link rel="stylesheet" href="/assets/css/customer-bill-history.css">
 <link rel="stylesheet" href="/assets/css/customer-list.css?v=20261030">
 <style>
-/* Popup scroll: only the popup content scrolls, never the page behind it */
+/* Popup scroll: only the popup content scrolls, never the page behind it.
+   (#id.modal selectors are stronger than customer.css / customer-add.css /
+   customer-edit.css, so load order does not matter.) */
+html:has(#customerActionModal.show),
 body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
-#customerActionModal { overflow-y: hidden !important; }
-#customerActionModal .modal-dialog { max-height: calc(100vh - 1.5rem); margin: .75rem auto; }
-#customerActionModal .modal-content { max-height: calc(100vh - 1.5rem); display: flex !important; flex-direction: column; overflow: hidden !important; }
-#customerActionModal .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-#customerActionModalBody .cm-wrap,
-#customerActionModalBody .cm-page,
-#customerActionModalBody form { display: flex; flex-direction: column; min-height: 0; }
-#customerActionModalBody .cm-body { overflow-y: auto; min-height: 0; max-height: calc(100vh - 12rem); }
-#bulkFloatingPanel { max-height: calc(100vh - 90px); overflow-y: auto !important; overscroll-behavior: contain; }
+
+#customerActionModal.modal { overflow-y: auto !important; overscroll-behavior: contain; }
+
+#customerActionModal.modal .modal-dialog {
+    height: auto !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    margin: .75rem auto !important;
+}
+
+#customerActionModal.modal .modal-content {
+    display: flex !important;
+    flex-direction: column;
+    height: auto !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    overflow: hidden !important;
+}
+
+#customerActionModal.modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#customerActionModal.modal #customerActionModalBody .cm-body {
+    height: auto !important;
+    max-height: calc(100dvh - 10.5rem) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+}
+</style>
+
+<style>
+/* Bulk panel: same look as the reference (coloured icon squares, scrollable) */
+#bulkFloatingPanel { max-height: calc(100vh - 90px); overflow-y: auto; }
+#bulkFloatingPanel .bulk-tile i {
+    display: inline-flex !important; align-items: center; justify-content: center;
+    width: 22px; height: 22px; margin-bottom: 4px; border-radius: 4px; font-size: 12px;
+    background: #fff !important; color: #2d86e5 !important;
+}
+#bulkFloatingPanel .bulk-tile:nth-child(4n+2) i { background: #17c1e8 !important; color: #fff !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+3) i,
+#bulkFloatingPanel .bulk-tile:nth-child(13) i { background: #fcc419 !important; color: #222 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+4) i { background: #e5383b !important; color: #fff !important; }
+</style>
+
+<style>
+/* Bulk gear tab + slide-out panel (reference design). Selected count shows in the Total Data pill. */
+#bulkFloatingToggle,
+.bulk-floating-toggle {
+    position: fixed !important; right: 0 !important; top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 34px !important; height: 46px !important; min-width: 34px !important;
+    border-radius: 23px 0 0 23px !important; background: #2d86e5 !important; color: #fff !important;
+    box-shadow: -2px 2px 6px rgba(0,0,0,.25) !important; font-size: 18px !important;
+    transition: right .25s ease; z-index: 99999 !important;
+}
+#bulkFloatingToggle .selected-count,
+#bulkFloatingToggle #selectedCount { display: none !important; }
+body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 90px !important; }
+
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    position: fixed !important; right: 0 !important; top: 50% !important; width: 90px !important;
+    transform: translate(100%, -50%) !important;
+    opacity: 1 !important; visibility: hidden !important; pointer-events: none;
+    transition: transform .25s ease, visibility .25s;
+    background: #2d86e5 !important; border-radius: 8px 0 0 8px !important; padding: 2px 0 !important;
+    z-index: 99998 !important;
+}
+#bulkFloatingPanel.show,
+.bulk-floating-panel.show { transform: translate(0, -50%) !important; visibility: visible !important; pointer-events: auto; }
+#bulkFloatingPanel .bulk-tile {
+    display: flex !important; flex-direction: column; align-items: center; text-align: center;
+    color: #fff !important; font-weight: 700; font-size: 10px !important; line-height: 1.15;
+    padding: 8px 4px 7px !important; border: 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,.35) !important;
+}
+#bulkFloatingPanel .bulk-tile:last-child { border-bottom: 0 !important; }
+#bulkFloatingPanel .bulk-tile span { color: #fff !important; }
+</style>
+
+<style>
+/* Bulk panel: exact reference look (measured from the screenshot) */
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    width: 77px !important; background: #2d86de !important;
+    border-radius: 12px 0 0 12px !important; padding: 0 !important;
+}
+#bulkFloatingToggle,
+.bulk-floating-toggle {
+    width: 26px !important; min-width: 26px !important; height: 52px !important;
+    border-radius: 0 !important; background: #2d86de !important; box-shadow: none !important;
+    clip-path: polygon(0 50%, 14% 36%, 100% 0, 100% 100%, 14% 64%) !important;
+    padding: 0 0 0 5px !important; font-size: 16px !important;
+}
+body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 77px !important; }
+
+#bulkFloatingPanel .bulk-tile {
+    padding: 7px 3px 6px !important; gap: 3px;
+    font-size: 11px !important; font-weight: 700 !important;
+    border-bottom: 1px solid #62a4e6 !important;
+}
+#bulkFloatingPanel .bulk-tile i {
+    width: 21px !important; height: 17px !important; margin: 0 0 3px !important;
+    border-radius: 3px !important; font-size: 10px !important;
+    background: #ffffff !important; color: #000000 !important;
+}
+#bulkFloatingPanel .bulk-tile:nth-child(4n+2) i { background: #0dcaf0 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+3) i { background: #ffc107 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+4) i { background: #dc3545 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(13) i { background: #ffc107 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-delete-btn i { color: #000 !important; }
+</style>
+
+<style>
+/* Bulk panel: scrolls on its own when the screen is short (page stays still) */
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    display: flex !important; flex-direction: column !important;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important; overflow-x: hidden !important;
+    overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none;
+}
+#bulkFloatingPanel::-webkit-scrollbar { display: none; }
+#bulkFloatingPanel .bulk-tile { flex: 0 0 auto !important; min-height: 0 !important; width: 100% !important; }
+
+/* Edit Status / Customer Delete / Bulk Recharge: same tile as the others */
+#bulkFloatingPanel .bulk-delete-btn,
+#bulkFloatingPanel .bulk-recharge-btn {
+    background: transparent !important; color: #fff !important;
+    border: 0 !important; border-bottom: 1px solid #62a4e6 !important; border-radius: 0 !important;
+}
+#bulkFloatingPanel .bulk-delete-btn:last-child,
+#bulkFloatingPanel .bulk-recharge-btn:last-child { border-bottom: 0 !important; }
+#bulkFloatingPanel .bulk-tile:hover { background: rgba(255,255,255,.14) !important; transform: none !important; filter: none !important; }
 </style>
 
 
@@ -436,258 +568,71 @@ body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
      BULK FLOATING PANEL
 ========================================================= -->
 
-<div
-    id="bulkFloatingPanel"
-    class="bulk-floating-panel"
->
+<div id="bulkFloatingPanel" class="bulk-floating-panel">
 
-
-    <!-- MESSAGE -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/message"
-        data-title="Bulk Message"
-    >
-
-        <i class="fa fa-comment"></i>
-
-        <span>
-            Bulk Message
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/message" data-title="Bulk Message">
+        <i class="fa fa-envelope"></i>
+        <span>Bulk Message</span>
     </button>
 
-
-    <!-- PROMISE DATE -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/promise_date"
-        data-title="Promise Date"
-    >
-
-        <i class="fa fa-calendar"></i>
-
-        <span>
-            Edit Promise Date
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/promise_date" data-title="Edit Promise Date">
+        <i class="fa fa-calendar-day"></i>
+        <span>Edit Promise Date</span>
     </button>
 
-
-    <!-- BILLING CYCLE -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/billing_cycle"
-        data-title="Billing Cycle"
-    >
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/billing_cycle" data-title="Update Billing Cycle">
         <i class="fa fa-calendar-days"></i>
-
-        <span>
-            Edit Billing Cycle
-        </span>
-
+        <span>Edit Billing Cycle</span>
     </button>
 
-
-    <!-- PAYMENT STATUS -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/payment_status"
-        data-title="Payment Status"
-    >
-
-        <i class="fa fa-money-check"></i>
-
-        <span>
-            Edit Payment Status
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/payment_status" data-title="Edit Payment Status">
+        <i class="fa fa-cash-register"></i>
+        <span>Edit Payment Status</span>
     </button>
 
-
-    <!-- AREA -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/area"
-        data-title="Area"
-    >
-
-        <i class="fa fa-location-dot"></i>
-
-        <span>
-            Edit Area
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/area" data-title="Update Area">
+        <i class="fa fa-map-location-dot"></i>
+        <span>Edit Area</span>
     </button>
 
-
-    <!-- STATUS -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/status"
-        data-title="Status"
-    >
-
-        <i class="fa fa-toggle-on"></i>
-
-        <span>
-            Edit Status
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/status" data-title="Update Status">
+        <i class="fa fa-pen-to-square"></i>
+        <span>Edit Status</span>
     </button>
 
-
-    <!-- BALANCE -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/balance"
-        data-title="Balance"
-    >
-
-        <i class="fa fa-wallet"></i>
-
-        <span>
-            Edit Balance
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/balance" data-title="Update Balance">
+        <i class="fa fa-dollar-sign"></i>
+        <span>Edit Balance</span>
     </button>
 
-
-    <!-- RECHARGE -->
-
-    <button
-        type="button"
-        id="bulkRechargeBtn"
-        class="bulk-recharge-btn bulk-tile"
-    >
-
-        <i class="fa fa-credit-card"></i>
-
-        <span>
-            Bulk Recharge
-        </span>
-
+    <button type="button" id="bulkRechargeBtn" class="bulk-recharge-btn bulk-tile">
+        <i class="fa fa-dollar-sign"></i>
+        <span>Bulk Recharge</span>
     </button>
 
-
-    <!-- RESELLER -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/reseller"
-        data-title="Reseller"
-    >
-
-        <i class="fa fa-user-tie"></i>
-
-        <span>
-            Transfer to Reseller
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/reseller" data-title="Transfer to Reseller">
+        <i class="fa fa-right-left"></i>
+        <span>Transfer to Reseller</span>
     </button>
 
-
-    <!-- PACKAGE -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/package"
-        data-title="Package"
-    >
-
-        <i class="fa fa-box"></i>
-
-        <span>
-            Package
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/package" data-title="Update Package">
+        <i class="fa fa-wifi"></i>
+        <span>Update Package</span>
     </button>
 
-
-    <!-- CONNECTION ON -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/connection_on"
-        data-title="Connection ON"
-    >
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/connection_on" data-title="Automatic Connection On/Off">
         <i class="fa fa-power-off"></i>
-
-        <span>
-            Connection ON
-        </span>
-
+        <span>Automatic Connection On/Off</span>
     </button>
 
-
-    <!-- CONNECTION OFF -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/connection_off"
-        data-title="Connection OFF"
-    >
-
-        <i class="fa fa-power-off"></i>
-
-        <span>
-            Connection OFF
-        </span>
-
-    </button>
-
-
-    <!-- MIKROTIK -->
-
-    <button
-        type="button"
-        class="bulk-action-popup bulk-tile"
-        data-url="/api/customers/bulk/mikrotik"
-        data-title="MikroTik"
-    >
-
-        <i class="fa fa-server"></i>
-
-        <span>
-            MikroTik
-        </span>
-
-    </button>
-
-
-    <!-- DELETE -->
-
-    <button
-        type="button"
-        class="bulk-delete-btn bulk-tile"
-    >
-
+    <button type="button" class="bulk-delete-btn bulk-tile">
         <i class="fa fa-trash"></i>
+        <span>Customer Delete</span>
+    </button>
 
-        <span>
-            Delete
-        </span>
-
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/mikrotik" data-title="Change Mikrotik">
+        <i class="fa fa-equals"></i>
+        <span>Change Mikrotik</span>
     </button>
 
 </div>
@@ -1174,6 +1119,7 @@ body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
 <script src="/assets/js/customer.js?v=20261030"></script>
 <script src="/assets/js/customer-add.js?v=20261025"></script>
 <script src="/assets/js/customer-actions.js?v=20261030"></script>
+<script src="/assets/js/customer-extras.js?v=20261103"></script>
 <script src="/assets/js/customer-edit.js?v=20261030"></script>
 <script src="/assets/js/bulk-recharge.js?v=20261009"></script>
 <script src="/assets/js/customer-bill-history.js"></script>
