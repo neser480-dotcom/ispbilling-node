@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 (function () {
 
@@ -451,9 +451,16 @@
                 ? Math.abs(value) + " days overdue"
                 : value + " day(s) left";
 
+        const tier =
+            value <= 0
+                ? " cl-dayleft-over"
+                : value <= 15
+                    ? " cl-dayleft-mid"
+                    : " cl-dayleft-high";
+
         return `
             <span
-                class="cl-dayleft${value <= 0 ? " cl-dayleft-over" : ""}"
+                class="cl-dayleft${tier}"
                 title="${title}"
             >${value}</span>
         `;
@@ -505,6 +512,16 @@
 
         const lines = [];
 
+        const dl =
+            customer.day_left ??
+            customer.dayLeft ??
+            "";
+
+        const promiseOk =
+            dl !== "" &&
+            dl !== null &&
+            number(dl) > 0;
+
         if (billing) {
 
             lines.push(
@@ -515,7 +532,7 @@
         if (promise) {
 
             lines.push(
-                `<div>${dateTimeDisplay(promise)}</div>`
+                `<div class="cl-promise${promiseOk ? " cl-promise-ok" : ""}">${dateTimeDisplay(promise)}</div>`
             );
         }
 

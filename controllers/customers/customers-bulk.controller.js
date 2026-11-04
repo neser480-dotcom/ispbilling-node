@@ -15,6 +15,7 @@ const { hasPermission } = require("../../middleware/permission");
 */
 
 const ACTION_PERMISSIONS = Object.freeze({
+        balance: "update_customer_balance",
     area: "bulk_area_edit",
     status: "bulk_status_edit",
 

@@ -1143,11 +1143,20 @@ exports.listOnus = async (req, res) => {
                 throw pppError;
             }
         }
+        // Show only ONUs linked to at least one valid customer.
+        const visibleRows = rows.filter(row => {
+            const hasPrimaryCustomer =
+                row.matched_customer_id != null;
 
+            const hasExtraCustomers =
+                (extrasByOnu.get(Number(row.id)) || []).length > 0;
+
+            return hasPrimaryCustomer || hasExtraCustomers;
+        });
         return res.json({
             success: true,
-            total: rows.length,
-            data: rows.map(row => {
+                 total: visibleRows.length,
+            data: visibleRows.map(row => {
                 const linked = row.matched_customer_id != null;
                 const primaryPpp = linked
                     ? pppByCustomer.get(Number(row.matched_customer_id))
