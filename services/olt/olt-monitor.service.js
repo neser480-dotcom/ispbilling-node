@@ -172,24 +172,22 @@ function parseDdm(output, id) {
 function parseCDataDdm(output) {
     const text = cleanOutput(output);
     const ports = [];
+    const seen = new Set();
 
-    const numberPattern = "(-?\\d+(?:\\.\\d+)?|--?)";
+    // 0/0 pon1 ... | 0/0 epon 1 ... | pon0/0/1 ... | 0/0/1 ...
+    const rowStart =
+        /^\s*(?:(\d+\/\d+)\s+e?pon\s?([1-4])|e?pon\s?(\d+\/\d+)\/([1-4])|(\d+\/\d+)\/([1-4]))\s+(.+?)\s*$/i;
 
-    const rowPattern = new RegExp(
-        "^\\s*(\\d+\\/\\d+)\\s+pon([1-4])\\s+" +
-        numberPattern + "\\s+" +
-        numberPattern + "\\s+" +
-        numberPattern + "\\s+" +
-        numberPattern + "\\s+" +
-        numberPattern + "\\s*$",
-        "i"
-    );
+    // 34.2 | -19.06 | 34.2C | -19.06dBm | - | -- | N/A
+    const cellPattern =
+        /^(-?\d+(?:\.\d+)?|--?|N\/A)(?:dBm|mA|uA|V|\u00B0C|C)?$/i;
 
     function numeric(value) {
         if (
             value == null ||
             value === "-" ||
-            value === "--"
+            value === "--" ||
+            /^n\/a$/i.test(value)
         ) {
             return null;
         }
@@ -200,20 +198,34 @@ function parseCDataDdm(output) {
     }
 
     for (const line of text.split("\n")) {
-        const match = line.match(rowPattern);
+        const start = line.match(rowStart);
 
-        if (!match) {
+        if (!start) {
             continue;
         }
 
-        const slot = match[1];
-        const ponNumber = Number(match[2]);
+        const slot = start[1] || start[3] || start[5];
+        const ponNumber = Number(start[2] || start[4] || start[6]);
 
-        const temp = numeric(match[3]);
-        const voltage = numeric(match[4]);
-        const bias = numeric(match[5]);
-        const tx = numeric(match[6]);
-        const rx = numeric(match[7]);
+        // temp, voltage, bias, tx, rx (extra columns are ignored)
+        const cells = start[7].split(/\s+/).slice(0, 5);
+
+        const parts = cells.map(cell => cell.match(cellPattern));
+
+        if (cells.length < 5 || parts.some(part => !part)) {
+            continue;
+        }
+
+        const id = `${slot}/${ponNumber}`;
+
+        if (seen.has(id)) {
+            continue;
+        }
+
+        seen.add(id);
+
+        const [temp, voltage, bias, tx, rx] =
+            parts.map(part => numeric(part[1]));
 
         const missing_fields = [];
 
@@ -224,7 +236,7 @@ function parseCDataDdm(output) {
         if (rx === null) missing_fields.push("rx");
 
         ports.push({
-            id: `${slot}/${ponNumber}`,
+            id,
             name: `PON ${ponNumber}`,
             status: missing_fields.length ? "partial" : "ok",
             temp,
@@ -814,6 +826,20 @@ async function readCDataLiveDdm(olt) {
         }
 
         ports = parseCDataDdm(ddmOutput);
+
+        if (!ports.length) {
+            const sample = cleanOutput(ddmOutput)
+                .split("\n")
+                .map(line => line.trim())
+                .filter(Boolean)
+                .slice(0, 12)
+                .join(" // ")
+                .slice(0, 700);
+
+            warnings.push(
+                "show ddm-info all raw output: " + (sample || "(empty)")
+            );
+        }
 
         for (const id of CDATA_PON_PORTS) {
             const found = ports.some(
