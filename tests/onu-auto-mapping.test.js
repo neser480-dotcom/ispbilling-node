@@ -5,11 +5,11 @@ const assert = require('node:assert/strict');
 
 const {
     normalizeMac, extractMacs, indexCustomers, indexSessions, decide, autoMapOnus
-} = require('../drivers/onu-auto-mapping.service');
+} = require('../drivers/services/onu-auto-mapping.service');
 
 const {
     loadConfig, parseLearnedMacs, collectLearnedMacs
-} = require('../drivers/cdata-learned-mac');
+} = require('../drivers/hardware/cdata-learned-mac');
 
 /* ---------- fake mysql2 pool (in-memory, only what the service runs) ---------- */
 

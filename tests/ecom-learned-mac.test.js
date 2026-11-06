@@ -3,8 +3,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { loadEcomConfig, collectEcomLearnedMacs } = require('../drivers/ecom-learned-mac');
-const { parseLearnedMacs } = require('../drivers/cdata-learned-mac');
+const { loadEcomConfig, collectEcomLearnedMacs } = require('../drivers/hardware/ecom-learned-mac');
+const { parseLearnedMacs } = require('../drivers/hardware/cdata-learned-mac');
 
 // Verbatim output of the real OLT (probe-output, 2026-10-27).
 const REAL_0_1_1 = `-----------------------------------------------------------------------------

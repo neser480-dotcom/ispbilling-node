@@ -35,7 +35,7 @@
 |--------------------------------------------------------------------------
 */
 
-const { normalizeMac } = require('./onu-auto-mapping.service');
+const { normalizeMac } = require('../services/onu-auto-mapping.service');
 
 const ERROR_OUTPUT =
     /unknown command|invalid input|command failed|unrecognized command|incomplete command/i;

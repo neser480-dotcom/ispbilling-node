@@ -1,8 +1,8 @@
 
 'use strict';
 
-const { EcomDriver, cleanMac } = require('./ecom');
-const { CDataDriver } = require('./cdata');
+const { EcomDriver, cleanMac } = require('../hardware/ecom');
+const { CDataDriver } = require('../hardware/cdata');
 const { autoMapOnus } = require('./onu-auto-mapping.service');
 const { collectPppSessions, loadMikrotikService } = require('./ppp-sessions');
 

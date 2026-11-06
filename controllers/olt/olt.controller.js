@@ -5,11 +5,11 @@ const mysql = require("mysql2/promise");
 const net = require("net");
 const crypto = require("crypto");
 const syncManager = require("../../drivers/sync/sync-manager");
-const { autoMapOnus } = require("../../drivers/onu-auto-mapping.service");
+const { autoMapOnus } = require("../../drivers/services/onu-auto-mapping.service");
 const {
     collectPppSessions,
     loadMikrotikService
-} = require("../../drivers/ppp-sessions");
+} = require("../../drivers/services/ppp-sessions");
 
 /*
 |--------------------------------------------------------------------------
@@ -680,10 +680,10 @@ exports.check = async (req, res) => {
         };
 
         if (vendor === "cdata") {
-            const { CDataDriver } = require("../../drivers/cdata");
+            const { CDataDriver } = require("../../drivers/hardware/cdata");
             driver = new CDataDriver(config);
         } else if (vendor === "ecom") {
-            const { EcomDriver } = require("../../drivers/ecom");
+            const { EcomDriver } = require("../../drivers/hardware/ecom");
             driver = new EcomDriver(config);
         } else {
             throw new OltError(

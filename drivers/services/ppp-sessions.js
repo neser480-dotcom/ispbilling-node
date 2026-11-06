@@ -101,9 +101,9 @@ async function collectPppSessions(
 
 function loadMikrotikService() {
     for (const path of [
-        '../services/mikrotik.service',
-        '../services/mikrotik/mikrotik.service',
-        '../mikrotik.service'
+        '../../services/mikrotik.service',
+        '../../services/mikrotik/mikrotik.service',
+        '../../mikrotik.service'
     ]) {
         try {
             return require(path);

@@ -1,7 +1,7 @@
 "use strict";
 
-const { EcomDriver } = require("../../drivers/ecom");
-const { CDataDriver } = require("../../drivers/cdata");
+const { EcomDriver } = require("../../drivers/hardware/ecom");
+const { CDataDriver } = require("../../drivers/hardware/cdata");
 
 const PON_PORTS = [
     "0/1/1", "0/1/2", "0/1/3", "0/1/4",

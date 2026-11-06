@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { EcomDriver, parseOpticalInfo, parseBasicInfo } = require('../drivers/ecom');
+const { EcomDriver, parseOpticalInfo, parseBasicInfo } = require('../drivers/hardware/ecom');
 
 // Verbatim excerpts of the real OLT output (probe 2026-10-28, OLT "Ecom 8s").
 const OPTICAL = `-------------------------------------------------------------------------------------------------

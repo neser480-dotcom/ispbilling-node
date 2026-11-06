@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { CDataDriver } = require('../drivers/cdata');
+const { CDataDriver } = require('../drivers/hardware/cdata');
 
 // Verbatim excerpt of the real OLT output (probe 2026-10-29, PON 2).
 const BASIC = `-----------------------------------------------------------------------------

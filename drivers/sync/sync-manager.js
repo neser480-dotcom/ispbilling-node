@@ -3,7 +3,7 @@
 const {
     collectPppSessions,
     loadMikrotikService
-} = require("../ppp-sessions");
+} = require("../services/ppp-sessions");
 const { normalizeMac } = require("./core/sync-normalizer");
 
 /*
@@ -222,10 +222,9 @@ async function syncCustomers(pool, olt, { dryRun = false } = {}) {
                 // just keep refreshing the ones this OLT already owns.
                 const callerMac = normalizeMac(session.mac);
 
-                const inScope = !!callerMac && (
-                    scope.onuMacs.has(callerMac) ||
-                    (scope.verified && scope.macs.has(callerMac))
-                );
+                // A MAC that WAS found on this OLT is proof, even when another
+                // PON failed to read. "verified" only matters for releasing.
+                const inScope = !!callerMac && scope.macs.has(callerMac);
 
                 if (!inScope && !(!scope.verified && ownedHere.has(customerId))) {
                     result.outsideOlt++;

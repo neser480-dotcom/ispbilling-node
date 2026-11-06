@@ -4,7 +4,7 @@ const {
     syncOnus,
     driverFor,
     disconnectDriver
-} = require("../../../olt-sync.service");
+} = require("../../../services/olt-sync.service");
 const { parseOnuRows, buildMacScope } = require("./parser");
 
 /*
