@@ -8,11 +8,13 @@
 |
 | For every customer (not deleted, all companies):
 |   - payment_status -> 'unpaid'
-|   - balance        -> 0
+|   - balance        -> NOT touched (it is the customer's real money / advance)
 |   - promise_date   -> the customer's billing-cycle day (and time) in the
 |                       new month. Billing day 3 -> promise 3rd of this month.
 |                       Day 31 in a 30-day month -> last day of the month.
 |                       No valid billing_cycle -> promise_date cleared (NULL).
+|                       A promise_date that is already LATER is kept, and that
+|                       customer's balance is kept too (day left unchanged).
 |
 | NOT touched:
 |   - billing_cycle  (stays on the same day)
@@ -31,7 +33,7 @@ const db = require("../../config/database");
 const SETTINGS = {
     TIMEZONE: "Asia/Dhaka",
     RUN_ON_DAY: 1,            /* day of month the reset runs */
-    RESET_BALANCE: true       /* false = leave balance untouched */
+    RESET_BALANCE: false      /* wallet rule: balance is real money, never wiped */
 };
 
 function nowInZone(timeZone) {
@@ -97,15 +99,37 @@ async function run({ log = console.log, settings = {}, force = false } = {}) {
         ? "deleted_at IS NULL"
         : "1 = 1";
 
-    /* promise_date = billing_cycle day + time, inside the new month */
+    /* new promise_date = billing_cycle day + time, inside the new month */
+    const computed =
+        `(CASE WHEN billing_cycle IS NULL OR billing_cycle <= '1000-01-01' THEN NULL
+               ELSE TIMESTAMP(
+                      CONCAT('${period}', '-',
+                             LPAD(LEAST(DAY(billing_cycle), DAY(LAST_DAY('${period}-01'))), 2, '0')),
+                      TIME(billing_cycle)
+                    )
+          END)`;
+
+    /*
+     * A customer whose promise_date is already LATER than the new one keeps
+     * promise_date AND balance untouched (day left stays the same).
+     */
+    const keepsExtension =
+        `(promise_date IS NOT NULL AND promise_date > COALESCE(${computed}, NOW()))`;
+
     const promiseSql =
-        `CASE WHEN billing_cycle IS NULL OR billing_cycle <= '1000-01-01' THEN NULL
-              ELSE TIMESTAMP(
-                     CONCAT(?, '-',
-                            LPAD(LEAST(DAY(billing_cycle), DAY(LAST_DAY(CONCAT(?, '-01')))), 2, '0')),
-                     TIME(billing_cycle)
-                   )
-         END`;
+        `CASE WHEN ${keepsExtension} THEN promise_date ELSE ${computed} END`;
+
+    /*
+     * Only customers whose billing_cycle falls in this month (or earlier) are
+     * due now. Customers prepaid into a LATER month stay paid.
+     */
+    const dueThisMonth =
+        `(billing_cycle IS NULL OR billing_cycle <= '1000-01-01'
+          OR billing_cycle < DATE_ADD('${period}-01', INTERVAL 1 MONTH))`;
+
+    const balanceSet = cfg.RESET_BALANCE
+        ? `balance = CASE WHEN ${keepsExtension} THEN balance ELSE 0 END,`
+        : "";
 
     const conn = await db.getConnection();
 
@@ -132,15 +156,13 @@ async function run({ log = console.log, settings = {}, force = false } = {}) {
             [period]
         );
 
-        const balanceSql = cfg.RESET_BALANCE ? ", balance = 0" : "";
-
+        /* balance is assigned BEFORE promise_date so it still sees the old promise_date */
         const [upd] = await conn.query(
             `UPDATE customers
              SET payment_status = 'unpaid',
+                 ${balanceSet}
                  promise_date = ${promiseSql}
-                 ${balanceSql}
-             WHERE ${notDeleted}`,
-            [period, period]
+             WHERE ${notDeleted} AND ${dueThisMonth}`
         );
 
         await conn.query(
@@ -150,7 +172,7 @@ async function run({ log = console.log, settings = {}, force = false } = {}) {
 
         await conn.commit();
 
-        log(`Month start ${period}: ${upd.affectedRows} customers -> unpaid, promise = billing day` +
+        log(`Month start ${period}: ${upd.affectedRows} customers -> unpaid, promise = billing day (longer promise kept)` +
             (cfg.RESET_BALANCE ? ", balance 0" : ""));
 
         try {

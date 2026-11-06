@@ -4,7 +4,7 @@
 const mysql = require("mysql2/promise");
 const net = require("net");
 const crypto = require("crypto");
-const { syncOnus } = require("../../drivers/olt-sync.service");
+const syncManager = require("../../drivers/sync/sync-manager");
 const { autoMapOnus } = require("../../drivers/onu-auto-mapping.service");
 const {
     collectPppSessions,
@@ -591,27 +591,11 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        // Remove links that belong to this OLT first, otherwise customers
-        // stay "linked" to ONUs that no longer exist and never auto-map to
-        // a re-added OLT. Optional tables are skipped when not installed.
-        for (const table of [
-            "onu_user_mapping",
-            "onu_ppp_info",
-            "onu_customer_links"
-        ]) {
-            try {
-                await connection.execute(
-                    `DELETE FROM ${table}
-                      WHERE olt_id = ? AND company_id = ?`,
-                    [id, olt.company_id]
-                );
-            } catch (error) {
-                if (error?.code !== "ER_NO_SUCH_TABLE") throw error;
-            }
-        }
-
-        const [deletedOnu] = await connection.execute(
-            "DELETE FROM onu WHERE olt_id = ?",
+        // Only the OLT row is deleted. ONU rows and customer mappings
+        // (onu_user_mapping, onu_ppp_info, onu_customer_links) are kept;
+        // an ONU is removed only by a manual ONU delete.
+        const [[kept]] = await connection.execute(
+            "SELECT COUNT(*) AS total FROM onu WHERE olt_id = ?",
             [id]
         );
 
@@ -627,7 +611,7 @@ exports.remove = async (req, res) => {
         return res.json({
             success: true,
             message: "OLT deleted.",
-            deleted_onu: deletedOnu.affectedRows,
+            kept_onu: Number(kept.total),
             olt: {
                 id: olt.id,
                 name: olt.name
@@ -799,21 +783,56 @@ exports.check = async (req, res) => {
 |--------------------------------------------------------------------------
 */
 
-exports.sync = async (req, res) => {
+exports.syncCustomers = async (req, res) => {
     try {
+        verifyMappingCsrf(req);
+
         const id = validId(req.params.id);
         const olt = await findOlt(req, id);
-        const result = await syncOnus(getPool(), olt);
+
+        const dryRun =
+            req.body?.dry_run === true ||
+            req.body?.dry_run === "true" ||
+            req.query?.dry_run === "1";
+
+        const result = await syncManager.syncCustomers(
+            getPool(),
+            olt,
+            { dryRun }
+        );
 
         return res.json({
             success: true,
-            message: "OLT ONU synchronization completed.",
+            message: dryRun
+                ? "Customer & mapping sync preview completed."
+                : "Customer & mapping sync completed.",
             data: result
         });
     } catch (error) {
         return jsonError(res, error);
     }
 };
+
+exports.syncOnuHardware = async (req, res) => {
+    try {
+        verifyMappingCsrf(req);
+
+        const id = validId(req.params.id);
+        const olt = await findOlt(req, id);
+        const result = await syncManager.syncOnuHardware(getPool(), olt);
+
+        return res.json({
+            success: true,
+            message: "ONU hardware synchronization completed.",
+            data: result
+        });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
+
+// Old endpoint (POST /:id/sync) keeps working as ONU hardware sync.
+exports.sync = exports.syncOnuHardware;
 
 /*
 |--------------------------------------------------------------------------
@@ -1143,6 +1162,88 @@ exports.listOnus = async (req, res) => {
                 throw pppError;
             }
         }
+        /*
+         * Customer PPPoE sessions are independent of ONU hardware.
+         * These rows must remain visible even before ONU synchronization.
+         */
+        const customerSessions = [];
+
+        try {
+            let sessionSql = `
+                SELECT
+                    s.id AS session_id,
+                    s.customer_id,
+                    s.olt_id,
+                    s.router_id,
+                    s.pppoe_username,
+                    s.caller_id,
+                    s.ip_address,
+                    s.online_status,
+                    s.last_seen,
+                    s.synced_at,
+                    c.customer_id AS customer_code,
+                    c.name AS customer_name,
+                    c.phone AS customer_phone
+                FROM olt_customer_sessions AS s
+                JOIN customers AS c
+                  ON c.id = s.customer_id
+                 AND c.company_id = s.company_id
+                 AND c.deleted_at IS NULL
+                WHERE s.company_id = ?
+                  AND s.olt_id = ?
+            `;
+
+            const sessionParams = [olt.company_id, id];
+
+            if (search) {
+                sessionSql += `
+                    AND (
+                        c.name LIKE ?
+                        OR CAST(c.customer_id AS CHAR) LIKE ?
+                        OR c.phone LIKE ?
+                        OR s.pppoe_username LIKE ?
+                        OR s.caller_id LIKE ?
+                        OR s.ip_address LIKE ?
+                    )
+                `;
+
+                const like = `%${search}%`;
+                sessionParams.push(
+                    like, like, like, like, like, like
+                );
+            }
+
+            sessionSql += `
+                ORDER BY
+                    s.online_status DESC,
+                    c.name ASC
+                LIMIT 2000
+            `;
+
+            const [sessionRows] = await getPool().execute(
+                sessionSql,
+                sessionParams
+            );
+
+            customerSessions.push(
+                ...sessionRows.map(row => ({
+                    ...row,
+                    customer_online_status:
+                        Number(row.online_status) === 1
+                            ? "online"
+                            : "offline",
+                    customer_only: true
+                }))
+            );
+        } catch (sessionError) {
+            if (
+                !sessionError ||
+                sessionError.code !== "ER_NO_SUCH_TABLE"
+            ) {
+                throw sessionError;
+            }
+        }
+
         // Show only ONUs linked to at least one valid customer.
         const visibleRows = rows.filter(row => {
             const hasPrimaryCustomer =
@@ -1155,7 +1256,9 @@ exports.listOnus = async (req, res) => {
         });
         return res.json({
             success: true,
-                 total: visibleRows.length,
+            total: visibleRows.length,
+            customer_session_total: customerSessions.length,
+            customer_sessions: customerSessions,
             data: visibleRows.map(row => {
                 const linked = row.matched_customer_id != null;
                 const primaryPpp = linked

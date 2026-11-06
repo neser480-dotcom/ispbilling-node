@@ -34,7 +34,13 @@ router.delete("/:id", controller.remove);
 // Test actual OLT connection
 router.post("/:id/check", controller.check);
 
-// Synchronize OLT and ONU information
+// OLT List page: customer + ONU mapping sync (add ?dry_run=1 to preview)
+router.post("/:id/sync/customers", controller.syncCustomers);
+
+// OLT Users page: ONU hardware / optical sync
+router.post("/:id/sync/onu", controller.syncOnuHardware);
+
+// Old endpoint, kept for compatibility (same as /sync/onu)
 router.post("/:id/sync", controller.sync);
 
 // Automatic ONU -> customer mapping (add ?dry_run=1 or body.dry_run to preview)

@@ -210,10 +210,8 @@
             if (!response.ok) {
 
                 throw new Error(
-                    errorText(
-                        html,
-                        "Failed to load customer action."
-                    )
+                    stripHtml(html) ||
+                    "Failed to load customer action."
                 );
             }
 
@@ -256,31 +254,6 @@
             div.innerText ||
             ""
         ).trim();
-    }
-
-
-    /*
-    | Server errors (e.g. 403 permission) arrive as JSON.
-    | Show only the readable message, never the raw JSON.
-    */
-    function errorText(raw, fallback) {
-
-        const text = String(raw || "").trim();
-
-        if (text.charAt(0) === "{") {
-
-            try {
-
-                const data = JSON.parse(text);
-
-                if (data && data.message) {
-                    return String(data.message);
-                }
-
-            } catch (_) {}
-        }
-
-        return stripHtml(text) || fallback;
     }
 
 
@@ -753,7 +726,7 @@
 
                     if (!response.ok) {
                         throw new Error(
-                            errorText(html, "Failed to load recharge form.")
+                            stripHtml(html) || "Failed to load recharge form."
                         );
                     }
 
@@ -824,7 +797,13 @@
         const discount =
             Math.max(0, Number((discountInput && discountInput.value) || 0));
 
-        const total = Math.max(0, subtotal - discount) + previousDue;
+        const credit = Number(form.dataset.credit || 0);
+        const advanceInput = form.querySelector("[data-recharge-advance]");
+        const advance = Math.max(0, Number((advanceInput && advanceInput.value) || 0));
+        const net = Math.max(0, subtotal - discount);
+        const chargeNow = daily ? net : Math.min(net, monthly);
+        const extra = net - chargeNow;
+        const total = Math.max(0, chargeNow - credit) + extra + previousDue + advance;
 
         const fmt = function (n) { return "৳" + n.toFixed(2); };
 
@@ -952,10 +931,8 @@
                 if (!response.ok) {
 
                     throw new Error(
-                        errorText(
-                            html,
-                            "Failed to load recharge form."
-                        )
+                        stripHtml(html) ||
+                        "Failed to load recharge form."
                     );
                 }
 

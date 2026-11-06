@@ -488,8 +488,83 @@ async function rechargeCustomer({
         /*
          * Clear the old due through the collected payment.
          */
+        /*
+         * USE THE CUSTOMER'S BALANCE FIRST
+         *
+         * Positive balance = advance credit. It pays the subscription
+         * charge before any cash is collected:
+         *
+         *   balance 500, bill 500  -> from balance 500, cash 0, balance 0
+         *   balance 300, bill 500  -> from balance 300, cash 200
+         *   balance 0,   bill 500  -> from balance 0,   cash 500
+         *
+         * (Old due is never paid from balance - credit and due never
+         *  exist together.)
+         */
+        const credit = roundMoney(
+            Math.max(0, currentBalance)
+        );
+
+        /*
+         * MONTHLY RECHARGE = ONE MONTH BILLED, REST GOES TO BALANCE
+         * Billing cycle moves only one month (Day Left never becomes 60/120).
+         * Money paid for the other months is kept in the balance (wallet);
+         * the auto job takes one month from it every month.
+         */
+        const chargeNow =
+            opts.billingType === "Monthly"
+                ? roundMoney(Math.min(subscriptionAmount, monthlyBill))
+                : subscriptionAmount;
+
+        const extraToWallet = roundMoney(
+            subscriptionAmount - chargeNow
+        );
+
+        const fromBalance = roundMoney(
+            Math.min(credit, chargeNow)
+        );
+
+        /*
+         * Extra money the customer gives in advance. It is kept in the
+         * wallet (balance) for the coming months.
+         */
+        const advanceRaw = Number(input && input.advance);
+
+        const advance = roundMoney(
+            Number.isFinite(advanceRaw)
+                ? Math.min(Math.max(0, advanceRaw), 10000000)
+                : 0
+        );
+
+        /* cash needed for this bill (old due + subscription not covered by wallet) */
+        const billCash = roundMoney(
+            chargeNow + previousDue - fromBalance
+        );
+
+        /* all cash received now */
+        const cashAmount = roundMoney(
+            billCash + extraToWallet + advance
+        );
+
+        const noteParts = [];
+
+        if (opts.comment) noteParts.push(opts.comment);
+        if (fromBalance > 0) noteParts.push(`Paid from balance: ${money(fromBalance)}`);
+        if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
+        if (advance > 0) noteParts.push(`Advance kept: ${money(advance)}`);
+
+        const paymentComment =
+            noteParts.join(" | ").slice(0, 255);
+
+        /*
+         * WALLET RULE
+         * balance = real money. The bill is taken from it; advance is added.
+         *   0 balance, bill 500, paid 5000 (advance 4500)  -> balance 4500
+         *   500 balance, bill 500, paid 0                  -> balance 0
+         *   -200 (due), bill 500, paid 700                 -> balance 0
+         */
         const newBalance = roundMoney(
-            currentBalance + amount
+            credit - fromBalance + extraToWallet + advance
         );
 
         /*
@@ -514,11 +589,29 @@ async function rechargeCustomer({
 
         const base = parsedOldCycle || todayDate;
 
+        /*
+         * Same month cannot be recharged twice: the popup sends the month it
+         * was opened for. If the customer was recharged meanwhile, stop.
+         */
+        const baseMonthKey =
+            `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+
+        if (
+            opts.billingType === "Monthly" &&
+            input &&
+            input.base_month &&
+            String(input.base_month) !== baseMonthKey
+        ) {
+            throw new RechargeError(
+                "This month is already recharged. Reopen the form and select the next month."
+            );
+        }
+
         const next = opts.billingType === "Daily"
             ? addDays(base, opts.selectedDays)
             : addMonthsClamped(
                 base,
-                opts.rechargeMonth
+                1
             );
 
         const newBillingCycle = formatDate(next);
@@ -561,7 +654,7 @@ async function rechargeCustomer({
             [
                 companyId,
                 customerDbId,
-                amount,
+                cashAmount,
                 opts.paymentMethod,
                 next.getMonth() + 1,
                 next.getFullYear(),
@@ -569,7 +662,7 @@ async function rechargeCustomer({
                     ? opts.rechargeMonth
                     : 0,
                 opts.billType === "Advance" ? 1 : 0,
-                opts.comment,
+                paymentComment,
                 userId,
 
                 // State before recharge
@@ -614,7 +707,10 @@ async function rechargeCustomer({
             ` | Customer ID: ${softwareId}` +
             ` | Subscription: ৳${money(subscriptionAmount)}` +
             ` | Previous Due: ৳${money(previousDue)}` +
-            ` | Total Paid: ৳${money(amount)}` +
+            ` | Total Paid: ৳${money(cashAmount)}` +
+            ` | From Balance: ৳${money(fromBalance)}` +
+            ` | Advance: ৳${money(advance)}` +
+            ` | Extra To Balance: ৳${money(extraToWallet)}` +
             ` | Method: ${opts.paymentMethod}` +
             ` | Billing Type: ${opts.billingType}` +
             ` | Months: ${opts.rechargeMonth}` +
@@ -660,7 +756,11 @@ async function rechargeCustomer({
             payment_id: pay.insertId,
             subscription_amount: subscriptionAmount,
             previous_due: previousDue,
-            amount,
+            amount: cashAmount,
+            from_balance: fromBalance,
+            extra_to_balance: extraToWallet,
+            advance,
+            total_payable: amount,
             balance: newBalance,
             promise_date: existingPromiseDate,
             billing_cycle: newBillingCycle,
@@ -919,6 +1019,7 @@ async function rechargeFragment({ user, id }) {
             phone,
             pppoe_username,
             monthly_bill,
+            billing_cycle,
             balance
          FROM customers
          WHERE id = ?
@@ -956,14 +1057,62 @@ async function rechargeFragment({ user, id }) {
         )
         .join("");
 
+    const MONTH_NAMES = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    /*
+     * The first month that can be recharged = month of the customer's
+     * current billing_cycle (months before it are already paid).
+     * Months can only be chosen from there onwards, in order.
+     */
+    const todayText = formatDate(new Date());
+    const baseDate =
+        parseDate(dateString(customer.billing_cycle)) ||
+        parseDate(todayText) ||
+        new Date();
+
+    const baseYear = baseDate.getFullYear();
+    const baseMonth = baseDate.getMonth();
+
+    const baseMonthKey =
+        `${baseYear}-${String(baseMonth + 1).padStart(2, "0")}`;
+
+    const monthChoices = Array.from({ length: 12 }, (_, index) => {
+        const d = new Date(baseYear, baseMonth + index, 1);
+        const label = MONTH_NAMES[d.getMonth()] +
+            (d.getFullYear() !== baseYear ? " " + d.getFullYear() : "");
+        return label;
+    });
+
+    const currentMonthName = monthChoices[0];
+    const credit = Math.max(0, Number(balance) || 0);
     const balanceClass = balance < 0 ? "nf-rc-neg" : "nf-rc-pos";
 
     return `
+<style>
+.nf-chips { position: relative; }
+.nf-chips-box { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 3px 8px; border: 1px solid #ced4da; border-radius: 4px; background: #fff; cursor: pointer; }
+.nf-chips-box:focus { border-color: #86b7fe; outline: 0; box-shadow: 0 0 0 .2rem rgba(13,110,253,.15); }
+.nf-chips-list { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+.nf-chip { display: inline-flex; align-items: center; gap: 6px; background: #e4e4e4; border: 1px solid #aaa; border-radius: 3px; padding: 1px 6px; font-size: 12px; color: #333; }
+.nf-chip-x { font-weight: 700; cursor: pointer; color: #888; }
+.nf-chip-x:hover { color: #000; }
+.nf-chips-clear { color: #999; font-size: 18px; line-height: 1; padding: 0 6px; cursor: pointer; }
+.nf-chips-caret { color: #888; font-size: 11px; padding: 0 6px 0 10px; border-left: 1px solid #ddd; }
+.nf-chips-menu { display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 30; max-height: 190px; overflow-y: auto; background: #fff; border: 1px solid #ced4da; border-radius: 4px; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+.nf-chips-menu.open { display: block; }
+.nf-chips-item { padding: 6px 10px; font-size: 13px; cursor: pointer; }
+.nf-chips-item:hover { background: #e8f0fe; }
+.nf-chips-item.picked { display: none; }
+</style>
 <form action="/api/customers/recharge"
       method="POST"
       class="customer-ajax-form netfee-recharge-form nf-rc"
       data-monthly-bill="${monthlyBill}"
-      data-previous-due="${previousDue}">
+      data-previous-due="${previousDue}"
+      data-credit="${credit}">
 
     <input type="hidden"
            name="customer_id"
@@ -994,7 +1143,7 @@ async function rechargeFragment({ user, id }) {
 
     <div class="nf-rc-total">
         ${escapeHtml(customer.name || "Customer")} Total Amount
-        <strong data-recharge-total>৳${money(monthlyBill + previousDue)}</strong>
+        <strong data-recharge-total>৳${money(Math.max(0, monthlyBill - credit) + previousDue)}</strong>
     </div>
 
     <div class="nf-rc-grid">
@@ -1042,8 +1191,21 @@ async function rechargeFragment({ user, id }) {
 
         <div class="nf-rc-wide" data-recharge-month-wrap>
             <label class="nf-rc-lbl">Select Month</label>
+            <div class="nf-chips" data-nf-chips>
+                <div class="nf-chips-box" tabindex="0">
+                    <span class="nf-chips-list">
+                        <span class="nf-chip" data-name="${currentMonthName}">${currentMonthName}<b class="nf-chip-x">&times;</b></span>
+                    </span>
+                    <span class="nf-chips-clear" title="Clear">&times;</span>
+                    <span class="nf-chips-caret"><i class="fa fa-chevron-down"></i></span>
+                </div>
+                <div class="nf-chips-menu">
+                    ${monthChoices.map(name => `<div class="nf-chips-item" data-name="${name}">${name}</div>`).join("")}
+                </div>
+            </div>
+            <input type="hidden" name="base_month" value="${baseMonthKey}">
             <select name="recharge_month"
-                    class="form-select"
+                    class="d-none"
                     data-recharge-month>
                 ${months}
             </select>
@@ -1068,6 +1230,16 @@ async function rechargeFragment({ user, id }) {
                    step="0.01"
                    value="0"
                    data-recharge-discount>
+        </div>
+        <div>
+            <label class="nf-rc-lbl">Advance (optional)</label>
+            <input type="number"
+                   name="advance"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   value="0"
+                   data-recharge-advance>
         </div>
 
         <div class="nf-rc-note-toggle">

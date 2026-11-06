@@ -826,6 +826,20 @@ async function addCustomer({
 
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | BILLING CYCLE / PROMISE DATE / OTHER FORM FIELDS
+        |--------------------------------------------------------------------------
+        | The main INSERT above does not carry these. They are saved right after,
+        | only into columns that really exist in the customers table.
+        | Promise date = billing cycle date (unless a promise date is sent).
+        */
+        await saveExtraCustomerFields(
+            connection,
+            insertResult[0].insertId,
+            data
+        );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -963,6 +977,114 @@ async function addCustomer({
 
 }
 
+
+
+/*
+|--------------------------------------------------------------------------
+| EXTRA FIELDS SAVED AFTER INSERT
+|--------------------------------------------------------------------------
+*/
+
+function toSqlDateTime(value) {
+
+    const text = String(value || "").trim();
+
+    if (!text) return null;
+
+    const m = text.match(
+        /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/
+    );
+
+    if (!m) return null;
+
+    return `${m[1]}-${m[2]}-${m[3]} ${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}`;
+}
+
+function toSqlDate(value) {
+
+    const full = toSqlDateTime(value);
+
+    return full ? full.slice(0, 10) : null;
+}
+
+async function saveExtraCustomerFields(connection, customerDbId, data) {
+
+    const [cols] = await connection.query("SHOW COLUMNS FROM customers");
+
+    const have = new Set(cols.map(c => c.Field));
+
+    const first = (...names) => names.find(n => have.has(n)) || null;
+
+    const set = {};
+
+    const billing = toSqlDateTime(data.billing_cycle);
+    const promise = toSqlDateTime(data.promise_date) || billing;
+
+    if (billing && have.has("billing_cycle")) set.billing_cycle = billing;
+    if (promise && have.has("promise_date")) set.promise_date = promise;
+
+    const connectionDate = toSqlDate(data.connection_date);
+
+    if (connectionDate && have.has("connection_date")) {
+        set.connection_date = connectionDate;
+    }
+
+    const fee = Number(data.connection_fee);
+
+    if (Number.isFinite(fee) && fee > 0 && have.has("connection_fee")) {
+        set.connection_fee = fee;
+    }
+
+    const balance = Number(data.balance);
+
+    if (Number.isFinite(balance) && balance !== 0 && have.has("balance")) {
+        set.balance = balance;
+    }
+
+    const nidCol = first("nid", "nid_no");
+    const nid = String(data.nid || data.nid_no || "").trim();
+
+    if (nid && nidCol) set[nidCol] = nid;
+
+    const birth = toSqlDate(data.birth_date);
+
+    if (birth && have.has("birth_date")) set.birth_date = birth;
+
+    ["division_id", "district_id", "upazila_id"].forEach(function (key) {
+        const value = Number(data[key] || 0);
+        if (value > 0 && have.has(key)) set[key] = value;
+    });
+
+    ["reference_name", "reference_mobile"].forEach(function (key) {
+        const value = String(data[key] || "").trim();
+        if (value && have.has(key)) set[key] = value;
+    });
+
+    /* Automatic connection: "Will continue" / "Next Month" checkboxes */
+    const auto = [].concat(data.auto_connection || []).map(String);
+
+    if (have.has("auto_connection")) {
+        set.auto_connection = auto.includes("Will continue") ? 1 : 0;
+    }
+
+    const nextCol = first("continue_next_month", "auto_next_month");
+
+    if (nextCol) {
+        set[nextCol] = auto.includes("Next Month") ? 1 : 0;
+    }
+
+    const keys = Object.keys(set);
+
+    if (!keys.length) return;
+
+    await connection.query(
+        `UPDATE customers
+         SET ${keys.map(k => `\`${k}\` = ?`).join(", ")}
+         WHERE id = ?
+         LIMIT 1`,
+        keys.map(k => set[k]).concat([customerDbId])
+    );
+}
 
 module.exports = {
     addCustomer

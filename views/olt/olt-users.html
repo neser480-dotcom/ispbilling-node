@@ -839,6 +839,59 @@ function normalizeOnu(row, olt) {
    TABLE HEADER
 -------------------------------------------------- */
 
+function normalizeCustomerSession(row, olt) {
+    const customerCode = row.customer_code || "";
+    const customerName = row.customer_name || "Customer";
+    const callerId = row.caller_id || "";
+    const ip = row.ip_address || "";
+
+    const status = normalizeStatus(
+        row.customer_online_status ?? row.online_status
+    );
+
+    const lastUpdate = row.last_seen || row.synced_at || "";
+
+    return {
+        id: `session-${row.session_id}`,
+        oltId: String(row.olt_id || olt.id),
+        displayId: customerCode || row.customer_id || "",
+        customerName,
+        customerLinked: true,
+        primaryLinked: true,
+        customerCount: 1,
+        extras: [],
+        callerId,
+        customerOnly: true,
+        mapping: "customer-only",
+        status,
+        alarm: "",
+        name: customerName,
+        ip,
+        routerMac: "",
+        onuMac: "",
+        serial: "",
+        oltPort: olt.name || olt.vendor || `OLT ${olt.id}`,
+        port: "",
+        rx: "",
+        tx: "",
+        distance: "",
+        voltage: "",
+        temperature: "",
+        lastUpdate: lastUpdate ? formatDate(lastUpdate) : "—",
+        searchText: [
+            row.customer_id,
+            customerCode,
+            customerName,
+            row.customer_phone,
+            row.pppoe_username,
+            callerId,
+            ip,
+            status,
+            olt.name,
+            olt.vendor
+        ].join(" ")
+    };
+}
 function renderHead() {
     head.innerHTML = `
         <tr>
@@ -916,7 +969,7 @@ function getCell(user, key) {
     switch (key) {
         case "customerId": {
             const people = peopleOf(user);
-            const badge = `
+            const badge = user.customerOnly ? "" : `
                 <span class="olt-status ${escapeHTML(user.status)}">
                     ${escapeHTML(statusLabel(user.status))}
                 </span>`;
@@ -1001,7 +1054,7 @@ function getCell(user, key) {
         case "oltPort":
             return `
                 <span class="olt-primary-text">${escapeHTML(user.oltPort)}</span>
-                <span class="olt-sub-text">${escapeHTML(user.port || "—")}</span>
+                <span class="olt-sub-text">${user.customerOnly ? "" : escapeHTML(user.port || "—")}</span>
             `;
 
         case "power":
@@ -1044,7 +1097,7 @@ function getCell(user, key) {
                     type="button"
                     class="olt-action-icon-btn"
                     data-sync-olt="${escapeHTML(user.oltId)}"
-                    title="Sync this OLT"
+                    title="Sync ONU hardware (RX/TX, distance, voltage, temp)"
                     aria-label="Sync OLT ${escapeHTML(user.oltId)}"
                     ${syncing ? "disabled" : ""}>
                     <i class="fa-solid fa-network-wired"></i>
@@ -1328,9 +1381,46 @@ async function loadOnus(keepMessage = false) {
                     ? result.data
                     : [];
 
+                const onuRows = rows.map(row => normalizeOnu(row, olt));
+
+                // Customer IDs already represented by ONU mappings.
+                const mappedCustomerIds = new Set();
+
+                for (const row of rows) {
+                    if (
+                        row.matched_customer_id !== null &&
+                        row.matched_customer_id !== undefined
+                    ) {
+                        mappedCustomerIds.add(
+                            String(row.matched_customer_id)
+                        );
+                    }
+
+                    for (const extra of (
+                        Array.isArray(row.extra_customers)
+                            ? row.extra_customers
+                            : []
+                    )) {
+                        if (extra.id !== null && extra.id !== undefined) {
+                            mappedCustomerIds.add(String(extra.id));
+                        }
+                    }
+                }
+
+                // Show PPPoE sessions even before ONU hardware is synced.
+                const customerSessions = Array.isArray(result.customer_sessions)
+                    ? result.customer_sessions
+                    : [];
+
+                const customerOnlyRows = customerSessions
+                    .filter(session =>
+                        !mappedCustomerIds.has(String(session.customer_id))
+                    )
+                    .map(session => normalizeCustomerSession(session, olt));
+
                 return {
                     olt,
-                    rows: rows.map(row => normalizeOnu(row, olt))
+                    rows: [...onuRows, ...customerOnlyRows]
                 };
             })
         );
@@ -1417,7 +1507,7 @@ async function syncSelectedOlt(button, targetOltId) {
 
     try {
         const result = await apiPost(
-            `/api/olt/${encodeURIComponent(targetOltId)}/sync`
+            `/api/olt/${encodeURIComponent(targetOltId)}/sync/onu`
         );
 
         const details = result.data || {};

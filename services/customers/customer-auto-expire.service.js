@@ -93,6 +93,7 @@ async function run({ log = console.log, settings = {} } = {}) {
         "pppoe_username", "username", "user_name", "login"
     ]);
     const deletedCol = await firstColumn("customers", ["deleted_at"]);
+    const payCol = await firstColumn("customers", ["payment_status"]);
 
     if (!promiseCol || !userCol) {
         log("STOP: promise_date or PPPoE username column not found in customers table.");
@@ -113,7 +114,12 @@ async function run({ log = console.log, settings = {} } = {}) {
         (deletedCol ? `\`${deletedCol}\` IS NULL AND ` : "") +
         (autoCol ? `COALESCE(\`${autoCol}\`, 1) = 1 AND ` : "");
 
-    const counts = { expired: 0, reactivated: 0, skipped: 0, failed: 0 };
+    /* paid customers are never expired */
+    const unpaidOnly = payCol
+        ? ` AND LOWER(COALESCE(\`${payCol}\`, '')) <> 'paid'`
+        : "";
+
+    const counts = { expired: 0, renewed: 0, reactivated: 0, skipped: 0, failed: 0 };
 
     /* customers belong to many companies - one super session serves all routers */
     const session = ppp.createSession({ isSuper: true });
@@ -122,9 +128,10 @@ async function run({ log = console.log, settings = {} } = {}) {
 
         /* ---------- 1) EXPIRE ---------- */
         const [toExpire] = await db.query(
-            `SELECT id, company_id, name, mikrotik_id, \`${userCol}\` AS pppoe, \`${promiseCol}\` AS promise
+            `SELECT id, company_id, name, mikrotik_id, monthly_bill, balance,
+                    \`${userCol}\` AS pppoe, \`${promiseCol}\` AS promise
              FROM customers
-             WHERE ${common} LOWER(status) = 'active' AND ${expired}
+             WHERE ${common} LOWER(status) = 'active' AND ${expired}${unpaidOnly}
              ORDER BY id ASC
              LIMIT ?`,
             [cfg.MAX_PER_RUN]
@@ -137,6 +144,42 @@ async function run({ log = console.log, settings = {} } = {}) {
             const label = `#${cid} ${c.name} (${pppoe})`;
 
             try {
+
+                /*
+                 * Promise / billing date has passed:
+                 *   balance covers the monthly bill -> take it from balance,
+                 *   move billing cycle one month, customer stays Active.
+                 *   no balance                      -> expire (below).
+                 */
+                if (payCol && Number(c.monthly_bill) > 0 && Number(c.balance) >= Number(c.monthly_bill)) {
+
+                    const cycleSet = billingCol
+                        ? `, \`${billingCol}\` = CASE WHEN \`${billingCol}\` > '1000-01-01'
+                                 THEN DATE_ADD(\`${billingCol}\`, INTERVAL 1 MONTH)
+                                 ELSE \`${billingCol}\` END`
+                        : "";
+
+                    const [renew] = await db.query(
+                        `UPDATE customers
+                         SET balance = balance - monthly_bill,
+                             \`${payCol}\` = 'paid'${cycleSet}
+                         WHERE id = ? AND monthly_bill > 0 AND balance >= monthly_bill
+                         LIMIT 1`,
+                        [cid]
+                    );
+
+                    if (renew.affectedRows) {
+
+                        await activity(
+                            c, "auto_balance_deduct",
+                            `Auto renewed from balance: ${c.name} | Bill: ${c.monthly_bill} | Balance was: ${c.balance}`
+                        );
+
+                        counts.renewed++;
+                        log(`RENEWED ${label} (bill ${c.monthly_bill} taken from balance ${c.balance})`);
+                        continue;
+                    }
+                }
 
                 const routerId = await ppp.resolveRouter(session, {
                     customerId: cid, mikrotikId: Number(c.mikrotik_id || 0), pppoe
@@ -223,8 +266,8 @@ async function run({ log = console.log, settings = {} } = {}) {
         await session.closeAll();
     }
 
-    if (counts.expired || counts.failed || counts.skipped || counts.reactivated) {
-        log(`Finished: expired=${counts.expired}, reactivated=${counts.reactivated}, skipped=${counts.skipped}, failed=${counts.failed}`);
+    if (counts.expired || counts.renewed || counts.failed || counts.skipped || counts.reactivated) {
+        log(`Finished: expired=${counts.expired}, renewed=${counts.renewed}, reactivated=${counts.reactivated}, skipped=${counts.skipped}, failed=${counts.failed}`);
     } else {
         log("Nothing to expire.");
     }

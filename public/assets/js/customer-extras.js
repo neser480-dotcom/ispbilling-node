@@ -267,6 +267,127 @@
         if (count) count.textContent = String(sms);
     });
 
+
+    /* ---------- recharge popup: Select Month chips ---------- */
+
+    function chipsSync(root) {
+
+        const form = root.closest("form");
+        const names = Array.prototype.map.call(
+            root.querySelectorAll(".nf-chip"),
+            function (chip) { return chip.dataset.name; }
+        );
+
+        root.querySelectorAll(".nf-chips-item").forEach(function (item) {
+            item.classList.toggle("picked", names.indexOf(item.dataset.name) !== -1);
+        });
+
+        if (!form) return;
+
+        const select = form.querySelector("[data-recharge-month]");
+
+        if (select) {
+            select.value = String(Math.min(12, Math.max(1, names.length)));
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        const note = form.querySelector('input[name="comment"]');
+
+        if (note && !note.dataset.edited) {
+            note.value = names.join(", ");
+        }
+    }
+
+    function chipsAdd(root, name) {
+
+        if (!name) return;
+
+        if (root.querySelector('.nf-chip[data-name="' + name + '"]')) return;
+
+        if (root.querySelectorAll(".nf-chip").length >= 12) return;
+
+        const chip = document.createElement("span");
+        chip.className = "nf-chip";
+        chip.dataset.name = name;
+        chip.appendChild(document.createTextNode(name));
+
+        const x = document.createElement("b");
+        x.className = "nf-chip-x";
+        x.innerHTML = "&times;";
+        chip.appendChild(x);
+
+        root.querySelector(".nf-chips-list").appendChild(chip);
+    }
+
+    document.addEventListener("click", function (event) {
+
+        const root = event.target.closest("[data-nf-chips]");
+
+        document.querySelectorAll("[data-nf-chips] .nf-chips-menu.open").forEach(function (menu) {
+            if (!root || menu.parentNode !== root) menu.classList.remove("open");
+        });
+
+        if (!root) return;
+
+        const menu = root.querySelector(".nf-chips-menu");
+
+        const item = event.target.closest(".nf-chips-item");
+
+        if (item) {
+
+            /* choosing a month selects every month from the first one up to it */
+            const items = Array.prototype.slice.call(root.querySelectorAll(".nf-chips-item"));
+            const index = items.indexOf(item);
+
+            root.querySelectorAll(".nf-chip").forEach(function (chip) { chip.remove(); });
+
+            items.slice(0, index + 1).forEach(function (it) {
+                chipsAdd(root, it.dataset.name);
+            });
+
+            chipsSync(root);
+            menu.classList.remove("open");
+            return;
+        }
+
+        const remove = event.target.closest(".nf-chip-x");
+
+        if (remove) {
+
+            /* the first month is always kept; removing a month removes the later ones too */
+            const chips = Array.prototype.slice.call(root.querySelectorAll(".nf-chip"));
+            const index = chips.indexOf(remove.closest(".nf-chip"));
+
+            if (index > 0) {
+                chips.slice(index).forEach(function (chip) { chip.remove(); });
+            }
+
+            chipsSync(root);
+            return;
+        }
+
+        if (event.target.closest(".nf-chips-clear")) {
+
+            Array.prototype.slice.call(root.querySelectorAll(".nf-chip"), 1).forEach(function (chip) {
+                chip.remove();
+            });
+
+            chipsSync(root);
+            return;
+        }
+
+        if (event.target.closest(".nf-chips-box")) {
+            menu.classList.toggle("open");
+        }
+    });
+
+    document.addEventListener("input", function (event) {
+
+        const note = event.target.closest('.netfee-recharge-form input[name="comment"]');
+
+        if (note) note.dataset.edited = "1";
+    });
+
     /* ---------- reset password ---------- */
 
     document.addEventListener("change", function (event) {

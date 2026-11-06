@@ -319,11 +319,13 @@ async function loadContext(conn, company, olt, entries, sessions) {
     }));
 
     const [mappingRows] = await conn.execute(
-        // Join onu: links left behind by a deleted OLT (orphans) must not
-        // make a customer look "already linked" to an ONU that is gone.
         `SELECT m.onu_id, m.customer_id
            FROM onu_user_mapping AS m
            JOIN onu AS o ON o.id = m.onu_id
+                         AND o.olt_id = m.olt_id
+           JOIN olts AS ol ON ol.id = m.olt_id
+                          AND ol.company_id = m.company_id
+                          AND ol.deleted_at IS NULL
           WHERE m.company_id = ?`,
         [company]
     );
@@ -346,6 +348,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
         `SELECT o.id, o.customer_id
            FROM onu AS o
            JOIN olts AS ol ON ol.id = o.olt_id
+                          AND ol.deleted_at IS NULL
           WHERE ol.company_id = ?
             AND o.customer_id IS NOT NULL
             AND o.customer_id <> 0`,
@@ -502,6 +505,10 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
         `SELECT m.onu_id
            FROM onu_user_mapping AS m
            JOIN onu AS o ON o.id = m.onu_id
+                         AND o.olt_id = m.olt_id
+           JOIN olts AS ol ON ol.id = m.olt_id
+                          AND ol.company_id = m.company_id
+                          AND ol.deleted_at IS NULL
           WHERE m.company_id = ? AND m.customer_id = ?
           LIMIT 1`,
         [company, customerId]
@@ -513,6 +520,7 @@ async function writeLink(conn, company, olt, decision, relinkUnlinked = true) {
         `SELECT o.id
            FROM onu AS o
            JOIN olts AS ol ON ol.id = o.olt_id
+                          AND ol.deleted_at IS NULL
           WHERE ol.company_id = ? AND o.customer_id = ?
           LIMIT 1`,
         [company, customerId]
@@ -627,11 +635,18 @@ async function writeOnuPppInfo(
         }
 
         const [existing] = await conn.execute(
-            `SELECT p.onu_id
+            `SELECT p.id, p.olt_id, p.onu_id, p.customer_id,
+                    p.pppoe_username, p.caller_id, p.ip_address,
+                    p.updated_at,
+                    old_olt.id AS active_olt_id
                FROM onu_ppp_info AS p
-               JOIN onu AS o ON o.id = p.onu_id
+               LEFT JOIN olts AS old_olt
+                 ON old_olt.id = p.olt_id
+                AND old_olt.company_id = p.company_id
+                AND old_olt.deleted_at IS NULL
               WHERE p.company_id = ? AND p.customer_id = ?
-              LIMIT 1`,
+              LIMIT 1
+              FOR UPDATE`,
             [company, item.customerId]
         );
 
@@ -639,52 +654,110 @@ async function writeOnuPppInfo(
             existing.length &&
             Number(existing[0].onu_id) !== Number(onuId)
         ) {
-            result.conflicts++;
-            continue;
-        }
+            // Never move a customer away from another active OLT.
+            if (existing[0].active_olt_id != null) {
+                result.conflicts++;
+                continue;
+            }
 
-        if (dryRun) {
-            // This is a count of would-save records, not persisted rows.
+            if (dryRun) {
+                result.saved++;
+                continue;
+            }
+
+            const old = existing[0];
+
+            // Preserve the previous current mapping before replacing it.
+            await conn.execute(
+                `INSERT INTO onu_ppp_info_history
+                    (source_id, company_id, olt_id, onu_id, customer_id,
+                     pppoe_username, caller_id, ip_address,
+                     original_updated_at, replaced_by_olt_id,
+                     replaced_by_onu_id, reason)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    old.id,
+                    company,
+                    old.olt_id,
+                    old.onu_id,
+                    old.customer_id,
+                    old.pppoe_username,
+                    old.caller_id,
+                    old.ip_address,
+                    old.updated_at,
+                    olt,
+                    onuId,
+                    'olt_remap'
+                ]
+            );
+
+            // Keep the same current row; only move its active mapping.
+            const [updated] = await conn.execute(
+                `UPDATE onu_ppp_info
+                    SET olt_id = ?, onu_id = ?, pppoe_username = ?,
+                        caller_id = ?, ip_address = ?
+                  WHERE id = ? AND company_id = ? AND customer_id = ?`,
+                [
+                    olt,
+                    onuId,
+                    item.username,
+                    item.callerId,
+                    item.ip,
+                    old.id,
+                    company,
+                    item.customerId
+                ]
+            );
+
+            if (!updated.affectedRows) {
+                throw new Error(
+                    `Could not update PPP mapping for customer ${item.customerId}`
+                );
+            }
+
             result.saved++;
             continue;
         }
 
-        // Cache row of a deleted ONU/OLT: drop it so the live session can
-        // be saved against the current ONU.
-        await conn.execute(
-            `DELETE p
-               FROM onu_ppp_info AS p
-               LEFT JOIN onu AS o ON o.id = p.onu_id
-              WHERE p.company_id = ? AND p.customer_id = ?
-                AND o.id IS NULL`,
-            [company, item.customerId]
-        );
+        if (dryRun) {
+            result.saved++;
+            continue;
+        }
 
-        await conn.execute(
-            `INSERT INTO onu_ppp_info
-                (company_id, olt_id, onu_id, customer_id,
-                 pppoe_username, caller_id, ip_address)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-                olt_id = IF(onu_id = VALUES(onu_id),
-                            VALUES(olt_id), olt_id),
-                pppoe_username = IF(onu_id = VALUES(onu_id),
-                                    VALUES(pppoe_username),
-                                    pppoe_username),
-                caller_id = IF(onu_id = VALUES(onu_id),
-                               VALUES(caller_id), caller_id),
-                ip_address = IF(onu_id = VALUES(onu_id),
-                                VALUES(ip_address), ip_address)`,
-            [
-                company,
-                olt,
-                onuId,
-                item.customerId,
-                item.username,
-                item.callerId,
-                item.ip
-            ]
-        );
+        if (existing.length) {
+            await conn.execute(
+                `UPDATE onu_ppp_info
+                    SET olt_id = ?, onu_id = ?, pppoe_username = ?,
+                        caller_id = ?, ip_address = ?
+                  WHERE id = ? AND company_id = ? AND customer_id = ?`,
+                [
+                    olt,
+                    onuId,
+                    item.username,
+                    item.callerId,
+                    item.ip,
+                    existing[0].id,
+                    company,
+                    item.customerId
+                ]
+            );
+        } else {
+            await conn.execute(
+                `INSERT INTO onu_ppp_info
+                    (company_id, olt_id, onu_id, customer_id,
+                     pppoe_username, caller_id, ip_address)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    company,
+                    olt,
+                    onuId,
+                    item.customerId,
+                    item.username,
+                    item.callerId,
+                    item.ip
+                ]
+            );
+        }
 
         result.saved++;
     }
@@ -1003,3 +1076,5 @@ module.exports = {
     decide,
     autoMapOnus
 };
+
+

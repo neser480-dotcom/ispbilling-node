@@ -784,8 +784,8 @@ function normalizeVendor(value) {
               </button>
 
               <button type="button" class="olt-icon-btn"
-                data-action="sync" data-id="${olt.id}"
-                title="Sync ONU">
+                data-action="sync-customers" data-id="${olt.id}"
+                title="Sync Customers &amp; Mapping">
                 <i class="fa-solid fa-rotate"></i>
               </button>
 
@@ -994,7 +994,7 @@ function normalizeVendor(value) {
 
     if (
       action === "delete" &&
-      !confirm("এই OLT এবং এর ONU records delete করতে চাও?")
+      !confirm("এই OLT delete করতে চাও? ONU ও customer mapping থেকে যাবে।")
     ) {
       return;
     }
@@ -1021,7 +1021,8 @@ function normalizeVendor(value) {
         });
       } else {
         result = await apiRequest(
-          "/api/olt/" + id + "/" + action,
+          "/api/olt/" + id + "/" +
+            (action === "sync-customers" ? "sync/customers" : action),
           {
             method: "POST",
             headers: {

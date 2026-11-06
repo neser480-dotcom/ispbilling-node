@@ -115,6 +115,27 @@ function nullableNumber(value) {
     return Number.isFinite(number) ? number : null;
 }
 
+/*
+ * Real slot/port label shown on the OLT Users page.
+ * Drivers return pon as a plain number plus f_s ("0/1"), so
+ *   Ecom  -> epon0/1/2
+ *   CData -> pon0/0/2
+ * A value that already looks like a label is kept as it is.
+ */
+function ponLabel(row, olt) {
+    const raw = String(row.pon ?? '').trim();
+    const fs = String(row.f_s ?? row.fs ?? '').trim();
+
+    if (!/^\d+$/.test(raw) || !/^\d+\/\d+$/.test(fs)) {
+        return raw;
+    }
+
+    const vendor = String((olt && olt.vendor) || '').toLowerCase();
+    const prefix = vendor.includes('cdata') ? 'pon' : 'epon';
+
+    return `${prefix}${fs}/${raw}`;
+}
+
 function normalizeRow(row) {
     const macValue =
         row.mac ??
@@ -339,7 +360,11 @@ async function syncOnus(pool, olt) {
 
     const normalized = rows
         .filter(row => row && typeof row === 'object')
-        .map(normalizeRow);
+        .map(row => {
+            const item = normalizeRow(row);
+            item.pon = ponLabel(item, olt);
+            return item;
+        });
 
     if (!normalized.length) {
         throw new Error(

@@ -172,7 +172,7 @@ function normalizeText(value) {
 function cleanNumber(value) {
     const v = String(value ?? "")
         .replace(/,/g, "")
-        .replace(/৳/g, "")
+        .replace(/à§³/g, "")
         .replace(/BDT/gi, "")
         .replace(/\s/g, "");
 
@@ -1061,13 +1061,13 @@ async function importCsv({ user, file }) {
 
             if (areaText && !areaId) {
                 report.messages.push(
-                    `Line ${line}: area "${areaText}" not found - customer added without area.`
+                    `Line ${line}: area "${areaText}" not found - customer will be skipped.`
                 );
             }
 
             if (subAreaText && !subAreaId) {
                 report.messages.push(
-                    `Line ${line}: sub-area "${subAreaText}" not found - customer added without sub-area.`
+                    `Line ${line}: sub-area "${subAreaText}" not found - customer will be skipped.`
                 );
             }
 
@@ -1084,9 +1084,10 @@ async function importCsv({ user, file }) {
 
             let mikrotikId = null;
 
-            // 1. CSV MikroTik ID
+            // 1. Resolve CSV MikroTik by ID or server name.
             if (clientMikrotik) {
-                const csvMikrotikId = Number(clientMikrotik);
+                const csvMikrotikText = String(clientMikrotik).trim();
+                const csvMikrotikId = Number(csvMikrotikText);
 
                 if (
                     Number.isInteger(csvMikrotikId) &&
@@ -1095,9 +1096,21 @@ async function importCsv({ user, file }) {
                 ) {
                     mikrotikId = csvMikrotikId;
                 } else {
-                    report.messages.push(
-                        `Line ${line}: MikroTik ID "${clientMikrotik}" is invalid for this company.`
+                    const matchingServers = mikrotikServers.filter(
+                        server =>
+                            normalizeText(server.name) ===
+                            normalizeText(csvMikrotikText)
                     );
+
+                    if (matchingServers.length === 1) {
+                        mikrotikId = Number(matchingServers[0].id);
+                    } else {
+                        report.messages.push(
+                            matchingServers.length > 1
+                                ? `Line ${line}: MikroTik name "${csvMikrotikText}" is ambiguous for this company.`
+                                : `Line ${line}: MikroTik "${csvMikrotikText}" not found for this company.`
+                        );
+                    }
                 }
             }
 
@@ -1136,14 +1149,114 @@ async function importCsv({ user, file }) {
                 );
             }
 
-            if (!mikrotikId) {
-                report.messages.push(
-                    `Line ${line}: MikroTik server could not be determined. Customer imported without MikroTik mapping.`
-                );
-            }
 
             /*
             |--------------------------------------------------------------------------
+            | REQUIRED CUSTOMER MAPPING VALIDATION
+            |--------------------------------------------------------------------------
+            */
+
+            if (!mikrotikId) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: MikroTik server is required. Customer skipped.`
+                );
+                continue;
+            }
+
+            const [validAreaRows] = await conn.query(
+                `
+                    SELECT id
+                    FROM areas
+                    WHERE id = ?
+                      AND company_id = ?
+                      AND (mikrotik_id = ? OR mikrotik_id IS NULL)
+                    LIMIT 1
+                `,
+                [areaId, companyId, mikrotikId]
+            );
+
+            if (!areaId || !validAreaRows.length) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: valid Area is required. Customer skipped.`
+                );
+                continue;
+            }
+
+            const [validSubAreaRows] = await conn.query(
+                `
+                    SELECT id
+                    FROM sub_areas
+                    WHERE id = ?
+                      AND area_id = ?
+                      AND company_id = ?
+                    LIMIT 1
+                `,
+                [subAreaId, areaId, companyId]
+            );
+
+            if (!subAreaId || !validSubAreaRows.length) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: valid Sub-area is required. Customer skipped.`
+                );
+                continue;
+            }
+
+            const packageText = get(row, "package");
+
+            if (!packageText) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: Package is required. Customer skipped.`
+                );
+                continue;
+            }
+
+            const [packageRows] = await conn.query(
+                `
+                    SELECT id, package_name, price
+                    FROM mikrotik_packages
+                    WHERE company_id = ?
+                      AND router_id = ?
+                      AND LOWER(TRIM(package_name)) = LOWER(TRIM(?))
+                    LIMIT 1
+                `,
+                [companyId, mikrotikId, packageText]
+            );
+
+            if (!packageRows.length) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: Package "${packageText}" not found for this MikroTik. Customer skipped.`
+                );
+                continue;
+            }
+
+            const selectedPackage = packageRows[0];
+            const packageId = Number(selectedPackage.id);
+            const monthlyBill = Number(selectedPackage.price || 0);
+
+            const requiredMappingColumns = [
+                "mikrotik_id",
+                "package_id",
+                "area_id",
+                "sub_area_id"
+            ];
+
+            const missingMappingColumns = requiredMappingColumns.filter(
+                column => !actual.has(column)
+            );
+
+            if (missingMappingColumns.length) {
+                report.errors++;
+                report.messages.push(
+                    `Line ${line}: Required database columns missing: ${missingMappingColumns.join(", ")}.`
+                );
+                continue;
+            }
+            /*
             | BUILD CUSTOMER
             |--------------------------------------------------------------------------
             */
@@ -1163,6 +1276,10 @@ async function importCsv({ user, file }) {
                 mikrotik_id:
                     mikrotikId,
 
+                
+                package_id:
+                    packageId,
+
                 phone:
                     get(row, "phone"),
 
@@ -1170,12 +1287,10 @@ async function importCsv({ user, file }) {
                     get(row, "address"),
 
                 package_name:
-                    get(row, "package"),
+                    selectedPackage.package_name,
 
                 monthly_bill:
-                    cleanNumber(
-                        get(row, "monthly_bill")
-                    ),
+                    monthlyBill,
 
                 status:
                     mapStatus(
@@ -1403,3 +1518,6 @@ module.exports = {
     exportCsv,
     importCsv
 };
+
+
+
