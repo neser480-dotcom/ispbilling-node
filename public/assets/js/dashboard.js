@@ -310,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="mf-notice mf-${level}">
                     <i class="fa-solid fa-triangle-exclamation mf-ico"></i>
                     <div class="mf-text">
-                        NetFee Monthly Fee
+                        Amader billing
                         <span class="mf-chip">${esc(taka(currentBilling.amount || 0))} Tk</span>.
                         Please make payment before
                         <span class="mf-chip">${esc(dueText)}</span>
