@@ -172,7 +172,7 @@ function normalizeText(value) {
 function cleanNumber(value) {
     const v = String(value ?? "")
         .replace(/,/g, "")
-        .replace(/à§³/g, "")
+        .replace(/(?:\u09F3|\u00C3\u00A0\u00C2\u00A7\u00C2\u00B3|\u00E0\u00A7\u00B3)/g, "")
         .replace(/BDT/gi, "")
         .replace(/\s/g, "");
 
