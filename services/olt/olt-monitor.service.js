@@ -722,6 +722,12 @@ function parseCDataSystem(outputs, olt) {
         deviceText.match(/\bCSM\s*[:=]\s*(.+)/i) || []
     )[1]?.trim() ?? null;
 
+    const kernelVersion = (
+        versionText.match(/Kernel version\s*:\s*(.+)/i) || []
+    )[1]?.trim() ?? null;
+
+    const modules = parseBoardModules(boardText, olt && olt.pon_ports);
+
     /*
      * Do not invent PSU voltage, channel voltage or power wattage.
      * The supplied "show power state" output provides slot statuses only.
@@ -735,6 +741,7 @@ function parseCDataSystem(outputs, olt) {
         hardware,
         webVersion,
         softwareVersion,
+        kernelVersion,
         serial,
         deviceMac,
 
@@ -775,17 +782,213 @@ function parseCDataSystem(outputs, olt) {
         powerSlots,
         registerStats,
         board: boardText || null,
+        modules,
 
         /*
          * These values remain null until a supported CLI command
          * returns actual voltage or wattage measurements.
          */
-        psu: [],
+        psu: powerSlots.map(item => ({
+            name: `PSU Slot ${item.slot}`,
+            slot: item.slot,
+            present: item.working,
+            powerState: item.working ? "ON" : "OFF",
+            status: item.status,
+            type: "Not reported",
+            input: "Not reported",
+            output: "Not reported",
+            load: "Not reported"
+        })),
         voltage: null,
         voltageChannels: [],
         voltageChannel0: null,
         devicePowerW: null
     };
+}
+
+/*
+|--------------------------------------------------------------------------
+| C-DATA EXTRAS: DDM re-read, board modules, alarms/events
+|--------------------------------------------------------------------------
+*/
+
+function nowStamp() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+        " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+
+// Fills only the values that are still empty, from a second read.
+async function fillMissingDdm(ports, reread) {
+    if (
+        !ports.length ||
+        !ports.some(port => port.missing_fields && port.missing_fields.length)
+    ) {
+        return ports;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    let again = [];
+
+    try {
+        again = parseCDataDdm(await reread());
+    } catch (_) {
+        return ports;
+    }
+
+    return ports.map(port => {
+        const next = again.find(item => item.id === port.id);
+
+        if (!next) return port;
+
+        const merged = { ...port };
+
+        for (const field of DDM_FIELDS) {
+            if (
+                (merged[field] === null || merged[field] === undefined) &&
+                next[field] !== null &&
+                next[field] !== undefined
+            ) {
+                merged[field] = next[field];
+            }
+        }
+
+        const missing = DDM_FIELDS.filter(
+            field => merged[field] === null || merged[field] === undefined
+        );
+
+        merged.missing_fields = missing;
+        merged.status = missing.length ? "partial" : "ok";
+
+        return merged;
+    });
+}
+
+// "show board" row:  0   FD1204   191:11:44:01   Normal   --
+function parseBoardModules(boardText, ponCount) {
+    const count = Math.min(
+        Math.max(Number(ponCount) || CDATA_PON_PORTS.length, 1),
+        CDATA_PON_PORTS.length
+    );
+
+    const first = CDATA_PON_PORTS[0];
+    const last = CDATA_PON_PORTS[count - 1];
+
+    return [
+        ...cleanOutput(boardText).matchAll(
+            /^\s*(\d+)\s+(\S+)\s+(\d+):(\d+):(\d+):(\d+)\s+(\S+)(?:\s+(.*))?$/gm
+        )
+    ].map(match => {
+        const reason = String(match[8] || "").trim();
+
+        return {
+            name: "Slot " + match[1] +
+                " (plugged " + Number(match[3]) + "d " + Number(match[4]) + "h)",
+            type: match[2],
+            range: count + " PON ports (" + first + " - " + last + ")",
+            status: match[7] + (reason && reason !== "--" ? " - " + reason : "")
+        };
+    });
+}
+
+// Defensive parser for "show alarm ... all" / "show event history all".
+// Header, separator, prompt and error lines are skipped; nothing is invented.
+function parseDeviceRecords(text, source) {
+    const skip = [
+        /^[-=\s]*$/,
+        /^show\s/i,
+        /\(config\)#|#\s*$/,
+        /command incomplete|unknown command|no matched command|^%/i,
+        /^(?:alarm\s?id|event\s?id|index|no\.?|time)\b/i,
+        /total number/i,
+        /\bno\s+(?:\w+\s+){0,2}(?:record|alarm|event)s?\b/i,
+        /\b(?:0|zero)\s+(?:record|alarm|event)s?\b/i
+    ];
+
+    const levelOf = line =>
+        /\bcrit(?:ical)?\b/i.test(line) ? "Critical" :
+        /\berr(?:or)?\b/i.test(line) ? "Error" :
+        /\bwarn(?:ing)?\b/i.test(line) ? "Warning" :
+        "Info";
+
+    const records = cleanOutput(text)
+        .split("\n")
+        .map(line => line.replace(/\s+/g, " ").trim())
+        .filter(line => line && !skip.some(re => re.test(line)))
+        .map(line => {
+            const stamp = line.match(
+                /\d{4}[-\/]\d{2}[-\/]\d{2}[ T]\d{2}:\d{2}:\d{2}/
+            );
+
+            return {
+                time: stamp
+                    ? stamp[0].replace(/\//g, "-").replace("T", " ")
+                    : "-",
+                event: line.slice(0, 160),
+                source,
+                level: levelOf(line),
+                derived: false
+            };
+        });
+
+    if (records.length && records.every(record => record.time !== "-")) {
+        records.sort((a, b) =>
+            a.time < b.time ? 1 : a.time > b.time ? -1 : 0
+        );
+    }
+
+    return records.slice(0, 10);
+}
+
+// Current conditions that are really visible in the data we already read.
+function buildDerivedEvents(system, ports) {
+    const time = nowStamp();
+    const events = [];
+
+    for (const slot of (system && system.powerSlots) || []) {
+        if (!slot.working) {
+            events.push({
+                time,
+                event: "Power supply slot " + slot.slot +
+                    " is not working (no power redundancy)",
+                source: "PSU",
+                level: "Warning",
+                derived: true
+            });
+        }
+    }
+
+    for (const fan of (system && system.fan && system.fan.fans) || []) {
+        if (!/normal|ok/i.test(String(fan.status))) {
+            events.push({
+                time,
+                event: fan.name + " status: " + fan.status,
+                source: "FAN",
+                level: "Error",
+                derived: true
+            });
+        }
+    }
+
+    for (const port of ports || []) {
+        if (
+            Array.isArray(port.missing_fields) &&
+            port.missing_fields.includes("rx")
+        ) {
+            events.push({
+                time,
+                event: port.name + ": no RX power reading from the OLT",
+                source: "PON " + String(port.id).split("/").pop(),
+                level: "Info",
+                derived: true
+            });
+        }
+    }
+
+    return events;
 }
 
 /*
@@ -800,6 +1003,8 @@ async function readCDataLiveDdm(olt) {
 
     let ports = [];
     let system = null;
+    let events = [];
+    let inConfig = false;
 
     try {
         await driver.connect();
@@ -827,19 +1032,6 @@ async function readCDataLiveDdm(olt) {
 
         ports = parseCDataDdm(ddmOutput);
 
-        if (!ports.length) {
-            const sample = cleanOutput(ddmOutput)
-                .split("\n")
-                .map(line => line.trim())
-                .filter(Boolean)
-                .slice(0, 12)
-                .join(" // ")
-                .slice(0, 700);
-
-            warnings.push(
-                "show ddm-info all raw output: " + (sample || "(empty)")
-            );
-        }
 
         for (const id of CDATA_PON_PORTS) {
             const found = ports.some(
@@ -901,6 +1093,132 @@ async function readCDataLiveDdm(olt) {
 
         system = parseCDataSystem(outputs, olt);
 
+        // DDM commands live in config mode (like the ONU commands). This runs
+        // LAST, so nothing here can affect the telemetry read above.
+        if (
+            !ports.some(
+                port =>
+                    port.status === "ok" ||
+                    port.status === "partial"
+            )
+        ) {
+            const brief = text =>
+                cleanOutput(text)
+                    .split("\n")
+                    .map(line => line.trim())
+                    .filter(Boolean)
+                    .slice(0, 14)
+                    .join(" // ")
+                    .slice(0, 500) || "(empty)";
+
+            const words = text =>
+                [
+                    ...new Set(
+                        cleanOutput(text)
+                            .split("\n")
+                            .map(line => line.trim())
+                            .filter(
+                                line =>
+                                    line &&
+                                    !/^%/.test(line) &&
+                                    !/^show\b/i.test(line) &&
+                                    !/#\s*$/.test(line)
+                            )
+                            .map(line => line.split(/\s+/)[0])
+                    )
+                ].join(", ").slice(0, 2500) || "(empty)";
+
+            const ask = async command => {
+                try {
+                    return await driver.command(command, 20000);
+                } catch (error) {
+                    return (
+                        "ERROR " +
+                        String(error?.message || "").slice(0, 80)
+                    );
+                }
+            };
+
+            const attempts = [];
+
+            try {
+                await driver.enterConfig();
+                inConfig = true;
+
+                const all = await ask("show ddm-info all");
+
+                ports = parseCDataDdm(all);
+
+                // The OLT sometimes leaves RX empty for one read; read once more.
+                ports = await fillMissingDdm(
+                    ports,
+                    () => ask("show ddm-info all")
+                );
+
+                if (!ports.length) {
+                    attempts.push(
+                        "[config] show ddm-info all => " + brief(all)
+                    );
+
+                    for (const id of CDATA_PON_PORTS) {
+                        const output = await ask(
+                            `show port ddm-info epon ${id}`
+                        );
+
+                        const port = finalizePort(parseDdm(output, id));
+
+                        if (port.status !== "unavailable") {
+                            ports.push(port);
+                        } else if (id === CDATA_PON_PORTS[0]) {
+                            attempts.push(
+                                `[config] show port ddm-info epon ${id} => ` +
+                                brief(output)
+                            );
+                        }
+                    }
+                }
+
+                if (!ports.length) {
+                    attempts.push(
+                        "[config] show ? => " + words(await ask("show ?"))
+                    );
+
+                    const entered = await ask("interface epon 0/0");
+
+                    if (/no matched|unknown|invalid|incomplete|ERROR/i.test(entered)) {
+                        attempts.push(
+                            "interface epon 0/0 => " + brief(entered)
+                        );
+                    } else {
+                        attempts.push(
+                            "[interface epon 0/0] show ? => " +
+                            words(await ask("show ?"))
+                        );
+                    }
+                }
+            } catch (error) {
+                attempts.push(
+                    "ERROR " + String(error?.message || "").slice(0, 80)
+                );
+            }
+
+            if (ports.length) {
+                ports.sort((a, b) =>
+                    a.id.localeCompare(b.id, undefined, { numeric: true })
+                );
+
+                for (let i = warnings.length - 1; i >= 0; i--) {
+                    if (/DDM row was not found/.test(warnings[i])) {
+                        warnings.splice(i, 1);
+                    }
+                }
+            } else {
+                warnings.push(
+                    "DDM command probe: " + attempts.join(" ## ")
+                );
+            }
+        }
+
         if (
             !ports.some(
                 port =>
@@ -913,6 +1231,43 @@ async function readCDataLiveDdm(olt) {
                 "The current firmware may not support 'show ddm-info all'."
             );
         }
+
+        // Device alarms / events (read-only "show" commands).
+        try {
+            if (!inConfig) {
+                await driver.enterConfig();
+                inConfig = true;
+            }
+
+            const readRecords = async (command, label) => {
+                try {
+                    return parseDeviceRecords(
+                        await driver.command(command, 15000),
+                        label
+                    );
+                } catch (error) {
+                    warnings.push(
+                        command + ": " +
+                        String((error && error.message) || "failed").slice(0, 100)
+                    );
+
+                    return [];
+                }
+            };
+
+            events = [
+                ...(await readRecords("show alarm active all", "Alarm (active)")),
+                ...(await readRecords("show alarm history all", "Alarm (history)")),
+                ...(await readRecords("show event history all", "Event (history)"))
+            ];
+        } catch (error) {
+            warnings.push(
+                "Device alarm/event read failed: " +
+                String((error && error.message) || "").slice(0, 100)
+            );
+        }
+
+        events = [...buildDerivedEvents(system, ports), ...events];
     } catch (error) {
         warnings.push(
             `OLT ${olt.id}: ${String(
@@ -938,7 +1293,8 @@ async function readCDataLiveDdm(olt) {
     return {
         ports,
         warnings,
-        system
+        system,
+        events
     };
 }
 
@@ -1108,6 +1464,10 @@ module.exports = {
     parseCDataDdm,
     parseSystemTelemetry,
     parseCDataSystem,
+    parseBoardModules,
+    parseDeviceRecords,
+    buildDerivedEvents,
+    fillMissingDdm,
     PON_PORTS,
     CDATA_PON_PORTS
 };

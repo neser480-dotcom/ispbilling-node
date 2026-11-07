@@ -46,6 +46,15 @@
         return "neutral";
     }
 
+    // A PON is active when it has online ONUs; falls back to the DDM status.
+    function isActivePon(port, onuKnown) {
+        if (onuKnown && port.totalOnu !== null && port.totalOnu !== undefined) {
+            return port.onlineOnu > 0;
+        }
+
+        return statusClass(port.status) === "good";
+    }
+
     function pill(status) {
         return `<span class="om-pill ${statusClass(status)}">
             <i class="om-dot"></i>${escapeHtml(status)}
@@ -191,11 +200,13 @@
         const pons = portSource.map((port, index) => ({
             n: getPonNumber(port, index),
             id: String(port.id ?? port.pon ?? ""),
-            tx: port.tx ?? "N/A",
-            rx: port.rx ?? "N/A",
-            bias: port.bias ?? "N/A",
-            temp: port.temp ?? "N/A",
-            voltage: port.voltage ?? "N/A",
+            tx: port.tx ?? "No reading",
+            rx: port.rx ?? "No reading",
+            bias: port.bias ?? "No reading",
+            temp: port.temp ?? "No reading",
+            voltage: port.voltage ?? "No reading",
+            totalOnu: numberOrNull(port.totalOnu),
+            onlineOnu: numberOrNull(port.onlineOnu),
             status: port.status ?? "No DDM data",
             detail: port.error
                 ? String(port.error)
@@ -277,13 +288,13 @@
 
         const voltage = voltageValue !== null
             ? `${displayNumber(voltageValue, 2)} V`
-            : "N/A";
+            : "Not reported by this OLT";
 
         const powerValue = numberOrNull(system.devicePowerW);
 
         const devicePower = powerValue !== null
             ? `${displayNumber(powerValue, 2)} W`
-            : "Not reported by device";
+            : "Not reported by this OLT";
 
         const powerSlots = Array.isArray(system.powerSlots)
             ? system.powerSlots
@@ -295,8 +306,10 @@
             ).join(" | ")
             : "N/A";
 
+        const onuKnown = pons.some((port) => port.totalOnu > 0);
+
         const activePorts = pons.filter(
-            (port) => statusClass(port.status) === "good"
+            (port) => isActivePon(port, onuKnown)
         ).length;
 
         const hasLiveDdm = rawPorts.length > 0;
@@ -320,6 +333,7 @@
             hardware: system.hardware ?? data.hardware ?? olt.hardware ?? "N/A",
             firmware: system.firmware ?? data.firmware ?? olt.firmware ?? "N/A",
             softwareVersion: system.softwareVersion ?? "N/A",
+            kernelVersion: system.kernelVersion ?? "N/A",
             webVersion: system.webVersion ?? "N/A",
             serial: system.serial ?? data.serial ?? olt.serial ?? "N/A",
             deviceMac: system.deviceMac ?? "N/A",
@@ -373,6 +387,7 @@
                     : [],
 
             pons,
+            onuKnown,
             alarms: Array.isArray(data.alarms) ? data.alarms : [],
             warnings: Array.isArray(data.warnings) ? data.warnings : []
         };
@@ -411,8 +426,18 @@
                 kv("Bias Current", `${pon.bias} mA`),
                 kv("Temperature", `${pon.temp} °C`),
                 kv("Voltage", `${pon.voltage} V`),
+                kv(
+                    "ONUs Online / Total",
+                    pon.onlineOnu === null
+                        ? "No ONU data"
+                        : pon.onlineOnu + " / " + pon.totalOnu
+                ),
                 kv("Details", pon.detail)
-            ].join("");
+            ].join("").replace(
+                // no unit after a missing value ("No reading dBm" -> "No reading")
+                /No reading\s*(?:dBm|mA|°C|V)/g,
+                "No reading"
+            );
         }
     }
 
@@ -443,12 +468,24 @@
                 kv("Model", olt.model),
                 kv("Hardware Version", olt.hardware),
                 kv("Firmware Version", olt.firmware),
-                kv("Software Version", olt.softwareVersion),
+                olt.softwareVersion !== "N/A"
+                    ? kv("Software Version", olt.softwareVersion)
+                    : kv(
+                        "Kernel Version",
+                        olt.kernelVersion !== "N/A"
+                            ? olt.kernelVersion
+                            : "Not reported by this OLT"
+                    ),
                 kv("Web Version", olt.webVersion),
                 kv("Serial Number", olt.serial),
                 kv("Device MAC", olt.deviceMac),
                 kv("IP Address", olt.ip),
-                kv("Location", olt.location)
+                kv(
+                    "Location",
+                    olt.location && olt.location !== "N/A"
+                        ? olt.location
+                        : "Not set"
+                )
             ].join("");
         }
 
@@ -489,7 +526,7 @@
             ponOverview.innerHTML = [
                 stat("Total PON Ports", olt.ports),
                 stat("Active PON Ports", olt.pons.filter(
-                    (port) => statusClass(port.status) === "good"
+                    (port) => isActivePon(port, olt.onuKnown)
                 ).length),
                 stat("Total ONUs", olt.totalOnu),
                 stat("Online ONUs", olt.activeOnu),
@@ -611,7 +648,7 @@
                     4,
                     olt.warnings.length
                         ? `Warnings: ${olt.warnings.join(" | ")}`
-                        : "No alarm data supplied by the API."
+                        : "No events reported by the OLT."
                 );
         }
 

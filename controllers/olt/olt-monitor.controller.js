@@ -114,10 +114,7 @@ async function getScopedOlts(req, selectedId) {
 
     const [rows] = await getPool().execute(
         `SELECT
-            id, company_id, name, vendor, model, ip, port,
-            username, password, status, pon_ports, cpu, memory,
-            temperature, uptime, onu_total, onu_online,
-            onu_offline, last_check
+            *
          FROM olts
          WHERE ${conditions.join(" AND ")}
          ORDER BY id ASC`,
@@ -295,6 +292,7 @@ async function getLiveForOlt(olt) {
         return {
             ports: Array.isArray(result?.ports) ? result.ports : [],
             system: result?.system || null,
+            events: Array.isArray(result?.events) ? result.events : [],
             warnings: Array.isArray(result?.warnings) ? result.warnings : []
         };
     } catch (error) {
@@ -463,6 +461,71 @@ async function getSelectedOltData(olt, counts, onuRows) {
     };
 }
 
+function nowStamp() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+        " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+
+async function getOnuRows(oltId) {
+    try {
+        const [rows] = await getPool().execute(
+            "SELECT pon, status FROM onu WHERE olt_id = ?",
+            [oltId]
+        );
+
+        return rows;
+    } catch (_) {
+        return [];
+    }
+}
+
+// Adds the real ONU totals of each PON port to the live DDM rows.
+function enrichLivePorts(ports, onuRows) {
+    return ports.map(port => {
+        const matching = onuRows.filter(
+            onu => ponMatches(onu.pon, port.id)
+        );
+
+        return {
+            ...port,
+            totalOnu: matching.length,
+            onlineOnu: matching.filter(onu => isOnline(onu.status)).length
+        };
+    });
+}
+
+function buildLiveAlarms(olt, deviceEvents, counts) {
+    const time = nowStamp();
+    const own = [];
+
+    if (!isOnline(olt.status)) {
+        own.push({
+            time,
+            event: "OLT status is " + (olt.status || "unknown"),
+            source: olt.name || "OLT",
+            level: "Warning"
+        });
+    }
+
+    if (counts.offline > 0) {
+        own.push({
+            time,
+            event: counts.offline + " of " + counts.total + " ONUs are offline",
+            source: "ONU",
+            level: "Info"
+        });
+    }
+
+    return [
+        ...deviceEvents.filter(item => item.derived),
+        ...own,
+        ...deviceEvents.filter(item => !item.derived)
+    ].slice(0, 30);
+}
+
 exports.live = async function (req, res, next) {
     try {
         const rawId = String(req.query.olt_id || "");
@@ -499,6 +562,8 @@ exports.live = async function (req, res, next) {
             "no-store, no-cache, must-revalidate, private"
         );
 
+        const onuRows = await getOnuRows(oltId);
+
         return res.json({
             success: true,
             olt: {
@@ -506,11 +571,20 @@ exports.live = async function (req, res, next) {
                 name: olt.name,
                 vendor: olt.vendor,
                 model: olt.model,
-                ip: olt.ip
+                ip: olt.ip,
+                location: olt.location || null
             },
             source: "live_olt_ddm",
-            ports: result.ports,
+            ports: enrichLivePorts(result.ports, onuRows),
             system: result.system,
+            modules: result.system && Array.isArray(result.system.modules)
+                ? result.system.modules
+                : [],
+            alarms: buildLiveAlarms(
+                olt,
+                Array.isArray(result.events) ? result.events : [],
+                onuCounts
+            ),
             totalOnu: onuCounts.total,
             activeOnu: onuCounts.online,
             offlineOnu: onuCounts.offline,

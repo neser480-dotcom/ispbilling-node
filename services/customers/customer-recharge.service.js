@@ -62,6 +62,20 @@ function formatDate(date) {
  * Extract YYYY-MM-DD without allowing JavaScript to interpret a
  * MySQL DATE string as a UTC timestamp.
  */
+function timePartOf(value) {
+
+    if (!value) return "";
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const pad = n => String(n).padStart(2, "0");
+        return `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+    }
+
+    const m = String(value).match(/(\d{2}:\d{2}:\d{2})/);
+
+    return m ? m[1] : "";
+}
+
 function dateString(value) {
     if (value instanceof Date) {
         if (Number.isNaN(value.getTime())) {
@@ -511,10 +525,22 @@ async function rechargeCustomer({
          * Money paid for the other months is kept in the balance (wallet);
          * the auto job takes one month from it every month.
          */
+        /*
+         * The current month is already paid: this recharge is NOT a new bill.
+         * All the money goes to the balance, billing cycle / Day Left stay
+         * the same. The auto job takes the bill from the balance when the
+         * promise date ends.
+         */
+        const alreadyPaid =
+            opts.billingType === "Monthly" &&
+            String(customer.payment_status || "").toLowerCase() === "paid";
+
         const chargeNow =
-            opts.billingType === "Monthly"
-                ? roundMoney(Math.min(subscriptionAmount, monthlyBill))
-                : subscriptionAmount;
+            alreadyPaid
+                ? 0
+                : opts.billingType === "Monthly"
+                    ? roundMoney(Math.min(subscriptionAmount, monthlyBill))
+                    : subscriptionAmount;
 
         const extraToWallet = roundMoney(
             subscriptionAmount - chargeNow
@@ -550,7 +576,8 @@ async function rechargeCustomer({
 
         if (opts.comment) noteParts.push(opts.comment);
         if (fromBalance > 0) noteParts.push(`Paid from balance: ${money(fromBalance)}`);
-        if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
+        if (alreadyPaid) noteParts.push("Month already paid - amount kept in balance");
+        else if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
         if (advance > 0) noteParts.push(`Advance kept: ${money(advance)}`);
 
         const paymentComment =
@@ -614,7 +641,17 @@ async function rechargeCustomer({
                 1
             );
 
-        const newBillingCycle = formatDate(next);
+        /* keep the time of day of the billing cycle (e.g. 12:19 PM) */
+        const cycleTime = timePartOf(customer.billing_cycle);
+
+        const nextCycleText =
+            cycleTime && cycleTime !== "00:00:00"
+                ? `${formatDate(next)} ${cycleTime}`
+                : formatDate(next);
+
+        const newBillingCycle = alreadyPaid
+            ? formatDate(base)
+            : nextCycleText;
 
         /*
          * Preserve the existing promise_date exactly as stored.
@@ -656,8 +693,8 @@ async function rechargeCustomer({
                 customerDbId,
                 cashAmount,
                 opts.paymentMethod,
-                next.getMonth() + 1,
-                next.getFullYear(),
+                (alreadyPaid ? base : next).getMonth() + 1,
+                (alreadyPaid ? base : next).getFullYear(),
                 opts.billingType === "Monthly"
                     ? opts.rechargeMonth
                     : 0,
@@ -692,7 +729,7 @@ async function rechargeCustomer({
              LIMIT 1`,
             [
                 newBalance,
-                newBillingCycle,
+                alreadyPaid ? customer.billing_cycle : newBillingCycle,
                 customerDbId,
                 companyId
             ]
@@ -1020,6 +1057,7 @@ async function rechargeFragment({ user, id }) {
             pppoe_username,
             monthly_bill,
             billing_cycle,
+            payment_status,
             balance
          FROM customers
          WHERE id = ?
@@ -1112,7 +1150,8 @@ async function rechargeFragment({ user, id }) {
       class="customer-ajax-form netfee-recharge-form nf-rc"
       data-monthly-bill="${monthlyBill}"
       data-previous-due="${previousDue}"
-      data-credit="${credit}">
+      data-credit="${credit}"
+      data-paid="${String(customer.payment_status || "").toLowerCase() === "paid" ? 1 : 0}">
 
     <input type="hidden"
            name="customer_id"

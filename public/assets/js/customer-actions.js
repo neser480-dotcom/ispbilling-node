@@ -801,7 +801,8 @@
         const advanceInput = form.querySelector("[data-recharge-advance]");
         const advance = Math.max(0, Number((advanceInput && advanceInput.value) || 0));
         const net = Math.max(0, subtotal - discount);
-        const chargeNow = daily ? net : Math.min(net, monthly);
+        const paidAlready = form.dataset.paid === "1";
+        const chargeNow = paidAlready ? 0 : (daily ? net : Math.min(net, monthly));
         const extra = net - chargeNow;
         const total = Math.max(0, chargeNow - credit) + extra + previousDue + advance;
 
