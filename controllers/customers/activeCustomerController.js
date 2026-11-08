@@ -232,3 +232,29 @@ exports.remove = async (req, res) => {
         });
     }
 };
+
+/*
+|--------------------------------------------------------------------------
+| MAC VENDOR
+|--------------------------------------------------------------------------
+*/
+
+exports.macVendor = async (req, res) => {
+    const user = requireAuth(req, res);
+
+    if (!user) return;
+
+    try {
+        const result =
+            await activeCustomerService.macVendor(
+                String(req.query.mac || "").trim()
+            );
+
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Vendor lookup failed."
+        });
+    }
+};

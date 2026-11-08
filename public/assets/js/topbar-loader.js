@@ -252,9 +252,9 @@
 
         installFetchErrorHandler();
 
-        await loadTopbar();
-
         loadThemeColors();
+
+        await loadTopbar();
     }
 
     if (document.readyState === "loading") {

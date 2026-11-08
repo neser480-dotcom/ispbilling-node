@@ -1241,9 +1241,89 @@ async function removeConnection({ user, routerId, activeId }) {
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| MAC VENDOR
+|--------------------------------------------------------------------------
+*/
+
+const vendorCache = new Map();
+
+function fetchVendorOnline(mac) {
+    return new Promise((resolve, reject) => {
+        const https = require("https");
+
+        const request = https.get(
+            "https://api.macvendors.com/" + encodeURIComponent(mac),
+            { timeout: 6000 },
+            (response) => {
+                let body = "";
+
+                response.on("data", (chunk) => { body += chunk; });
+
+                response.on("end", () => {
+                    if (response.statusCode === 200) {
+                        resolve(body.trim());
+                    } else if (response.statusCode === 404) {
+                        resolve("");
+                    } else {
+                        reject(new Error("Vendor service busy, try again."));
+                    }
+                });
+            }
+        );
+
+        request.on("timeout", () => request.destroy(new Error("Vendor service timeout.")));
+        request.on("error", (error) => reject(error));
+    });
+}
+
+async function macVendor(value) {
+    const hex = clean(value).replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+
+    if (hex.length !== 12) {
+        throw new Error("Invalid MAC address.");
+    }
+
+    const mac = hex.match(/.{2}/g).join(":");
+
+    // locally administered bit set = random / private MAC (most phones)
+    if (parseInt(hex.substr(0, 2), 16) & 2) {
+        return { mac, vendor: "Private / randomized MAC" };
+    }
+
+    if (vendorCache.has(hex)) {
+        return { mac, vendor: vendorCache.get(hex) };
+    }
+
+    let vendor = "";
+
+    try {
+        const oui = require("oui");
+        const found = oui(hex.substr(0, 6));
+
+        if (found) {
+            vendor = String(found).split("\n")[0].trim();
+        }
+    } catch (error) {
+        // package "oui" is not installed: use the online lookup
+    }
+
+    if (!vendor) {
+        vendor = await fetchVendorOnline(mac);
+    }
+
+    vendor = vendor || "Unknown vendor";
+
+    vendorCache.set(hex, vendor);
+
+    return { mac, vendor };
+}
+
 module.exports = {
     getRouters,
     getData,
     pingHost,
-    removeConnection
+    removeConnection,
+    macVendor
 };

@@ -566,17 +566,23 @@ async function rechargeCustomer({
         const paidFlag =
             String(customer.payment_status || "").toLowerCase() === "paid";
 
-        const isActiveNow =
-            String(customer.status || "").toLowerCase() === "active";
-
         /*
-         * BEFORE the promise date ends (or already paid): money only goes to
-         * the balance. Billing cycle / Day Left change later, when the promise
-         * date has ended and the auto job takes the bill from the balance.
+         * BILL type: a month that is already paid (balance covers it) cannot be
+         * recharged again. It is possible again after the promise date ends
+         * (the auto job renews it, month start makes the next month unpaid).
+         *
+         * ADVANCE type: only a deposit. Money goes to the balance, billing
+         * cycle and Day Left never change.
          */
-        const alreadyPaid =
-            opts.billingType === "Monthly" &&
-            (paidFlag || (isActiveNow && promiseNotEnded(customer)));
+        const isDeposit = opts.billType === "Advance";
+
+        if (!isDeposit && opts.billingType === "Monthly" && paidFlag) {
+            throw new RechargeError(
+                "This month is already paid. You can recharge again after the promise date ends, or use Bill Type: Advance to add balance."
+            );
+        }
+
+        const alreadyPaid = isDeposit;
 
         const chargeNow =
             alreadyPaid
@@ -585,9 +591,9 @@ async function rechargeCustomer({
                     ? roundMoney(Math.min(subscriptionAmount, monthlyBill))
                     : subscriptionAmount;
 
-        const extraToWallet = roundMoney(
-            subscriptionAmount - chargeNow
-        );
+        const extraToWallet = alreadyPaid
+            ? 0
+            : roundMoney(subscriptionAmount - chargeNow);
 
         const fromBalance = roundMoney(
             Math.min(credit, chargeNow)
@@ -605,6 +611,10 @@ async function rechargeCustomer({
                 : 0
         );
 
+        if (alreadyPaid && advance <= 0) {
+            throw new RechargeError("Enter the advance amount (greater than 0).");
+        }
+
         /* cash needed for this bill (old due + subscription not covered by wallet) */
         const billCash = roundMoney(
             chargeNow + previousDue - fromBalance
@@ -619,7 +629,7 @@ async function rechargeCustomer({
 
         if (opts.comment) noteParts.push(opts.comment);
         if (fromBalance > 0) noteParts.push(`Paid from balance: ${money(fromBalance)}`);
-        if (alreadyPaid) noteParts.push(paidFlag ? "Month already paid - amount kept in balance" : "Before promise date - amount kept in balance");
+        if (alreadyPaid) noteParts.push("Advance deposit - kept in balance");
         else if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
         if (advance > 0) noteParts.push(`Advance kept: ${money(advance)}`);
 
@@ -1219,7 +1229,7 @@ async function rechargeFragment({ user, id }) {
       data-monthly-bill="${monthlyBill}"
       data-previous-due="${previousDue}"
       data-credit="${credit}"
-      data-paid="${(String(customer.payment_status || "").toLowerCase() === "paid" || (String(customer.status || "").toLowerCase() === "active" && promiseNotEnded(customer))) ? 1 : 0}">
+      data-paid="${String(customer.payment_status || "").toLowerCase() === "paid" ? 1 : 0}">
 
     <input type="hidden"
            name="customer_id"

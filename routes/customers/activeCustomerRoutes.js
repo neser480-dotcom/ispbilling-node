@@ -15,4 +15,6 @@ router.post("/api/ping", controller.ping);
 
 router.post("/api/remove", controller.remove);
 
+router.get("/api/mac-vendor", controller.macVendor);
+
 module.exports = router;

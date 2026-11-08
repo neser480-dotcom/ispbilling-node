@@ -255,6 +255,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const ip = esc(row.address || "—");
         const mac = esc(row.caller_id || "—");
 
+        const macCell = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i.test(String(row.caller_id || ""))
+            ? '<span class="mac-link" data-act="vendor" data-mac="' + mac + '" data-user="' + esc(row.username) + '" title="Show vendor">' + mac + '</span>'
+            : mac;
+
         const removeItem = isActive ? `
             <li><button type="button" class="dropdown-item" data-act="remove"
                 data-active-id="${esc(row[".id"] || "")}" data-user="${esc(row.username)}">
@@ -269,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="c-name">${esc(row.customer_name || "—")}</div>
                 <div class="c-sub">${esc(row.username || "—")}</div>
             </td>
-            <td><div>${ip}</div><div>${mac}</div></td>
+            <td><div>${ip}</div><div>${macCell}</div></td>
             <td>${esc(row.package || "PPPoE")}</td>
             <td><span class="t-up">${esc(row.upload_display || "0 MB")}</span>
                 <span class="t-down">${esc(row.download_display || "0 MB")}</span></td>
@@ -395,6 +399,28 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (e) {
                 alert(e.message);
             }
+            return;
+        }
+
+        if (act === "vendor") {
+            const title = (btn.dataset.user || "") + " Mac Address Vendor";
+
+            showInfo(title, '<i class="fa-solid fa-spinner fa-spin"></i> Loading...');
+
+            try {
+                const r = await getJson(
+                    API_BASE + "/mac-vendor?mac=" + encodeURIComponent(btn.dataset.mac || "")
+                );
+
+                showInfo(title,
+                    '<table class="vendor-table">' +
+                    '<tr><th>Mac Address</th><td>' + esc(r.mac) + '</td></tr>' +
+                    '<tr><th>Company</th><td>' + esc(r.vendor) + '</td></tr>' +
+                    '</table>');
+            } catch (e) {
+                showInfo(title, '<div class="text-danger">' + esc(e.message) + '</div>');
+            }
+
             return;
         }
 
