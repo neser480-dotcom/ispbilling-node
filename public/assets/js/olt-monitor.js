@@ -15,8 +15,60 @@
     let currentData = null;
     let refreshInProgress = false;
     let refreshPending = false;
+    let forceNext = false;
+    let snapshotMeta = null;
 
-    function getLiveUrl(oltId) {
+    function ageText(iso) {
+        const time = Date.parse(iso);
+
+        if (!Number.isFinite(time)) return "unknown";
+
+        const seconds = Math.max(0, Math.round((Date.now() - time) / 1000));
+
+        if (seconds < 60) return "just now";
+
+        const minutes = Math.round(seconds / 60);
+
+        if (minutes < 60) return minutes + " min ago";
+
+        const hours = Math.floor(minutes / 60);
+
+        if (hours < 48) return hours + " h " + (minutes % 60) + " min ago";
+
+        return Math.floor(hours / 24) + " days ago";
+    }
+
+    function renderSnapshotAge() {
+        const element = document.getElementById("omLastUpdated");
+
+        if (!element || !snapshotMeta) return;
+
+        let text = snapshotMeta.capturedAt
+            ? "Last updated: " +
+              new Date(snapshotMeta.capturedAt).toLocaleString() +
+              " (" + ageText(snapshotMeta.capturedAt) + ")"
+            : "Last updated: -";
+
+        if (snapshotMeta.refreshing) {
+            text += " | reading the OLT in the background";
+        }
+
+        if (snapshotMeta.throttled) {
+            text += " | OLT was just read (at most once per 30 s)";
+        }
+
+        element.textContent = text;
+    }
+
+    setInterval(renderSnapshotAge, 30000);
+
+    function getLiveUrl(oltId, force) {
+        const base = getLiveUrlBase(oltId);
+
+        return force ? base + "&refresh=1" : base;
+    }
+
+    function getLiveUrlBase(oltId) {
         const id = Number(oltId);
 
         if (!Number.isInteger(id) || id < 1) {
@@ -603,15 +655,44 @@
         const psuRows = $("omPsuRows");
 
         if (psuRows) {
-            psuRows.innerHTML = olt.psu.length
-                ? olt.psu.map((psu) => `<tr>
-                    <td>${escapeHtml(psu.name ?? `Slot ${psu.slot ?? "?"}`)}</td>
-                    <td>${pill(psu.status ?? psu.powerState ?? "Unknown")}</td>
-                    <td>${escapeHtml(psu.input ?? "N/A")}</td>
-                    <td>${escapeHtml(psu.output ?? "N/A")}</td>
-                    <td>${escapeHtml(psu.load ?? "N/A")}</td>
-                </tr>`).join("")
-                : emptyRow(5, "PSU telemetry is not available from the API.");
+            // psuStatusNote: this OLT reports only slot status (working / no work).
+            const psuTable = psuRows.closest("table");
+            const psuHead = psuTable && psuTable.querySelector("thead tr");
+
+            if (psuHead) {
+                psuHead.innerHTML = "<th>PSU</th><th>Status</th><th>Note</th>";
+            }
+
+            const isPsuOk = (psu) => /^(working|on)$/i.test(
+                String(psu.status ?? psu.powerState ?? "")
+            );
+
+            const psuTotal = olt.psu.length;
+            const psuGood = olt.psu.filter(isPsuOk).length;
+
+            let psuHtml = olt.psu.map((psu) => {
+                const status = psu.status ?? psu.powerState ?? "Unknown";
+                const note = isPsuOk(psu)
+                    ? "Powering the OLT"
+                    : "No power (not installed or failed)";
+
+                return "<tr><td>" + escapeHtml(psu.name ?? ("Slot " + (psu.slot ?? "?"))) +
+                    "</td><td>" + pill(status) +
+                    "</td><td>" + escapeHtml(note) + "</td></tr>";
+            }).join("");
+
+            if (psuTotal && psuGood === 0) {
+                psuHtml += "<tr><td colspan=\"3\"><span class=\"om-pill bad\"><i class=\"om-dot\"></i>" +
+                    "No PSU is working</span></td></tr>";
+            } else if (psuTotal && psuGood < psuTotal) {
+                psuHtml += "<tr><td colspan=\"3\"><span class=\"om-pill warn\"><i class=\"om-dot\"></i>" +
+                    "No power backup: " + psuGood + " of " + psuTotal +
+                    " PSU slots working</span></td></tr>";
+            }
+
+            psuRows.innerHTML = psuTotal
+                ? psuHtml
+                : emptyRow(3, "PSU status is not available from the OLT.");
         }
 
         const powerRows = $("omPowerRows");
@@ -686,11 +767,15 @@
 
         refreshInProgress = true;
 
+        // Only the Refresh button reads the OLT; everything else uses saved data.
+        const force = forceNext;
+        forceNext = false;
+
         const refreshButton = $("omRefresh");
 
         if (refreshButton) {
             refreshButton.disabled = true;
-            refreshButton.textContent = "Loading...";
+            refreshButton.textContent = force ? "Reading OLT..." : "Loading...";
         }
 
         if ($("omErrorMessage")) {
@@ -736,7 +821,7 @@
                 }
             }
 
-            const result = await fetchJson(getLiveUrl(oltId));
+            const result = await fetchJson(getLiveUrl(oltId, force));
 
             const currentOltId = $("omOltSelect")?.value;
 
@@ -772,12 +857,13 @@
                 false
             );
 
-            const lastUpdated = $("omLastUpdated");
+            snapshotMeta = {
+                capturedAt: result.captured_at || null,
+                refreshing: Boolean(result.refreshing),
+                throttled: Boolean(result.throttled)
+            };
 
-            if (lastUpdated) {
-                lastUpdated.textContent =
-                    `Last updated: ${new Date().toLocaleString()}`;
-            }
+            renderSnapshotAge();
         } catch (error) {
             console.error("OLT monitoring refresh failed:", error);
 
@@ -813,7 +899,10 @@
     const refreshButton = $("omRefresh");
 
     if (refreshButton) {
-        refreshButton.addEventListener("click", refreshLiveData);
+        refreshButton.addEventListener("click", () => {
+            forceNext = true;
+            refreshLiveData();
+        });
     }
 
     root.addEventListener("click", (event) => {
@@ -869,6 +958,11 @@
         "Waiting for live data from the Node.js OLT monitoring API.",
         false
     );
+
+    // Pick up the background (20 minute) OLT reads; this never touches the OLT.
+    setInterval(() => {
+        if (!document.hidden) refreshLiveData();
+    }, 60000);
 
     refreshLiveData();
 })();

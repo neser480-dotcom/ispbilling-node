@@ -1206,3 +1206,303 @@ body.dark-mode
     }
 
 }
+
+
+/* =========================================================
+   TOPBAR-SS-STYLE
+   Look like the reference screenshot. Loaded last, so it wins.
+========================================================= */
+
+.topbar {
+    min-height: 66px;
+    border-bottom: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+/* Support Ticket sits in the free space, between search and icons */
+.topbar-right {
+    flex: 1 1 auto;
+}
+
+.btn-open-ticket {
+    margin-left: auto;
+    margin-right: auto;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 6px;
+    background-color: var(--theme-primary-soft, #eef2ff);
+    color: var(--theme-primary, #2563eb);
+}
+
+.btn-open-ticket:hover {
+    background-color: var(--theme-primary, #2563eb);
+    color: #fff;
+}
+
+/* icons: soft rounded squares */
+.icon-box {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
+    border-radius: 6px;
+    background: var(--theme-primary-soft, #e8f1fb);
+    font-size: 17px;
+}
+
+.icon-box:hover {
+    background: var(--theme-primary-soft, #dbeafe);
+}
+
+.badge-count {
+    top: -8px;
+    right: -8px;
+    border: 2px solid #fff;
+    min-width: 22px;
+    height: 20px;
+}
+
+/* name in theme colour, role line hidden, small arrow */
+.profile-info {
+    max-width: 200px;
+}
+
+.profile-info strong {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--theme-primary, #2563eb);
+}
+
+.profile-info small {
+    display: none;
+}
+
+.avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex-basis: 38px;
+    background-size: cover;
+    background-position: center;
+}
+
+.avatar.has-photo {
+    color: transparent;
+    font-size: 0;
+}
+
+.profile-arrow {
+    width: 24px;
+    min-width: 24px;
+    flex-basis: 24px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+}
+
+body.dark-mode .icon-box {
+    background: #1f2937;
+}
+
+body.dark-mode .badge-count {
+    border-color: #111827;
+}
+
+body.dark-mode .profile-info strong {
+    color: #93c5fd;
+}
+
+body.dark-mode .profile-arrow {
+    background: transparent;
+}
+
+/* mobile / tablet (menu button visible): no Support Ticket button */
+@media (max-width: 850px) {
+    .btn-open-ticket,
+    #openSupportTicketBtn {
+        display: none !important;
+    }
+
+    .topbar-right {
+        justify-content: flex-end;
+    }
+}
+
+
+/* =========================================================
+   TOPBAR-SS-STYLE-2
+   Same icons / same look as the reference screenshot.
+========================================================= */
+
+.topbar-right {
+    flex: 1 1 auto;
+    gap: 4px;
+}
+
+.btn-open-ticket {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.icon-box {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    flex-basis: 34px;
+    font-size: 18px;
+}
+
+#messagesBtn .msg-plus {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    font-size: 11px;
+    line-height: 1;
+    border-radius: 50%;
+    background: var(--theme-primary-soft, #e8f1fb);
+}
+
+.badge-count {
+    top: -8px;
+    right: -7px;
+    z-index: 2;
+}
+
+.language-dropdown {
+    margin: 0 4px 0 8px;
+}
+
+.profile {
+    position: relative;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* invisible button over photo + name: a click anywhere opens the menu */
+.profile-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    flex: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.profile-dropdown {
+    top: calc(100% + 8px);
+    z-index: 100001;
+}
+
+@media (max-width: 850px) {
+    .btn-open-ticket,
+    #openSupportTicketBtn {
+        display: none !important;
+    }
+
+    .topbar-right {
+        justify-content: flex-end;
+    }
+}
+
+
+/* =========================================================
+   TOPBAR-SS-STYLE-3
+   Name first, photo last; only the photo opens the menu.
+========================================================= */
+
+.profile {
+    cursor: default;
+}
+
+.avatar-wrap {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    flex: 0 0 38px;
+    cursor: pointer;
+}
+
+.avatar-wrap .avatar {
+    width: 100%;
+    height: 100%;
+}
+
+/* invisible button covers the photo only */
+.avatar-wrap .profile-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    opacity: 0;
+    z-index: 2;
+}
+
+.profile-info {
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   TOPBAR-SS-STYLE-4
+   Avatar = grey round photo (default person picture).
+========================================================= */
+
+.avatar-wrap {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
+}
+
+.avatar-wrap .avatar,
+.avatar {
+    background-color: #c9ced6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23c9ced6'/%3E%3Ccircle cx='20' cy='15.5' r='7.5' fill='%23f1f3f5'/%3E%3Cellipse cx='20' cy='37' rx='14' ry='11' fill='%23f1f3f5'/%3E%3C/svg%3E");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    color: transparent;
+    font-size: 0;
+    overflow: hidden;
+}
+
+/* a real photo (set by topbar.js as an inline style) wins over the default */
+
+
+/* =========================================================
+   TOPBAR-SS-STYLE-5
+   Bigger colour palette (scrolls if the screen is short).
+========================================================= */
+
+#netfeeColorPanel {
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+.netfee-color-options {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.netfee-custom-picker {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    right: 24px;
+    bottom: 24px;
+    opacity: 0;
+    pointer-events: none;
+    border: 0;
+    padding: 0;
+}

@@ -380,7 +380,7 @@ function average(values) {
 }
 
 async function getSelectedOltData(olt, counts, onuRows) {
-    const live = await getLiveForOlt(olt);
+    const live = await getCachedLive(olt);
     const ddmPorts = live.ports;
     const ponIds = getConfiguredPonIds(olt, ddmPorts);
     const telemetry = live.system || {};
@@ -460,6 +460,247 @@ async function getSelectedOltData(olt, counts, onuRows) {
         offlineOnu: counts.offline
     };
 }
+
+/*
+|--------------------------------------------------------------------------
+| SAVED OLT SNAPSHOTS
+|--------------------------------------------------------------------------
+| The last successful OLT read is kept in memory and in the table
+| olt_monitor_snapshots, so the page opens at once. A background job reads
+| every OLT every 20 minutes; the Refresh button reads it on demand.
+|--------------------------------------------------------------------------
+*/
+
+const SNAPSHOT_INTERVAL_MS = 20 * 60 * 1000;
+const SNAPSHOT_MIN_GAP_MS = 30 * 1000;
+const SNAPSHOT_STARTUP_DELAY_MS = 20 * 1000;
+
+const snapshots = new Map();   // olt id -> { result, capturedAt }
+const inflight = new Map();    // olt id -> Promise (one Telnet session per OLT)
+const attempts = new Map();    // olt id -> { at, error }
+
+let snapshotTableReady = null;
+
+function ensureSnapshotTable() {
+    if (!snapshotTableReady) {
+        snapshotTableReady = getPool().query(
+            "CREATE TABLE IF NOT EXISTS olt_monitor_snapshots (" +
+            " olt_id INT NOT NULL PRIMARY KEY," +
+            " payload LONGTEXT NOT NULL," +
+            " captured_at DATETIME NOT NULL" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        ).then(() => true).catch(() => false);
+    }
+
+    return snapshotTableReady;
+}
+
+async function loadSnapshot(oltId) {
+    if (snapshots.has(oltId)) return snapshots.get(oltId);
+
+    if (!(await ensureSnapshotTable())) return null;
+
+    try {
+        const [rows] = await getPool().execute(
+            "SELECT payload FROM olt_monitor_snapshots WHERE olt_id = ?",
+            [oltId]
+        );
+
+        if (!rows.length) return null;
+
+        const saved = JSON.parse(rows[0].payload);
+
+        if (!saved || !saved.result || !saved.capturedAt) return null;
+
+        const snap = {
+            result: saved.result,
+            capturedAt: Number(saved.capturedAt)
+        };
+
+        snapshots.set(oltId, snap);
+
+        return snap;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function saveSnapshot(oltId, snap) {
+    if (!(await ensureSnapshotTable())) return;
+
+    try {
+        await getPool().execute(
+            "INSERT INTO olt_monitor_snapshots (olt_id, payload, captured_at) " +
+            "VALUES (?, ?, NOW()) " +
+            "ON DUPLICATE KEY UPDATE payload = VALUES(payload), " +
+            "captured_at = VALUES(captured_at)",
+            [
+                oltId,
+                JSON.stringify({
+                    capturedAt: snap.capturedAt,
+                    result: snap.result
+                })
+            ]
+        );
+    } catch (_) {
+        // The memory copy is still used.
+    }
+}
+
+// Reads the OLT. Only one read per OLT runs at a time; callers share it.
+function refreshSnapshot(olt) {
+    const id = Number(olt.id);
+
+    if (inflight.has(id)) return inflight.get(id);
+
+    const job = (async () => {
+        const started = Date.now();
+
+        attempts.set(id, { at: started, error: null });
+
+        try {
+            const result = await getLiveForOlt(olt);
+
+            // system is null when the OLT could not be reached/read.
+            if (!result.system) {
+                attempts.set(id, {
+                    at: started,
+                    error: (result.warnings && result.warnings[0]) ||
+                        "OLT could not be read"
+                });
+
+                return { ok: false, result };
+            }
+
+            const snap = { result, capturedAt: Date.now() };
+
+            snapshots.set(id, snap);
+            await saveSnapshot(id, snap);
+
+            return { ok: true, snap };
+        } catch (error) {
+            attempts.set(id, {
+                at: started,
+                error: String((error && error.message) || "OLT read failed")
+                    .slice(0, 200)
+            });
+
+            return { ok: false, result: null };
+        } finally {
+            inflight.delete(id);
+        }
+    })();
+
+    inflight.set(id, job);
+
+    return job;
+}
+
+// Saved data for a request; reads the OLT only when nothing is saved yet or
+// when "force" is set (Refresh button, at most once per 30 s).
+async function getSnapshot(olt, force) {
+    const id = Number(olt.id);
+
+    let snap = await loadSnapshot(id);
+    let throttled = false;
+    let fallback = null;
+
+    if (!snap) {
+        const outcome = await refreshSnapshot(olt);
+
+        if (outcome.ok) {
+            snap = outcome.snap;
+        } else {
+            fallback = outcome.result;
+        }
+    } else if (force) {
+        if (inflight.has(id)) {
+            await inflight.get(id);
+            snap = snapshots.get(id) || snap;
+        } else {
+            const last = attempts.get(id);
+
+            if (last && Date.now() - last.at < SNAPSHOT_MIN_GAP_MS) {
+                throttled = true;
+            } else {
+                const outcome = await refreshSnapshot(olt);
+
+                if (outcome.ok) snap = outcome.snap;
+            }
+        }
+    } else if (
+        Date.now() - snap.capturedAt > SNAPSHOT_INTERVAL_MS * 1.5 &&
+        !inflight.has(id)
+    ) {
+        // Saved data is much older than expected: refresh in the background.
+        refreshSnapshot(olt).catch(() => {});
+    }
+
+    const last = attempts.get(id);
+
+    return {
+        snap,
+        fallback,
+        throttled,
+        refreshing: inflight.has(id),
+        lastError: last && last.error ? last.error : null
+    };
+}
+
+async function getCachedLive(olt) {
+    const state = await getSnapshot(olt, false);
+
+    if (state.snap) return state.snap.result;
+
+    return state.fallback || {
+        ports: [],
+        system: null,
+        events: [],
+        warnings: ["OLT could not be read."]
+    };
+}
+
+function supportsLiveRead(olt) {
+    const identity = [olt.vendor, olt.model, olt.name]
+        .join(" ")
+        .toLowerCase();
+
+    return (
+        Number(olt.id) === 43 ||
+        Number(olt.id) === 45 ||
+        /cdata|c-data|e1204es|ecom|e08ep/i.test(identity)
+    );
+}
+
+async function refreshAllOlts() {
+    try {
+        const [rows] = await getPool().execute(
+            "SELECT * FROM olts WHERE deleted_at IS NULL ORDER BY id ASC"
+        );
+
+        for (const olt of rows) {
+            if (supportsLiveRead(olt)) {
+                await refreshSnapshot(olt);
+            }
+        }
+    } catch (_) {
+        // Try again at the next interval.
+    }
+}
+
+function startSnapshotJob() {
+    if (global.__oltSnapshotJobStarted) return;
+
+    global.__oltSnapshotJobStarted = true;
+
+    const first = setTimeout(refreshAllOlts, SNAPSHOT_STARTUP_DELAY_MS);
+    const timer = setInterval(refreshAllOlts, SNAPSHOT_INTERVAL_MS);
+
+    if (first.unref) first.unref();
+    if (timer.unref) timer.unref();
+}
+
+startSnapshotJob();
 
 function nowStamp() {
     const d = new Date();
@@ -548,7 +789,29 @@ exports.live = async function (req, res, next) {
         }
 
         const olt = rows[0];
-        const result = await getLiveForOlt(olt);
+        const force = String(req.query.refresh || "") === "1";
+        const state = await getSnapshot(olt, force);
+
+        const result = state.snap
+            ? state.snap.result
+            : state.fallback || {
+                ports: [],
+                system: null,
+                events: [],
+                warnings: ["OLT could not be read."]
+            };
+
+        const warnings = Array.isArray(result.warnings)
+            ? [...result.warnings]
+            : [];
+
+        if (state.snap && state.lastError) {
+            warnings.unshift(
+                "Last OLT read failed (" + state.lastError +
+                "); showing saved data."
+            );
+        }
+
         const countsMap = await getOnuCounts([oltId]);
 
         const onuCounts = countsMap.get(oltId) || {
@@ -588,7 +851,12 @@ exports.live = async function (req, res, next) {
             totalOnu: onuCounts.total,
             activeOnu: onuCounts.online,
             offlineOnu: onuCounts.offline,
-            warnings: result.warnings
+            captured_at: state.snap
+                ? new Date(state.snap.capturedAt).toISOString()
+                : null,
+            refreshing: state.refreshing,
+            throttled: state.throttled,
+            warnings
         });
     } catch (error) {
         return next(error);

@@ -177,6 +177,20 @@
                 avatarElement.textContent =
                     firstLetter.toUpperCase();
 
+                // topbarAvatarPhoto: show the profile photo when the API has one
+                const photoUrl = String(
+                    user.photo || user.avatar || user.image ||
+                    user.profile_image || user.profile_photo ||
+                    user.picture || ''
+                ).trim().replace(/["'\\\n\r]/g, '');
+
+                if (/^(\/|https?:\/\/)/i.test(photoUrl)) {
+                    avatarElement.style.backgroundImage =
+                        'url("' + photoUrl + '")';
+                    avatarElement.classList.add('has-photo');
+                    avatarElement.textContent = '';
+                }
+
             }
 
 
@@ -584,22 +598,99 @@
     };
 
 
+    /* netfeeMakeTheme: build a theme from any colour */
+    function netfeeHexToHsl(hex) {
+        let h = String(hex).replace('#', '');
+        if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+        const r = parseInt(h.substr(0, 2), 16) / 255;
+        const g = parseInt(h.substr(2, 2), 16) / 255;
+        const b = parseInt(h.substr(4, 2), 16) / 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        const d = max - min;
+        let hue = 0;
+        let s = 0;
+        if (d !== 0) {
+            s = d / (1 - Math.abs(2 * l - 1));
+            if (max === r) { hue = ((g - b) / d) % 6; }
+            else if (max === g) { hue = (b - r) / d + 2; }
+            else { hue = (r - g) / d + 4; }
+            hue = Math.round(hue * 60);
+            if (hue < 0) { hue += 360; }
+        }
+        return { h: hue, s: s, l: l };
+    }
+
+    function netfeeHslToHex(h, s, l) {
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+        let r = 0; let g = 0; let b = 0;
+        if (h < 60) { r = c; g = x; }
+        else if (h < 120) { r = x; g = c; }
+        else if (h < 180) { g = c; b = x; }
+        else if (h < 240) { g = x; b = c; }
+        else if (h < 300) { r = x; b = c; }
+        else { r = c; b = x; }
+        const hex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+        return '#' + hex(r) + hex(g) + hex(b);
+    }
+
+    function netfeeMakeTheme(name, accent) {
+        const hsl = netfeeHexToHsl(accent);
+        return {
+            name: name,
+            accent: accent,
+            accentHover: netfeeHslToHex(hsl.h, hsl.s, Math.max(0.15, hsl.l - 0.08)),
+            accentSoft: netfeeHslToHex(hsl.h, Math.min(0.95, Math.max(0.4, hsl.s)), 0.93)
+        };
+    }
+
+    const extraThemes = {
+        teal: ['Teal', '#0d9488'],
+        indigo: ['Indigo', '#4f46e5'],
+        rose: ['Rose', '#e11d48'],
+        lime: ['Lime', '#65a30d'],
+        sky: ['Sky', '#0284c7'],
+        emerald: ['Emerald', '#059669'],
+        fuchsia: ['Fuchsia', '#c026d3'],
+        slate: ['Slate', '#475569'],
+        brown: ['Brown', '#92400e'],
+        violet: ['Violet', '#8b5cf6'],
+        navy: ['Navy', '#1e3a8a']
+    };
+
+    Object.keys(extraThemes).forEach(function (key) {
+        themes[key] = netfeeMakeTheme(extraThemes[key][0], extraThemes[key][1]);
+    });
+
+    function netfeeCustomColor() {
+        let saved = '';
+        try { saved = localStorage.getItem('ispbilling_custom_color') || ''; } catch (e) { saved = ''; }
+        return /^#[0-9a-f]{6}$/i.test(saved) ? saved : '#2563eb';
+    }
+
+
+
+
     /* =========================================================
        APPLY COLOR THEME
     ========================================================= */
 
     function applyColorTheme(themeName) {
 
-        if (!themes[themeName]) {
+        let theme;
 
-            themeName =
-                'blue';
+        if (themeName === 'custom') {
+            theme = netfeeMakeTheme('Custom', netfeeCustomColor());
+        } else {
+            if (!themes[themeName]) {
+                themeName = 'blue';
+            }
 
+            theme = themes[themeName];
         }
-
-
-        const theme =
-            themes[themeName];
 
 
         document.documentElement.style.setProperty(
@@ -1170,6 +1261,46 @@
             document.body.appendChild(
                 colorPanel
             );
+
+            // netfeeMakeTheme: more colours + custom picker
+            const optionsBox = colorPanel.querySelector('.netfee-color-options');
+
+            if (optionsBox) {
+                Object.keys(extraThemes).forEach(function (key) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'netfee-color-option';
+                    btn.setAttribute('data-color-theme', key);
+                    btn.innerHTML = '<span style="background:' + themes[key].accent + '"></span><small>' + themes[key].name + '</small>';
+                    optionsBox.appendChild(btn);
+                });
+
+                const custom = document.createElement('button');
+                custom.type = 'button';
+                custom.className = 'netfee-color-option';
+                custom.setAttribute('data-color-theme', 'custom');
+                custom.title = 'Pick any colour';
+                custom.innerHTML = '<span style="background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red)"></span><small>Custom</small>';
+                optionsBox.appendChild(custom);
+
+                const picker = document.createElement('input');
+                picker.type = 'color';
+                picker.id = 'netfeeCustomColor';
+                picker.value = netfeeCustomColor();
+                picker.setAttribute('aria-label', 'Custom colour');
+                picker.className = 'netfee-custom-picker';
+                colorPanel.appendChild(picker);
+
+                custom.addEventListener('click', function () {
+                    picker.value = netfeeCustomColor();
+                    picker.click();
+                });
+
+                picker.addEventListener('input', function () {
+                    try { localStorage.setItem('ispbilling_custom_color', picker.value); } catch (e) { /* ignore */ }
+                    applyColorTheme('custom');
+                });
+            }
 
         }
 

@@ -1,3 +1,4 @@
+<!-- topbar-ss-3 -->
 <div class="topbar">
 
     <div class="topbar-left">
@@ -10,15 +11,6 @@
         >
             <i class="fas fa-bars"></i>
         </button>
-
-        <input
-            type="text"
-            id="topbarCustomerSearch"
-            name="topbarCustomerSearch"
-            class="search-box"
-            placeholder="Search customer..."
-            autocomplete="off"
-        >
 
     </div>
 
@@ -43,7 +35,7 @@
             data-bs-toggle="modal"
             data-bs-target="#billingCycleModal"
         >
-            <i class="fas fa-sync-alt"></i>
+            <i class="fas fa-recycle"></i>
         </div>
 
 
@@ -53,7 +45,8 @@
             id="messagesBtn"
             title="Messages"
         >
-            <i class="fas fa-comments"></i>
+            <i class="far fa-envelope"></i>
+            <i class="fas fa-plus-circle msg-plus"></i>
 
             <span class="badge-count">
                 124
@@ -123,64 +116,69 @@
         </div>
 
 
-<!-- PROFILE -->
-<div
-    class="profile"
-    id="profileContainer"
->
-
-    <div
-        class="avatar"
-        id="profileAvatar"
-        title=""
-    >
-        A
-    </div>
-
-    <div class="profile-info">
-
-        <strong id="profileFullname">
-            Loading...
-        </strong>
-
-        <small id="profileRole">
-            -
-        </small>
-
-    </div>
-
-    <button
-        type="button"
-        class="profile-arrow"
-        id="profileBtn"
-        title="Profile Menu"
-        aria-expanded="false"
-        aria-controls="profileMenu"
-    >
-        <i class="fas fa-caret-down"></i>
-    </button>
-
-    <div
-        class="profile-dropdown"
-        id="profileMenu"
-    >
-
-        <a href="/admin/profile">
-            <i class="fas fa-user me-2"></i>
-            Profile
-        </a>
-
-        <a
-            href="/api/auth/logout"
-            class="text-danger"
-            id="logoutBtn"
+        <!-- PROFILE: name first, photo last. Only the photo opens the menu -->
+        <div
+            class="profile"
+            id="profileContainer"
         >
-            <i class="fas fa-sign-out-alt me-2"></i>
-            Logout
-        </a>
+
+            <div class="profile-info">
+
+                <strong id="profileFullname">
+                    Loading...
+                </strong>
+
+                <small id="profileRole">
+                    -
+                </small>
+
+            </div>
+
+            <div class="avatar-wrap">
+
+                <div
+                    class="avatar"
+                    id="profileAvatar"
+                    title=""
+                >
+                    A
+                </div>
+
+                <button
+                    type="button"
+                    class="profile-arrow"
+                    id="profileBtn"
+                    title="Profile Menu"
+                    aria-label="Profile Menu"
+                    aria-expanded="false"
+                    aria-controls="profileMenu"
+                ></button>
+
+            </div>
+
+            <div
+                class="profile-dropdown"
+                id="profileMenu"
+            >
+
+                <a href="/admin/profile">
+                    <i class="fas fa-user me-2"></i>
+                    Profile
+                </a>
+
+                <a
+                    href="/api/auth/logout"
+                    class="text-danger"
+                    id="logoutBtn"
+                >
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    Logout
+                </a>
+
+            </div>
+
+        </div>
 
     </div>
-
-</div>
 
 </div>

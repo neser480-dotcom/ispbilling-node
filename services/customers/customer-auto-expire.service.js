@@ -114,9 +114,18 @@ async function run({ log = console.log, settings = {} } = {}) {
         (deletedCol ? `\`${deletedCol}\` IS NULL AND ` : "") +
         (autoCol ? `COALESCE(\`${autoCol}\`, 1) = 1 AND ` : "");
 
-    /* paid customers are never expired */
+    /* paid customers with a future billing cycle are never touched */
+    /*
+     * Skip customers who are paid AND whose billing cycle is still in the
+     * future. A customer shown "paid" only because the balance covers the
+     * month (billing cycle already reached) is still handled at promise end.
+     */
     const unpaidOnly = payCol
-        ? ` AND LOWER(COALESCE(\`${payCol}\`, '')) <> 'paid'`
+        ? (
+            billingCol
+                ? ` AND NOT (LOWER(COALESCE(\`${payCol}\`, '')) = 'paid' AND \`${billingCol}\` > '${now}')`
+                : ` AND LOWER(COALESCE(\`${payCol}\`, '')) <> 'paid'`
+        )
         : "";
 
     const counts = { expired: 0, renewed: 0, reactivated: 0, skipped: 0, failed: 0 };

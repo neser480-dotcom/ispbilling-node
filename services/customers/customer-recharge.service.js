@@ -62,6 +62,38 @@ function formatDate(date) {
  * Extract YYYY-MM-DD without allowing JavaScript to interpret a
  * MySQL DATE string as a UTC timestamp.
  */
+/*
+ * Promise date handling.
+ * A date-only value (00:00:00) is valid for the whole day.
+ * If there is no promise date, the billing cycle date is used.
+ */
+function endOfDate(value) {
+
+    if (!value) return NaN;
+
+    const d = value instanceof Date
+        ? value
+        : new Date(String(value).replace(" ", "T"));
+
+    const t = d.getTime();
+
+    if (!Number.isFinite(t) || d.getFullYear() < 1971) return NaN;
+
+    const midnight =
+        d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
+
+    return midnight ? t + 86400000 : t;
+}
+
+function promiseNotEnded(customer) {
+
+    let end = endOfDate(customer.promise_date);
+
+    if (!Number.isFinite(end)) end = endOfDate(customer.billing_cycle);
+
+    return Number.isFinite(end) && end > Date.now();
+}
+
 function timePartOf(value) {
 
     if (!value) return "";
@@ -531,9 +563,20 @@ async function rechargeCustomer({
          * the same. The auto job takes the bill from the balance when the
          * promise date ends.
          */
+        const paidFlag =
+            String(customer.payment_status || "").toLowerCase() === "paid";
+
+        const isActiveNow =
+            String(customer.status || "").toLowerCase() === "active";
+
+        /*
+         * BEFORE the promise date ends (or already paid): money only goes to
+         * the balance. Billing cycle / Day Left change later, when the promise
+         * date has ended and the auto job takes the bill from the balance.
+         */
         const alreadyPaid =
             opts.billingType === "Monthly" &&
-            String(customer.payment_status || "").toLowerCase() === "paid";
+            (paidFlag || (isActiveNow && promiseNotEnded(customer)));
 
         const chargeNow =
             alreadyPaid
@@ -576,7 +619,7 @@ async function rechargeCustomer({
 
         if (opts.comment) noteParts.push(opts.comment);
         if (fromBalance > 0) noteParts.push(`Paid from balance: ${money(fromBalance)}`);
-        if (alreadyPaid) noteParts.push("Month already paid - amount kept in balance");
+        if (alreadyPaid) noteParts.push(paidFlag ? "Month already paid - amount kept in balance" : "Before promise date - amount kept in balance");
         else if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
         if (advance > 0) noteParts.push(`Advance kept: ${money(advance)}`);
 
@@ -620,8 +663,16 @@ async function rechargeCustomer({
          * Same month cannot be recharged twice: the popup sends the month it
          * was opened for. If the customer was recharged meanwhile, stop.
          */
+        /* months already covered by the balance are skipped */
+        const monthShift =
+            monthlyBill > 0
+                ? Math.floor(Math.max(0, currentBalance) / monthlyBill)
+                : 0;
+
+        const keyDate = new Date(base.getFullYear(), base.getMonth() + monthShift, 1);
+
         const baseMonthKey =
-            `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+            `${keyDate.getFullYear()}-${String(keyDate.getMonth() + 1).padStart(2, "0")}`;
 
         if (
             opts.billingType === "Monthly" &&
@@ -722,13 +773,21 @@ async function rechargeCustomer({
             `UPDATE customers
              SET balance = ?,
                  status = 'Active',
-                 payment_status = 'paid',
+                 payment_status = ?,
                  billing_cycle = ?
              WHERE id = ?
                AND company_id = ?
              LIMIT 1`,
             [
                 newBalance,
+                /* balance kept (before promise end): show PAID once the balance covers a month */
+                alreadyPaid
+                    ? (
+                        monthlyBill > 0 && newBalance >= monthlyBill
+                            ? "paid"
+                            : (customer.payment_status || "unpaid")
+                    )
+                    : "paid",
                 alreadyPaid ? customer.billing_cycle : newBillingCycle,
                 customerDbId,
                 companyId
@@ -1058,6 +1117,8 @@ async function rechargeFragment({ user, id }) {
             monthly_bill,
             billing_cycle,
             payment_status,
+            promise_date,
+            status,
             balance
          FROM customers
          WHERE id = ?
@@ -1112,15 +1173,22 @@ async function rechargeFragment({ user, id }) {
         new Date();
 
     const baseYear = baseDate.getFullYear();
-    const baseMonth = baseDate.getMonth();
+    const heldMonths =
+        Number(customer.monthly_bill) > 0
+            ? Math.floor(Math.max(0, Number(customer.balance) || 0) / Number(customer.monthly_bill))
+            : 0;
+
+    const baseMonth = baseDate.getMonth() + heldMonths;
+
+    const baseKeyDate = new Date(baseYear, baseMonth, 1);
 
     const baseMonthKey =
-        `${baseYear}-${String(baseMonth + 1).padStart(2, "0")}`;
+        `${baseKeyDate.getFullYear()}-${String(baseKeyDate.getMonth() + 1).padStart(2, "0")}`;
 
     const monthChoices = Array.from({ length: 12 }, (_, index) => {
         const d = new Date(baseYear, baseMonth + index, 1);
         const label = MONTH_NAMES[d.getMonth()] +
-            (d.getFullYear() !== baseYear ? " " + d.getFullYear() : "");
+            (d.getFullYear() !== baseKeyDate.getFullYear() ? " " + d.getFullYear() : "");
         return label;
     });
 
@@ -1151,7 +1219,7 @@ async function rechargeFragment({ user, id }) {
       data-monthly-bill="${monthlyBill}"
       data-previous-due="${previousDue}"
       data-credit="${credit}"
-      data-paid="${String(customer.payment_status || "").toLowerCase() === "paid" ? 1 : 0}">
+      data-paid="${(String(customer.payment_status || "").toLowerCase() === "paid" || (String(customer.status || "").toLowerCase() === "active" && promiseNotEnded(customer))) ? 1 : 0}">
 
     <input type="hidden"
            name="customer_id"

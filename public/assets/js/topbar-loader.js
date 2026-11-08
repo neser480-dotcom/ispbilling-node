@@ -220,12 +220,41 @@
     |--------------------------------------------------------------------------
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | 3b. THEME COLORS (dark mode follows the chosen colour) - loaded last
+    |--------------------------------------------------------------------------
+    */
+
+    function loadThemeColors() {
+        if (!document.querySelector("link[data-theme-colors-css]")) {
+            const css = document.createElement("link");
+
+            css.rel = "stylesheet";
+            css.href = "/assets/css/theme-colors.css";
+            css.dataset.themeColorsCss = "true";
+
+            document.head.appendChild(css);
+        }
+
+        if (!document.querySelector("script[data-theme-colors-js]")) {
+            const script = document.createElement("script");
+
+            script.src = "/assets/js/theme-colors.js";
+            script.dataset.themeColorsJs = "true";
+
+            document.head.appendChild(script);
+        }
+    }
+
     async function initialize() {
         await loadAppToast();
 
         installFetchErrorHandler();
 
         await loadTopbar();
+
+        loadThemeColors();
     }
 
     if (document.readyState === "loading") {

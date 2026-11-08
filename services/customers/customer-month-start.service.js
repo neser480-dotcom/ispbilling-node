@@ -7,7 +7,7 @@
 | Runs once per month, on the 1st (Asia/Dhaka).
 |
 | For every customer (not deleted, all companies):
-|   - payment_status -> 'unpaid'
+|   - payment_status -> 'paid' if the balance covers one month, else 'unpaid'
 |   - balance        -> NOT touched (it is the customer's real money / advance)
 |   - promise_date   -> the customer's billing-cycle day (and time) in the
 |                       new month. Billing day 3 -> promise 3rd of this month.
@@ -159,7 +159,9 @@ async function run({ log = console.log, settings = {}, force = false } = {}) {
         /* balance is assigned BEFORE promise_date so it still sees the old promise_date */
         const [upd] = await conn.query(
             `UPDATE customers
-             SET payment_status = 'unpaid',
+             SET payment_status = CASE
+                     WHEN COALESCE(monthly_bill, 0) > 0 AND COALESCE(balance, 0) >= COALESCE(monthly_bill, 0)
+                     THEN 'paid' ELSE 'unpaid' END,
                  ${balanceSet}
                  promise_date = ${promiseSql}
              WHERE ${notDeleted} AND ${dueThisMonth}`
