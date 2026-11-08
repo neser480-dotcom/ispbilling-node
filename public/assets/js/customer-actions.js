@@ -804,7 +804,13 @@
         const paidAlready = form.dataset.paid === "1";
         const chargeNow = paidAlready ? 0 : (daily ? net : Math.min(net, monthly));
         const extra = net - chargeNow;
-        const total = Math.max(0, chargeNow - credit) + extra + previousDue + advance;
+        const billTypeSelect = form.querySelector('[name="bill_type"]');
+        const deposit = !!billTypeSelect && billTypeSelect.value === "Advance";
+        const total = deposit
+            ? previousDue + advance
+            : (paidAlready
+                ? previousDue
+                : Math.max(0, chargeNow - credit) + extra + previousDue + advance);
 
         const fmt = function (n) { return "৳" + n.toFixed(2); };
 
