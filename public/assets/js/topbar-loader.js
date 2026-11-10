@@ -207,8 +207,7 @@
             console.error("Topbar loading error:", error);
 
             if (window.AppToast) {
-                window.AppToast.error(
-                    "Topbar লোড করা যায়নি। পেজটি Refresh করুন।"
+                window.AppToast.error("Topbar লোড করা যায়নি। পেজটি রিফ্রেশ করুন।"
                 );
             }
         }

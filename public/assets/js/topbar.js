@@ -517,7 +517,7 @@
 
             langBtn.innerHTML =
                 language === 'bn'
-                    ? 'বাংলা <i class="fas fa-caret-down"></i>'
+                    ? '\u09AC\u09BE\u0982\u09B2\u09BE <i class="fas fa-caret-down"></i>'
                     : 'EN <i class="fas fa-caret-down"></i>';
 
         }
@@ -533,7 +533,7 @@
 
             search.placeholder =
                 language === 'bn'
-                    ? 'কাস্টমার খুঁজুন...'
+                    ? '\u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0 \u0996\u09C1\u0981\u099C\u09C1\u09A8...'
                     : 'Search customer...';
 
         }

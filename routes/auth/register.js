@@ -25,7 +25,6 @@ const RATE_LIMIT_MAX = 10;
 
 function getClientIp(req) {
     return (
-        req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
         req.ip ||
         req.socket?.remoteAddress ||
         "unknown"
@@ -373,10 +372,11 @@ router.post("/", async (req, res) => {
             });
         }
 
-        if (password.length < 6) {
+        if (password.length < 8 ||
+            Buffer.byteLength(password, "utf8") > 72) {
             return res.status(400).json({
                 success: false,
-                message: "Password must be at least 6 characters."
+                message: "Password must be 8 to 72 characters."
             });
         }
 

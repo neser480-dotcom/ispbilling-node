@@ -49,7 +49,7 @@ function emptyExpr(col) {
 
 async function firstColumn(table, candidates) {
 
-    const [cols] = await db.query(`SHOW COLUMNS FROM \`${table}\``);
+    const [cols] = await db.query("SHOW COLUMNS FROM ??", [table]);
 
     const have = new Set(cols.map(c => c.Field));
 

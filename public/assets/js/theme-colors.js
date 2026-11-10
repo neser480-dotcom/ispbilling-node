@@ -61,7 +61,7 @@
     applyAccent();
 
     try {
-        new MutationObserver(applyAccent).observe(root, {
+        new MutationObserver(function () { applyAccent(); later(true); }).observe(root, {
             attributes: true,
             attributeFilter: ['style', 'data-color-theme']
         });
@@ -226,7 +226,19 @@
         });
     }
 
+    /* default Blue: pages keep their own colours, nothing is re-pointed */
+    function themeActive() {
+        var v = getComputedStyle(root).getPropertyValue('--theme-primary').trim();
+        var t = root.getAttribute('data-color-theme');
+
+        return !!v && !!t && t !== 'blue';
+    }
+
     function run() {
+        if (!themeActive()) {
+            return;
+        }
+
         fixAllSheets();
         fixInline();
     }
@@ -248,6 +260,11 @@
         clearTimeout(timer);
 
         timer = setTimeout(function () {
+            if (!themeActive()) {
+                needSheets = false;
+                return;
+            }
+
             if (needSheets) {
                 fixAllSheets();
             }

@@ -1734,11 +1734,13 @@ async function save(
                     reference_name,
                     reference_mobile,
                     auto_connection,
-                    payment_status
+                    payment_status,
+                    promise_date
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?
                 )
             `;
 
@@ -1849,7 +1851,24 @@ async function save(
 
                 autoConnection,
 
-                'unpaid'
+                'unpaid',
+
+                /*
+                 * Promise date = billing cycle date, saved together with the
+                 * customer (a promise date from the form wins if it is sent).
+                 */
+                nullable(
+                    postValue(
+                        body,
+                        'promise_date'
+                    )
+                ) ||
+                nullable(
+                    postValue(
+                        body,
+                        'billing_cycle'
+                    )
+                )
 
             ];
 

@@ -22,6 +22,7 @@
 */
 
 const db = require("../../config/database");
+const ppp = require("../ppp.service");
 
 /*
 |--------------------------------------------------------------------------
@@ -85,6 +86,20 @@ function isValidDateString(value) {
         date.getMonth() + 1 === Number(value.slice(5, 7)) &&
         date.getDate() === Number(value.slice(8, 10))
     );
+}
+
+function timePartOf(value) {
+
+    if (!value) return "";
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+    }
+
+    const match = String(value).match(/(\d{2}:\d{2}:\d{2})/);
+
+    return match ? match[1] : "";
 }
 
 function dateOnly(value) {
@@ -391,6 +406,9 @@ async function processBulkRecharge({ user, body }) {
     let failedCount = 0;
     let totalAmount = 0;
 
+    /* one MikroTik session for the whole run (restores expired customers) */
+    const pppSession = ppp.createSession({ companyId });
+
     /*
     |--------------------------------------------------------------------------
     | PROCESS EACH CUSTOMER IN ITS OWN TRANSACTION
@@ -425,6 +443,9 @@ async function processBulkRecharge({ user, body }) {
                     id,
                     customer_id,
                     name,
+                    mikrotik_id,
+                    pppoe_username,
+                    monthly_bill,
                     balance,
                     promise_date,
                     billing_cycle,
@@ -477,50 +498,69 @@ async function processBulkRecharge({ user, body }) {
             |--------------------------------------------------------------------------
             */
 
-            const newBalance = money(oldBalance + amount);
-
             /*
             |--------------------------------------------------------------------------
-            | CALCULATE NEW BILLING DATE
+            | WALLET RULE (same as single recharge)
             |--------------------------------------------------------------------------
+            | amount = cash received. Balance = real money.
+            | - month already paid  -> not allowed
+            | - balance + amount covers one month -> one month is billed,
+            |   billing cycle moves ONE month, the rest stays in the balance
+            | - otherwise -> everything stays in the balance (nothing billed)
             */
-
-            let baseDate = today;
+            const monthlyBill = money(customer.monthly_bill);
 
             if (
-                oldPromiseDate &&
-                isValidDateString(oldPromiseDate)
+                String(customer.payment_status || "").toLowerCase() === "paid" &&
+                String(customer.status || "").toLowerCase() === "active"
             ) {
-                const oldDate = new Date(
-                    `${oldPromiseDate}T00:00:00`
+                throw new Error(
+                    "This month is already paid. Recharge again after the promise date ends."
                 );
-
-                if (oldDate.getTime() >= todayDate.getTime()) {
-                    baseDate = oldPromiseDate;
-                }
             }
 
-            const newPromiseDate = addMonths(
-                baseDate,
-                monthsPaid
-            );
+            if (!(monthlyBill > 0)) {
+                throw new Error("Customer has no monthly bill.");
+            }
 
-            const newBillingCycle = newPromiseDate;
+            const available = money(oldBalance + amount);
+            const covers = available >= monthlyBill;
+            const newBalance = covers
+                ? money(available - monthlyBill)
+                : available;
+
+            let newBillingCycle = oldBillingCycle;
+            const newPromiseDate = oldPromiseDate;
+
+            if (covers) {
+                const cycleBase = dateOnly(customer.billing_cycle);
+                const nextDate = addMonths(
+                    isValidDateString(cycleBase) ? cycleBase : today,
+                    1
+                );
+                const cycleTime = timePartOf(customer.billing_cycle);
+
+                newBillingCycle =
+                    cycleTime && cycleTime !== "00:00:00"
+                        ? `${nextDate} ${cycleTime}`
+                        : nextDate;
+            }
+
+            const newStatus = covers ? "Active" : oldStatus;
+            const newPaymentStatus = covers ? "paid" : oldPaymentStatus;
 
             /*
             |--------------------------------------------------------------------------
             | UPDATE CUSTOMER
             |--------------------------------------------------------------------------
             */
-
             const [updateResult] = await connection.execute(
                 `
                 UPDATE customers
                 SET
                     balance = ?,
-                    status = 'Active',
-                    payment_status = 'paid',
-                    promise_date = ?,
+                    status = ?,
+                    payment_status = ?,
                     billing_cycle = ?
                 WHERE id = ?
                   AND company_id = ?
@@ -529,7 +569,8 @@ async function processBulkRecharge({ user, body }) {
                 `,
                 [
                     newBalance,
-                    newPromiseDate,
+                    newStatus,
+                    newPaymentStatus,
                     newBillingCycle,
                     customerId,
                     companyId
@@ -609,6 +650,42 @@ async function processBulkRecharge({ user, body }) {
             await connection.commit();
             transactionStarted = false;
 
+            /*
+             * A customer who was Expired / Inactive and is now paid must be
+             * switched back on in MikroTik (after the payment is committed).
+             */
+            let mikrotikOk = true;
+
+            if (
+                covers &&
+                String(oldStatus || "").toLowerCase() !== "active" &&
+                Number(customer.mikrotik_id) > 0 &&
+                customer.pppoe_username
+            ) {
+                try {
+                    const api = await pppSession.api(Number(customer.mikrotik_id));
+                    const secret = await ppp.findSecret(api, customer.pppoe_username);
+
+                    if (!secret) {
+                        throw new Error(
+                            `PPPoE customer not found on MikroTik: ${customer.pppoe_username}`
+                        );
+                    }
+
+                    await ppp.restoreCustomer(api, {
+                        secret,
+                        routerId: Number(customer.mikrotik_id),
+                        customerId
+                    });
+                } catch (restoreError) {
+                    mikrotikOk = false;
+                    console.error(
+                        `Bulk recharge MikroTik warning [${customerId}]:`,
+                        restoreError.message
+                    );
+                }
+            }
+
             successCount++;
             totalAmount = money(totalAmount + amount);
 
@@ -619,12 +696,15 @@ async function processBulkRecharge({ user, body }) {
                 payment_id: paymentResult.insertId,
                 amount,
                 success: true,
-                message: "Recharge completed successfully.",
+                message: covers
+                    ? "Recharge completed successfully."
+                    : "Amount kept in balance (less than one month's bill).",
                 old_balance: oldBalance,
                 new_balance: newBalance,
                 old_promise_date: oldPromiseDate,
                 new_promise_date: newPromiseDate,
-                months_paid: monthsPaid
+                months_paid: monthsPaid,
+                mikrotik_ok: mikrotikOk
             });
         } catch (error) {
             if (connection && transactionStarted) {
@@ -670,14 +750,34 @@ async function processBulkRecharge({ user, body }) {
     |--------------------------------------------------------------------------
     */
 
-    let message;
+    try {
+        await pppSession.closeAll();
+    } catch (_) {}
 
+    /* why customers failed (shown to the user, e.g. "already paid (12)") */
+    const reasons = {};
+
+    results
+        .filter((row) => row && row.success === false)
+        .forEach((row) => {
+            const key = String(row.message || "Recharge failed.");
+            reasons[key] = (reasons[key] || 0) + 1;
+        });
+
+    const reasonText = Object.entries(reasons)
+        .slice(0, 3)
+        .map(([text, count]) => `${text} (${count})`)
+        .join(" | ");
+
+    let message;
     if (successCount === items.length) {
         message = "Bulk recharge completed successfully.";
     } else if (successCount > 0) {
-        message = "Bulk recharge partially completed.";
+        message = "Bulk recharge partially completed." +
+            (reasonText ? " " + reasonText : "");
     } else {
-        message = "Bulk recharge failed.";
+        message = "Bulk recharge failed." +
+            (reasonText ? " " + reasonText : "");
     }
 
     return {

@@ -83,17 +83,17 @@ async function ensureTables() {
     );
 }
 
-async function run({ log = console.log, settings = {}, force = false } = {}) {
+async function run({ log = console.log, settings = {}, force = false, dryRun = false } = {}) {
 
     const cfg = { ...SETTINGS, ...settings };
 
     const { period, day } = nowInZone(cfg.TIMEZONE);
 
-    if (!force && day !== cfg.RUN_ON_DAY) {
+    if (!force && !dryRun && day !== cfg.RUN_ON_DAY) {
         return { skipped: true, reason: "not the run day" };
     }
 
-    await ensureTables();
+    if (!dryRun) await ensureTables();
 
     const notDeleted = (await hasColumn("customers", "deleted_at"))
         ? "deleted_at IS NULL"
@@ -130,6 +130,29 @@ async function run({ log = console.log, settings = {}, force = false } = {}) {
     const balanceSet = cfg.RESET_BALANCE
         ? `balance = CASE WHEN ${keepsExtension} THEN balance ELSE 0 END,`
         : "";
+
+    /*
+     * DRY RUN: only counts, changes nothing.
+     */
+    if (dryRun) {
+
+        const [[row]] = await db.query(
+            `SELECT
+                COUNT(*) AS customers_affected,
+                SUM(CASE WHEN COALESCE(monthly_bill, 0) > 0
+                          AND COALESCE(balance, 0) >= COALESCE(monthly_bill, 0)
+                         THEN 1 ELSE 0 END) AS will_become_paid,
+                SUM(CASE WHEN COALESCE(monthly_bill, 0) > 0
+                          AND COALESCE(balance, 0) >= COALESCE(monthly_bill, 0)
+                         THEN 0 ELSE 1 END) AS will_become_unpaid,
+                SUM(CASE WHEN (${promiseSql}) IS NOT NULL
+                          AND (${promiseSql}) < NOW() THEN 1 ELSE 0 END) AS promise_date_already_passed
+             FROM customers
+             WHERE ${notDeleted} AND ${dueThisMonth}`
+        );
+
+        return { dryRun: true, period, ...row };
+    }
 
     const conn = await db.getConnection();
 

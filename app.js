@@ -6,6 +6,7 @@ const MySQLStore =
     require("express-mysql-session")(session);
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const security = require("./middleware/security");
 
 require("dotenv").config();
 
@@ -115,6 +116,9 @@ const customerBulkRechargeRoutes =
 const customerCsvRoutes =
     require("./routes/customers/customers-csv");
 
+const customerExtrasRoutes =
+    require("./routes/customers/customers-extras");
+
 const { multipart } =
     require("./middleware/multipart");
 
@@ -165,6 +169,10 @@ const paymentGatewayRoutes =
 
 const app =
     express();
+
+app.disable("x-powered-by");
+app.use(security.headers());
+if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
 
 
 /*
@@ -266,7 +274,12 @@ app.use(
 
         secret:
             process.env.SESSION_SECRET ||
-            "ispbilling_node_test_secret",
+            (() => {
+                if (process.env.NODE_ENV === "production") {
+                    throw new Error("SESSION_SECRET is required in production");
+                }
+                return "ispbilling_node_test_secret";
+            })(),
 
         store:
             sessionStore,
@@ -292,7 +305,7 @@ app.use(
                 "lax",
 
             secure:
-                false,
+                process.env.COOKIE_SECURE === "true",
 
             path:
                 "/"
@@ -365,6 +378,11 @@ app.get(
 | STATIC FILES
 |--------------------------------------------------------------------------
 */
+
+app.use("/api/auth/login", security.authLimiter());
+app.use("/api/register", security.authLimiter());
+app.use(security.sameOriginGuard);
+app.use(security.csrfTokenCheck);
 
 app.use(
     express.static(
@@ -635,6 +653,21 @@ app.use(
     "/api/customers",
     requireSoftwareBilling,
     customerCsvRoutes
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER EXTRAS (Note, Activity Log, Reset Password)
+|--------------------------------------------------------------------------
+| Must be BEFORE customerRoutes, because customerRoutes has "/:id".
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+    "/api/customers",
+    requireSoftwareBilling,
+    customerExtrasRoutes
 );
 
 

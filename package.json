@@ -26,7 +26,9 @@
     "express": "^5.2.1",
     "express-fileupload": "^1.5.2",
     "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^8.7.3",
     "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
     "mysql2": "^3.24.6",
     "node-routeros": "^1.6.9",
     "routeros-client": "^1.1.1"
@@ -38,5 +40,10 @@
     "browser-sync": "^3.0.4",
     "concurrently": "^9.2.5",
     "nodemon": "^3.1.14"
+  },
+  "overrides": {
+    "express-mysql-session": {
+      "mysql2": "$mysql2"
+    }
   }
 }
