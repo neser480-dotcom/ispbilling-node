@@ -1,4 +1,4 @@
-﻿
+
 "use strict";
 
 const db = require("../../config/database");
@@ -237,6 +237,16 @@ function buildAdvancedFilterScope(filters = {}, alias = "c") {
     } else if (customerType === "expired") {
         clauses.push(` AND LOWER(COALESCE(${alias}.status, '')) = 'expired' `);
     } else if (customerType === "due") {
+        clauses.push(` AND (COALESCE(${alias}.balance, 0) < 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
+    }
+
+    const otherCustomerType = String(filters.other_customer_type ?? "").trim().toLowerCase();
+
+    if (otherCustomerType === "new") {
+        clauses.push(` AND ${alias}.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') AND ${alias}.created_at < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH) `);
+    } else if (otherCustomerType === "inactive") {
+        clauses.push(` AND LOWER(COALESCE(${alias}.status, '')) = 'inactive' `);
+    } else if (otherCustomerType === "due") {
         clauses.push(` AND (COALESCE(${alias}.balance, 0) < 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
     }
 
@@ -632,17 +642,15 @@ async function getCustomers({
         buildStatusScope(status, "c");
 
 
-    const whereSql =
-        company.sql +
-        deleted +
-        searchScope.sql +
-        statusScope.sql;
+    const otherScope = filters.other_customer_type ? buildAdvancedFilterScope({ other_customer_type: filters.other_customer_type }, "c") : { sql: "", params: [] };
 
+    const whereSql = company.sql + deleted + searchScope.sql + statusScope.sql + otherScope.sql;
 
     const whereParams = [
         ...company.params,
         ...searchScope.params,
-        ...statusScope.params
+        ...statusScope.params,
+        ...otherScope.params
     ];
 
 

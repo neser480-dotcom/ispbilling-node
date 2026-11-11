@@ -238,3 +238,53 @@ body.has-nf .d-footer { margin-bottom:52px; }
 @keyframes nf-wiggle { 0%,60%,100% { transform:rotate(0); } 70% { transform:rotate(-18deg); } 80% { transform:rotate(14deg); } 90% { transform:rotate(-8deg); } }
 @media (max-width:850px) { .nf-wrap { left:0; } .nf-label { padding:9px 10px; font-size:13px; } .nf-item { padding-top:9px; padding-bottom:9px; font-size:14px; } }
 @media (prefers-reduced-motion:reduce) { .nf-bar, .nf-label i, .nf-label::after { animation:none !important; } .nf-track { animation-duration:60s !important; } }
+
+/* ---- customer list popup ---- */
+.dc-link { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
+.dc-link:hover { opacity: .85; }
+
+#custListModal .modal-title { display: flex; align-items: center; gap: 18px; font-size: 20px; color: var(--d-muted, #6b7280); }
+.cl-print { width: 36px; height: 36px; border: 0; border-radius: 8px; background: #19b45d; color: #fff; }
+.cl-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    background: #318ce7; color: #fff; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px;
+    box-shadow: 0 3px 8px rgba(49,140,231,.35); font-weight: 600;
+}
+.cl-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cl-pill { display: inline-block; min-width: 38px; text-align: center; padding: 1px 10px; border-radius: 14px; background: #2a74c4; }
+.cl-search { width: 365px; max-width: 100%; border: 0; border-radius: 4px; padding: 7px 10px; background: #2a74c4; color: #fff; }
+.cl-search::placeholder { color: #dbe9f8; }
+.cl-search:focus { outline: 2px solid rgba(255,255,255,.5); }
+
+.cl-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.cl-table th { padding: 10px 8px; font-weight: 700; color: #212529; vertical-align: bottom; white-space: nowrap; }
+.cl-th { cursor: pointer; user-select: none; }
+.cl-sort { font-size: 11px; color: #3b82f6; }
+.cl-sort.on { color: #0d3b8c; }
+.cl-table td { padding: 8px; vertical-align: middle; }
+.cl-table tbody tr:nth-child(odd) { background: #f1f1f1; }
+.cl-id { text-align: center; }
+.cl-badge { display: block; width: fit-content; margin: 3px auto 0; padding: 1px 8px; border-radius: 4px; background: #0d6efd; color: #fff; font-size: 11px; font-weight: 700; }
+.cl-ico { color: #0dcaf0; } .cl-ico2 { color: #6b7280; }
+.cl-green { color: #198754; font-weight: 600; }
+.cl-red { color: #dc3545; } .cl-amber { color: #ffc107; }
+.cl-day { display: inline-block; min-width: 40px; text-align: center; padding: 2px 6px; font-weight: 600; }
+.cl-day.neg { background: #dc3545; color: #fff; }
+.cl-day.pos { border: 2px solid #198754; color: #198754; }
+.cl-tag { display: block; width: fit-content; margin: 2px auto; padding: 1px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #fff; }
+.cl-tag.paid { background: #198754; } .cl-tag.unpaid { background: #ffc107; color: #212529; }
+.cl-tag.active { background: #0d6efd; } .cl-tag.expired { background: #dc3545; } .cl-tag.inactive { background: #6c757d; }
+.cl-act { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border: 1px solid #0d6efd; border-radius: 5px; color: #0d6efd; font-size: 16px; text-decoration: none; }
+.cl-empty { text-align: center; font-size: 17px; padding: 26px 0 !important; background: transparent !important; }
+
+body.dark-mode .cl-table th, body.dark-mode .cl-table td { color: #cbd5e1; }
+body.dark-mode .cl-table tbody tr:nth-child(odd) { background: #172033; }
+
+/* ---- popup must sit above sidebar + topbar ---- */
+#custListModal { z-index: 100050 !important; }
+body > .modal-backdrop { z-index: 100040 !important; }
+
+/* ---- profile popup opened from the customer list: above list popup ---- */
+#customerActionModal { z-index: 100100 !important; }
+body > .modal-backdrop ~ .modal-backdrop { z-index: 100090 !important; }
+button.cl-act { background: #fff; cursor: pointer; padding: 0; }

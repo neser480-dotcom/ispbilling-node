@@ -1,0 +1,201 @@
+/* =========================================================
+   NETFEE THEME COLORS (loaded last, by topbar-loader.js)
+   1) Bootstrap-style blue things follow --theme-primary
+   2) In dark mode only the ACCENT (sidebar text) follows the chosen
+      colour; the dark surfaces stay the normal dark.
+========================================================= */
+
+:root {
+    --dk-accent: #60a5fa;
+}
+
+
+/* ---------- 1) LIGHT + DARK: theme colour everywhere ---------- */
+
+.bg-primary {
+    background-color: var(--theme-primary) !important;
+}
+
+.text-primary {
+    color: var(--theme-primary) !important;
+}
+
+.border-primary {
+    border-color: var(--theme-primary) !important;
+}
+
+.btn-link {
+    color: var(--theme-primary);
+}
+
+.badge.bg-primary,
+.badge-primary {
+    background-color: var(--theme-primary) !important;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: var(--theme-primary) !important;
+    color: #fff !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--theme-primary) !important;
+    border-bottom-color: var(--theme-primary) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+}
+
+.progress-bar {
+    background-color: var(--theme-primary);
+}
+
+.bg-blue {
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-primary-hover)) !important;
+}
+
+.list-group-item.active {
+    background-color: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+}
+
+
+/* ---------- 1b) LIGHT MODE: sidebar / menus have fixed blue in their CSS ---------- */
+
+body:not(.dark-mode) .sidebar-profile h5,
+body:not(.dark-mode) .sidebar ul li a,
+body:not(.dark-mode) .sidebar ul li a i,
+body:not(.dark-mode) .sidebar ul li a span,
+body:not(.dark-mode) .sidebar .submenu {
+    color: var(--theme-primary) !important;
+}
+
+body:not(.dark-mode) .sidebar ul li a:hover {
+    background: var(--theme-primary-soft);
+}
+
+body:not(.dark-mode) .profile-dropdown a:not(.text-danger) {
+    color: var(--theme-primary);
+}
+
+
+/* ---------- 2) DARK MODE: normal dark, only the accent follows ---------- */
+
+html body.dark-mode .sidebar-profile h5,
+html body.dark-mode .sidebar ul li a,
+html body.dark-mode .sidebar ul li a i,
+html body.dark-mode .sidebar ul li a span,
+html body.dark-mode .submenu {
+    color: var(--dk-accent);
+}
+
+html body.dark-mode .submenu a {
+    color: var(--dk-accent) !important;
+}
+
+/* links, outline buttons, tabs, icons: readable lighter shade of the chosen colour */
+html body.dark-mode a:not(.btn):not(.dropdown-item):not(.nav-link):not(.page-link),
+html body.dark-mode .text-primary,
+html body.dark-mode .btn-link,
+html body.dark-mode .nav-tabs .nav-link.active,
+html body.dark-mode .page-link,
+html body.dark-mode .icon-box,
+html body.dark-mode .language-dropdown,
+html body.dark-mode .profile-info strong {
+    color: var(--dk-accent) !important;
+}
+
+html body.dark-mode .btn-outline-primary {
+    color: var(--dk-accent) !important;
+    border-color: var(--theme-primary) !important;
+}
+
+html body.dark-mode .btn-outline-primary:hover {
+    color: #fff !important;
+}
+
+html body.dark-mode .sidebar a:hover,
+html body.dark-mode .sidebar .nav-link:hover {
+    color: var(--dk-accent) !important;
+}
+
+/* ---------- 3) DASHBOARD: ring, buttons and the blue-family cards follow the colour ---------- */
+
+body .d-circle .bar {
+    stroke: var(--theme-primary) !important;
+}
+
+body .d-circle .pct {
+    color: var(--theme-primary) !important;
+}
+
+body .d-btn-blue {
+    background: var(--theme-primary) !important;
+    border-color: var(--theme-primary) !important;
+    color: #fff !important;
+}
+
+body .d-btn-blue:hover {
+    background: var(--theme-primary-hover) !important;
+    border-color: var(--theme-primary-hover) !important;
+}
+
+body .d-icon-btn {
+    color: var(--theme-primary) !important;
+}
+
+body #monthFilter:focus {
+    border-color: var(--theme-primary) !important;
+    box-shadow: 0 0 0 3px var(--theme-primary-soft) !important;
+}
+
+/* blue-family cards: shades of the chosen colour (green / orange / red / brown ... stay as they are) */
+body .dc.dc-teal,
+body .dc.dc-teal2 {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--theme-primary) 72%, #ffffff),
+        color-mix(in srgb, var(--theme-primary) 92%, #ffffff)) !important;
+}
+
+body .dc.dc-blue {
+    background: linear-gradient(135deg,
+        var(--theme-primary),
+        var(--theme-primary-hover)) !important;
+}
+
+body .dc.dc-royal {
+    background: linear-gradient(135deg,
+        var(--theme-primary-hover),
+        color-mix(in srgb, var(--theme-primary) 70%, #000000)) !important;
+}
+
+body .dc.dc-navy {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--theme-primary) 60%, #000000),
+        color-mix(in srgb, var(--theme-primary) 40%, #000000)) !important;
+}
+
+body .dc.dc-steel {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--theme-primary) 55%, #64748b),
+        color-mix(in srgb, var(--theme-primary) 40%, #475569)) !important;
+}
+
+/* ---------- 4) FILTER ICON: same thin "circle filter" icon in the whole software ---------- */
+
+.fa-filter::before,
+.fa-solid.fa-filter::before,
+.fas.fa-filter::before,
+.fa.fa-filter::before {
+    content: "" !important;
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: -0.2em;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9.2'/%3E%3Cpath d='M7.4 9.7h9.2M9.4 12.7h5.2M11.3 15.6h1.4'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9.2'/%3E%3Cpath d='M7.4 9.7h9.2M9.4 12.7h5.2M11.3 15.6h1.4'/%3E%3C/svg%3E") center / contain no-repeat;
+}

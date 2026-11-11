@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Customers - ISP Billing</title>
+
+
+    <!-- =====================================================
+         BOOTSTRAP
+    ====================================================== -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         FONT AWESOME
+    ====================================================== -->
+
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+
+    <!-- =====================================================
+         TOPBAR
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+
+    <!-- =====================================================
+         MAIN STYLE
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/style.css"
+    >
+
+
+    <!-- =====================================================
+         CUSTOMER STYLE
+    ====================================================== -->
+<link rel="stylesheet" href="/assets/css/customer.css?v=20261030">
+<link rel="stylesheet" href="/assets/css/customer-add.css?v=20261025">
+<link rel="stylesheet" href="/assets/css/customer-bill-history.css">
+<link rel="stylesheet" href="/assets/css/customer-list.css?v=20261030">
+<link rel="stylesheet" href="/assets/css/other-customers.css?v=20261110">
+<style>
+/* Popup scroll: only the popup content scrolls, never the page behind it.
+   (#id.modal selectors are stronger than customer.css / customer-add.css /
+   customer-edit.css, so load order does not matter.) */
+html:has(#customerActionModal.show),
+body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+
+#customerActionModal.modal { overflow-y: auto !important; overscroll-behavior: contain; }
+
+#customerActionModal.modal .modal-dialog {
+    height: auto !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    margin: .75rem auto !important;
+}
+
+#customerActionModal.modal .modal-content {
+    display: flex !important;
+    flex-direction: column;
+    height: auto !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    overflow: hidden !important;
+}
+
+#customerActionModal.modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#customerActionModal.modal #customerActionModalBody .cm-body {
+    height: auto !important;
+    max-height: calc(100dvh - 10.5rem) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+}
+</style>
+
+<style>
+/* Bulk panel: same look as the reference (coloured icon squares, scrollable) */
+#bulkFloatingPanel { max-height: calc(100vh - 90px); overflow-y: auto; }
+#bulkFloatingPanel .bulk-tile i {
+    display: inline-flex !important; align-items: center; justify-content: center;
+    width: 22px; height: 22px; margin-bottom: 4px; border-radius: 4px; font-size: 12px;
+    background: #fff !important; color: #2d86e5 !important;
+}
+#bulkFloatingPanel .bulk-tile:nth-child(4n+2) i { background: #17c1e8 !important; color: #fff !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+3) i,
+#bulkFloatingPanel .bulk-tile:nth-child(13) i { background: #fcc419 !important; color: #222 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+4) i { background: #e5383b !important; color: #fff !important; }
+</style>
+
+<style>
+/* Bulk gear tab + slide-out panel (reference design). Selected count shows in the Total Data pill. */
+#bulkFloatingToggle,
+.bulk-floating-toggle {
+    position: fixed !important; right: 0 !important; top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 34px !important; height: 46px !important; min-width: 34px !important;
+    border-radius: 23px 0 0 23px !important; background: #2d86e5 !important; color: #fff !important;
+    box-shadow: -2px 2px 6px rgba(0,0,0,.25) !important; font-size: 18px !important;
+    transition: right .25s ease; z-index: 99999 !important;
+}
+#bulkFloatingToggle .selected-count,
+#bulkFloatingToggle #selectedCount { display: none !important; }
+body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 90px !important; }
+
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    position: fixed !important; right: 0 !important; top: 50% !important; width: 90px !important;
+    transform: translate(100%, -50%) !important;
+    opacity: 1 !important; visibility: hidden !important; pointer-events: none;
+    transition: transform .25s ease, visibility .25s;
+    background: #2d86e5 !important; border-radius: 8px 0 0 8px !important; padding: 2px 0 !important;
+    z-index: 99998 !important;
+}
+#bulkFloatingPanel.show,
+.bulk-floating-panel.show { transform: translate(0, -50%) !important; visibility: visible !important; pointer-events: auto; }
+#bulkFloatingPanel .bulk-tile {
+    display: flex !important; flex-direction: column; align-items: center; text-align: center;
+    color: #fff !important; font-weight: 700; font-size: 10px !important; line-height: 1.15;
+    padding: 8px 4px 7px !important; border: 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,.35) !important;
+}
+#bulkFloatingPanel .bulk-tile:last-child { border-bottom: 0 !important; }
+#bulkFloatingPanel .bulk-tile span { color: #fff !important; }
+</style>
+
+<style>
+/* Bulk panel: exact reference look (measured from the screenshot) */
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    width: 77px !important; background: #2d86de !important;
+    border-radius: 12px 0 0 12px !important; padding: 0 !important;
+}
+#bulkFloatingToggle,
+.bulk-floating-toggle {
+    width: 26px !important; min-width: 26px !important; height: 52px !important;
+    border-radius: 0 !important; background: #2d86de !important; box-shadow: none !important;
+    clip-path: polygon(0 50%, 14% 36%, 100% 0, 100% 100%, 14% 64%) !important;
+    padding: 0 0 0 5px !important; font-size: 16px !important;
+}
+body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 77px !important; }
+
+#bulkFloatingPanel .bulk-tile {
+    padding: 7px 3px 6px !important; gap: 3px;
+    font-size: 11px !important; font-weight: 700 !important;
+    border-bottom: 1px solid #62a4e6 !important;
+}
+#bulkFloatingPanel .bulk-tile i {
+    width: 21px !important; height: 17px !important; margin: 0 0 3px !important;
+    border-radius: 3px !important; font-size: 10px !important;
+    background: #ffffff !important; color: #000000 !important;
+}
+#bulkFloatingPanel .bulk-tile:nth-child(4n+2) i { background: #0dcaf0 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+3) i { background: #ffc107 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(4n+4) i { background: #dc3545 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-tile:nth-child(13) i { background: #ffc107 !important; color: #000 !important; }
+#bulkFloatingPanel .bulk-delete-btn i { color: #000 !important; }
+</style>
+
+<style>
+/* Bulk panel: scrolls on its own when the screen is short (page stays still) */
+#bulkFloatingPanel,
+.bulk-floating-panel {
+    display: flex !important; flex-direction: column !important;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important; overflow-x: hidden !important;
+    overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none;
+}
+#bulkFloatingPanel::-webkit-scrollbar { display: none; }
+#bulkFloatingPanel .bulk-tile { flex: 0 0 auto !important; min-height: 0 !important; width: 100% !important; }
+
+/* Edit Status / Customer Delete / Bulk Recharge: same tile as the others */
+#bulkFloatingPanel .bulk-delete-btn,
+#bulkFloatingPanel .bulk-recharge-btn {
+    background: transparent !important; color: #fff !important;
+    border: 0 !important; border-bottom: 1px solid #62a4e6 !important; border-radius: 0 !important;
+}
+#bulkFloatingPanel .bulk-delete-btn:last-child,
+#bulkFloatingPanel .bulk-recharge-btn:last-child { border-bottom: 0 !important; }
+#bulkFloatingPanel .bulk-tile:hover { background: rgba(255,255,255,.14) !important; transform: none !important; filter: none !important; }
+</style>
+
+
+    <!-- =====================================================
+         CSRF
+    ====================================================== -->
+
+    <meta
+        name="csrf-token"
+        content=""
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     SIDEBAR
+========================================================= -->
+
+<div id="sidebarContainer"></div>
+
+
+<!-- =========================================================
+     MAIN CONTENT
+========================================================= -->
+
+<div
+    class="main-content"
+    id="mainContent"
+>
+
+
+    <!-- =====================================================
+         TOPBAR
+    ====================================================== -->
+
+    <div id="topbarContainer"></div>
+
+
+    <!-- =====================================================
+         CUSTOMER PAGE
+    ====================================================== -->
+
+    <main class="container-fluid customer-page other-customers-page">
+
+
+
+        <!-- =================================================
+             CUSTOMER HEADER
+        ================================================== -->
+
+        <div class="cl-wrap">
+
+        <!-- HEADER -->
+        <div class="cm-list-header cl-header">
+
+            <h4 class="cl-title">Other Customer</h4>
+
+            <div id="customerRangeText" class="cm-list-subtitle d-none"></div>
+
+            <div class="cm-list-actions cl-header-actions">
+
+                <button type="button" class="cm-ibtn" id="customerFilterToggle" title="Filter"><i class="fa fa-filter"></i></button>
+
+                <button type="button" class="cm-ibtn" id="refreshCustomersBtn" title="Refresh"><i class="fa fa-rotate-right"></i></button>
+
+                <span class="cl-extra" id="clExtraTools" hidden><button type="button" class="btn btn-success cm-ibtn" id="exportCustomersBtn" title="CSV Export"><i class="fa fa-file-csv"></i></button><button type="button" class="btn btn-dark cm-ibtn" id="customerPrintBtn" title="Print"><i class="fa fa-print"></i></button></span>
+
+                <button type="button" class="btn btn-outline-light cl-back" id="clToggleTools" title="More tools" aria-expanded="false"><i class="fa fa-arrow-left-long"></i></button>
+
+            </div>
+
+        </div>
+
+        <section class="other-customer-tabs" id="otherCustomerTabs"><button type="button" class="active" data-other-tab="new">New Customer</button><button type="button" data-other-tab="inactive">Inactive Customer</button><button type="button" data-other-tab="due">Due Customers</button></section><input type="hidden" data-cf="other_customer_type" id="otherCustomerType" value="new">
+<div class="cl-card">
+
+        <!-- FILTER (opened by the header filter button) -->
+        <div class="cm-filter-bar cl-filter" id="customerFilterBar" hidden>
+
+            <div class="cl-fgrid">
+
+                <select class="form-select cl-f" data-cf="router_id" data-source="/api/router" data-list="routers" data-label="name"><option value="">Mikrotik</option></select>
+                <select class="form-select cl-f" data-cf="package_id" data-source="/api/packages" data-list="packages" data-label="name"><option value="">Package</option></select>
+                <select class="form-select cl-f" data-cf="area_id" data-source="/api/areas" data-list="areas" data-label="name"><option value="">All Area</option></select>
+                <select class="form-select cl-f" data-cf="sub_area_id"><option value="">Sub Area</option></select>
+                <select id="customerStatus" class="form-select cl-f">
+                    <option value="">Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Suspended">Suspended</option>
+                    <option value="Disabled">Disabled</option>
+                    <option value="Pending">Pending</option>
+                </select>
+                <select class="form-select cl-f" data-cf="payment_status">
+                    <option value="">Payment Status</option>
+                    <option value="paid">Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                </select>
+
+                <select class="form-select cl-f" data-cf="customer_type">
+                    <option value="">All Customer</option>
+                    <option value="new">New Customer</option>
+                    <option value="expired">Expired Customer</option>
+                    <option value="due">Due Customer</option>
+                </select>
+                <select class="form-select cl-f" data-cf="bill_date_left">
+                    <option value="">Bill date left</option>
+                    <option value="0">Today</option>
+                    <option value="1">1 day</option>
+                    <option value="2">2 days</option>
+                    <option value="3">3 days</option>
+                    <option value="5">5 days</option>
+                    <option value="7">7 days</option>
+                </select>
+                <input type="text" class="form-control cl-f cl-date" data-cf="billing_start" placeholder="Start BillingCycle Date" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+                <input type="text" class="form-control cl-f cl-date" data-cf="billing_end" placeholder="End BillingCycle Date" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+                <input type="text" class="form-control cl-f cl-date" data-cf="promise_start" placeholder="Start Promise Date" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+                <input type="text" class="form-control cl-f cl-date" data-cf="promise_end" placeholder="End Promise Date" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'">
+
+                <select class="form-select cl-f" data-cf="change_customer">
+                    <option value="">Change Customer</option>
+                    <option value="changed">Changed</option>
+                    <option value="not_changed">Not Changed</option>
+                </select>
+
+                <div class="cl-fbtns">
+                    <button type="button" class="btn btn-outline-primary" id="applyCustomerFilter">Filter</button>
+                    <button type="button" class="btn btn-outline-secondary" id="resetCustomerFilter">Reset</button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="cm-summary cl-toolbar">
+
+            <i class="fa fa-gear cl-toolbar-ico"></i>
+            <i class="fa fa-database cl-toolbar-ico"></i>
+
+            <span class="cl-tb-text">Total Data:</span>
+            <span class="cl-pill" id="totalCustomers">0</span>
+
+            <span class="cl-tb-strong">Monthly Fee: <span id="totalBill">৳0</span></span>
+            <span class="cl-tb-strong">Due: <span id="totalBalance">৳0</span></span>
+
+            <div class="cl-search">
+                <input type="text" id="customerSearch" placeholder="Search" autocomplete="off">
+                <button type="button" id="clearSearchBtn" title="Clear"><i class="fa fa-times"></i></button>
+            </div>
+
+        </div>
+
+        <div class="customer-table-scroll">
+
+
+            <table
+                class="table cm-table"
+                id="customerTable"
+            >
+
+                <thead>
+
+                    <tr>
+
+
+                        <!-- SELECT -->
+
+                        <th
+                            class="text-center"
+                            style="width:45px;"
+                        >
+
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                id="selectAll"
+                            >
+
+                        </th>
+
+
+                        <!-- ID -->
+
+                        <th>
+                            ID
+                        </th>
+
+
+                        <!-- NAME -->
+
+                        <th>
+                            Name / PPPoE
+                        </th>
+
+
+                        <!-- MOBILE -->
+
+                        <th>
+                            Mobile / Address
+                        </th>
+
+
+                        <!-- PACKAGE -->
+
+                        <th>
+                            Package
+                        </th>
+
+
+                        <!-- BILL -->
+
+                        <th>
+                            Bill / Balance
+                        </th>
+
+
+                        <!-- DATE -->
+
+                        <th>
+                            Bill / Promise Date
+                        </th>
+
+
+                        <!-- DAY LEFT -->
+
+                        <th>
+                            Day Left
+                        </th>
+
+
+                        <!-- STATUS -->
+
+                        <th>
+                            Status
+                        </th>
+
+
+                        <!-- ACTION -->
+
+                        <th class="text-center">
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody
+                    id="customerTableBody"
+                >
+
+                    <tr>
+
+                        <td
+                            colspan="10"
+                            class="text-center py-5"
+                        >
+
+                            <div
+                                class="spinner-border text-primary"
+                                role="status"
+                            ></div>
+
+                            <div class="mt-2 text-muted">
+                                Loading customers...
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- PAGINATION -->
+        <div class="cm-pagination-wrap cl-bottom">
+
+            <select id="customerLimit" class="form-select cl-limit">
+                <option value="100">100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+                <option value="5000">5000</option>
+                <option value="0">All</option>
+            </select>
+
+            <div id="paginationInfo" class="cl-info small text-muted"></div>
+
+            <nav aria-label="Customer pagination">
+                <ul class="pagination pagination-sm mb-0" id="customerPagination"></ul>
+            </nav>
+
+        </div>
+
+        </div><!-- /cl-card -->
+
+        <div class="cl-footer">© IRFAN IT - <span id="clYear"></span></div>
+
+        </div><!-- /cl-wrap -->
+
+    </main>
+
+</div>
+
+
+<!-- =========================================================
+     BULK FLOATING TOGGLE
+========================================================= -->
+
+<button
+    type="button"
+    id="bulkFloatingToggle"
+    class="bulk-floating-toggle"
+    title="Bulk Actions"
+>
+
+    <i class="fa fa-cog"></i>
+
+    <span
+        id="selectedCount"
+        class="selected-count"
+    >
+        0
+    </span>
+
+</button>
+
+
+<!-- =========================================================
+     BULK FLOATING PANEL
+========================================================= -->
+
+<div id="bulkFloatingPanel" class="bulk-floating-panel">
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/message" data-title="Bulk Message">
+        <i class="fa fa-envelope"></i>
+        <span>Bulk Message</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/promise_date" data-title="Edit Promise Date">
+        <i class="fa fa-calendar-day"></i>
+        <span>Edit Promise Date</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/billing_cycle" data-title="Update Billing Cycle">
+        <i class="fa fa-calendar-days"></i>
+        <span>Edit Billing Cycle</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/payment_status" data-title="Edit Payment Status">
+        <i class="fa fa-cash-register"></i>
+        <span>Edit Payment Status</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/area" data-title="Update Area">
+        <i class="fa fa-map-location-dot"></i>
+        <span>Edit Area</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/status" data-title="Update Status">
+        <i class="fa fa-pen-to-square"></i>
+        <span>Edit Status</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/balance" data-title="Update Balance">
+        <i class="fa fa-dollar-sign"></i>
+        <span>Edit Balance</span>
+    </button>
+
+    <button type="button" id="bulkRechargeBtn" class="bulk-recharge-btn bulk-tile">
+        <i class="fa fa-dollar-sign"></i>
+        <span>Bulk Recharge</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/reseller" data-title="Transfer to Reseller">
+        <i class="fa fa-right-left"></i>
+        <span>Transfer to Reseller</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/package" data-title="Update Package">
+        <i class="fa fa-wifi"></i>
+        <span>Update Package</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/connection_on" data-title="Automatic Connection On/Off">
+        <i class="fa fa-power-off"></i>
+        <span>Automatic Connection On/Off</span>
+    </button>
+
+    <button type="button" class="bulk-delete-btn bulk-tile">
+        <i class="fa fa-trash"></i>
+        <span>Customer Delete</span>
+    </button>
+
+    <button type="button" class="bulk-action-popup bulk-tile" data-url="/api/customers/bulk/mikrotik" data-title="Change Mikrotik">
+        <i class="fa fa-equals"></i>
+        <span>Change Mikrotik</span>
+    </button>
+
+</div>
+
+
+<!-- =========================================================
+     CUSTOMER ACTION MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="customerActionModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-xl modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="customerActionModalLabel"
+                >
+                    Customer Action
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close bulk-popup-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="customerActionModalBody"
+            >
+
+                <div
+                    class="text-center py-5"
+                >
+
+                    <div
+                        class="spinner-border text-primary"
+                        role="status"
+                    ></div>
+
+                    <div class="mt-2 text-muted">
+                        Loading...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CSV IMPORT MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="csvImportModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-file-csv me-2"></i>
+
+                    Import Customers CSV
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <form
+                id="csvImportForm"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+
+                <div class="modal-body">
+
+
+                    <div class="alert alert-info">
+
+                        <i class="fa fa-info-circle me-1"></i>
+
+                        Upload your customer CSV file.
+
+                    </div>
+
+
+                    <!-- CSV FILE -->
+
+                    <div class="mb-3">
+
+                        <label
+                            for="csv_file"
+                            class="form-label fw-semibold"
+                        >
+                            CSV File
+                        </label>
+
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="csv_file"
+                            name="csv_file"
+                            accept=".csv,text/csv"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- TEMPLATE -->
+
+                    <div class="mb-2">
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary"
+                            id="csvTemplateModalBtn"
+                        >
+
+                            <i class="fa fa-download me-1"></i>
+
+                            Download CSV Template
+
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="csvImportMessage"
+                        class="mt-3"
+                    ></div>
+
+
+                </div>
+
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        id="csvImportSubmit"
+                    >
+
+                        <i class="fa fa-upload me-1"></i>
+
+                        Import CSV
+
+                    </button>
+
+                </div>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CSV REPORT MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="csvReportModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-file-circle-check me-2"></i>
+
+                    CSV Import Report
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="csvReportBody"
+            >
+
+                <div class="text-center text-muted py-4">
+
+                    No report available.
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     SINGLE RECHARGE MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="rechargeModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-lg modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="rechargeModalTitle"
+                >
+                    Customer Recharge
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div
+                class="modal-body"
+                id="rechargeModalBody"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BULK RECHARGE MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="bulkRechargeModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div
+        class="modal-dialog modal-xl modal-dialog-centered"
+    >
+
+        <div class="modal-content">
+
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+
+                    <i class="fa fa-credit-card me-2"></i>
+
+                    Bulk Recharge
+
+                </h5>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+
+                <div
+                    id="bulkRechargeContent"
+                >
+
+                    <div class="text-center py-5">
+
+                        <div
+                            class="spinner-border text-primary"
+                            role="status"
+                        ></div>
+
+                        <div class="mt-2 text-muted">
+                            Loading...
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CUSTOMER TOAST
+========================================================= -->
+
+<div
+    class="customer-topbar-toast"
+    id="customerToast"
+    style="display:none;"
+>
+
+    <div
+        id="customerToastTitle"
+        class="fw-bold"
+    >
+        ISP Billing
+    </div>
+
+
+    <div
+        id="customerToastBody"
+    ></div>
+
+</div>
+
+
+<!-- =========================================================
+     HIDDEN CSRF
+========================================================= -->
+
+<input
+    type="hidden"
+    name="csrf_token"
+    id="csrfTokenInput"
+    value=""
+>
+
+
+<!-- =========================================================
+     BOOTSTRAP JS
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- =========================================================
+     SWEETALERT
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/sweetalert2@11"
+></script>
+
+
+<!-- =========================================================
+     SIDEBAR LOADER
+========================================================= -->
+
+<script
+    src="/assets/js/sidebar-loader.js?v=20261009"
+></script>
+
+
+<!-- =========================================================
+     TOPBAR LOADER
+========================================================= -->
+
+<script
+    src="/assets/js/topbar-loader.js?v=20261009"
+></script>
+
+
+<!-- =========================================================
+     CUSTOMER JS
+========================================================= -->
+<script src="/assets/js/customer.js?v=20261030"></script>
+<script src="/assets/js/customer-add.js?v=20261025"></script>
+<script src="/assets/js/customer-actions.js?v=20261030"></script>
+<script src="/assets/js/customer-extras.js?v=20261103"></script>
+<script src="/assets/js/customer-edit.js?v=20261030"></script>
+<script src="/assets/js/bulk-recharge.js?v=20261009"></script>
+<script src="/assets/js/customer-bill-history.js"></script>
+
+
+<script>
+(function () {
+    var y = document.getElementById("clYear");
+    if (y) y.textContent = new Date().getFullYear();
+    function toggle(btnId, boxId) {
+        var b = document.getElementById(btnId), x = document.getElementById(boxId);
+        if (!b || !x) return;
+        b.addEventListener("click", function () { x.hidden = !x.hidden; });
+    }
+    toggle("customerFilterToggle", "customerFilterBar");
+    var tt = document.getElementById("clToggleTools"), ex = document.getElementById("clExtraTools");
+    if (tt && ex) tt.addEventListener("click", function () {
+        ex.hidden = !ex.hidden;
+        tt.setAttribute("aria-expanded", String(!ex.hidden));
+        tt.innerHTML = ex.hidden
+            ? '<i class="fa fa-arrow-left-long"></i>'
+            : '<i class="fa fa-arrow-left-long"></i>';
+    });
+    var pr = document.getElementById("customerPrintBtn");
+    if (pr) pr.addEventListener("click", function () { window.print(); });
+})();
+</script>
+<script src="/assets/js/i18n.js?v=mw7ynpem"></script>
+<script src="/assets/js/other-customers.js?v=20261110"></script></body>
+
+</html>

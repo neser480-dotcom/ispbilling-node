@@ -494,7 +494,7 @@ function templateCsv() {
             "",
             "",
             "0",
-            todayString,
+            "",
             "pppoe",
             "500",
             ""
@@ -618,15 +618,15 @@ async function exportCsv(
                         r.package_name ?? "",
                         r.pppoe_password ?? "",
                         r.phone ?? "",
-                        String(r.status ?? "Active").toLowerCase(),
-                        r.payment_status ?? "unpaid",
+                        (r.status == null ? "" : String(r.status).toLowerCase()),
+                        r.payment_status ?? "",
                         r.sub_area_name ?? "",
                         r.area_name ?? "",
                         r.email ?? "",
-                        r.balance ?? "0",
+                        r.balance ?? "",
                         fmt(r.billing_cycle) ?? "",
                         r.connection_type ?? "",
-                        r.monthly_bill ?? "0",
+                        r.monthly_bill ?? "",
                         r.comments ?? ""
                     ])
                 )
@@ -1176,7 +1176,7 @@ async function importCsv({ user, file }) {
                 [areaId, companyId, mikrotikId]
             );
 
-            if (!areaId || !validAreaRows.length) {
+            if ((areaText && !areaId) || (areaId && !validAreaRows.length)) {
                 report.errors++;
                 report.messages.push(
                     `Line ${line}: valid Area is required. Customer skipped.`
@@ -1196,7 +1196,7 @@ async function importCsv({ user, file }) {
                 [subAreaId, areaId, companyId]
             );
 
-            if (!subAreaId || !validSubAreaRows.length) {
+            if ((subAreaText && !subAreaId) || (subAreaId && !validSubAreaRows.length)) {
                 report.errors++;
                 report.messages.push(
                     `Line ${line}: valid Sub-area is required. Customer skipped.`
@@ -1337,9 +1337,9 @@ async function importCsv({ user, file }) {
                     0,
 
                 billing_type:
-                    get(row, "user_type")
-                        ? get(row, "user_type").toUpperCase()
-                        : "POSTPAID",
+                    String(get(row, "user_type") || "Prepaid").trim().toLowerCase() === "postpaid"
+                        ? "Postpaid"
+                        : "Prepaid",
 
                 auto_connection:
                     0,
@@ -1518,6 +1518,10 @@ module.exports = {
     exportCsv,
     importCsv
 };
+
+
+
+
 
 
 

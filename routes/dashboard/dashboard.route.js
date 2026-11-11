@@ -288,8 +288,10 @@ router.get("/data", async (req, res) => {
             const sqlWith = `
                 SELECT
                     c.status,
-                    COALESCE(c.monthly_bill, 0) AS bill,
+                    c.payment_status,
+                    COALESCE(NULLIF(c.monthly_bill, 0), mp.price, 0) AS bill,
                     c.promise_date,
+                    c.billing_cycle,
                     c.created_at,
                     p.paid_amount,
                     (p.customer_id IS NOT NULL) AS paid
@@ -303,6 +305,8 @@ router.get("/data", async (req, res) => {
                       AND deleted_at IS NULL
                     GROUP BY customer_id
                 ) p ON p.customer_id = c.id
+                LEFT JOIN mikrotik_packages mp
+                    ON mp.id = c.package_id AND mp.company_id = c.company_id
                 WHERE c.company_id = ?
                   AND c.deleted_at IS NULL
             `;
@@ -336,13 +340,11 @@ router.get("/data", async (req, res) => {
             for (const r of rows) {
                 const bill = toNumber(r.bill);
                 const isActive = String(r.status || "") === "Active";
-                const isPaid = Number(r.paid) === 1;
+                const isPaid = String(r.payment_status || "").trim().toLowerCase() === "paid" || Number(r.paid) === 1;
                 const paidAmount = toNumber(r.paid_amount);
                 /* expired = status is "Expired", OR still Active but the promise date has passed */
                 const statusText = String(r.status || "").trim().toLowerCase();
-                const isExpired =
-                    statusText === "expired" ||
-                    (isActive && r.promise_date && new Date(r.promise_date) < now);
+                const isExpired = computeExpired(r, now);
                 const isFree = bill === 0;
 
                 const created = r.created_at ? new Date(r.created_at) : null;
@@ -354,7 +356,7 @@ router.get("/data", async (req, res) => {
                 const bucket = (b) => {
                     b.total += 1;
                     if (isActive) { b.active += 1; b.a_active += bill; }
-                    else { b.inactive += 1; b.a_inactive += bill; }
+                    if (statusText === "inactive") { b.inactive += 1; b.a_inactive += bill; }
                     if (isPaid) { b.paid += 1; b.a_paid += paidAmount; b.collected += paidAmount; }
                     else { b.unpaid += 1; b.a_unpaid += bill; }
                     if (isExpired) { b.expired += 1; b.a_expired += bill; }
@@ -618,6 +620,206 @@ router.get("/data", async (req, res) => {
 | CHART  (daily amount / bill count of one month)
 |--------------------------------------------------------------------------
 */
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER LIST  (popup that opens when a dashboard card number is clicked)
+|--------------------------------------------------------------------------
+| GET /api/dashboard/customers?type=total|active|paid|unpaid|expired|inactive|free|discount&month=YYYY-MM
+|
+| customers table-er column nam onek project-e alada hoy, tai pick() ekadhik
+| nam try kore. Tomar column nam alada hole ekhane CANDIDATES-e jog koro.
+*/
+
+const LIST_TITLES = {
+    total: "Customers",
+    active: "Active Customer",
+    paid: "Paid Customer",
+    unpaid: "Unpaid Customer",
+    expired: "Expired Customer",
+    inactive: "Inactive Customer",
+    free: "Free Customer",
+    discount: "Discount Customer"
+};
+
+const CANDIDATES = {
+    name: ["name", "full_name", "customer_name"],
+    sub: ["father_name", "nick_name", "nickname", "guardian_name"],
+    username: ["pppoe_username", "username", "pppoe_user", "user_name"],
+    type: ["connection_type", "service_type", "type"],
+    mobile: ["phone", "mobile", "mobile_number", "contact_number"],
+    address: ["address", "village", "area_name", "location"],
+    package: ["package_name", "package", "profile", "profile_name"],
+    balance: ["balance", "advance_balance", "advance", "wallet"],
+    expire: ["expire_date", "expiry_date", "expired_at", "due_date", "next_due_date", "billing_date"]
+};
+
+function pick(row, keys) {
+    for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return row[k];
+    }
+    return null;
+}
+
+/* calendar-day difference in Asia/Dhaka, same as the Customers page */
+function dayDiff(value) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const ymd = x => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(x).split("-").map(Number);
+    const [a, b, c] = ymd(new Date());
+    const [y, m, dd] = ymd(d);
+    return Math.round((Date.UTC(y, m - 1, dd) - Date.UTC(a, b - 1, c)) / 86400000);
+}
+
+/*
+ * Same rule as customer-auto-expire.service.js:
+ * - status "Expired" is expired
+ * - Active customer is expired when the promise date (or, with no promise date,
+ *   the billing cycle) has passed
+ * - BUT a PAID customer whose billing cycle is still in the future is never expired
+ * A date-only value (00:00:00) counts for the whole day.
+ */
+function endMs(value) {
+    if (!value) return NaN;
+    const d = new Date(value);
+    const t = d.getTime();
+    if (!Number.isFinite(t) || d.getFullYear() < 1971) return NaN;
+    const midnight = d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
+    return midnight ? t + 86400000 : t;
+}
+
+function computeExpired(r, now) {
+    const statusText = String(r.status || "").trim().toLowerCase();
+    if (statusText === "expired") return true;
+    if (statusText !== "active") return false;
+
+    const paidFlag = String(r.payment_status || "").trim().toLowerCase() === "paid";
+    const cycleEnd = endMs(r.billing_cycle);
+    if (paidFlag && Number.isFinite(cycleEnd) && cycleEnd > now.getTime()) return false;
+
+    let end = endMs(r.promise_date);
+    if (!Number.isFinite(end)) end = cycleEnd;
+
+    return Number.isFinite(end) && end <= now.getTime();
+}
+
+function asIso(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+router.get("/customers", async (req, res) => {
+    try {
+        const ctx = await getContext(req);
+
+        if (ctx.isSuperAdmin || !ctx.companyId || !ctx.permissions.has("dashboard.customers")) {
+            return res.status(403).json({ success: false, message: "You do not have permission to view this list." });
+        }
+
+        const type = Object.prototype.hasOwnProperty.call(LIST_TITLES, req.query.type) ? req.query.type : "total";
+        const { year, month } = parseMonth(req.query.month);
+
+        const buildSql = withDiscount => `
+            SELECT
+                c.*,
+                COALESCE(NULLIF(c.monthly_bill, 0), mp.price, 0) AS display_bill,
+                COALESCE(NULLIF(c.package_name, ''), mp.package_name, '') AS display_package,
+                p.paid_amount,
+                ${withDiscount ? "p.paid_discount" : "0"} AS paid_discount,
+                (p.customer_id IS NOT NULL) AS is_paid
+            FROM customers c
+            LEFT JOIN (
+                SELECT customer_id,
+                       SUM(amount) AS paid_amount
+                       ${withDiscount ? ", SUM(COALESCE(discount, 0)) AS paid_discount" : ""}
+                FROM payments
+                WHERE company_id = ? AND billing_month = ? AND billing_year = ? AND deleted_at IS NULL
+                GROUP BY customer_id
+            ) p ON p.customer_id = c.id
+            LEFT JOIN mikrotik_packages mp
+                ON mp.id = c.package_id AND mp.company_id = c.company_id
+            WHERE c.company_id = ? AND c.deleted_at IS NULL
+            ORDER BY c.id ASC
+        `;
+
+        const params = [ctx.companyId, month, year, ctx.companyId];
+
+        let rows;
+
+        try {
+            rows = await query(buildSql(true), params);
+        } catch (e) {
+            rows = await query(buildSql(false), params);
+        }
+
+        const now = new Date();
+        const items = [];
+
+        for (const r of rows) {
+            const bill = toNumber(r.display_bill);
+            const statusText = String(r.status || "").trim().toLowerCase();
+            const isActive = statusText === "active";
+            const isPaid = String(r.payment_status || "").trim().toLowerCase() === "paid" || Number(r.is_paid) === 1;
+            const discount = toNumber(r.paid_discount);
+            const promise = r.promise_date || null;
+            const isExpired = computeExpired(r, now);
+            const isFree = bill === 0;
+
+            const match = {
+                total: true,
+                active: isActive,
+                paid: isPaid,
+                unpaid: !isPaid,
+                expired: isExpired,
+                inactive: statusText === "inactive",
+                free: isFree,
+                discount: discount > 0
+            }[type];
+
+            if (!match) continue;
+
+            const expire = r.billing_cycle || null;
+            const dayLeft = expire ? dayDiff(expire) : null;
+
+            items.push({
+                id: Number(r.id),
+                customer_id: r.customer_id || "",
+                name: pick(r, CANDIDATES.name) || "",
+                sub: pick(r, CANDIDATES.sub) || "",
+                username: pick(r, CANDIDATES.username) || "",
+                conn_type: pick(r, CANDIDATES.type) || "PPPoE",
+                mobile: pick(r, CANDIDATES.mobile) || "",
+                address: pick(r, CANDIDATES.address) || "",
+                package: r.display_package || "",
+                bill,
+                balance: toNumber(pick(r, CANDIDATES.balance)),
+                discount,
+                expire_date: asIso(expire),
+                promise_date: asIso(promise),
+                day_left: Number.isFinite(dayLeft) ? dayLeft : null,
+                paid: isPaid,
+                status: isExpired ? "expired" : (isActive ? "active" : (statusText || "inactive"))
+            });
+        }
+
+        return res.json({
+            success: true,
+            type,
+            title: LIST_TITLES[type],
+            count: items.length,
+            total_bill: items.reduce((s, i) => s + i.bill, 0),
+            total_balance: items.reduce((s, i) => s + i.balance, 0),
+            total_discount: items.reduce((s, i) => s + i.discount, 0),
+            items
+        });
+
+    } catch (error) {
+        console.error("[Dashboard] Customer list error:", error);
+
+        return res.status(500).json({ success: false, message: "Failed to load customer list." });
+    }
+});
 
 router.get("/chart", async (req, res) => {
     try {

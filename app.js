@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 const express = require("express");
 const session = require("express-session");
@@ -1209,7 +1209,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customers", "customers.html"
+                "customers", "other-customers.html"
             )
         );
 

@@ -1173,7 +1173,7 @@
 
             if (
                 event.target.closest(
-                    "#csvTemplateModalBtn"
+                    "#csvTemplateBtn, #csvTemplateModalBtn"
                 )
             ) {
 

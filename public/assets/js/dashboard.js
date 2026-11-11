@@ -589,6 +589,203 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    /* ------------------------------------------- customer list popup */
+
+    /* card number element id -> list type */
+    const LIST_LINKS = {
+        v_total: "total", v_active: "active", v_paid: "paid", v_unpaid: "unpaid",
+        v_expired: "expired", v_inactive: "inactive", v_free: "free", v_discount: "discount"
+    };
+
+    let listItems = [];
+    let listType = "total";
+    let listSort = { key: "id", dir: 1 };
+    let listModal = null;
+
+    const COLS = [
+        { key: "id", label: "ID", sort: true },
+        { key: "name", label: "Name & PP/IP/Hp", sort: true },
+        { key: "mobile", label: "Mobile/Address", sort: true },
+        { key: "package", label: "Package", sort: true },
+        { key: "bill", label: "Bill/Balance", sort: true },
+        { key: "discount", label: "Discount", sort: true, only: "discount" },
+        { key: "expire_date", label: "Bill/Promise Date", sort: true },
+        { key: "day_left", label: "Day Left", sort: true },
+        { key: "status", label: "Status", sort: true }
+    ];
+
+    function fmtDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return "";
+        const p = n => String(n).padStart(2, "0");
+        const h12 = d.getHours() % 12 || 12;
+        return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(h12)}:${p(d.getMinutes())} ${d.getHours() >= 12 ? "PM" : "AM"}`;
+    }
+
+    function listColumns() {
+        return COLS.filter(c => !c.only || c.only === listType);
+    }
+
+    function renderListHead() {
+        $("custListHead").innerHTML = "<tr>" + listColumns().map(c => {
+            const arrow = c.sort ? ` <i class="fa-solid fa-arrow-down-up-across-line cl-sort${listSort.key === c.key ? " on" : ""}"></i>` : "";
+            return `<th data-key="${c.key}"${c.sort ? ' class="cl-th"' : ""}>${esc(c.label)}${arrow}</th>`;
+        }).join("") + "<th>Action</th></tr>";
+    }
+
+    function listRowHtml(i) {
+        const colspanDiscount = listType === "discount" ? `<td>${esc(taka(i.discount))}</td>` : "";
+
+        let dayCell = "";
+        if (i.day_left !== null) {
+            dayCell = i.day_left < 0
+                ? `<span class="cl-day neg">${i.day_left}</span>`
+                : `<span class="cl-day pos">${i.day_left}</span>`;
+        }
+
+        const promiseLine = i.promise_date
+            ? `<div class="${new Date(i.promise_date) < new Date() ? "cl-red" : "cl-amber"}">${esc(fmtDate(i.promise_date))}</div>`
+            : `<div>${esc(fmtDate(i.expire_date))}</div>`;
+
+        const dateCell = i.promise_date
+            ? `<div>${esc(fmtDate(i.expire_date))}</div>${promiseLine}`
+            : `<div>${esc(fmtDate(i.expire_date))}</div>${promiseLine}`;
+
+        return `
+            <tr>
+                <td class="cl-id">${esc(i.customer_id || i.id)}<span class="cl-badge">${esc(i.conn_type)}</span></td>
+                <td><div>${esc(i.name)}${i.sub ? " / " + esc(i.sub) : ""}</div><div>${esc(i.username)}</div></td>
+                <td>
+                    <div><i class="fa-solid fa-mobile-screen cl-ico"></i> <b>${esc(i.mobile || "N/A")}</b></div>
+                    <div><i class="fa-solid fa-location-dot cl-ico2"></i> ${esc(i.address || "N/A")}</div>
+                </td>
+                <td>${esc(i.package)}</td>
+                <td><div><b>${esc(takaShort(i.bill))}</b></div><div class="cl-green">${esc(takaShort(i.balance))}</div></td>
+                ${colspanDiscount}
+                <td>${dateCell}</td>
+                <td>${dayCell}</td>
+                <td>
+                    <span class="cl-tag ${i.paid ? "paid" : "unpaid"}">${i.paid ? "paid" : "unpaid"}</span>
+                    <span class="cl-tag ${esc(i.status)}">${esc(i.status)}</span>
+                </td>
+                <td><button type="button" class="cl-act customer-profile-btn" data-id="${esc(i.id)}" title="Profile"><i class="fa-regular fa-user"></i></button></td>
+            </tr>`;
+    }
+
+    function renderListBody() {
+        const q = ($("custListSearch").value || "").trim().toLowerCase();
+        const { key, dir } = listSort;
+
+        const rows = listItems
+            .filter(i => !q || [i.customer_id, i.id, i.name, i.sub, i.username, i.mobile, i.address, i.package]
+                .some(v => String(v ?? "").toLowerCase().includes(q)))
+            .sort((a, b) => {
+                const x = a[key] ?? "", y = b[key] ?? "";
+                if (typeof x === "number" && typeof y === "number") return (x - y) * dir;
+                return String(x).localeCompare(String(y), undefined, { numeric: true }) * dir;
+            });
+
+        const cols = listColumns().length + 1;
+
+        $("custListBody").innerHTML = rows.length
+            ? rows.map(listRowHtml).join("")
+            : `<tr><td colspan="${cols}" class="cl-empty">No Data Found !</td></tr>`;
+    }
+
+    async function openCustomerList(type) {
+        const modalEl = $("custListModal");
+        if (!modalEl || typeof bootstrap === "undefined") return;
+
+        listType = type;
+        listSort = { key: "id", dir: 1 };
+        listItems = [];
+
+        $("custListSearch").value = "";
+        $("custListTitle").textContent = "Loading...";
+        $("custListCount").textContent = "0";
+        $("custListSummary").textContent = "";
+        renderListHead();
+        $("custListBody").innerHTML = `<tr><td colspan="${listColumns().length + 1}" class="cl-empty">Loading...</td></tr>`;
+
+        listModal = listModal || new bootstrap.Modal(modalEl);
+        listModal.show();
+
+        try {
+            const month = $("monthFilter")?.value || "";
+            const params = new URLSearchParams({ type });
+            if (month) params.set("month", month);
+
+            const d = await getJson(`/api/dashboard/customers?${params}`);
+
+            listItems = d.items || [];
+
+            $("custListTitle").textContent = d.title || "Customers";
+            $("custListCount").textContent = num(d.count);
+
+            const bits = [];
+            if (type !== "free") bits.push(`Total Bill: ${taka(d.total_bill)}`);
+            if (type === "active") bits.push(`Total Balance: ${taka(d.total_balance)}`);
+            if (type === "discount") bits.push(`Total Discount: ${taka(d.total_discount)}`);
+            $("custListSummary").textContent = bits.join("   ");
+
+            renderListHead();
+            renderListBody();
+        } catch (e) {
+            $("custListTitle").textContent = "Customers";
+            $("custListBody").innerHTML = `<tr><td colspan="${listColumns().length + 1}" class="cl-empty">${esc(e.message)}</td></tr>`;
+        }
+    }
+
+    function printCustomerList() {
+        const w = window.open("", "_blank");
+        if (!w) return;
+
+        const head = listColumns().map(c => `<th>${esc(c.label)}</th>`).join("");
+        const body = listItems.map(i => `<tr>
+            <td>${esc(i.customer_id || i.id)}</td>
+            <td>${esc(i.name)}${i.sub ? " / " + esc(i.sub) : ""}<br>${esc(i.username)}</td>
+            <td>${esc(i.mobile || "N/A")}<br>${esc(i.address || "N/A")}</td>
+            <td>${esc(i.package)}</td>
+            <td>${esc(takaShort(i.bill))}<br>${esc(takaShort(i.balance))}</td>
+            ${listType === "discount" ? `<td>${esc(takaShort(i.discount))}</td>` : ""}
+            <td>${esc(fmtDate(i.expire_date))}<br>${esc(fmtDate(i.promise_date))}</td>
+            <td>${i.day_left ?? ""}</td>
+            <td>${i.paid ? "paid" : "unpaid"} / ${esc(i.status)}</td></tr>`).join("");
+
+        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc($("custListTitle").textContent)}</title>
+            <style>body{font-family:Arial,sans-serif;font-size:12px}table{width:100%;border-collapse:collapse}
+            th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}</style></head>
+            <body><h3>${esc($("custListTitle").textContent)} (${listItems.length})</h3>
+            <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`);
+        w.document.close();
+        w.focus();
+        w.print();
+    }
+
+    /* make the card numbers clickable (elements removed by permissions are skipped) */
+    Object.entries(LIST_LINKS).forEach(([id, type]) => {
+        const el = $(id);
+        if (!el) return;
+
+        el.classList.add("dc-link");
+        el.title = "Click to view list";
+        el.addEventListener("click", () => openCustomerList(type));
+    });
+
+    $("custListSearch")?.addEventListener("input", renderListBody);
+    $("custListPrint")?.addEventListener("click", printCustomerList);
+
+    $("custListHead")?.addEventListener("click", e => {
+        const th = e.target.closest("th[data-key]");
+        if (!th || !th.classList.contains("cl-th")) return;
+
+        const key = th.dataset.key;
+        listSort = { key, dir: listSort.key === key ? -listSort.dir : 1 };
+        renderListHead();
+        renderListBody();
+    });
+
     /* ---------------------------------------------------------------- init */
 
     loadDashboard();
