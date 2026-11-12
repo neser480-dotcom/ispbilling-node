@@ -374,3 +374,38 @@ body {
     color: #cfd6e2;
 }
 
+/* SUB AREA POPUP (area.css এর শেষে যোগ হয়) */
+
+/* Sidebar (100000) ও topbar (99999+) এর উপরে popup রাখার জন্য — style.css এর মতোই */
+.modal-backdrop { z-index: 1000000 !important; }
+.modal { z-index: 1000001 !important; }
+#subAreaAddModal, #subAreaEditModal { z-index: 1000003 !important; }
+.modal .dropdown-menu { z-index: 1000004; }
+.swal2-container { z-index: 1000005 !important; }
+
+#subAreaListModal .modal-content { border-radius: 8px; overflow: hidden; background: var(--area-card-bg); }
+#subAreaListModal .sa-head { padding: .45rem .75rem; border-bottom: 1px solid var(--area-line); }
+#subAreaListModal .modal-body { padding: 1.1rem 1.8rem 1.5rem; }
+#subAreaListModal .sa-title-card { margin-bottom: 18px; padding: 18px 20px; }
+#subAreaListModal .sa-title-card h1 { font-size: 24px; color: #fff; }
+#subAreaListModal .sa-strip { margin: 0 1.2rem 14px; }
+#subAreaListModal .sa-table-wrap { margin: 0 1.2rem; overflow: visible; }
+#subAreaListModal .area-table tbody td:first-child { font-weight: 700; }
+
+.sa-plus { width: 20px; height: 20px; fill: none; stroke: #2f86e3; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#saAddBtn { width: 36px; height: 36px; }
+
+.sa-small .modal-header { padding: .9rem 1rem; }
+.sa-small .modal-title { font-size: 1.3rem; font-weight: 500; color: var(--area-head); }
+.sa-small .form-label { color: var(--area-muted); font-size: .95rem; margin-bottom: .3rem; }
+.sa-small .btn-success { background: #198754; min-width: 62px; }
+.sa-error { margin-top: .6rem; color: #dc3545; font-size: 13px; }
+.sa-error[hidden] { display: none !important; }
+
+@media (max-width: 768px) {
+    #subAreaListModal .modal-body { padding: .8rem .6rem 1.1rem; }
+    #subAreaListModal .sa-strip,
+    #subAreaListModal .sa-table-wrap { margin-left: 0; margin-right: 0; }
+    #subAreaListModal .sa-table-wrap { overflow-x: auto; }
+}
+/* /SUB AREA POPUP */

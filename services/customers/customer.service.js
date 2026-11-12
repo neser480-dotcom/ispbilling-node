@@ -1,4 +1,4 @@
-
+﻿
 "use strict";
 
 const db = require("../../config/database");
@@ -145,20 +145,47 @@ function buildSearchScope(search, alias = "c") {
 
     const like = `%${value}%`;
 
+    /*
+     * EXACT MATCH FIRST
+     * If the text is exactly a Display ID, PPPoE name or customer name, ONLY
+     * that customer is returned (searching "1" no longer returns 11, 21 ...).
+     * If nothing matches exactly, normal "contains" search is used.
+     */
+    const exact = `(
+                ${alias}.customer_id = ?
+                OR ${alias}.pppoe_username = ?
+                OR ${alias}.name = ?
+            )`;
+
     return {
         sql: `
             AND (
-                ${alias}.name LIKE ?
-                OR ${alias}.customer_id LIKE ?
-                OR ${alias}.phone LIKE ?
-                OR ${alias}.pppoe_username LIKE ?
+                ${exact}
+                OR (
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM customers x
+                        WHERE x.company_id = ${alias}.company_id
+                          AND x.deleted_at IS NULL
+                          AND (
+                                x.customer_id = ?
+                                OR x.pppoe_username = ?
+                                OR x.name = ?
+                          )
+                    )
+                    AND (
+                        ${alias}.name LIKE ?
+                        OR ${alias}.customer_id LIKE ?
+                        OR ${alias}.phone LIKE ?
+                        OR ${alias}.pppoe_username LIKE ?
+                    )
+                )
             )
         `,
         params: [
-            like,
-            like,
-            like,
-            like
+            value, value, value,
+            value, value, value,
+            like, like, like, like
         ]
     };
 
@@ -240,14 +267,26 @@ function buildAdvancedFilterScope(filters = {}, alias = "c") {
         clauses.push(` AND (COALESCE(${alias}.balance, 0) < 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
     }
 
-    const otherCustomerType = String(filters.other_customer_type ?? "").trim().toLowerCase();
+    /*
+     * CHANGE CUSTOMER: "changed" = the customer was edited at least once
+     * (an update entry exists in the activity log), "not_changed" = never.
+     */
+    const changeFilter = String(filters.change_customer ?? "").trim().toLowerCase();
 
-    if (otherCustomerType === "new") {
-        clauses.push(` AND ${alias}.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') AND ${alias}.created_at < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH) `);
-    } else if (otherCustomerType === "inactive") {
-        clauses.push(` AND LOWER(COALESCE(${alias}.status, '')) = 'inactive' `);
-    } else if (otherCustomerType === "due") {
-        clauses.push(` AND (COALESCE(${alias}.balance, 0) < 0 OR LOWER(COALESCE(${alias}.payment_status, '')) = 'unpaid') `);
+    if (changeFilter === "changed" || changeFilter === "not_changed") {
+
+        const edited = `EXISTS (
+            SELECT 1 FROM activity_logs al
+            WHERE al.customer_id = ${alias}.id
+              AND al.company_id = ${alias}.company_id
+              AND LOWER(al.action) LIKE '%update%'
+        )`;
+
+        clauses.push(
+            changeFilter === "changed"
+                ? ` AND ${edited} `
+                : ` AND NOT ${edited} `
+        );
     }
 
     const billDateLeft = String(filters.bill_date_left ?? "").trim();
@@ -642,15 +681,22 @@ async function getCustomers({
         buildStatusScope(status, "c");
 
 
-    const otherScope = filters.other_customer_type ? buildAdvancedFilterScope({ other_customer_type: filters.other_customer_type }, "c") : { sql: "", params: [] };
+    const advancedScope =
+        buildAdvancedFilterScope(filters, "c");
 
-    const whereSql = company.sql + deleted + searchScope.sql + statusScope.sql + otherScope.sql;
+    const whereSql =
+        company.sql +
+        deleted +
+        searchScope.sql +
+        statusScope.sql +
+        advancedScope.sql;
+
 
     const whereParams = [
         ...company.params,
         ...searchScope.params,
         ...statusScope.params,
-        ...otherScope.params
+        ...advancedScope.params
     ];
 
 
