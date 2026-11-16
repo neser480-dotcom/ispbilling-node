@@ -894,11 +894,7 @@ function normalizeOnu(row, olt) {
         row.mapped_customer_name ||
         "";
 
-    const customerCode =
-        row.customer_code ||
-        row.customer_id ||
-        row.matched_customer_id ||
-        "";
+    const customerCode = row.customer_code || "";
 
     const primaryLinked =
         (
@@ -980,7 +976,7 @@ function normalizeOnu(row, olt) {
     return {
         id: row.id,
         oltId: String(row.olt_id || olt.id),
-        displayId: customerCode ? customerCode : row.id,
+        displayId: customerCode,
         customerName,
         customerLinked,
         primaryLinked,
@@ -1055,7 +1051,7 @@ function normalizeCustomerSession(row, olt) {
     return {
         id: `session-${row.session_id}`,
         oltId: String(row.olt_id || olt.id),
-        displayId: customerCode || row.customer_id || "",
+        displayId: customerCode,
         customerName,
         customerLinked: true,
         primaryLinked: true,
@@ -1133,7 +1129,7 @@ function peopleOf(user) {
 
     for (const extra of user.extras) {
         people.push({
-            code: extra.customer_code || extra.id,
+            code: extra.customer_code || "",
             name: extra.name || extra.pppoe_username || "Customer",
             ip: extra.ip,
             callerId: extra.caller_id
@@ -1148,7 +1144,7 @@ function peopleOf(user) {
 function expandSwitchRows(user) {
     const people = peopleOf(user);
 
-    if (people.length < 2) return [user];
+    if (people.length === 0) return [user];
 
     return people.map(person => ({
         ...user,

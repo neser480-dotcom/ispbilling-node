@@ -1027,6 +1027,11 @@ router.post("/login", async (req, res) => {
         */
 
         const rememberMe =
+            req.body.remember === true ||
+            req.body.remember === "true" ||
+            req.body.remember === "1" ||
+            req.body.remember === 1 ||
+            req.body.remember === "on" ||
             req.body.remember_me === true ||
             req.body.remember_me === "true" ||
             req.body.remember_me === "1" ||
@@ -1143,22 +1148,29 @@ router.post("/login", async (req, res) => {
         |--------------------------------------------------------------------------
         */
 
-        res.cookie(
-            "ispbilling_username",
-            matchedUser.username,
-            {
-                httpOnly: false,
-                secure: isHttps(req),
-                sameSite: "lax",
-                maxAge:
-                    30 *
-                    24 *
-                    60 *
-                    60 *
-                    1000,
-                path: "/"
-            }
-        );
+        if (rememberMe) {
+            res.cookie(
+                "ispbilling_username",
+                matchedUser.username,
+                {
+                    httpOnly: false,
+                    secure: isHttps(req),
+                    sameSite: "lax",
+                    maxAge: 30 * 24 * 60 * 60 * 1000,
+                    path: "/"
+                }
+            );
+        } else {
+            res.clearCookie(
+                "ispbilling_username",
+                {
+                    httpOnly: false,
+                    secure: isHttps(req),
+                    sameSite: "lax",
+                    path: "/"
+                }
+            );
+        }
 
 
         /*
@@ -1509,6 +1521,16 @@ router.post("/logout", async (req, res) => {
 
     }
 
+});
+
+
+router.get("/remembered", (req, res) => {
+    const username = req.cookies?.ispbilling_username || "";
+
+    return res.set("Cache-Control", "no-store").json({
+        success: Boolean(username),
+        username: username
+    });
 });
 
 
