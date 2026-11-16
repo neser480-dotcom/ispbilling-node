@@ -540,3 +540,7 @@ button.cl-back { border: 0; background: none; color: #fff; font-size: 18px; padd
 #customerActionModal .customer-edit-form .cm-btn { min-width: 72px; height: 38px; padding: 6px 14px; font-size: 15px; border: 0; border-radius: 6px; color: #fff; }
 #customerActionModal .customer-edit-form .cm-cancel { background: #6c757d; }
 #customerActionModal .customer-edit-form .cm-save { background: #198754; }
+
+/* ID red when Auto Connection is off */
+.cl-id-link.cl-conn-off,
+.customer-page .cm-table .cl-id-link.cl-conn-off { color: #dc3545 !important; }

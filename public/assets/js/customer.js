@@ -930,7 +930,7 @@
 
                     <a
                         href="#"
-                        class="cl-id-link customer-profile-btn"
+                        class="cl-id-link customer-profile-btn${customer.auto_connection != null && Number(customer.auto_connection) === 0 ? " cl-conn-off" : ""}"
                         data-id="${id}"
                         data-name="${escapeHtml(
                             customerName(customer)

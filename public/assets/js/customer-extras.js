@@ -388,6 +388,206 @@
         if (note) note.dataset.edited = "1";
     });
 
+
+    /* ---------- row Action menu: always fully reachable, scrolls inside if long ---------- */
+
+    /*
+     * The row "..." menu is handled here and NOT by Bootstrap's dropdown/Popper
+     * (their placement was the cause of a menu that ran off the bottom of the
+     * screen and could not be scrolled).
+     *
+     *  - The menu is moved into <body> (the table's scroll box can not clip it)
+     *    and is fixed to the SCREEN under the "..." button.
+     *  - No room below: it opens above the button. No room above either: it is
+     *    pushed back inside the screen.
+     *  - Its height is limited to the screen, so a long menu scrolls INSIDE
+     *    itself (mouse wheel / touch), even with a single customer in the list.
+     *  - Closes on: click outside, Esc, page scroll, window resize, or after an
+     *    item was clicked (the item's own handler runs first).
+     */
+    let menuHost = null;
+    let openToggle = null;
+    let openMenu = null;
+
+    const MENU_STYLE_KEYS = [
+        "position", "display", "top", "left", "right", "bottom", "margin",
+        "transform", "inset", "z-index", "max-height", "overflow-y",
+        "overscroll-behavior"
+    ];
+
+    function getMenuHost() {
+
+        if (!menuHost) {
+            menuHost = document.createElement("div");
+            menuHost.className = "cm-table customer-action nf-menu-host";
+            document.body.appendChild(menuHost);
+        }
+
+        return menuHost;
+    }
+
+    function placeRowMenu(toggle, menu) {
+
+        const pad = 8;
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+        const rect = toggle.getBoundingClientRect();
+
+        // "important" so no stylesheet rule can override the placement
+        const set = function (key, value) {
+            menu.style.setProperty(key, value, "important");
+        };
+
+        set("position", "fixed");
+        set("display", "block");
+        set("right", "auto");
+        set("bottom", "auto");
+        set("margin", "0");
+        set("transform", "none");
+        set("inset", "auto");
+        set("z-index", "2000");
+        set("max-height", (vh - pad * 2) + "px");
+        set("overflow-y", "auto");
+        set("overscroll-behavior", "contain");
+        set("top", "0px");
+        set("left", "0px");
+
+        const height = menu.offsetHeight;
+        const width = menu.offsetWidth;
+
+        let top = rect.bottom + 2;
+
+        if (top + height > vh - pad) {
+            const above = rect.top - 2 - height;
+            top = above >= pad ? above : Math.max(pad, vh - pad - height);
+        }
+
+        const left = Math.min(Math.max(pad, rect.right - width), vw - width - pad);
+
+        set("top", top + "px");
+        set("left", left + "px");
+    }
+
+    function closeRowMenu() {
+
+        if (!openMenu) return;
+
+        const toggle = openToggle;
+        const menu = openMenu;
+
+        openToggle = null;
+        openMenu = null;
+
+        menu.classList.remove("show");
+
+        MENU_STYLE_KEYS.forEach(function (key) {
+            menu.style.removeProperty(key);
+        });
+
+        if (toggle) {
+            toggle.classList.remove("show");
+            toggle.setAttribute("aria-expanded", "false");
+
+            if (toggle.__nfHome) {
+                toggle.__nfHome.appendChild(menu);
+            }
+        }
+    }
+
+    function openRowMenu(toggle) {
+
+        const home = toggle.parentElement;
+        const menu = home && home.querySelector(".dropdown-menu");
+
+        if (!menu) return;
+
+        closeRowMenu();
+
+        toggle.__nfHome = home;
+
+        getMenuHost().appendChild(menu);
+
+        menu.classList.add("show");
+        toggle.classList.add("show");
+        toggle.setAttribute("aria-expanded", "true");
+
+        openToggle = toggle;
+        openMenu = menu;
+
+        placeRowMenu(toggle, menu);
+    }
+
+    function rowToggleFrom(target) {
+
+        return target && target.closest
+            ? target.closest(".cm-table [data-bs-toggle=\"dropdown\"]")
+            : null;
+    }
+
+    document.addEventListener("click", function (event) {
+
+        const toggle = rowToggleFrom(event.target);
+
+        if (toggle) {
+
+            // Bootstrap must not also handle this click
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            if (openToggle === toggle) {
+                closeRowMenu();
+            } else {
+                openRowMenu(toggle);
+            }
+
+            return;
+        }
+
+        if (!openMenu) return;
+
+        if (openMenu.contains(event.target)) {
+
+            // let the item's own handler run first, then close
+            if (event.target.closest(".dropdown-item")) {
+                setTimeout(closeRowMenu, 0);
+            }
+
+            return;
+        }
+
+        closeRowMenu();
+
+    }, true);
+
+    document.addEventListener("keydown", function (event) {
+
+        if (event.key === "Escape") {
+            closeRowMenu();
+            return;
+        }
+
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+
+            const toggle = rowToggleFrom(event.target);
+
+            if (toggle) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                openRowMenu(toggle);
+            }
+        }
+    }, true);
+
+    document.addEventListener("scroll", function (event) {
+
+        // scrolling INSIDE the menu must keep it open
+        if (openMenu && !openMenu.contains(event.target)) {
+            closeRowMenu();
+        }
+    }, true);
+
+    window.addEventListener("resize", closeRowMenu);
+
     /* ---------- reset password ---------- */
 
     document.addEventListener("change", function (event) {

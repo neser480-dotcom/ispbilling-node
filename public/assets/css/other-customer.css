@@ -1,0 +1,150 @@
+/* =========================================================
+   OTHER CUSTOMER  (Active Customer পেজের মতো look)
+========================================================= */
+.oc-page { font-family: "Hind Siliguri", "Segoe UI", Arial, sans-serif; --oc-blue: var(--theme-primary, rgb(47, 138, 232)); --oc-dark: var(--theme-primary, rgb(26, 95, 181)); padding: 0 12px 20px; }
+
+/* header */
+.oc-header {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 58px; padding: 0 22px;
+    background: linear-gradient(90deg, var(--oc-blue), var(--theme-primary, rgb(58, 149, 240)));
+    color: #fff; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,.15);
+}
+.oc-title { margin: 0; font-size: 22px; font-weight: 600; color: #fff; white-space: nowrap; }
+.oc-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.oc-extra { display: inline-flex; gap: 8px; }
+.oc-extra[hidden] { display: none !important; }
+.oc-hbtn {
+    width: 36px; height: 36px; min-width: 36px; padding: 0; border: 0; border-radius: 5px;
+    background: #fff; color: var(--oc-blue); font-size: 15px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.oc-hbtn:hover { background: color-mix(in srgb, var(--theme-primary, #2563eb) 10%, #ffffff); }
+.oc-svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.oc-toggle {
+    display: inline-flex; align-items: center; gap: 3px; height: 36px; padding: 0 4px; margin-left: 2px;
+    background: transparent; border: 0; color: #fff; font-size: 20px; cursor: pointer;
+}
+.oc-toggle .bar { width: 2px; height: 24px; background: #fff; border-radius: 1px; }
+.oc-toggle.open { flex-direction: row-reverse; }
+.oc-toggle.open i { transform: rotate(180deg); }
+
+/* card + tabs */
+.oc-card { background: #fff; padding: 14px 16px 22px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.oc-tabs { display: flex; gap: 2px; list-style: none; margin: 0 0 14px; padding: 0; border-bottom: 1px solid #dee2e6; flex-wrap: wrap; }
+.oc-tabs li { margin-bottom: -1px; }
+.oc-tab {
+    background: transparent; border: 1px solid transparent; border-radius: 4px 4px 0 0;
+    padding: 8px 16px; font-size: 15px; color: var(--oc-blue); cursor: pointer;
+}
+.oc-tab:hover { border-color: #e9ecef #e9ecef #dee2e6; }
+.oc-tab.active { color: #495057; background: #fff; border-color: #dee2e6 #dee2e6 #fff; }
+
+/* filter */
+.oc-filter { margin: 0 0 14px; }
+.oc-filter[hidden] { display: none !important; }
+.oc-fgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.oc-fgrid .form-select { height: 38px; font-size: 14px; }
+.oc-fbtns { display: flex; gap: 10px; margin-top: 12px; }
+
+/* toolbar */
+.oc-toolbar {
+    display: flex; align-items: center; gap: 8px; min-height: 50px; padding: 8px 14px; margin: 0 0 22px;
+    background: var(--theme-primary, rgb(51, 142, 233)); color: #fff; border-radius: 6px;
+    box-shadow: 0 3px 8px color-mix(in srgb, var(--theme-primary, rgb(47, 138, 232)) 35%, transparent);
+}
+.oc-tb-ico { font-size: 15px; }
+.oc-tb-text { font-size: 15px; white-space: nowrap; }
+.oc-pill { background: var(--oc-dark); color: #fff; font-size: 14px; font-weight: 600; min-width: 40px; padding: 3px 14px; border-radius: 14px; text-align: center; }
+.oc-tb-strong { font-weight: 600; font-size: 15px; margin-left: 6px; white-space: nowrap; }
+.oc-search { margin-left: auto; width: 315px; max-width: 100%; }
+.oc-search input {
+    width: 100%; height: 36px; padding: 0 12px; border: 0; border-radius: 4px; outline: 0;
+    background: color-mix(in srgb, var(--theme-primary, rgb(26, 95, 181)) 55%, transparent); color: #fff; font-size: 14px;
+}
+.oc-search input::placeholder { color: color-mix(in srgb, var(--theme-primary, #2563eb) 15%, #ffffff); }
+
+/* table */
+.oc-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.oc-table { margin: 0; width: 100%; min-width: 1050px; font-size: 15px; text-align: center; color: #4b5563; }
+.oc-table thead th {
+    background: #fff; color: #4b5563; font-weight: 600; font-size: 15px; text-align: center; vertical-align: bottom;
+    padding: 10px 8px 14px; border-bottom: 0; cursor: pointer; user-select: none; white-space: nowrap;
+}
+.oc-table thead th:last-child { cursor: default; }
+.oc-table thead th.oc-left { text-align: left; }
+.oc-sort { color: var(--oc-blue); font-size: 12px; margin-left: 2px; }
+.oc-table tbody td { padding: 12px 8px; vertical-align: middle; text-align: center; border: 0; background: #fff; line-height: 1.5; }
+.oc-table tbody td.oc-left { text-align: left; }
+.oc-table tbody tr:nth-child(odd) td { background: #f2f2f2; }
+.oc-table tbody tr:hover td { background: color-mix(in srgb, var(--theme-primary, #2563eb) 10%, #ffffff); }
+.oc-empty { text-align: center; color: #7b8798; padding: 35px !important; background: #fff !important; }
+.oc-err { color: #dc2626; }
+
+.oc-idcell { white-space: nowrap; }
+.oc-id { font-size: 15px; }
+.oc-kind { display: inline-block; margin-top: 2px; background: #0d6efd; color: #fff; font-size: 11px; font-weight: 600; padding: 1px 9px; border-radius: 6px; }
+.oc-name, .oc-sub { color: #555; font-size: 15px; }
+.oc-line { white-space: nowrap; }
+.oc-ico-phone { color: #17c1e8; margin-right: 6px; }
+.oc-ico-pin { color: #6b7280; margin-right: 4px; }
+.oc-ph { font-weight: 600; }
+.oc-pos { color: #16a34a; font-weight: 600; }
+.oc-neg { color: #dc2626; font-weight: 600; }
+.oc-pd.oc-late { color: #dc2626; }
+.oc-pd.oc-soon { color: #f59e0b; }
+.oc-na { color: #9ca3af; }
+
+.oc-day { display: inline-block; min-width: 38px; padding: 3px 6px; border: 2px solid; border-radius: 3px; font-weight: 600; font-size: 14px; line-height: 1.2; }
+.oc-day-over { background: #dc3545; border-color: #dc3545; color: #fff; }
+.oc-day-ok { border-color: #198754; color: #4b5563; background: transparent; }
+.oc-day-pend { border-color: #0d6efd; color: #4b5563; background: transparent; }
+
+.oc-badges { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+.oc-badge { display: inline-block; min-width: 54px; padding: 1px 10px; border-radius: 9px; font-size: 11px; font-weight: 700; line-height: 1.5; color: #fff; }
+.oc-paid { background: #198754; }
+.oc-unpaid { background: #ffc107; color: #333; }
+.oc-active { background: #0d6efd; }
+.oc-expired { background: #dc3545; }
+.oc-inactive { background: #6c757d; }
+.oc-warn { background: #fd7e14; }
+
+.oc-act {
+    display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+    border: 1.5px solid var(--oc-blue); border-radius: 5px; color: var(--oc-blue); font-size: 15px; text-decoration: none;
+}
+.oc-act:hover { background: var(--oc-blue); color: #fff; }
+
+.oc-footer { text-align: center; color: #6b7280; font-size: 15px; margin-top: 38px; }
+
+/* dark mode */
+body.dark-mode .oc-card { background: #1e2530; }
+body.dark-mode .oc-tab.active { background: #1e2530; color: #e2e8f2; border-color: #364050 #364050 #1e2530; }
+body.dark-mode .oc-tabs { border-bottom-color: #364050; }
+body.dark-mode .oc-table, body.dark-mode .oc-table thead th, body.dark-mode .oc-name, body.dark-mode .oc-sub { color: #cfd6e2; }
+body.dark-mode .oc-table thead th, body.dark-mode .oc-table tbody td { background: #1e2530; }
+body.dark-mode .oc-table tbody tr:nth-child(odd) td { background: #262e3b; }
+body.dark-mode .oc-table tbody tr:hover td { background: #2f3a4b; }
+body.dark-mode .oc-empty { background: #1e2530 !important; }
+body.dark-mode .oc-day-ok, body.dark-mode .oc-day-pend { color: #cfd6e2; }
+body.dark-mode .oc-footer { color: #8f9bb0; }
+
+@media (max-width: 850px) {
+    .oc-page { padding: 0 3px 14px; }
+    .oc-header { height: 58px; padding: 0 10px; gap: 6px; }
+    .oc-title { font-size: 20px; }
+    .oc-hbtn { width: 34px; height: 34px; min-width: 34px; }
+    .oc-card { padding: 10px 8px 16px; }
+    .oc-fgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .oc-toolbar { gap: 8px; padding: 8px 10px; margin-bottom: 14px; }
+    .oc-tb-ico { display: none; }
+    .oc-search { flex: 1 1 auto; width: auto; min-width: 0; }
+    .oc-tb-strong { font-size: 13px; }
+}
+
+@media print {
+    .oc-header-actions, .oc-filter, .oc-search, .oc-tabs, .oc-table td:last-child, .oc-table th:last-child { display: none !important; }
+    .oc-table { min-width: 0; }
+}
+
+.oc-id.cl-conn-off { color: #dc3545 !important; }

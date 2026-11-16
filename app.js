@@ -1209,7 +1209,7 @@ app.get(
             path.join(
                 __dirname,
                 "views",
-                "customers", "other-customers.html"
+                "customers", "other-customer.html"
             )
         );
 

@@ -2219,4 +2219,253 @@ router.post(
 );
 
 
+/*
+|--------------------------------------------------------------------------
+| UPDATE SUB AREA
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/sub-update",
+    requireAuth,
+    requirePermission("area_management"),
+    async (req, res) => {
+        try {
+            const areaId = Number(req.body.area_id || 0);
+            const subAreaId = Number(req.body.id || 0);
+            const name = String(req.body.name || "").trim();
+            const remarks = String(req.body.remarks || "").trim();
+
+            if (areaId <= 0 || subAreaId <= 0) {
+                return jsonError(res, 400, "Invalid Sub Area Access.");
+            }
+
+            if (!name) {
+                return jsonError(res, 400, "Sub Area Name Required.");
+            }
+
+            let areaSql = `
+                SELECT id, company_id
+                FROM areas
+                WHERE id = ?
+            `;
+            const areaParams = [areaId];
+
+            if (!isSuperAdmin(req)) {
+                areaSql += ` AND company_id = ? `;
+                areaParams.push(getCompanyId(req));
+            }
+
+            areaSql += ` LIMIT 1 `;
+
+            const [areaRows] = await db.execute(areaSql, areaParams);
+
+            if (!areaRows.length) {
+                return jsonError(res, 403, "Invalid Area Access.");
+            }
+
+            const targetCompany = areaRows[0].company_id;
+
+            const [subRows] = await db.execute(
+                `
+                SELECT id
+                FROM sub_areas
+                WHERE id = ?
+                  AND area_id = ?
+                  AND company_id = ?
+                LIMIT 1
+                `,
+                [subAreaId, areaId, targetCompany]
+            );
+
+            if (!subRows.length) {
+                return jsonError(res, 404, "Sub Area Not Found.");
+            }
+
+            const [duplicate] = await db.execute(
+                `
+                SELECT id
+                FROM sub_areas
+                WHERE area_id = ?
+                  AND company_id = ?
+                  AND name = ?
+                  AND id <> ?
+                LIMIT 1
+                `,
+                [areaId, targetCompany, name, subAreaId]
+            );
+
+            if (duplicate.length) {
+                return jsonError(res, 409, "Sub Area Name Already Exists.");
+            }
+
+            await db.execute(
+                `
+                UPDATE sub_areas
+                SET name = ?, remarks = ?
+                WHERE id = ?
+                  AND area_id = ?
+                  AND company_id = ?
+                `,
+                [name, remarks, subAreaId, areaId, targetCompany]
+            );
+
+            return res.json({
+                success: true,
+                status: true,
+                message: "Sub Area Updated Successfully."
+            });
+
+        } catch (error) {
+            console.error("Sub Area Update Error:", error);
+
+            return jsonError(
+                res,
+                500,
+                error?.sqlMessage || error?.message || "Sub Area Update Failed."
+            );
+        }
+    }
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| DELETE SUB AREA
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/sub-delete",
+    requireAuth,
+    requirePermission("area_management"),
+    async (req, res) => {
+        try {
+            const areaId = Number(req.body.area_id || 0);
+            const subAreaId = Number(req.body.id || 0);
+
+            if (areaId <= 0 || subAreaId <= 0) {
+                return jsonError(res, 400, "Invalid Sub Area Access.");
+            }
+
+            let areaSql = `
+                SELECT id, company_id
+                FROM areas
+                WHERE id = ?
+            `;
+            const areaParams = [areaId];
+
+            if (!isSuperAdmin(req)) {
+                areaSql += ` AND company_id = ? `;
+                areaParams.push(getCompanyId(req));
+            }
+
+            areaSql += ` LIMIT 1 `;
+
+            const [areaRows] = await db.execute(areaSql, areaParams);
+
+            if (!areaRows.length) {
+                return jsonError(res, 403, "Invalid Area Access.");
+            }
+
+            const targetCompany = areaRows[0].company_id;
+
+            const [subRows] = await db.execute(
+                `
+                SELECT id, name
+                FROM sub_areas
+                WHERE id = ?
+                  AND area_id = ?
+                  AND company_id = ?
+                LIMIT 1
+                `,
+                [subAreaId, areaId, targetCompany]
+            );
+
+            if (!subRows.length) {
+                return jsonError(res, 404, "Sub Area Not Found.");
+            }
+
+            // Protect Customer mappings.
+            const [customerRows] = await db.execute(
+                `
+                SELECT COUNT(*) AS total
+                FROM customers
+                WHERE company_id = ?
+                  AND sub_area_id = ?
+                `,
+                [targetCompany, subAreaId]
+            );
+
+            const customerCount = Number(customerRows[0]?.total || 0);
+
+            if (customerCount > 0) {
+                return jsonError(
+                    res,
+                    409,
+                    `Cannot delete. This Sub Area is assigned to ${customerCount} Customer(s).`
+                );
+            }
+
+            // Protect Collector and Manager assignments.
+            let staffCount = 0;
+
+            try {
+                const [staffRows] = await db.execute(
+                    `
+                    SELECT COUNT(*) AS total
+                    FROM staff_sub_area_assignments
+                    WHERE company_id = ?
+                      AND sub_area_id = ?
+                    `,
+                    [targetCompany, subAreaId]
+                );
+
+                staffCount = Number(staffRows[0]?.total || 0);
+
+            } catch (error) {
+                if (
+                    error.code !== "ER_NO_SUCH_TABLE" &&
+                    Number(error.errno) !== 1146
+                ) {
+                    throw error;
+                }
+            }
+
+            if (staffCount > 0) {
+                return jsonError(
+                    res,
+                    409,
+                    `Cannot delete. This Sub Area is assigned to ${staffCount} Staff member(s).`
+                );
+            }
+
+            await db.execute(
+                `
+                DELETE FROM sub_areas
+                WHERE id = ?
+                  AND area_id = ?
+                  AND company_id = ?
+                `,
+                [subAreaId, areaId, targetCompany]
+            );
+
+            return res.json({
+                success: true,
+                status: true,
+                message: "Sub Area Deleted Successfully."
+            });
+
+        } catch (error) {
+            console.error("Sub Area Delete Error:", error);
+
+            return jsonError(
+                res,
+                500,
+                error?.sqlMessage || error?.message || "Sub Area Delete Failed."
+            );
+        }
+    }
+);
+
 module.exports = router;

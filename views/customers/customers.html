@@ -226,6 +226,12 @@ body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 77px !important; 
         content=""
     >
 
+
+<style>
+/* Row Action menu lives in <body> while open: never clipped, always fully on screen (scroll bar only if the screen is shorter than the menu) */
+.nf-menu-host { position: static; }
+.nf-menu-host .dropdown-menu { z-index: 1060; max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }
+</style>
 </head>
 
 
@@ -1117,7 +1123,6 @@ body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 77px !important; 
      CUSTOMER JS
 ========================================================= -->
 <script src="/assets/js/customer.js?v=20261030"></script>
-<script src="/assets/js/customer-export.js?v=20261110"></script>
 <script src="/assets/js/customer-add.js?v=20261025"></script>
 <script src="/assets/js/customer-actions.js?v=20261030"></script>
 <script src="/assets/js/customer-extras.js?v=20261103"></script>
@@ -1148,7 +1153,6 @@ body:has(#bulkFloatingPanel.show) #bulkFloatingToggle { right: 77px !important; 
     if (pr) pr.addEventListener("click", function () { window.print(); });
 })();
 </script>
-<script src="/assets/js/i18n.js?v=mw7ynpem"></script>
 </body>
 
 </html>

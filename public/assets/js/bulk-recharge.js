@@ -18,7 +18,8 @@
 
     let selectedCustomerIds = [];
 
-    let customerRows = [];
+        let customerRows = [];
+    let bulkSort = { key: "", dir: 1 };
 
 
     /*
@@ -195,6 +196,34 @@
 
     }
 
+
+        function bulkSortRows(rows) {
+
+        if (!bulkSort.key) {
+            return rows;
+        }
+
+        const value = function (customer) {
+
+            if (bulkSort.key === "amount") {
+                return Number(customer.amount || customer.monthly || 0);
+            }
+
+            if (bulkSort.key === "package") {
+                return String(customer.package || "").toLowerCase();
+            }
+
+            return String(customer.name || customer.pppoe || "").toLowerCase();
+        };
+
+        return rows.sort(function (a, b) {
+
+            const x = value(a);
+            const y = value(b);
+
+            return (x < y ? -1 : x > y ? 1 : 0) * bulkSort.dir;
+        });
+    }
 
     function normalizeIds(ids) {
 
@@ -500,188 +529,123 @@
         }
 
 
+        /*
+        | Modal look: medium dialog, plain title (no icon).
+        */
+        const dialog = document.querySelector("#bulkRechargeModal .modal-dialog");
+
+        if (dialog) {
+            dialog.classList.remove("modal-xl");
+            dialog.classList.add("modal-lg");
+        }
+
+        const titleIcon = document.querySelector("#bulkRechargeModal .modal-title i");
+
+        if (titleIcon) {
+            titleIcon.remove();
+        }
+
+        const arrows = '<span style="color:#2f86e4;font-size:12px;margin-left:4px;">&darr;&uarr;</span>';
+
         content.innerHTML = `
 
-            <div class="mb-3">
+            <div class="row g-2 mb-3">
 
-                <div class="row g-2">
+                <div class="col-md-6">
 
-                    <div class="col-md-4">
+                    <label class="form-label" for="bulkRechargeBillingType">
+                        Billing Type <span class="text-danger">*</span>
+                    </label>
 
-                        <label class="form-label">
-                            Billing Type
-                        </label>
+                    <select id="bulkRechargeBillingType" class="form-select">
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
 
-                        <select
-                            id="bulkRechargeBillingType"
-                            class="form-select"
-                        >
+                </div>
 
-                            <option value="monthly">
-                                Monthly
-                            </option>
+                <div class="col-md-6">
 
-                            <option value="yearly">
-                                Yearly
-                            </option>
+                    <label class="form-label" for="bulkRechargeMedium">
+                        Medium <span class="text-danger">*</span>
+                    </label>
 
-                        </select>
-
-                    </div>
-
-
-                    <div class="col-md-4">
-
-                        <label class="form-label">
-                            Payment Medium
-                        </label>
-
-                        <select
-                            id="bulkRechargeMedium"
-                            class="form-select"
-                        >
-
-                            <option value="hand_cash">
-                                Hand Cash
-                            </option>
-
-                            <option value="bkash">
-                                bKash
-                            </option>
-
-                            <option value="nagad">
-                                Nagad
-                            </option>
-
-                            <option value="bank">
-                                Bank Transfer
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="col-md-4">
-
-                        <label class="form-label">
-                            Search
-                        </label>
-
-                        <input
-                            type="text"
-                            id="bulkRechargeSearch"
-                            class="form-control"
-                            placeholder="Search customer..."
-                        >
-
-                    </div>
+                    <select id="bulkRechargeMedium" class="form-select">
+                        <option value="hand_cash">Hand Cash</option>
+                        <option value="bkash">bKash</option>
+                        <option value="nagad">Nagad</option>
+                        <option value="bank">Bank Transfer</option>
+                    </select>
 
                 </div>
 
             </div>
 
+            <div class="px-3">
 
-            <div
-                class="d-flex justify-content-between align-items-center mb-2"
-            >
+                <div class="cm-summary cl-toolbar">
 
-                <span
-                    id="bulkRechargeSelectedBadge"
-                    class="badge bg-primary"
+                    <i class="fa fa-gear cl-toolbar-ico"></i>
+
+                    <span class="cl-tb-text">Total Data:</span>
+                    <span class="cl-pill" id="bulkRechargeSelectedBadge">0</span>
+
+                    <div class="cl-search">
+                        <input
+                            type="text"
+                            id="bulkRechargeSearch"
+                            placeholder="Search"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                </div>
+
+                <div class="table-responsive">
+
+                    <table class="table table-striped align-middle mb-0">
+
+                        <thead>
+                            <tr>
+                                <th data-bulk-sort="name" style="cursor:pointer;">Name/PPPoE ${arrows}</th>
+                                <th data-bulk-sort="package" style="cursor:pointer;">Package &amp; Bill ${arrows}</th>
+                                <th data-bulk-sort="amount" style="cursor:pointer;">Amount ${arrows}</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="bulkRechargeTableBody"></tbody>
+
+                    </table>
+
+                </div>
+
+                <div
+                    id="bulkRechargeEmpty"
+                    class="text-center py-4 text-muted"
+                    style="display:none;"
                 >
-                    Selected: 0
-                </span>
-
-
-                <span
-                    id="bulkRechargeTotalBadge"
-                    class="badge bg-success"
-                >
-                    Total: 0.00
-                </span>
+                    No selected customers found.
+                </div>
 
             </div>
 
+            <div class="d-flex justify-content-end gap-2 mt-4">
 
-            <div
-                class="table-responsive"
-                style="max-height:420px;overflow:auto;"
-            >
-
-                <table
-                    class="table table-sm table-hover align-middle"
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
                 >
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                #
-                            </th>
-
-                            <th>
-                                ID
-                            </th>
-
-                            <th>
-                                Customer
-                            </th>
-
-                            <th>
-                                PPPoE
-                            </th>
-
-                            <th>
-                                Package
-                            </th>
-
-                            <th>
-                                Monthly
-                            </th>
-
-                            <th>
-                                Amount
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody
-                        id="bulkRechargeTableBody"
-                    ></tbody>
-
-                </table>
-
-            </div>
-
-
-            <div
-                id="bulkRechargeEmpty"
-                class="text-center py-4 text-muted"
-                style="display:none;"
-            >
-                No selected customers found.
-            </div>
-
-
-            <div class="mt-3">
+                    Cancel
+                </button>
 
                 <button
                     type="button"
                     id="bulkRechargeSubmit"
-                    class="btn btn-primary w-100"
+                    class="btn btn-success"
                 >
-
-                    <i
-                        class="fa fa-money-bill-wave me-1"
-                    ></i>
-
-                    Process Bulk Recharge
-
+                    Recharge
                 </button>
 
             </div>
@@ -944,6 +908,8 @@
             );
 
 
+                bulkSortRows(rows);
+
         tbody.innerHTML =
             "";
 
@@ -983,58 +949,36 @@
 
 
                 tr.innerHTML = `
-
                     <td>
-                        ${index + 1}
+                        <div>${escapeHtml(customer.name)}</div>
+                        <div>${escapeHtml(customer.pppoe)}</div>
                     </td>
-
                     <td>
-                        ${escapeHtml(
-                            customer.id
-                        )}
+                        <div>${escapeHtml(customer.package)}</div>
+                        <div class="fw-bold">\u09f3${escapeHtml(String(Number(customer.monthly || 0)))}</div>
                     </td>
-
                     <td>
-                        ${escapeHtml(
-                            customer.name
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            customer.pppoe
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            customer.package
-                        )}
-                    </td>
-
-                    <td>
-                        ${money(
-                            customer.monthly
-                        )}
-                    </td>
-
-                    <td>
-
                         <input
                             type="number"
                             min="0.01"
                             step="0.01"
-                            class="form-control form-control-sm bulk-recharge-amount"
-                            data-id="${escapeHtml(
-                                customer.id
-                            )}"
-                            value="${money(
-                                customer.monthly
-                            )}"
+                            class="form-control-plaintext bulk-recharge-amount"
+                            style="width:90px;padding:0;"
+                            data-id="${escapeHtml(customer.id)}"
+                            value="${escapeHtml(String(Number(customer.amount || customer.monthly || 0)))}"
                         >
-
                     </td>
-
+                    <td class="text-center">
+                        <button
+                            type="button"
+                            class="btn btn-link text-danger p-0 bulk-recharge-remove"
+                            data-id="${escapeHtml(customer.id)}"
+                            title="Remove"
+                            aria-label="Remove"
+                        >
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </td>
                 `;
 
 
@@ -1092,17 +1036,14 @@
         );
 
 
-        const totalBadge =
+        const submitButton =
             document.getElementById(
-                "bulkRechargeTotalBadge"
+                "bulkRechargeSubmit"
             );
 
-
-        if (totalBadge) {
-
-            totalBadge.textContent =
-                `Total: ${money(total)}`;
-
+        if (submitButton) {
+            submitButton.title =
+                `Total ${money(total)}`;
         }
 
     }
@@ -1125,7 +1066,7 @@
         if (badge) {
 
             badge.textContent =
-                `Selected: ${customerRows.length}`;
+                String(customerRows.length);
 
         }
 
@@ -1225,11 +1166,24 @@
                 }
 
 
+                                bulkSort = { key: "", dir: 1 };
+
+                const searchBox =
+                    document.getElementById("bulkRechargeSearch");
+
+                if (searchBox) {
+                    searchBox.value = "";
+                }
+
+                const submitBtn =
+                    document.getElementById("bulkRechargeSubmit");
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+
                 renderCustomers();
-
                 updateSelectedBadge();
-
-
                 modal.show();
 
             } catch (error) {
@@ -1465,6 +1419,7 @@
 
                     amount =
                         Number(
+                            customer.amount ||
                             customer.monthly ||
                             0
                         );
@@ -1917,6 +1872,110 @@
         }
     );
 
+
+        /*
+    |--------------------------------------------------------------------------
+    | REMOVE ROW / SORT / KEEP EDITED AMOUNT
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            const remove =
+                event.target.closest(
+                    ".bulk-recharge-remove"
+                );
+
+            if (remove) {
+
+                const id =
+                    Number(remove.dataset.id);
+
+                customerRows =
+                    customerRows.filter(
+                        function (customer) {
+                            return Number(customer.id) !== id;
+                        }
+                    );
+
+                selectedCustomerIds =
+                    (selectedCustomerIds || []).filter(
+                        function (value) {
+                            return Number(value) !== id;
+                        }
+                    );
+
+                renderCustomers();
+                updateSelectedBadge();
+
+                if (!customerRows.length) {
+
+                    const submitBtn =
+                        document.getElementById(
+                            "bulkRechargeSubmit"
+                        );
+
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                    }
+                }
+
+                return;
+            }
+
+            const th =
+                event.target.closest(
+                    "th[data-bulk-sort]"
+                );
+
+            if (th) {
+
+                const key =
+                    th.dataset.bulkSort;
+
+                bulkSort.dir =
+                    bulkSort.key === key
+                        ? -bulkSort.dir
+                        : 1;
+
+                bulkSort.key =
+                    key;
+
+                renderCustomers();
+            }
+        }
+    );
+
+    document.addEventListener(
+        "input",
+        function (event) {
+
+            if (
+                !event.target.matches(
+                    ".bulk-recharge-amount"
+                )
+            ) {
+                return;
+            }
+
+            const id =
+                Number(event.target.dataset.id);
+
+            const customer =
+                customerRows.find(
+                    function (row) {
+                        return Number(row.id) === id;
+                    }
+                );
+
+            if (customer) {
+                customer.amount =
+                    Number(event.target.value);
+            }
+        }
+    );
 
     /*
     |--------------------------------------------------------------------------

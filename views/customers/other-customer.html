@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Other Customer - ISP Billing</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+
+    <!-- Customer profile popup styles -->
+    <link rel="stylesheet" href="/assets/css/customer.css?v=20261030">
+    <link rel="stylesheet" href="/assets/css/customer-add.css?v=20261025">
+    <link rel="stylesheet" href="/assets/css/customer-bill-history.css">
+
+    <link rel="stylesheet" href="/assets/css/other-customer.css?v=1">
+
+    <style>
+    /* Popup scroll: only the popup content scrolls, never the page behind it. */
+    html:has(#customerActionModal.show),
+    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+    #customerActionModal.modal { overflow-y: auto !important; overscroll-behavior: contain; }
+    #customerActionModal.modal .modal-dialog { height: auto !important; max-height: calc(100dvh - 1.5rem) !important; margin: .75rem auto !important; }
+    #customerActionModal.modal .modal-content { display: flex !important; flex-direction: column; height: auto !important; max-height: calc(100dvh - 1.5rem) !important; overflow: hidden !important; }
+    #customerActionModal.modal .modal-body { flex: 1 1 auto; min-height: 0; max-height: none !important; overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #customerActionModal.modal #customerActionModalBody .cm-body { height: auto !important; max-height: calc(100dvh - 10.5rem) !important; overflow-y: auto !important; overscroll-behavior: contain; }
+    </style>
+
+    <meta name="csrf-token" content="">
+</head>
+
+<body>
+
+<div id="sidebarContainer"></div>
+
+<div class="main-content" id="mainContent">
+
+    <div id="topbarContainer"></div>
+
+    <main class="container-fluid oc-page">
+
+        <!-- HEADER -->
+        <div class="oc-header">
+            <h4 class="oc-title">Other Customer</h4>
+
+            <div class="oc-header-actions">
+                <button type="button" class="oc-hbtn" id="ocFilterBtn" title="Filter">
+                    <svg class="oc-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"></circle><path d="M7.4 9.7h9.2M9.4 12.7h5.2M11.3 15.6h1.4"></path></svg>
+                </button>
+
+                <button type="button" class="oc-hbtn" id="ocRefreshBtn" title="Refresh">
+                    <svg class="oc-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12.4a8 8 0 1 1-2.5-5.8"></path><path d="M17.9 3.4v3.5h-3.5"></path></svg>
+                </button>
+
+                <span class="oc-extra" id="ocExtra" hidden>
+                    <button type="button" class="oc-hbtn" id="ocCsvBtn" title="Export CSV"><i class="fa-solid fa-file-csv"></i></button>
+                    <button type="button" class="oc-hbtn" id="ocPrintBtn" title="Print"><i class="fa-solid fa-print"></i></button>
+                </span>
+
+                <button type="button" class="oc-toggle" id="ocToggleTools" title="More tools" aria-expanded="false">
+                    <i class="fa-solid fa-arrow-left-long"></i><span class="bar"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="oc-card">
+
+            <!-- TABS -->
+            <ul class="oc-tabs">
+                <li><button type="button" class="oc-tab active" data-tab="new">New Customer</button></li>
+                <li><button type="button" class="oc-tab" data-tab="inactive">Inactive Customer</button></li>
+                <li><button type="button" class="oc-tab" data-tab="due">Due Customers</button></li>
+            </ul>
+
+            <!-- FILTER -->
+            <section class="oc-filter" id="ocFilterPanel" hidden>
+                <div class="oc-fgrid">
+                    <select class="form-select" data-cf="router_id"><option value="">Mikrotik</option></select>
+                    <select class="form-select" data-cf="package_id"><option value="">Package</option></select>
+                    <select class="form-select" data-cf="area_id"><option value="">All Area</option></select>
+                    <select class="form-select" data-cf="sub_area_id"><option value="">Sub Area</option></select>
+                </div>
+                <div class="oc-fbtns">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="ocApplyFilter">Filter</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="ocResetFilter">Reset</button>
+                </div>
+            </section>
+
+            <!-- TOOLBAR -->
+            <section class="oc-toolbar">
+                <i class="fa-solid fa-gear oc-tb-ico"></i>
+                <span class="oc-tb-text">Total Data:</span>
+                <span class="oc-pill" id="ocTotal">0</span>
+                <span class="oc-tb-strong" id="ocSummary"></span>
+
+                <div class="oc-search">
+                    <input type="text" id="ocSearch" placeholder="Search" autocomplete="off">
+                </div>
+            </section>
+
+            <!-- TABLE -->
+            <div class="oc-scroll">
+                <table class="table oc-table" id="ocTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="id">ID <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="name" class="oc-left">Name &amp; PP/IP/Hp <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="contact" class="oc-left">Mobile/Address <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="package" class="oc-left">Package <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="bill" class="oc-left">Bill/Balance <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="date" class="oc-left">Bill/Promise Date <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="day">Day Left <span class="oc-sort">↓↑</span></th>
+                            <th data-sort="status">Status <span class="oc-sort">↓↑</span></th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ocBody">
+                        <tr><td colspan="9" class="oc-empty"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading customers...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="oc-footer">© IRFAN IT - <span id="ocYear"></span></div>
+
+    </main>
+</div>
+
+
+<!-- CUSTOMER ACTION (PROFILE) MODAL -->
+<div class="modal fade" id="customerActionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerActionModalLabel">Customer Action</h5>
+                <button type="button" class="btn-close bulk-popup-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="customerActionModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="customer-topbar-toast" id="customerToast" style="display:none;">
+    <div id="customerToastTitle" class="fw-bold">ISP Billing</div>
+    <div id="customerToastBody"></div>
+</div>
+
+<input type="hidden" name="csrf_token" id="csrfTokenInput" value="">
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="/assets/js/sidebar-loader.js?v=20261009"></script>
+<script src="/assets/js/topbar-loader.js?v=20261009"></script>
+
+<script src="/assets/js/other-customer.js?v=1"></script>
+<script src="/assets/js/customer-actions.js?v=20261030"></script>
+<script src="/assets/js/customer-edit.js?v=20261030"></script>
+<script src="/assets/js/customer-bill-history.js"></script>
+
+<script src="/assets/js/i18n.js?v=mw7ynpem"></script>
+</body>
+
+</html>
