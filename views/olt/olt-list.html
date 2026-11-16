@@ -9,38 +9,40 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/topbar.css">
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <link rel="stylesheet" href="/assets/css/theme.css">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/theme.css">
   <style>
     .main-content { margin-top: 60px; }
 
     .olt-list-page {
       width: 100%;
       min-width: 0;
-      padding: 20px;
-      color: #1f2937;
+      padding: 12px 14px 20px;
+      color: #5f6b7a;
     }
 
     .olt-list-page,
     .olt-list-page * { box-sizing: border-box; }
 
+    /* ---------- Heading bar ---------- */
     .olt-heading {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 14px;
-      padding: 15px 20px;
-      background: #2563eb;
+      padding: 18px 24px;
+      background: linear-gradient(90deg, #2d82e0 0%, #3a90e8 100%);
       color: #fff;
-      border-radius: 8px;
-      margin-bottom: 15px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      box-shadow: 0 2px 6px rgba(45, 130, 224, .25);
     }
 
     .olt-heading h2 {
       margin: 0;
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 28px;
+      font-weight: 500;
       color: #fff;
     }
 
@@ -48,105 +50,84 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      min-height: 36px;
-      padding: 6px 12px;
-      border: 1px solid rgba(255,255,255,.3);
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
       border-radius: 6px;
       background: #fff;
-      color: #2563eb;
-      font-size: 13px;
-      font-weight: 600;
+      color: #2d82e0;
+      font-size: 15px;
       cursor: pointer;
+      transition: background .15s;
     }
 
-    .olt-btn:hover { background: #f8fafc; }
+    .olt-btn:hover { background: #eaf3ff; }
 
-    .olt-btn-primary {
-      color: #fff;
-      border-color: #fff;
-      background: #2563eb;
-    }
-
-    .olt-btn-primary:hover {
-      background: #1d4ed8;
-      color: #fff;
+    /* ---------- White card ---------- */
+    .olt-card {
+      background: #fff;
+      padding: 28px 20px 14px;
+      border-radius: 0;
     }
 
     .olt-summary {
-      display: flex !important;
+      display: flex;
       align-items: center;
-      justify-content: space-between !important;
+      justify-content: space-between;
       flex-wrap: wrap;
       gap: 12px;
-      padding: 12px 18px;
-      margin-bottom: 15px;
-      background: #2563eb;
+      padding: 8px 10px 8px 14px;
+      margin-bottom: 22px;
+      background: #2f8ae6;
       color: #fff;
       border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(47, 138, 230, .35);
     }
 
     .olt-summary-left {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 600;
-      font-size: 14px;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 500;
     }
 
     .olt-badge {
       display: inline-grid;
       place-items: center;
-      padding: 2px 10px;
-      background: rgba(255,255,255,.2);
+      min-width: 38px;
+      padding: 3px 12px;
+      background: #2866b8;
       border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 600;
     }
 
-    .olt-list-page .olt-search {
-      position: relative;
-      width: 300px;
+    .olt-search {
+      width: 345px;
       max-width: 100%;
-      margin-left: auto !important;
-      margin-right: 0 !important;
-      flex: 0 1 300px;
-    }
-
-    .olt-search i {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af;
-      pointer-events: none;
-      font-size: 13px;
+      flex: 0 1 345px;
+      margin-left: auto;
     }
 
     .olt-search input {
       display: block;
       width: 100%;
       height: 36px;
-      padding: 6px 12px 6px 36px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 4px;
       outline: none;
-      font-size: 13px;
-      background: #fff;
+      font-size: 14px;
+      color: #fff;
+      background: rgba(0, 0, 0, .14);
     }
 
-    .olt-search input:focus {
-      border-color: #60a5fa;
-      box-shadow: 0 0 0 3px #dbeafe;
-    }
+    .olt-search input::placeholder { color: rgba(255, 255, 255, .85); }
+    .olt-search input:focus { background: rgba(0, 0, 0, .22); }
 
-    .olt-card {
-      overflow: hidden;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-    }
-
+    /* ---------- Table ---------- */
     .olt-table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -154,67 +135,135 @@
 
     .olt-table {
       width: 100%;
-      min-width: 1050px;
+      min-width: 980px;
       margin: 0;
       border-collapse: collapse;
-      white-space: nowrap;
     }
 
     .olt-table th {
-      padding: 12px;
-      background: #f9fafb;
-      color: #6b7280;
-      font-size: 11px;
+      padding: 12px 10px;
+      background: transparent;
+      color: #5a6678;
+      font-size: 14px;
       font-weight: 700;
-      text-transform: uppercase;
-      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+      border: 0;
+      user-select: none;
+    }
+
+    .olt-table th[data-sort] { cursor: pointer; text-align: left; }
+    .olt-table th:first-child { padding-left: 12px; }
+    .olt-table th:last-child { text-align: center; cursor: default; }
+
+    .olt-sort {
+      color: #2f86e0;
+      font-weight: 400;
+      font-size: 13px;
+      margin-left: 2px;
     }
 
     .olt-table td {
-      padding: 12px;
-      border-bottom: 1px solid #f0f1f3;
+      padding: 14px 10px;
+      border: 0;
       vertical-align: middle;
-      font-size: 13px;
+      font-size: 14px;
+      color: #66717f;
     }
 
-    .olt-table tbody tr:hover { background: #fafcff; }
+    .olt-table tbody tr:nth-child(odd) { background: #f1f1f1; }
+    .olt-table tbody tr:nth-child(even) { background: #fff; }
+    .olt-table tbody tr:hover { background: #e9f1fb; }
 
-    .olt-vendor {
-      display: inline-block;
-      padding: 3px 8px;
+    .olt-table td:first-child { font-weight: 700; color: #4b5563; padding-left: 12px; }
+    .olt-table td.olt-created { white-space: normal; min-width: 120px; max-width: 140px; line-height: 1.45; }
+    .olt-table td.olt-action { white-space: nowrap; text-align: center; }
+
+    .olt-vendor { color: #66717f; font-weight: 500; }
+    .olt-name { color: #66717f; font-weight: 500; }
+    .olt-muted { color: #66717f; }
+
+    .olt-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .olt-act {
+      display: inline-grid;
+      place-items: center;
+      width: 36px;
+      height: 30px;
+      border: 1px solid #1f6fe0;
       border-radius: 4px;
-      background: #f3f4f6;
-      color: #374151;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity .15s;
     }
 
-    .olt-name { color: #111827; font-weight: 600; }
-    .olt-muted { color: #6b7280; }
-    .olt-actions { display: flex; gap: 6px; }
+    .olt-act.solid { background: #1f6fe0; color: #fff; }
+    .olt-act.outline { background: #fff; color: #1f6fe0; }
+    .olt-act:hover { opacity: .85; }
+    .olt-act:disabled { opacity: .55; cursor: wait; }
 
-    .olt-icon-btn {
+    .olt-dots {
       display: inline-grid;
       place-items: center;
       width: 30px;
       height: 30px;
-      border: none;
-      border-radius: 4px;
-      background: #2563eb;
-      color: #fff;
+      border: 0;
+      background: transparent;
+      color: #2f86e0;
+      font-size: 16px;
       cursor: pointer;
-      font-size: 12px;
     }
 
-    .olt-icon-btn:hover { opacity: .9; }
-    .olt-icon-btn:disabled { opacity: .55; cursor: wait; }
+    .olt-menu {
+      min-width: 160px;
+      padding: 8px 0;
+      border: 0;
+      border-radius: 8px;
+      background: #2f86e0;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
+    }
+
+    .olt-menu .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      color: #fff;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .olt-menu .dropdown-item:hover,
+    .olt-menu .dropdown-item:focus {
+      background: rgba(255, 255, 255, .16);
+      color: #fff;
+    }
+
+    .olt-menu .dropdown-item:disabled { opacity: .6; }
 
     .olt-empty {
       padding: 40px 15px !important;
       text-align: center;
       color: #6b7280;
+      background: #fff;
     }
 
+    .olt-footer {
+      text-align: center;
+      margin-top: 34px;
+      color: #6b7280;
+      font-size: 16px;
+    }
+
+    @media (max-width: 576px) {
+      .olt-card { padding: 16px 10px 10px; }
+      .olt-search { flex-basis: 100%; width: 100%; }
+    }
+
+    /* ---------- Modal ---------- */
     #oltModal .modal-dialog { max-width: 600px; }
 
     #oltModal .modal-content {
@@ -245,7 +294,7 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    /* Toast notifications */
+    /* ---------- Toast notifications ---------- */
     #oltToastContainer {
       position: fixed;
       top: 82px;
@@ -288,126 +337,78 @@
       from { opacity: 0; transform: translateX(18px); }
       to { opacity: 1; transform: translateX(0); }
     }
+
     /* =========================================
-   OLT LIST - DARK MODE FIX
-========================================= */
+       OLT LIST - DARK MODE
+    ========================================= */
+    body.dark-mode .olt-list-page { color: #e5e7eb; }
 
-body.dark-mode .olt-list-page {
-    color: #e5e7eb;
-}
+    body.dark-mode .olt-card {
+      background: #1e293b;
+      color: #e5e7eb;
+    }
 
-body.dark-mode .olt-card {
-    background: #1e293b;
-    border-color: #334155;
-    color: #e5e7eb;
-}
+    body.dark-mode .olt-table th { color: #cbd5e1; }
+    body.dark-mode .olt-table td { color: #e2e8f0; }
+    body.dark-mode .olt-table td:first-child { color: #f1f5f9; }
+    body.dark-mode .olt-table tbody tr:nth-child(odd) { background: #263449; }
+    body.dark-mode .olt-table tbody tr:nth-child(even) { background: #1e293b; }
+    body.dark-mode .olt-table tbody tr:hover { background: #2f405a; }
 
-body.dark-mode .olt-table {
-    color: #e5e7eb;
-}
+    body.dark-mode .olt-vendor,
+    body.dark-mode .olt-name,
+    body.dark-mode .olt-muted { color: #cbd5e1; }
 
-body.dark-mode .olt-table th {
-    background: #263449;
-    color: #cbd5e1;
-    border-bottom-color: #475569;
-}
+    body.dark-mode .olt-empty { background: #1e293b; color: #94a3b8; }
+    body.dark-mode .olt-footer { color: #94a3b8; }
+    body.dark-mode .olt-act.outline { background: #1e293b; }
 
-body.dark-mode .olt-table td {
-    color: #e2e8f0;
-    border-bottom-color: #334155;
-}
+    body.dark-mode .olt-list-page input,
+    body.dark-mode .olt-list-page select,
+    body.dark-mode .olt-list-page textarea {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-color: #475569;
+    }
 
-body.dark-mode .olt-table tbody tr:hover {
-    background: #29384d;
-}
+    body.dark-mode .olt-list-page .olt-search input {
+      background: rgba(0, 0, 0, .25);
+      color: #fff;
+      border: 0;
+    }
 
-body.dark-mode .olt-name {
-    color: #f1f5f9;
-}
+    body.dark-mode .olt-list-page input::placeholder,
+    body.dark-mode .olt-list-page textarea::placeholder { color: #94a3b8; }
 
-body.dark-mode .olt-muted {
-    color: #94a3b8;
-}
+    body.dark-mode #oltModal .modal-content {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-color: #475569;
+    }
 
-body.dark-mode .olt-vendor {
-    background: #334155;
-    color: #cbd5e1;
-}
+    body.dark-mode #oltModal .modal-header,
+    body.dark-mode #oltModal .modal-footer {
+      background: #263449;
+      border-color: #475569;
+    }
 
-body.dark-mode .olt-search input,
-body.dark-mode .olt-list-page input,
-body.dark-mode .olt-list-page select,
-body.dark-mode .olt-list-page textarea {
-    background: #1e293b;
-    color: #e2e8f0;
-    border-color: #475569;
-}
+    body.dark-mode #oltModal .modal-title { color: #f1f5f9; }
+    body.dark-mode #oltModal .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 
-body.dark-mode .olt-list-page input::placeholder,
-body.dark-mode .olt-list-page textarea::placeholder {
-    color: #94a3b8;
-}
+    body.dark-mode #oltModal .form-control,
+    body.dark-mode #oltModal .form-select {
+      background-color: #1e293b;
+      color: #e2e8f0;
+      border-color: #475569;
+    }
 
-body.dark-mode .olt-list-page .form-control,
-body.dark-mode .olt-list-page .form-select {
-    background-color: #1e293b;
-    color: #e2e8f0;
-    border-color: #475569;
-}
-
-body.dark-mode .olt-list-page .form-control:focus,
-body.dark-mode .olt-list-page .form-select:focus {
-    background-color: #1e293b;
-    color: #fff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
-}
-
-body.dark-mode .olt-list-page .modal-content {
-    background: #1e293b;
-    color: #e2e8f0;
-    border-color: #475569;
-}
-
-body.dark-mode .olt-list-page .modal-header,
-body.dark-mode .olt-list-page .modal-footer {
-    background: #263449;
-    border-color: #475569;
-}
-
-body.dark-mode .olt-list-page .modal-title {
-    color: #f1f5f9;
-}
-
-body.dark-mode .olt-list-page .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-
-body.dark-mode .olt-list-page .dropdown-menu {
-    background: #1e293b;
-    border-color: #475569;
-}
-
-body.dark-mode .olt-list-page .dropdown-item {
-    color: #e2e8f0;
-}
-
-body.dark-mode .olt-list-page .dropdown-item:hover {
-    background: #334155;
-    color: #fff;
-}
-
-body.dark-mode .olt-list-page .text-dark {
-    color: #e2e8f0 !important;
-}
-
-body.dark-mode .olt-list-page .bg-white {
-    background-color: #1e293b !important;
-}
-
-body.dark-mode .olt-list-page hr {
-    border-color: #475569;
-}
+    body.dark-mode #oltModal .form-control:focus,
+    body.dark-mode #oltModal .form-select:focus {
+      background-color: #1e293b;
+      color: #fff;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.2);
+    }
   </style>
 </head>
 
@@ -418,47 +419,49 @@ body.dark-mode .olt-list-page hr {
   <div class="main-content">
     <main class="olt-list-page">
 
+      <!-- Heading -->
       <div class="olt-heading">
         <h2>OLT</h2>
         <div class="d-flex gap-2">
           <button type="button" class="olt-btn" id="refreshTopBtn" title="Refresh">
-            <i class="fa-solid fa-rotate"></i>
+            <i class="fa-solid fa-rotate-right"></i>
           </button>
-          <button type="button" class="olt-btn olt-btn-primary" id="addOltBtn" title="Add OLT">
+          <button type="button" class="olt-btn" id="addOltBtn" title="Add OLT">
             <i class="fa-solid fa-plus"></i>
           </button>
           <button type="button" class="olt-btn" id="reloadTopBtn" title="Reload">
-            <i class="fa-solid fa-rotate-right"></i>
+            <i class="fa-solid fa-arrows-rotate"></i>
           </button>
         </div>
       </div>
 
-      <section class="olt-summary">
-        <div class="olt-summary-left">
-          <i class="fa-solid fa-gear"></i>
-          Total Data:
-          <span class="olt-badge" id="totalOltCount">0</span>
-        </div>
-
-        <div class="olt-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="search" id="oltSearch" placeholder="Search" autocomplete="off" aria-label="Search OLTs">
-        </div>
-      </section>
-
+      <!-- Card -->
       <section class="olt-card">
+
+        <div class="olt-summary">
+          <div class="olt-summary-left">
+            <i class="fa-solid fa-gear"></i>
+            Total Data:
+            <span class="olt-badge" id="totalOltCount">0</span>
+          </div>
+
+          <div class="olt-search">
+            <input type="search" id="oltSearch" placeholder="Search" autocomplete="off" aria-label="Search OLTs">
+          </div>
+        </div>
+
         <div class="olt-table-wrap">
           <table class="olt-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Vendor</th>
-                <th>Name</th>
-                <th>PON</th>
-                <th>User Name</th>
-                <th>Host</th>
-                <th>Port</th>
-                <th>Created At</th>
+                <th data-sort="idx"># <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="vendor">Vendor <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="name">Name <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="pon">PON <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="username">User Name <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="host">Host <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="port">Port <span class="olt-sort">&darr;&uarr;</span></th>
+                <th data-sort="createdAt">Created At <span class="olt-sort">&darr;&uarr;</span></th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -470,6 +473,8 @@ body.dark-mode .olt-list-page hr {
           </table>
         </div>
       </section>
+
+      <div class="olt-footer">&copy; IRFAN IT - <span id="oltYear"></span></div>
 
     </main>
   </div>
@@ -489,28 +494,27 @@ body.dark-mode .olt-list-page hr {
               <label class="form-label fw-semibold" for="oltMikrotik">Select MikroTik <span class="text-danger">*</span></label>
               <select class="form-select" id="oltMikrotik" required>
                 <option value="">Select MikroTik</option>
-                <!-- আপনার ব্যাকএন্ড থেকে ডাইনামিক অপশন এখানে আসবে -->
               </select>
             </div>
 
             <div class="mb-3">
-<label class="form-label fw-semibold" for="oltVendor">
-  Select OLT Vendor <span class="text-danger">*</span>
-</label>
-<select class="form-select" id="oltVendor" required>
-  <option value="">Select OLT Vendor</option>
-  <option value="CData EPon">CData</option>
-  <option value="ECom EPon">ECom</option>
-  <option value="V-SOL">V-SOL</option>
-  <option value="BDCOM">BDCOM</option>
-  <option value="Huawei">Huawei</option>
-  <option value="ZTE">ZTE</option>
-  <option value="FiberHome">FiberHome</option>
-  <option value="Raisecom">Raisecom</option>
-  <option value="Nokia">Nokia</option>
-  <option value="TP-Link">TP-Link</option>
-  <option value="Other">Other</option>
-</select>
+              <label class="form-label fw-semibold" for="oltVendor">
+                Select OLT Vendor <span class="text-danger">*</span>
+              </label>
+              <select class="form-select" id="oltVendor" required>
+                <option value="">Select OLT Vendor</option>
+                <option value="CData EPon">CData</option>
+                <option value="ECom EPon">ECom</option>
+                <option value="V-SOL">V-SOL</option>
+                <option value="BDCOM">BDCOM</option>
+                <option value="Huawei">Huawei</option>
+                <option value="ZTE">ZTE</option>
+                <option value="FiberHome">FiberHome</option>
+                <option value="Raisecom">Raisecom</option>
+                <option value="Nokia">Nokia</option>
+                <option value="TP-Link">TP-Link</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div class="mb-3">
@@ -547,7 +551,7 @@ body.dark-mode .olt-list-page hr {
                   <i class="fa-solid fa-eye"></i>
                 </button>
               </div>
-              <small class="text-muted">Edit করার সময় ফাঁকা রাখলে বর্তমান password অপরিবর্তিত থাকবে।</small>
+              <small class="text-muted">Edit করার সময় ফাঁকা রাখলে বর্তমান password অপরিবর্তিত থাকবে।</small>
             </div>
 
             <div class="mb-3">
@@ -587,6 +591,7 @@ body.dark-mode .olt-list-page hr {
   const modalElement = document.getElementById("oltModal");
   const oltModal = bootstrap.Modal.getOrCreateInstance(modalElement);
   const oltForm = document.getElementById("oltForm");
+  const sortHeaders = document.querySelectorAll(".olt-table thead th[data-sort]");
 
   let oltRecords = [];
   let mikrotikRecords = [];
@@ -594,8 +599,13 @@ body.dark-mode .olt-list-page hr {
   let loading = false;
   let loadingMikrotiks = false;
   let saving = false;
+  let sortKey = "";
+  let sortDir = 1;
 
   const busyActions = new Set();
+
+  const yearEl = document.getElementById("oltYear");
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
   const field = {
     mikrotik: document.getElementById("oltMikrotik"),
@@ -669,7 +679,7 @@ body.dark-mode .olt-list-page hr {
     const close = document.createElement("button");
     close.type = "button";
     close.className = "olt-toast-close";
-    close.textContent = "×";
+    close.textContent = "\u00d7";
 
     content.append(title, text);
     toast.append(icon, content, close);
@@ -721,28 +731,28 @@ body.dark-mode .olt-list-page hr {
     return data;
   }
 
-function normalizeVendor(value) {
-  const raw = String(value ?? "").trim();
-  const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  function normalizeVendor(value) {
+    const raw = String(value ?? "").trim();
+    const key = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-  const vendorMap = {
-    cdata: "CData EPon",
-    cdataepon: "CData EPon",
-    ecom: "ECom EPon",
-    ecomepon: "ECom EPon",
-    vsol: "V-SOL",
-    bdcom: "BDCOM",
-    huawei: "Huawei",
-    zte: "ZTE",
-    fiberhome: "FiberHome",
-    raisecom: "Raisecom",
-    nokia: "Nokia",
-    tplink: "TP-Link",
-    other: "Other"
-  };
+    const vendorMap = {
+      cdata: "CData EPon",
+      cdataepon: "CData EPon",
+      ecom: "ECom EPon",
+      ecomepon: "ECom EPon",
+      vsol: "V-SOL",
+      bdcom: "BDCOM",
+      huawei: "Huawei",
+      zte: "ZTE",
+      fiberhome: "FiberHome",
+      raisecom: "Raisecom",
+      nokia: "Nokia",
+      tplink: "TP-Link",
+      other: "Other"
+    };
 
-  return vendorMap[key] || "Other";
-}
+    return vendorMap[key] || "Other";
+  }
 
   function normalizeOlt(row) {
     return {
@@ -761,14 +771,27 @@ function normalizeVendor(value) {
     };
   }
 
+  /* Format: 2026/10/08 06:32 PM */
   function formatDate(value) {
-    if (!value) return "—";
+    if (!value) return "\u2014";
 
     const date = new Date(value);
 
-    return Number.isNaN(date.getTime())
-      ? String(value)
-      : date.toLocaleString();
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    const pad = function (n) { return String(n).padStart(2, "0"); };
+    let hours = date.getHours();
+    const suffix = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    return (
+      date.getFullYear() + "/" +
+      pad(date.getMonth() + 1) + "/" +
+      pad(date.getDate()) + " " +
+      pad(hours) + ":" +
+      pad(date.getMinutes()) + " " +
+      suffix
+    );
   }
 
   /*
@@ -849,6 +872,29 @@ function normalizeVendor(value) {
     }
   }
 
+  /* ---------- Sorting ---------- */
+  function sortValue(olt, key) {
+    if (key === "idx") return oltRecords.indexOf(olt) + 1;
+
+    if (key === "createdAt") {
+      const t = new Date(olt.createdAt).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    }
+
+    return olt[key] ?? "";
+  }
+
+  function updateSortIcons() {
+    sortHeaders.forEach(function (th) {
+      const icon = th.querySelector(".olt-sort");
+      if (!icon) return;
+
+      icon.textContent = th.dataset.sort === sortKey
+        ? (sortDir === 1 ? "\u2191" : "\u2193")
+        : "\u2193\u2191";
+    });
+  }
+
   function renderTable() {
     const term = searchInput.value.trim().toLowerCase();
 
@@ -861,11 +907,31 @@ function normalizeVendor(value) {
         olt.host,
         olt.port,
         olt.mikrotik_name,
-        olt.createdAt
+        formatDate(olt.createdAt)
       ].some(function (value) {
         return String(value ?? "").toLowerCase().includes(term);
       });
     });
+
+    if (sortKey) {
+      const collator = new Intl.Collator(undefined, {
+        numeric: true,
+        sensitivity: "base"
+      });
+
+      filtered.sort(function (a, b) {
+        const x = sortValue(a, sortKey);
+        const y = sortValue(b, sortKey);
+
+        const result = (typeof x === "number" && typeof y === "number")
+          ? x - y
+          : collator.compare(String(x), String(y));
+
+        return result * sortDir;
+      });
+    }
+
+    updateSortIcons();
 
     totalCount.textContent = String(oltRecords.length);
 
@@ -885,42 +951,49 @@ function normalizeVendor(value) {
       return `
         <tr data-olt-id="${olt.id}">
           <td>${index + 1}</td>
-          <td>
-            <span class="olt-vendor">
-              ${escapeHtml(olt.vendor || "Unknown")}
-            </span>
-          </td>
+          <td><span class="olt-vendor">${escapeHtml(olt.vendor || "Unknown")}</span></td>
           <td class="olt-name">${escapeHtml(olt.name)}</td>
           <td>${escapeHtml(olt.pon)}</td>
           <td>${escapeHtml(olt.username)}</td>
           <td>${escapeHtml(olt.host)}</td>
           <td>${escapeHtml(olt.port)}</td>
-          <td class="olt-muted">${escapeHtml(formatDate(olt.createdAt))}</td>
-          <td>
+          <td class="olt-created olt-muted">${escapeHtml(formatDate(olt.createdAt))}</td>
+          <td class="olt-action">
             <div class="olt-actions">
-              <button type="button" class="olt-icon-btn"
+              <button type="button" class="olt-act solid"
                 data-action="check" data-id="${olt.id}"
                 title="Test Connection">
                 <i class="fa-solid fa-plug"></i>
               </button>
 
-              <button type="button" class="olt-icon-btn"
+              <button type="button" class="olt-act outline"
                 data-action="sync-customers" data-id="${olt.id}"
                 title="Sync Customers &amp; Mapping">
-                <i class="fa-solid fa-rotate"></i>
+                <i class="fa-solid fa-arrows-rotate"></i>
               </button>
 
-              <button type="button" class="olt-icon-btn"
-                data-action="edit" data-id="${olt.id}"
-                title="Edit OLT">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-
-              <button type="button" class="olt-icon-btn"
-                data-action="delete" data-id="${olt.id}"
-                title="Delete OLT">
-                <i class="fa-solid fa-trash"></i>
-              </button>
+              <div class="dropdown">
+                <button type="button" class="olt-dots"
+                  data-bs-toggle="dropdown"
+                  data-bs-popper-config='{"strategy":"fixed"}'
+                  aria-expanded="false" title="More">
+                  <i class="fa-solid fa-ellipsis"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end olt-menu">
+                  <li>
+                    <button type="button" class="dropdown-item"
+                      data-action="edit" data-id="${olt.id}">
+                      <i class="fa-solid fa-pen"></i>Edit
+                    </button>
+                  </li>
+                  <li>
+                    <button type="button" class="dropdown-item"
+                      data-action="delete" data-id="${olt.id}">
+                      <i class="fa-solid fa-box-archive"></i>Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </div>
           </td>
         </tr>`;
@@ -1025,7 +1098,7 @@ function normalizeVendor(value) {
     const token = data.csrfToken || data.csrf_token || data.token;
 
     if (!token) {
-      throw new Error("CSRF token পাওয়া যায়নি।");
+      throw new Error("CSRF token পাওয়া যায়নি।");
     }
 
     return token;
@@ -1193,6 +1266,21 @@ function normalizeVendor(value) {
         ? '<i class="fa-solid fa-eye"></i>'
         : '<i class="fa-solid fa-eye-slash"></i>';
     });
+
+  sortHeaders.forEach(function (th) {
+    th.addEventListener("click", function () {
+      const key = th.dataset.sort;
+
+      if (sortKey === key) {
+        sortDir = -sortDir;
+      } else {
+        sortKey = key;
+        sortDir = 1;
+      }
+
+      renderTable();
+    });
+  });
 
   searchInput.addEventListener("input", renderTable);
   oltForm.addEventListener("submit", saveOlt);

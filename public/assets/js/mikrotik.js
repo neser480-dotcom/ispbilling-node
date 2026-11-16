@@ -1,3 +1,45 @@
+/* ---- Auto CSRF header for same-origin POST/PUT/PATCH/DELETE ---- */
+(function () {
+    if (window.__csrfFetchPatched) { return; }
+    window.__csrfFetchPatched = true;
+
+    const nativeFetch = window.fetch.bind(window);
+    let cachedToken = "";
+
+    async function getToken() {
+        if (cachedToken) { return cachedToken; }
+        const r = await nativeFetch("/api/csrf-token", {
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+        const d = await r.json().catch(function () { return {}; });
+        cachedToken = d.csrf_token || "";
+        return cachedToken;
+    }
+
+    window.fetch = async function (input, init) {
+        init = init || {};
+        const method = String(
+            init.method || (input && input.method) || "GET"
+        ).toUpperCase();
+
+        const url = typeof input === "string" ? input : (input && input.url) || "";
+        const sameOrigin = url.startsWith("/") || url.startsWith(location.origin);
+
+        if (sameOrigin && method !== "GET" && method !== "HEAD") {
+            const token = await getToken();
+            if (token) {
+                const headers = new Headers(init.headers || {});
+                if (!headers.has("X-CSRF-Token")) {
+                    headers.set("X-CSRF-Token", token);
+                }
+                init.headers = headers;
+            }
+            if (!init.credentials) { init.credentials = "same-origin"; }
+        }
+        return nativeFetch(input, init);
+    };
+})();
 "use strict";
 
 
