@@ -594,7 +594,8 @@ document.addEventListener("DOMContentLoaded", () => {
     /* card number element id -> list type */
     const LIST_LINKS = {
         v_total: "total", v_active: "active", v_paid: "paid", v_unpaid: "unpaid",
-        v_expired: "expired", v_inactive: "inactive", v_free: "free", v_discount: "discount"
+        v_expired: "expired", v_inactive: "inactive", v_free: "free", v_discount: "discount",
+        v_collnew: "paid"
     };
 
     let listItems = [];
@@ -771,6 +772,11 @@ document.addEventListener("DOMContentLoaded", () => {
         el.classList.add("dc-link");
         el.title = "Click to view list";
         el.addEventListener("click", () => openCustomerList(type));
+    });
+
+    /* move focus out before Bootstrap sets aria-hidden (removes the console warning) */
+    document.addEventListener("hide.bs.modal", () => {
+        if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     });
 
     $("custListSearch")?.addEventListener("input", renderListBody);

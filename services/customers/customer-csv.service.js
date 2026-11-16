@@ -31,7 +31,7 @@ const EXPORT_HEADERS = [
     "PPPoE_Name",
     "address_of_client",
     "activation_date",
-    "client_mikrotik",
+    "client_mikrotik",  
     "bandwidth_allocation MB",
     "password",
     "client_phone",
@@ -42,6 +42,7 @@ const EXPORT_HEADERS = [
     "email",
     "balance",
     "billing_cycle",
+    "promise_date",
     "user_type",
     "selling_bandwidthBDT (Excluding VAT).",
     "comment"
@@ -334,7 +335,10 @@ const ALIASES = {
         "billingcycle",
         "cycle"
     ],
-
+promise_date: [
+    "promise date",
+    "promised date"
+],
     user_type: [
         "user type",
         "usertype",
@@ -572,6 +576,7 @@ async function exportCsv(
                     c.email,
                     c.balance,
                     c.billing_cycle,
+		    c.promise_date,
                     c.connection_type,
                     c.monthly_bill,
                     c.comments
@@ -625,6 +630,7 @@ async function exportCsv(
                         r.email ?? "",
                         r.balance ?? "",
                         fmt(r.billing_cycle) ?? "",
+			fmt(r.promise_date) ?? "",
                         r.connection_type ?? "",
                         r.monthly_bill ?? "",
                         r.comments ?? ""
@@ -1321,7 +1327,11 @@ async function importCsv({ user, file }) {
                     get(row, "email"),
 
                 billing_cycle:
-                    get(row, "billing_cycle") || "Monthly",
+  		  parseDateOnly(get(row, "billing_cycle")),
+
+		promise_date:
+   		 parseDateOnly(get(row, "promise_date")) ||
+   		 parseDateOnly(get(row, "billing_cycle")),
 
                 payment_status:
                     mapPaymentStatus(

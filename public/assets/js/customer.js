@@ -453,7 +453,7 @@
 
         return `
             <span
-                class="cl-dayleft${value <= 0 ? " cl-dayleft-over" : ""}"
+                class="cl-dayleft${value <= 0 ? " cl-dayleft-over" : ""}${String(customer.payment_status || customer.paymentStatus || "").toLowerCase() === "paid" ? " cl-dayleft-paid" : " cl-dayleft-unpaid"}"
                 title="${title}"
             >${value}</span>
         `;
@@ -572,13 +572,11 @@
             <div>
 
                 <div class="cl-bill">
-                    ${taka(
-                        monthlyBill(customer)
-                    )}
+                    ৳${taka(monthlyBill(customer))}
                 </div>
 
                 <div class="cl-balance${bal < 0 ? " cl-balance-neg" : ""}">
-                    ${taka(bal)}
+                    ৳${taka(bal)}
                 </div>
 
             </div>

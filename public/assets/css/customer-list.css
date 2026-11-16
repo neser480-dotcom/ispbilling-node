@@ -550,3 +550,19 @@ button.cl-back { border: 0; background: none; color: #fff; font-size: 18px; padd
 .cl-balance { color: #16a34a !important; }
 .customer-page .cm-table .cl-balance.cl-balance-neg,
 .cl-balance.cl-balance-neg { color: #dc3545 !important; }
+
+/* DAY LEFT OUTLINE (patch-customers-dayleft-taka-1) : স্কয়ার বক্স, নম্বর মাঝখানে */
+.customer-page .cm-table .cl-dayleft {
+    display: inline-flex !important; align-items: center !important; justify-content: center !important;
+    box-sizing: border-box !important; width: 38px !important; height: 38px !important; min-width: 38px !important;
+    padding: 0 !important; line-height: 1 !important; text-align: center !important;
+    border-radius: 3px !important; font-weight: 700 !important; font-size: 14px !important;
+}
+.customer-page .cm-table .cl-dayleft:not(.cl-dayleft-over) {
+    background: transparent !important; color: #4b5563 !important; border: 2px solid #0d6efd !important;
+}
+.customer-page .cm-table .cl-dayleft.cl-dayleft-paid:not(.cl-dayleft-over) { border-color: #198754 !important; }
+.customer-page .cm-table .cl-dayleft.cl-dayleft-over {
+    background: #dc3545 !important; color: #fff !important; border: 2px solid #dc3545 !important;
+}
+body.dark-mode .customer-page .cm-table .cl-dayleft:not(.cl-dayleft-over) { color: #cfd6e2 !important; }

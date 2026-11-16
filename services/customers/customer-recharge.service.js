@@ -720,6 +720,9 @@ async function rechargeCustomer({
          */
         const existingPromiseDate =
             customer.promise_date ?? null;
+        const newPromiseDate = alreadyPaid
+            ? existingPromiseDate
+            : newBillingCycle;
         /*
          * Insert payment record with balance/status snapshots.
          */
@@ -777,14 +780,15 @@ async function rechargeCustomer({
 
         /*
          * Update billing/payment fields.
-         * Do not update promise_date here.
+         * Update promise_date for Bill Recharge; preserve it for Advance Recharge.
          */
         await conn.query(
             `UPDATE customers
              SET balance = ?,
                  status = 'Active',
                  payment_status = ?,
-                 billing_cycle = ?
+                 billing_cycle = ?,
+                 promise_date = ?
              WHERE id = ?
                AND company_id = ?
              LIMIT 1`,
@@ -799,6 +803,7 @@ async function rechargeCustomer({
                     )
                     : "paid",
                 alreadyPaid ? customer.billing_cycle : newBillingCycle,
+                newPromiseDate,
                 customerDbId,
                 companyId
             ]
@@ -868,7 +873,7 @@ async function rechargeCustomer({
             advance,
             total_payable: amount,
             balance: newBalance,
-            promise_date: existingPromiseDate,
+            promise_date: newPromiseDate,
             billing_cycle: newBillingCycle,
             billing_type: opts.billingType,
             recharge_month: opts.rechargeMonth,
