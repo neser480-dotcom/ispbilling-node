@@ -300,8 +300,8 @@ router.get("/data", async (req, res) => {
                     SELECT customer_id, SUM(amount) AS paid_amount
                     FROM payments
                     WHERE company_id = ?
-                      AND billing_month = ?
-                      AND billing_year = ?
+                      AND MONTH(payment_date) = ?
+                      AND YEAR(payment_date) = ?
                       AND deleted_at IS NULL
                     GROUP BY customer_id
                 ) p ON p.customer_id = c.id
@@ -344,7 +344,7 @@ router.get("/data", async (req, res) => {
                 const paidAmount = toNumber(r.paid_amount);
                 /* expired = status is "Expired", OR still Active but the promise date has passed */
                 const statusText = String(r.status || "").trim().toLowerCase();
-                const isExpired = computeExpired(r, now);
+                const isExpired = computeExpired(r);
                 const isFree = bill === 0;
 
                 const created = r.created_at ? new Date(r.created_at) : null;
@@ -428,7 +428,7 @@ router.get("/data", async (req, res) => {
                 query(`
                     SELECT COALESCE(SUM(amount), 0) AS v
                     FROM payments
-                    WHERE company_id = ? AND billing_month = ? AND billing_year = ? AND deleted_at IS NULL
+                    WHERE company_id = ? AND MONTH(payment_date) = ? AND YEAR(payment_date) = ? AND deleted_at IS NULL
                 `, [companyId, month, year]),
 
                 query(`
@@ -461,7 +461,7 @@ router.get("/data", async (req, res) => {
                 safeQuery(`
                     SELECT COALESCE(SUM(discount), 0) AS v
                     FROM payments
-                    WHERE company_id = ? AND billing_month = ? AND billing_year = ? AND deleted_at IS NULL
+                    WHERE company_id = ? AND MONTH(payment_date) = ? AND YEAR(payment_date) = ? AND deleted_at IS NULL
                 `, [companyId, month, year]),
 
                 safeQuery(`
@@ -672,35 +672,12 @@ function dayDiff(value) {
 }
 
 /*
- * Same rule as customer-auto-expire.service.js:
- * - status "Expired" is expired
- * - Active customer is expired when the promise date (or, with no promise date,
- *   the billing cycle) has passed
- * - BUT a PAID customer whose billing cycle is still in the future is never expired
- * A date-only value (00:00:00) counts for the whole day.
+ * Expired = ONLY customers whose status is "Expired" in the database.
+ * That status is set when the customer is really moved to the MikroTik block
+ * profile (auto-expire job or Bulk status). A passed date alone is not expired.
  */
-function endMs(value) {
-    if (!value) return NaN;
-    const d = new Date(value);
-    const t = d.getTime();
-    if (!Number.isFinite(t) || d.getFullYear() < 1971) return NaN;
-    const midnight = d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0;
-    return midnight ? t + 86400000 : t;
-}
-
-function computeExpired(r, now) {
-    const statusText = String(r.status || "").trim().toLowerCase();
-    if (statusText === "expired") return true;
-    if (statusText !== "active") return false;
-
-    const paidFlag = String(r.payment_status || "").trim().toLowerCase() === "paid";
-    const cycleEnd = endMs(r.billing_cycle);
-    if (paidFlag && Number.isFinite(cycleEnd) && cycleEnd > now.getTime()) return false;
-
-    let end = endMs(r.promise_date);
-    if (!Number.isFinite(end)) end = cycleEnd;
-
-    return Number.isFinite(end) && end <= now.getTime();
+function computeExpired(r) {
+    return String(r.status || "").trim().toLowerCase() === "expired";
 }
 
 function asIso(value) {
@@ -734,7 +711,7 @@ router.get("/customers", async (req, res) => {
                        SUM(amount) AS paid_amount
                        ${withDiscount ? ", SUM(COALESCE(discount, 0)) AS paid_discount" : ""}
                 FROM payments
-                WHERE company_id = ? AND billing_month = ? AND billing_year = ? AND deleted_at IS NULL
+                WHERE company_id = ? AND MONTH(payment_date) = ? AND YEAR(payment_date) = ? AND deleted_at IS NULL
                 GROUP BY customer_id
             ) p ON p.customer_id = c.id
             LEFT JOIN mikrotik_packages mp
@@ -763,7 +740,7 @@ router.get("/customers", async (req, res) => {
             const isPaid = String(r.payment_status || "").trim().toLowerCase() === "paid" || Number(r.is_paid) === 1;
             const discount = toNumber(r.paid_discount);
             const promise = r.promise_date || null;
-            const isExpired = computeExpired(r, now);
+            const isExpired = computeExpired(r);
             const isFree = bill === 0;
 
             const match = {

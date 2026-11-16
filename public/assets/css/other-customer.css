@@ -148,3 +148,7 @@ body.dark-mode .oc-footer { color: #8f9bb0; }
 }
 
 .oc-id.cl-conn-off { color: #dc3545 !important; }
+
+/* BALANCE COLOUR (patch-balance-color-1) */
+.oc-pos { color: #16a34a !important; }
+.oc-neg { color: #dc3545 !important; }

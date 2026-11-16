@@ -544,3 +544,9 @@ button.cl-back { border: 0; background: none; color: #fff; font-size: 18px; padd
 /* ID red when Auto Connection is off */
 .cl-id-link.cl-conn-off,
 .customer-page .cm-table .cl-id-link.cl-conn-off { color: #dc3545 !important; }
+
+/* BALANCE COLOUR (patch-balance-color-1) : minus = red, 0 / positive = green */
+.customer-page .cm-table .cl-balance,
+.cl-balance { color: #16a34a !important; }
+.customer-page .cm-table .cl-balance.cl-balance-neg,
+.cl-balance.cl-balance-neg { color: #dc3545 !important; }
