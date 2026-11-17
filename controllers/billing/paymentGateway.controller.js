@@ -1,263 +1,194 @@
 "use strict";
 
-
-const crypto =
-    require("crypto");
-
-
-const path =
-    require("path");
-
-
-const paymentService =
-    require("../../services/payment/payment.service");
-
-
-const {
-    getProvider
-} =
-    require("../../services/payment/payment.factory");
-
-
 /*
 |--------------------------------------------------------------------------
-| ROLE
+| PAYMENT GATEWAY CONTROLLER
+|--------------------------------------------------------------------------
+| Admin   : page, csrf, list, save            (credentials, per scope)
+| Checkout: createPayment (logged in), publicQuote / publicCreate (by
+|           Customer ID, no login)
+| Return  : nagadCallback, result, success/fail/cancel
+|
+| Scopes (never mixed):
+|   customer -> ISP's own merchant account (customer bill payments)
+|   central  -> Amader Bill's merchant account (software subscription)
+|
+| The browser NEVER decides the amount:
+|   customer bill  -> Customer Recharge calculation (dry run)
+|   software bill  -> software_billing_notifications.amount
 |--------------------------------------------------------------------------
 */
 
-function normalizeRole(
-    role
-) {
+const crypto = require("crypto");
+const path = require("path");
 
-    return String(
-        role || ""
-    )
+const db = require("../../config/database");
+const paymentService = require("../../services/payment/payment.service");
+const { getProvider } = require("../../services/payment/payment.factory");
+const settlement = require("../../services/payment/paymentSettlement.service");
+const nagad = require("../../services/payment/nagad.service");
+const recharge = require("../../services/customers/customer-recharge.service");
+const softwarePayment = require("../../services/billing/softwareBillingPayment.service");
+
+/* Gateways that use the verified server-side flow. */
+const CHECKOUT_GATEWAYS = ["nagad"];
+
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
+
+/*
+|--------------------------------------------------------------------------
+| ROLE / SESSION
+|--------------------------------------------------------------------------
+*/
+
+function normalizeRole(role) {
+    return String(role || "")
         .trim()
         .toLowerCase()
-        .replace(
-            /[\s_-]+/g,
-            ""
-        );
-
+        .replace(/[\s_-]+/g, "");
 }
 
-
-function isSuperAdmin(
-    req
-) {
-
-    return (
-        normalizeRole(
-            req.session?.role
-        ) === "superadmin"
-    );
-
+function isSuperAdmin(req) {
+    return normalizeRole(req.session?.role) === "superadmin";
 }
 
+/* Gateway credentials are managed by Super Admin only. */
+function isGatewayAdmin(req) {
+    return isSuperAdmin(req);
+}
 
 /*
-|--------------------------------------------------------------------------
-| LOGIN
-|--------------------------------------------------------------------------
-*/
+ * Customer-scope credentials belong to one ISP. Super Admin picks which
+ * ISP (company_id); default = own company.
+ */
+async function resolveTargetCompany(req, raw) {
+    const value = Number(raw || req.session?.company_id || 0);
 
-function requireLogin(
-    req,
-    res
-) {
+    if (!Number.isInteger(value) || value <= 0) {
+        const error = new Error("Company ID is required.");
+        error.status = 400;
+        throw error;
+    }
 
-    if (
-        !req.session ||
-        !req.session.user_id
-    ) {
+    const [rows] = await db.execute(
+        "SELECT 1 FROM users WHERE company_id = ? LIMIT 1",
+        [value]
+    );
 
+    if (!rows.length) {
+        const error = new Error("Invalid company ID: no such company.");
+        error.status = 400;
+        throw error;
+    }
+
+    return value;
+}
+
+function requireLogin(req, res) {
+    if (!req.session || !req.session.user_id) {
         res.redirect("/");
-
         return false;
-
     }
 
     return true;
-
 }
 
+function requireLoginJson(req, res) {
+    if (!req.session || !req.session.user_id) {
+        res.status(401).json({
+            success: false,
+            message: "Not logged in."
+        });
+
+        return false;
+    }
+
+    return true;
+}
+
+function getCompanyId(req) {
+    const value = Number(req.session?.company_id || 0);
+
+    return Number.isInteger(value) && value > 0 ? value : null;
+}
 
 /*
-|--------------------------------------------------------------------------
-| COMPANY
-|--------------------------------------------------------------------------
-*/
+ * Which merchant account a request may manage.
+ */
+function resolveScope(req, requested) {
+    const scope = paymentService.normalizeScope(requested || "customer");
 
-function getCompanyId(
-    req
-) {
-
-    const value =
-        Number(
-            req.session?.company_id || 0
+    if (scope === "central" && !isSuperAdmin(req)) {
+        const error = new Error(
+            "Only Super Admin can manage the central gateway."
         );
-
-
-    if (
-        Number.isInteger(value) &&
-        value > 0
-    ) {
-
-        return value;
-
+        error.status = 403;
+        throw error;
     }
 
-
-    return null;
-
+    return scope;
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| CSRF
+| CSRF  (kept: timing-safe, body or header)
 |--------------------------------------------------------------------------
 */
 
-function getCsrfToken(
-    req
-) {
-
-    if (
-        !req.session
-    ) {
-
+function getCsrfToken(req) {
+    if (!req.session) {
         return null;
-
     }
 
-
     if (
-        typeof req.session.csrf_token !==
-        "string" ||
+        typeof req.session.csrf_token !== "string" ||
         !req.session.csrf_token
     ) {
-
-        req.session.csrf_token =
-            crypto
-                .randomBytes(32)
-                .toString("hex");
-
+        req.session.csrf_token = crypto.randomBytes(32).toString("hex");
     }
 
-
     return req.session.csrf_token;
-
 }
 
-
-function verifyCsrf(
-    req
-) {
-
-    const sessionToken =
-        req.session?.csrf_token;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Body অথবা Header
-    |--------------------------------------------------------------------------
-    */
+function verifyCsrf(req) {
+    const sessionToken = req.session?.csrf_token;
 
     const postedToken =
         req.body?.csrf_token ||
-        req.headers[
-            "x-csrf-token"
-        ] ||
-        req.headers[
-            "x-xsrf-token"
-        ];
-
+        req.headers["x-csrf-token"] ||
+        req.headers["x-xsrf-token"];
 
     if (
-        typeof sessionToken !==
-            "string" ||
-
-        typeof postedToken !==
-            "string" ||
-
+        typeof sessionToken !== "string" ||
+        typeof postedToken !== "string" ||
         !sessionToken ||
-
         !postedToken
     ) {
-
         return false;
-
     }
 
+    const a = Buffer.from(sessionToken, "utf8");
+    const b = Buffer.from(postedToken, "utf8");
 
-    const sessionBuffer =
-        Buffer.from(
-            sessionToken,
-            "utf8"
-        );
-
-
-    const postedBuffer =
-        Buffer.from(
-            postedToken,
-            "utf8"
-        );
-
-
-    if (
-        sessionBuffer.length !==
-        postedBuffer.length
-    ) {
-
+    if (a.length !== b.length) {
         return false;
-
     }
 
-
-    return crypto.timingSafeEqual(
-        sessionBuffer,
-        postedBuffer
-    );
-
+    return crypto.timingSafeEqual(a, b);
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| CSRF ENDPOINT
-|--------------------------------------------------------------------------
-*/
-
-function csrf(
-    req,
-    res
-) {
-
-    if (
-        !requireLogin(
-            req,
-            res
-        )
-    ) {
-
+function csrf(req, res) {
+    if (!requireLoginJson(req, res)) {
         return;
-
     }
-
 
     return res.json({
-
         success: true,
-
-        csrf_token:
-            getCsrfToken(req)
-
+        csrf_token: getCsrfToken(req),
+        is_super_admin: isSuperAdmin(req),
+        is_gateway_admin: isGatewayAdmin(req)
     });
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -265,1683 +196,921 @@ function csrf(
 |--------------------------------------------------------------------------
 */
 
-function page(
-    req,
-    res
-) {
-
-    if (
-        !requireLogin(
-            req,
-            res
-        )
-    ) {
-
+function page(req, res) {
+    if (!requireLogin(req, res)) {
         return;
-
     }
 
-
-    if (
-        !isSuperAdmin(req)
-    ) {
-
+    if (!isGatewayAdmin(req)) {
         return res
             .status(403)
-            .send(
-                "Only Super Admin can configure payment gateways."
-            );
-
+            .send("Only Super Admin can configure payment gateways.");
     }
 
-
     return res.sendFile(
-        path.join(__dirname, "..", "..", "views",
-            "billing",
-            "payment",
+        path.join(
+            __dirname, "..", "..", "views", "billing", "payment",
             "payment-gateway.html"
         )
     );
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| SAVE GATEWAY
+| SAVE GATEWAY CONFIGURATION
 |--------------------------------------------------------------------------
 */
 
-async function save(
-    req,
-    res
-) {
+const NAGAD_CREDENTIAL_KEYS = [
+    "merchantId", "merchantNumber", "publicKey", "privateKey"
+];
 
-    if (
-        !requireLogin(
-            req,
-            res
-        )
-    ) {
+async function slugTakenByAnotherCompany(slug, companyId) {
+    const [rows] = await db.execute(
+        `SELECT company_id, settings
+         FROM payment_gateways
+         WHERE scope = 'customer'
+           AND settings LIKE ?`,
+        [`%"slug":"${slug}"%`]
+    );
 
+    return rows.some((row) => {
+        const settings = paymentService.parseJson(row.settings, {});
+
+        return (
+            settings.slug === slug &&
+            Number(row.company_id) !== Number(companyId)
+        );
+    });
+}
+
+async function save(req, res) {
+    if (!requireLoginJson(req, res)) {
         return;
-
     }
 
-
-    if (
-        !isSuperAdmin(req)
-    ) {
-
-        return res
-            .status(403)
-            .json({
-
-                success: false,
-
-                message:
-                    "Only Super Admin can configure payment gateways."
-
-            });
-
+    if (!isGatewayAdmin(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Only Super Admin can configure payment gateways."
+        });
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | CSRF
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        !verifyCsrf(req)
-    ) {
-
-        return res
-            .status(419)
-            .json({
-
-                success: false,
-
-                message:
-                    "Invalid CSRF token."
-
-            });
-
+    if (!verifyCsrf(req)) {
+        return res.status(419).json({
+            success: false,
+            message: "Invalid CSRF token."
+        });
     }
-
-
-    const companyId =
-        getCompanyId(req);
-
-
-    if (
-        !companyId
-    ) {
-
-        return res
-            .status(400)
-            .json({
-
-                success: false,
-
-                message:
-                    "Company ID is required."
-
-            });
-
-    }
-
 
     try {
+        const body = req.body || {};
+        const scope = resolveScope(req, body.scope);
+        const gateway = String(body.gateway || "").trim().toLowerCase();
+        const companyId =
+            scope === "central"
+                ? 0
+                : await resolveTargetCompany(req, body.company_id);
 
-        const {
+        let credentials = body.credentials || {};
+        let settings = body.settings || {};
 
-            gateway,
+        if (gateway === "nagad") {
+            const clean = {};
 
-            enabled,
+            for (const key of NAGAD_CREDENTIAL_KEYS) {
+                if (typeof credentials[key] === "string") {
+                    clean[key] = credentials[key].trim();
+                }
+            }
 
-            environment,
+            /* reject bad keys now instead of at payment time */
+            if (clean.publicKey) {
+                nagad._test.loadPublicKey(clean.publicKey);
+            }
 
-            credentials,
+            if (clean.privateKey) {
+                nagad._test.loadPrivateKey(clean.privateKey);
+            }
 
-            settings
+            credentials = clean;
 
-        } =
-            req.body || {};
+            const cleanSettings = {};
+            const slug = String(settings.slug || "").trim().toLowerCase();
 
+            if (slug) {
+                if (scope !== "customer") {
+                    throw new Error("Checkout link applies to ISP gateways only.");
+                }
+
+                if (!SLUG_RE.test(slug)) {
+                    throw new Error(
+                        "Checkout link: use 3-40 letters, digits or hyphens."
+                    );
+                }
+
+                if (await slugTakenByAnotherCompany(slug, companyId)) {
+                    throw new Error("This checkout link name is already taken.");
+                }
+
+                cleanSettings.slug = slug;
+            }
+
+            if (settings.baseUrl) {
+                const baseUrl = String(settings.baseUrl).trim();
+
+                nagad._test.resolveBaseUrl(
+                    body.environment || "sandbox",
+                    { baseUrl }
+                );
+
+                cleanSettings.baseUrl = baseUrl;
+            }
+
+            settings = cleanSettings;
+        }
 
         await paymentService.saveGateway({
-
             companyId,
-
+            scope,
             gateway,
-
-            enabled,
-
-            environment,
-
+            enabled: Boolean(body.enabled),
+            environment: body.environment,
             credentials,
-
             settings
-
         });
-
 
         return res.json({
-
             success: true,
-
-            message:
-                "Payment gateway configuration saved."
-
+            message: "Payment gateway configuration saved."
         });
-
-
     } catch (error) {
+        const known =
+            error.status ||
+            error.name === "NagadError" ||
+            /Invalid|Unsupported|required|taken|Checkout|Only|company/.test(
+                error.message || ""
+            );
 
-        console.error(
-            "PAYMENT GATEWAY SAVE ERROR:",
-            error
-        );
+        if (!known) {
+            console.error("PAYMENT GATEWAY SAVE ERROR:", error);
+        }
 
-
-        return res
-            .status(500)
-            .json({
-
-                success: false,
-
-                message:
-                    error.message ||
-                    "Unable to save gateway configuration."
-
-            });
-
+        return res.status(error.status || (known ? 400 : 500)).json({
+            success: false,
+            message: known
+                ? error.message
+                : "Unable to save gateway configuration."
+        });
     }
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| GATEWAY LIST
+| GATEWAY LIST  (secrets are never returned)
 |--------------------------------------------------------------------------
 */
 
-async function list(
-    req,
-    res
-) {
+const PUBLIC_CREDENTIAL_KEYS = ["merchantId", "merchantNumber"];
 
-    if (
-        !requireLogin(
-            req,
-            res
-        )
-    ) {
-
+async function list(req, res) {
+    if (!requireLoginJson(req, res)) {
         return;
-
     }
 
-
-    const companyId =
-        getCompanyId(req);
-
-
-    if (
-        !companyId
-    ) {
-
-        return res
-            .status(400)
-            .json({
-
-                success: false,
-
-                message:
-                    "Company ID is required."
-
-            });
-
+    if (!isGatewayAdmin(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Only Super Admin can view gateway settings."
+        });
     }
-
 
     try {
+        const scope = resolveScope(req, req.query?.scope);
+        const companyId =
+            scope === "central"
+                ? 0
+                : await resolveTargetCompany(req, req.query?.company_id);
 
         const gateways = [];
 
+        for (const gateway of paymentService.SUPPORTED_GATEWAYS) {
+            const row = await paymentService.getGateway(
+                companyId,
+                gateway,
+                scope
+            );
 
-        for (
-            const gateway
-            of paymentService
-                .SUPPORTED_GATEWAYS
-        ) {
-
-            const row =
-                await paymentService
-                    .getGateway(
-                        companyId,
-                        gateway
-                    );
-
+            const credentials = row?.credentials || {};
 
             gateways.push({
-
                 gateway,
-
-                enabled:
-                    Boolean(
-                        row?.enabled
-                    ),
-
-                environment:
-                    row?.environment ||
-                    "sandbox",
-
-                settings:
-                    row?.settings ||
-                    {}
-
+                scope,
+                enabled: Boolean(row?.enabled),
+                environment: row?.environment || "sandbox",
+                settings: row?.settings || {},
+                credentials_public: Object.fromEntries(
+                    PUBLIC_CREDENTIAL_KEYS
+                        .filter((key) => credentials[key])
+                        .map((key) => [key, credentials[key]])
+                ),
+                credentials_set: Object.fromEntries(
+                    Object.keys(credentials).map((key) => [key, true])
+                )
             });
-
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Credentials intentionally omitted.
-        |--------------------------------------------------------------------------
-        */
-
-        return res.json({
-
-            success: true,
-
-            gateways
-
-        });
-
-
+        return res.json({ success: true, scope, gateways });
     } catch (error) {
-
-        console.error(
-            "PAYMENT GATEWAY LIST ERROR:",
-            error
-        );
-
-
-        return res
-            .status(500)
-            .json({
-
+        if (error.status) {
+            return res.status(error.status).json({
                 success: false,
-
-                message:
-                    "Unable to load payment gateways."
-
+                message: error.message
             });
+        }
 
+        console.error("PAYMENT GATEWAY LIST ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to load payment gateways."
+        });
     }
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
-| CREATE PAYMENT
+| HELPERS FOR CHECKOUT
 |--------------------------------------------------------------------------
 */
 
-async function createPayment(
-    req,
-    res
-) {
+function clientIpV4(req) {
+    const ip = String(req.ip || "").replace(/^::ffff:/, "");
 
-    if (
-        !requireLogin(
-            req,
-            res
-        )
-    ) {
+    return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip : "127.0.0.1";
+}
 
-        return;
+function baseUrl(req) {
+    const configured = String(process.env.APP_BASE_URL || "").trim();
 
+    if (configured) {
+        return configured.replace(/\/+$/, "");
     }
 
+    return `${req.protocol}://${req.get("host")}`;
+}
 
-    /*
-    |--------------------------------------------------------------------------
-    | CSRF
-    |--------------------------------------------------------------------------
-    */
+function maskName(name) {
+    const text = String(name || "").trim();
 
-    if (
-        !verifyCsrf(req)
-    ) {
-
-        return res
-            .status(419)
-            .json({
-
-                success: false,
-
-                message:
-                    "Invalid CSRF token."
-
-            });
-
+    if (!text) {
+        return "";
     }
 
+    return text
+        .split(/\s+/)
+        .map((part) => part.slice(0, 1) + "***")
+        .join(" ");
+}
 
-    const companyId =
-        getCompanyId(req);
+class CheckoutError extends Error {
+    constructor(message, status = 400) {
+        super(message);
+        this.name = "CheckoutError";
+        this.status = status;
+    }
+}
 
-
-    if (
-        !companyId
-    ) {
-
-        return res
-            .status(400)
-            .json({
-
-                success: false,
-
-                message:
-                    "Company ID is required."
-
-            });
-
+async function loadEnabledGateway(companyId, gateway, scope) {
+    if (!CHECKOUT_GATEWAYS.includes(gateway)) {
+        throw new CheckoutError(
+            "This payment method is not available for online checkout."
+        );
     }
 
+    const row = await paymentService.getGateway(companyId, gateway, scope);
+
+    if (!row || !row.enabled) {
+        throw new CheckoutError(
+            "This payment method is not available right now."
+        );
+    }
+
+    return row;
+}
+
+/*
+ * Real amount for a customer bill (Customer Recharge calculation).
+ */
+async function quoteCustomerBill({ companyId, customerId, form }) {
+    const [rows] = await db.execute(
+        `SELECT id
+         FROM customers
+         WHERE company_id = ?
+           AND customer_id = ?
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        [companyId, String(customerId || "").trim()]
+    );
+
+    if (!rows.length) {
+        throw new CheckoutError("Customer not found.", 404);
+    }
+
+    const input = {
+        bill_type: form.bill_type === "Advance" ? "Advance" : "Bill",
+        billing_type: "Monthly",
+        recharge_month: form.recharge_month || 1,
+        payment_method: "Nagad",
+        discount: 0,
+        advance: form.advance || 0
+    };
+
+    let quote;
 
     try {
-
-        const {
-
-            gateway,
-
-            purpose,
-
-            amount,
-
-            customer_id,
-
-            invoice_id
-
-        } =
-            req.body || {};
-
-
-        const normalizedGateway =
-            String(
-                gateway || ""
-            )
-                .trim()
-                .toLowerCase();
-
-
-        const normalizedPurpose =
-            String(
-                purpose || ""
-            )
-                .trim()
-                .toLowerCase();
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gateway validation
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !paymentService
-                .SUPPORTED_GATEWAYS
-                .includes(
-                    normalizedGateway
-                )
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Unsupported payment gateway."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Purpose validation
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !paymentService
-                .SUPPORTED_PURPOSES
-                .includes(
-                    normalizedPurpose
-                )
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Unsupported payment purpose."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gateway configuration
-        |--------------------------------------------------------------------------
-        */
-
-        const gatewayRow =
-            await paymentService
-                .getGateway(
-                    companyId,
-                    normalizedGateway
-                );
-
-
-        if (
-            !gatewayRow
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Payment gateway is not configured."
-
-                });
-
-        }
-
-
-        if (
-            !gatewayRow.enabled
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Payment gateway is disabled."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Transaction
-        |--------------------------------------------------------------------------
-        */
-
-        const transaction =
-            await paymentService
-                .createTransaction({
-
-                    companyId,
-
-                    userId:
-                        req.session.user_id,
-
-                    customerId:
-                        customer_id ||
-                        null,
-
-                    invoiceId:
-                        invoice_id ||
-                        null,
-
-                    gateway:
-                        normalizedGateway,
-
-                    purpose:
-                        normalizedPurpose,
-
-                    amount,
-
-                    currency:
-                        "BDT"
-
-                });
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Provider
-        |--------------------------------------------------------------------------
-        */
-
-        const provider =
-            getProvider(
-                normalizedGateway
-            );
-
-
-        if (
-            !provider ||
-            typeof provider.initiate !==
-                "function"
-        ) {
-
-            throw new Error(
-                "Payment gateway provider is not available."
-            );
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CALLBACK URL
-        |--------------------------------------------------------------------------
-        */
-
-        const baseUrl =
-            `${req.protocol}://${req.get("host")}`;
-
-
-        const urls = {
-
-            success:
-                `${baseUrl}/api/payment-gateway/success/${transaction.transactionId}`,
-
-            fail:
-                `${baseUrl}/api/payment-gateway/fail/${transaction.transactionId}`,
-
-            cancel:
-                `${baseUrl}/api/payment-gateway/cancel/${transaction.transactionId}`,
-
-            ipn:
-                `${baseUrl}/api/payment-gateway/ipn/${normalizedGateway}`
-
-        };
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | INITIATE PAYMENT
-        |--------------------------------------------------------------------------
-        */
-
-        const result =
-            await provider.initiate({
-
-                credentials:
-                    gatewayRow.credentials,
-
-                environment:
-                    gatewayRow.environment,
-
-                transaction,
-
-                customer: {
-
-                    name:
-                        req.session?.name ||
-                        req.session?.username ||
-                        "Customer"
-
-                },
-
-                urls
-
-            });
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Save provider session information
-        |--------------------------------------------------------------------------
-        */
-
-        await paymentService
-            .updateTransaction(
-                transaction.id,
-                {
-
-                    gateway_session_id:
-                        result?.sessionKey ||
-                        result?.token ||
-                        result?.sessionId ||
-                        null,
-
-                    metadata:
-                        JSON.stringify(
-                            result?.raw ||
-                            result ||
-                            {}
-                        )
-
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Payment URL
-        |--------------------------------------------------------------------------
-        */
-
-        const redirectUrl =
-            result?.gatewayPageUrl ||
-            result?.paymentUrl ||
-            result?.redirectUrl ||
-            null;
-
-
-        if (
-            !redirectUrl
-        ) {
-
-            throw new Error(
-                "Gateway did not return a payment URL."
-            );
-
-        }
-
-
-        return res.json({
-
-            success: true,
-
-            transaction_id:
-                transaction.transactionId,
-
-            redirect_url:
-                redirectUrl
-
+        quote = await recharge.rechargeCustomer({
+            user: { company_id: companyId, user_id: 0 },
+            customerDbId: rows[0].id,
+            input,
+            dryRun: true
         });
-
-
     } catch (error) {
+        if (error.name === "RechargeError") {
+            throw new CheckoutError(error.message);
+        }
 
-        console.error(
-            "CREATE PAYMENT ERROR:",
-            error
-        );
-
-
-        return res
-            .status(500)
-            .json({
-
-                success: false,
-
-                message:
-                    error.message ||
-                    "Unable to create payment."
-
-            });
-
+        throw error;
     }
 
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| EXTRACT CALLBACK DATA
-|--------------------------------------------------------------------------
-*/
-
-function getCallbackPayload(
-    req
-) {
-
-    const body =
-        req.body &&
-        typeof req.body === "object"
-            ? req.body
-            : {};
-
-
-    const query =
-        req.query &&
-        typeof req.query === "object"
-            ? req.query
-            : {};
-
+    if (!(Number(quote.amount) > 0)) {
+        throw new CheckoutError("Nothing to pay for this customer.");
+    }
 
     return {
-
-        ...query,
-
-        ...body
-
+        quote,
+        request: {
+            customer_db_id: rows[0].id,
+            customer_id: quote.customer_id,
+            input
+        }
     };
-
 }
 
-
 /*
-|--------------------------------------------------------------------------
-| FIND TRANSACTION ID
-|--------------------------------------------------------------------------
-*/
-
-function findTransactionId(
-    payload
-) {
-
-    const candidates = [
-
-        payload.transaction_id,
-
-        payload.tran_id,
-
-        payload.tranId,
-
-        payload.transactionId,
-
-        payload.merchantTransactionId,
-
-        payload.order_id,
-
-        payload.orderId,
-
-        payload.sp_order_id,
-
-        payload.invoice_id
-
-    ];
-
-
-    for (
-        const value
-        of candidates
-    ) {
-
-        if (
-            value !==
-                undefined &&
-            value !==
-                null &&
-            String(value).trim()
-        ) {
-
-            return String(
-                value
-            ).trim();
-
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FIND PROVIDER REFERENCE
-|--------------------------------------------------------------------------
-*/
-
-function findGatewayTransactionId(
-    payload
-) {
-
-    const candidates = [
-
-        payload.gateway_transaction_id,
-
-        payload.gatewayTransactionId,
-
-        payload.bank_tran_id,
-
-        payload.bank_tran_id,
-
-        payload.tran_id,
-
-        payload.transaction_id,
-
-        payload.transactionId,
-
-        payload.order_id,
-
-        payload.orderId,
-
-        payload.paymentID,
-
-        payload.paymentId,
-
-        payload.paymentID
-
-    ];
-
-
-    for (
-        const value
-        of candidates
-    ) {
-
-        if (
-            value !==
-                undefined &&
-            value !==
-                null &&
-            String(value).trim()
-        ) {
-
-            return String(
-                value
-            ).trim();
-
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| PROVIDER VERIFICATION
-|--------------------------------------------------------------------------
-|
-| Important:
-|
-| Browser success callback ≠ verified payment.
-|
-| এখানে provider-এর server-side verify/validate method
-| ব্যবহার করার চেষ্টা করা হবে।
-|
-|--------------------------------------------------------------------------
-*/
-
-async function verifyProviderPayment({
-
-    provider,
-
+ * Create the transaction, call Nagad, return the payment page URL.
+ */
+async function startPayment({
+    req,
+    companyId,
+    userId,
     gateway,
-
-    credentials,
-
-    environment,
-
-    transaction,
-
-    payload
-
+    gatewayRow,
+    scope,
+    purpose,
+    amount,
+    request
 }) {
+    const transaction = await paymentService.createTransaction({
+        companyId,
+        userId,
+        gateway,
+        purpose,
+        scope,
+        amount,
+        currency: "BDT",
+        shortId: gateway === "nagad",
+        metadata: { request }
+    });
 
-    if (
-        !provider
-    ) {
+    const provider = getProvider(gateway);
 
-        throw new Error(
-            `Provider "${gateway}" is not available.`
-        );
-
-    }
-
-
-    let verifyFunction =
-        null;
-
-
-    let verifyMethod =
-        null;
-
-
-    if (
-        typeof provider.verify ===
-        "function"
-    ) {
-
-        verifyFunction =
-            provider.verify;
-
-        verifyMethod =
-            "verify";
-
-    } else if (
-        typeof provider.validate ===
-        "function"
-    ) {
-
-        verifyFunction =
-            provider.validate;
-
-        verifyMethod =
-            "validate";
-
-    }
-
-
-    if (
-        !verifyFunction
-    ) {
-
-        throw new Error(
-            `Server-side verification is not implemented for ${gateway}.`
-        );
-
-    }
-
-
-    const result =
-        await verifyFunction({
-
-            credentials,
-
-            environment,
-
+    try {
+        const result = await provider.initiate({
+            credentials: gatewayRow.credentials,
+            environment: gatewayRow.environment,
+            settings: gatewayRow.settings,
             transaction,
-
-            payload,
-
-            gateway
-
+            clientIp: clientIpV4(req),
+            urls: {
+                callback:
+                    `${baseUrl(req)}/api/payment-gateway/${gateway}/callback/${transaction.transactionId}`
+            }
         });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | IMPORTANT
-    |--------------------------------------------------------------------------
-    |
-    | Provider adapter-কে explicit verified:true return করতে হবে।
-    |
-    | শুধু "success" text দেখে আমরা payment paid করব না।
-    |
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        result?.verified === true
-    ) {
+        await paymentService.updateTransaction(transaction.id, {
+            gateway_session_id: result.sessionKey || null,
+            metadata: JSON.stringify({
+                request,
+                initiate: result.raw || {}
+            })
+        });
 
         return {
-
-            verified: true,
-
-            raw:
-                result?.raw ||
-                result
-
+            transaction_id: transaction.transactionId,
+            redirect_url: result.paymentUrl
         };
+    } catch (error) {
+        /* nothing was paid: initiation itself failed */
+        await paymentService.changeStatus(
+            transaction.id,
+            ["pending"],
+            "failed",
+            {
+                metadata: JSON.stringify({
+                    request,
+                    initiate_error: String(error.message).slice(0, 300)
+                })
+            }
+        );
 
+        console.error(
+            `PAYMENT INITIATE ERROR [${transaction.transactionId}]:`,
+            error.message,
+            error.details || ""
+        );
+
+        throw new CheckoutError(
+            "Could not start the payment. Please try again later.",
+            502
+        );
     }
-
-
-    return {
-
-        verified: false,
-
-        raw:
-            result?.raw ||
-            result ||
-            {}
-
-    };
-
 }
 
+function sendCheckoutError(res, error, label) {
+    if (error instanceof CheckoutError) {
+        return res.status(error.status).json({
+            success: false,
+            message: error.message
+        });
+    }
+
+    if (
+        error.name === "SoftwareBillingError" ||
+        error.name === "RechargeError"
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+
+    console.error(label, error);
+
+    return res.status(500).json({
+        success: false,
+        message: "Unable to create payment."
+    });
+}
+
+/*
+|--------------------------------------------------------------------------
+| CREATE PAYMENT  (logged in)
+|--------------------------------------------------------------------------
+| software_*   : billing_id from body, amount from the billing row,
+|                central merchant account.
+| customer_bill: staff/admin collecting for a customer of THEIR company,
+|                ISP merchant account.
+|--------------------------------------------------------------------------
+*/
+
+function sessionCustomerRef(req) {
+    return String(
+        req.session?.customer_id ||
+        req.session?.customerId ||
+        req.session?.customer_code ||
+        ""
+    ).trim();
+}
+
+async function createPayment(req, res) {
+    if (!requireLoginJson(req, res)) {
+        return;
+    }
+
+    if (!verifyCsrf(req)) {
+        return res.status(419).json({
+            success: false,
+            message: "Invalid CSRF token."
+        });
+    }
+
+    const companyId = getCompanyId(req);
+
+    if (!companyId) {
+        return res.status(400).json({
+            success: false,
+            message: "Company ID is required."
+        });
+    }
+
+    try {
+        const body = req.body || {};
+        const gateway = String(body.gateway || "").trim().toLowerCase();
+        const purposeIn = String(body.purpose || "").trim().toLowerCase();
+
+        if (!paymentService.SUPPORTED_PURPOSES.includes(purposeIn)) {
+            throw new CheckoutError("Unsupported payment purpose.");
+        }
+
+        /* ---------------- software subscription ---------------- */
+        if (purposeIn !== "customer_bill") {
+            if (isSuperAdmin(req)) {
+                throw new CheckoutError(
+                    "Super Admin does not pay software billing."
+                );
+            }
+
+            const billing = await softwarePayment.getPayableBilling({
+                billingId: body.billing_id,
+                companyId,
+                userId: req.session.user_id
+            });
+
+            const gatewayRow = await loadEnabledGateway(
+                0, gateway, "central"
+            );
+
+            const result = await startPayment({
+                req,
+                companyId,
+                userId: Number(req.session.user_id),
+                gateway,
+                gatewayRow,
+                scope: "central",
+                purpose:
+                    String(billing.billing_type).toLowerCase() === "registration"
+                        ? "software_registration"
+                        : "software_billing",
+                amount: billing.amount,
+                request: { billing_id: billing.id }
+            });
+
+            return res.json({ success: true, ...result });
+        }
+
+        /* ---------------- customer bill ---------------- */
+        const role = normalizeRole(req.session?.role);
+
+        if (role === "customer") {
+            const own = sessionCustomerRef(req);
+
+            if (!own || own !== String(body.customer_id || "").trim()) {
+                throw new CheckoutError(
+                    "You can pay only your own bill.", 403
+                );
+            }
+        }
+
+        const gatewayRow = await loadEnabledGateway(
+            companyId, gateway, "customer"
+        );
+
+        const { quote, request } = await quoteCustomerBill({
+            companyId,
+            customerId: body.customer_id,
+            form: body
+        });
+
+        const result = await startPayment({
+            req,
+            companyId,
+            userId: Number(req.session.user_id),
+            gateway,
+            gatewayRow,
+            scope: "customer",
+            purpose: "customer_bill",
+            amount: quote.amount,
+            request
+        });
+
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        return sendCheckoutError(res, error, "CREATE PAYMENT ERROR:");
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC CHECKOUT  (no login, by Customer ID, per-ISP link)
+|--------------------------------------------------------------------------
+*/
+
+async function companyFromSlug(slug, gateway) {
+    slug = String(slug || "").trim().toLowerCase();
+
+    if (!SLUG_RE.test(slug)) {
+        throw new CheckoutError("Payment link not found.", 404);
+    }
+
+    const [rows] = await db.execute(
+        `SELECT company_id, settings
+         FROM payment_gateways
+         WHERE scope = 'customer'
+           AND gateway = ?
+           AND enabled = 1
+           AND settings LIKE ?`,
+        [gateway, `%"slug":"${slug}"%`]
+    );
+
+    const match = rows.find(
+        (row) =>
+            paymentService.parseJson(row.settings, {}).slug === slug
+    );
+
+    if (!match) {
+        throw new CheckoutError("Payment link not found.", 404);
+    }
+
+    return Number(match.company_id);
+}
+
+function publicPage(req, res) {
+    return res.sendFile(
+        path.join(
+            __dirname, "..", "..", "views", "billing", "payment",
+            "customer-pay.html"
+        )
+    );
+}
+
+async function publicQuote(req, res) {
+    try {
+        const body = req.body || {};
+        const gateway = "nagad";
+        const companyId = await companyFromSlug(body.slug, gateway);
+
+        await loadEnabledGateway(companyId, gateway, "customer");
+
+        const { quote } = await quoteCustomerBill({
+            companyId,
+            customerId: body.customer_id,
+            form: body
+        });
+
+        return res.json({
+            success: true,
+            customer_name: maskName(quote.customer_name),
+            amount: quote.amount,
+            currency: "BDT"
+        });
+    } catch (error) {
+        return sendCheckoutError(res, error, "PUBLIC QUOTE ERROR:");
+    }
+}
+
+async function publicCreate(req, res) {
+    try {
+        const body = req.body || {};
+        const gateway = "nagad";
+        const companyId = await companyFromSlug(body.slug, gateway);
+
+        const gatewayRow = await loadEnabledGateway(
+            companyId, gateway, "customer"
+        );
+
+        const { quote, request } = await quoteCustomerBill({
+            companyId,
+            customerId: body.customer_id,
+            form: body
+        });
+
+        const result = await startPayment({
+            req,
+            companyId,
+            userId: null,
+            gateway,
+            gatewayRow,
+            scope: "customer",
+            purpose: "customer_bill",
+            amount: quote.amount,
+            request
+        });
+
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        return sendCheckoutError(res, error, "PUBLIC CREATE ERROR:");
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| RESULT PAGE
+|--------------------------------------------------------------------------
+| Always built from the DATABASE state, never from the URL the browser
+| came through.
+|--------------------------------------------------------------------------
+*/
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;",
+        '"': "&quot;", "'": "&#39;"
+    })[c]);
+}
+
+const RESULT_TEXT = {
+    paid: {
+        title: "Payment Successful",
+        bn: "আপনার পেমেন্ট সফলভাবে সম্পন্ন হয়েছে।",
+        status: 200
+    },
+    verified: {
+        title: "Payment Received",
+        bn: "পেমেন্ট পাওয়া গেছে, বিল আপডেট হচ্ছে। কয়েক মুহূর্ত পরে দেখুন।",
+        status: 202,
+        refresh: true
+    },
+    pending: {
+        title: "Payment Pending",
+        bn: "পেমেন্ট যাচাই করা হচ্ছে। এই পেজ নিজে থেকেই আপডেট হবে।",
+        status: 202,
+        refresh: true
+    },
+    failed: {
+        title: "Payment Failed",
+        bn: "পেমেন্ট সম্পন্ন হয়নি। কোনো টাকা কাটা হয়ে থাকলে ফেরত আসবে।",
+        status: 400
+    },
+    needs_review: {
+        title: "Payment Under Review",
+        bn: "আপনার পেমেন্ট পাওয়া গেছে, তবে স্বয়ংক্রিয়ভাবে বিল আপডেট করা যায়নি। অনুগ্রহ করে অফিসে যোগাযোগ করুন এবং নিচের Transaction ID জানান।",
+        status: 202
+    }
+};
+
+function renderResult(res, transaction, receipt) {
+    const state = RESULT_TEXT[transaction.status]
+        ? transaction.status
+        : "pending";
+
+    const text = RESULT_TEXT[state];
+
+    const backLink =
+        transaction.purpose === "customer_bill" && !transaction.user_id
+            ? ""
+            : receipt
+                ? `<p><a href="${escapeHtml(receipt)}">View receipt</a></p>`
+                : `<p><a href="/dashboard">Back to Dashboard</a></p>`;
+
+    return res.status(text.status === 200 ? 200 : text.status).send(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+${text.refresh ? '<meta http-equiv="refresh" content="8">' : ""}
+<title>${escapeHtml(text.title)}</title>
+</head>
+<body style="font-family:Arial;text-align:center;padding:60px 20px;">
+<h2>${escapeHtml(text.title)}</h2>
+<p>${escapeHtml(text.bn)}</p>
+<p>Amount: ৳${escapeHtml(Number(transaction.amount).toFixed(2))}</p>
+<p>Transaction ID: <b>${escapeHtml(transaction.transaction_id)}</b></p>
+${backLink}
+</body>
+</html>`);
+}
+
+function renderNotFound(res) {
+    return res.status(404).send(
+        `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Not found</title></head>` +
+        `<body style="font-family:Arial;text-align:center;padding:60px 20px;">` +
+        `<h2>Payment not found</h2></body></html>`
+    );
+}
+
+async function settleAndRender(req, res, transaction) {
+    let outcome = { transaction };
+
+    const ageMs = Date.now() - new Date(transaction.created_at).getTime();
+
+    if (
+        ["pending", "verified"].includes(transaction.status) &&
+        ageMs < 24 * 60 * 60 * 1000
+    ) {
+        try {
+            outcome = await settlement.settle(transaction, {
+                clientIp: clientIpV4(req)
+            });
+        } catch (error) {
+            console.error("PAYMENT SETTLE ERROR:", error);
+        }
+    }
+
+    return renderResult(
+        res,
+        outcome.transaction || transaction,
+        outcome.receipt
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| NAGAD CALLBACK  (browser redirect from Nagad - no login, no CSRF)
+|--------------------------------------------------------------------------
+| The query string is NOT trusted. The transaction is found by OUR id and
+| the payment is confirmed with Nagad's Verify API. An invalid or fake
+| callback therefore changes nothing.
+|--------------------------------------------------------------------------
+*/
+
+async function nagadCallback(req, res) {
+    try {
+        const transactionId = String(
+            req.params.transactionId || ""
+        ).trim();
+
+        if (!/^[A-Za-z0-9]{6,40}$/.test(transactionId)) {
+            return renderNotFound(res);
+        }
+
+        const transaction =
+            await paymentService.getTransactionByTransactionId(transactionId);
+
+        if (!transaction || transaction.gateway !== "nagad") {
+            return renderNotFound(res);
+        }
+
+        const orderId = String(req.query?.order_id || "").trim();
+        const refId = String(req.query?.payment_ref_id || "").trim();
+
+        if (
+            (orderId && orderId !== transaction.transaction_id) ||
+            (refId &&
+                transaction.gateway_session_id &&
+                refId !== transaction.gateway_session_id)
+        ) {
+            console.error(
+                "NAGAD CALLBACK: query does not match transaction",
+                { transactionId, orderId, refId }
+            );
+        }
+
+        return settleAndRender(req, res, transaction);
+    } catch (error) {
+        console.error("NAGAD CALLBACK ERROR:", error);
+
+        return res.status(500).send("Unable to process the payment result.");
+    }
+}
+
+async function result(req, res) {
+    try {
+        const transactionId = String(
+            req.params.transactionId || ""
+        ).trim();
+
+        if (!/^[A-Za-z0-9]{6,40}$/.test(transactionId)) {
+            return renderNotFound(res);
+        }
+
+        const transaction =
+            await paymentService.getTransactionByTransactionId(transactionId);
+
+        if (!transaction) {
+            return renderNotFound(res);
+        }
+
+        return settleAndRender(req, res, transaction);
+    } catch (error) {
+        console.error("PAYMENT RESULT ERROR:", error);
+
+        return res.status(500).send("Unable to load the payment result.");
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
 | IPN
 |--------------------------------------------------------------------------
+| Nagad does not use IPN (browser callback + Verify API only).
+| Other gateways are not wired to the verified ledger flow yet, so their
+| IPN is not accepted (it previously could only mark payments failed).
+|--------------------------------------------------------------------------
 */
 
-async function ipn(
-    req,
-    res
-) {
-
-    const gateway =
-        String(
-            req.params?.gateway ||
-            ""
-        )
-            .trim()
-            .toLowerCase();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Gateway validation
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        !paymentService
-            .SUPPORTED_GATEWAYS
-            .includes(
-                gateway
-            )
-    ) {
-
-        return res
-            .status(400)
-            .json({
-
-                success: false,
-
-                message:
-                    "Unsupported payment gateway."
-
-            });
-
-    }
-
-
-    try {
-
-        const payload =
-            getCallbackPayload(
-                req
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Find transaction
-        |--------------------------------------------------------------------------
-        */
-
-        const transactionId =
-            findTransactionId(
-                payload
-            );
-
-
-        if (
-            !transactionId
-        ) {
-
-            console.error(
-                "PAYMENT IPN: transaction ID missing.",
-                {
-                    gateway,
-                    payload
-                }
-            );
-
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Transaction ID is missing."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Load transaction
-        |--------------------------------------------------------------------------
-        */
-
-        const transaction =
-            await paymentService
-                .getTransactionByTransactionId(
-                    transactionId
-                );
-
-
-        if (
-            !transaction
-        ) {
-
-            return res
-                .status(404)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Payment transaction not found."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gateway mismatch protection
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            String(
-                transaction.gateway ||
-                ""
-            )
-                .trim()
-                .toLowerCase() !==
-            gateway
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    success: false,
-
-                    message:
-                        "Gateway mismatch."
-
-                });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Already verified
-        |--------------------------------------------------------------------------
-        |
-        | Duplicate IPN এ provider আবার call করার দরকার নেই।
-        |
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            String(
-                transaction.status ||
-                ""
-            )
-                .toLowerCase() ===
-            "verified"
-        ) {
-
-            return res.json({
-
-                success: true,
-
-                verified: true,
-
-                message:
-                    "Payment was already verified."
-
-            });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Load gateway configuration
-        |--------------------------------------------------------------------------
-        */
-
-        const gatewayRow =
-            await paymentService
-                .getGateway(
-                    transaction.company_id,
-                    gateway
-                );
-
-
-        if (
-            !gatewayRow
-        ) {
-
-            throw new Error(
-                "Payment gateway configuration not found."
-            );
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Provider
-        |--------------------------------------------------------------------------
-        */
-
-        const provider =
-            getProvider(
-                gateway
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SERVER-SIDE VERIFICATION
-        |--------------------------------------------------------------------------
-        */
-
-        const verification =
-            await verifyProviderPayment({
-
-                provider,
-
-                gateway,
-
-                credentials:
-                    gatewayRow.credentials,
-
-                environment:
-                    gatewayRow.environment,
-
-                transaction,
-
-                payload
-
-            });
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | NOT VERIFIED
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !verification.verified
-        ) {
-
-            await paymentService
-                .updateTransaction(
-                    transaction.id,
-                    {
-
-                        status:
-                            "failed",
-
-                        gateway_transaction_id:
-                            findGatewayTransactionId(
-                                payload
-                            ),
-
-                        metadata:
-                            JSON.stringify({
-
-                                callback:
-                                    payload,
-
-                                verification:
-                                    verification.raw ||
-                                    {}
-
-                            })
-
-                    }
-                );
-
-
-            return res.json({
-
-                success: true,
-
-                verified: false,
-
-                message:
-                    "Payment could not be verified."
-
-            });
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | VERIFIED
-        |--------------------------------------------------------------------------
-        */
-
-        const gatewayTransactionId =
-            findGatewayTransactionId(
-                payload
-            );
-
-
-        await paymentService
-            .updateTransaction(
-                transaction.id,
-                {
-
-                    status:
-                        "verified",
-
-                    gateway_transaction_id:
-                        gatewayTransactionId,
-
-                    payment_date:
-                        new Date(),
-
-                    verified_at:
-                        new Date(),
-
-                    metadata:
-                        JSON.stringify({
-
-                            callback:
-                                payload,
-
-                            verification:
-                                verification.raw ||
-                                {}
-
-                        })
-
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT
-        |--------------------------------------------------------------------------
-        |
-        | এখানে এখনো invoice/customer payment paid করা হচ্ছে না।
-        |
-        | কারণ customer recharge এবং software invoice-এর
-        | actual DB business logic আলাদা করে verify করে
-        | transaction-এর সঙ্গে atomically apply করতে হবে।
-        |
-        |--------------------------------------------------------------------------
-        */
-
-        return res.json({
-
-            success: true,
-
-            verified: true,
-
-            transaction_id:
-                transaction.transaction_id,
-
-            message:
-                "Payment verified successfully."
-
-        });
-
-
-    } catch (error) {
-
-        console.error(
-            `PAYMENT IPN ERROR [${gateway}]:`,
-            error
-        );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gateway সাধারণত 200 response পেলে callback গ্রহণ করে।
-        | কিন্তু internal error হলে 500 রাখছি যাতে retry সম্ভব হয়।
-        |--------------------------------------------------------------------------
-        */
-
-        return res
-            .status(500)
-            .json({
-
-                success: false,
-
-                message:
-                    "Payment verification failed."
-
-            });
-
-    }
-
+async function ipn(req, res) {
+    return res.status(501).json({
+        success: false,
+        message: "IPN is not enabled for this gateway."
+    });
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| GENERIC RESULT PAGES
-|--------------------------------------------------------------------------
-*/
-
-function success(
-    req,
-    res
-) {
-
-    return res.send(
-        `
-        <!DOCTYPE html>
-
-        <html>
-
-        <head>
-
-            <meta charset="UTF-8">
-
-            <meta
-                name="viewport"
-                content="width=device-width, initial-scale=1.0"
-            >
-
-            <title>
-                Payment Submitted
-            </title>
-
-        </head>
-
-
-        <body
-            style="
-                font-family:Arial;
-                text-align:center;
-                padding:60px 20px;
-            "
-        >
-
-            <h2>
-                Payment Submitted
-            </h2>
-
-            <p>
-                Your payment request has been received.
-            </p>
-
-            <p>
-                The payment will be verified by the server
-                before the bill is marked as paid.
-            </p>
-
-            <a href="/dashboard">
-                Back to Dashboard
-            </a>
-
-        </body>
-
-        </html>
-        `
-    );
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FAIL
-|--------------------------------------------------------------------------
-*/
-
-function fail(
-    req,
-    res
-) {
-
-    return res
-        .status(400)
-        .send(
-            `
-            <!DOCTYPE html>
-
-            <html>
-
-            <head>
-
-                <meta charset="UTF-8">
-
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1.0"
-                >
-
-                <title>
-                    Payment Failed
-                </title>
-
-            </head>
-
-
-            <body
-                style="
-                    font-family:Arial;
-                    text-align:center;
-                    padding:60px 20px;
-                "
-            >
-
-                <h2>
-                    Payment Failed
-                </h2>
-
-                <p>
-                    The payment was not completed.
-                </p>
-
-                <a href="/dashboard">
-                    Back to Dashboard
-                </a>
-
-            </body>
-
-            </html>
-            `
-        );
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| CANCEL
-|--------------------------------------------------------------------------
-*/
-
-function cancel(
-    req,
-    res
-) {
-
-    return res
-        .status(400)
-        .send(
-            `
-            <!DOCTYPE html>
-
-            <html>
-
-            <head>
-
-                <meta charset="UTF-8">
-
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1.0"
-                >
-
-                <title>
-                    Payment Cancelled
-                </title>
-
-            </head>
-
-
-            <body
-                style="
-                    font-family:Arial;
-                    text-align:center;
-                    padding:60px 20px;
-                "
-            >
-
-                <h2>
-                    Payment Cancelled
-                </h2>
-
-                <p>
-                    The payment process was cancelled.
-                </p>
-
-                <a href="/dashboard">
-                    Back to Dashboard
-                </a>
-
-            </body>
-
-            </html>
-            `
-        );
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| EXPORTS
-|--------------------------------------------------------------------------
-*/
 
 module.exports = {
-
     page,
-
     save,
-
     list,
-
     csrf,
-
     createPayment,
-
+    publicPage,
+    publicQuote,
+    publicCreate,
+    nagadCallback,
+    result,
     ipn,
 
-    success,
-
-    fail,
-
-    cancel
-
+    /* result pages: the URL never decides the outcome */
+    success: result,
+    fail: result,
+    cancel: result
 };

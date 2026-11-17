@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Pay Internet Bill</title>
+<style>
+    :root { --bg:#f4f6fa; --card:#fff; --text:#1c2333; --muted:#667085; --brand:#e2136e; --line:#d9dee8; }
+    @media (prefers-color-scheme: dark) {
+        :root { --bg:#12151d; --card:#1b2030; --text:#eef1f7; --muted:#9aa3b5; --line:#2d3550; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+    .wrap { max-width:440px; margin:0 auto; padding:32px 16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    p.sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+    label { display:block; font-size:13px; margin:14px 0 6px; color:var(--muted); }
+    input, select { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px;
+        font-size:15px; background:transparent; color:var(--text); }
+    button { width:100%; margin-top:18px; padding:12px; border:0; border-radius:8px; font-size:15px;
+        font-weight:bold; color:#fff; background:var(--brand); cursor:pointer; }
+    button.secondary { background:transparent; color:var(--text); border:1px solid var(--line); }
+    button:disabled { opacity:.6; cursor:default; }
+    .box { margin-top:18px; padding:14px; border-radius:8px; border:1px dashed var(--line); }
+    .amount { font-size:26px; font-weight:bold; }
+    .error { margin-top:14px; color:#d92d20; font-size:14px; }
+    [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>ইন্টারনেট বিল পেমেন্ট</h1>
+        <p class="sub">Pay your internet bill securely with Nagad</p>
+
+        <label for="customerId">Customer ID</label>
+        <input id="customerId" autocomplete="off" inputmode="text" maxlength="50">
+
+        <label for="billType">Payment type</label>
+        <select id="billType">
+            <option value="Bill">Monthly bill / মাসিক বিল</option>
+            <option value="Advance">Advance deposit / অগ্রিম জমা</option>
+        </select>
+
+        <div id="monthsBox">
+            <label for="months">Months / মাস</label>
+            <select id="months"></select>
+        </div>
+
+        <div id="advanceBox" hidden>
+            <label for="advance">Advance amount (৳)</label>
+            <input id="advance" type="number" min="1" step="1" inputmode="numeric">
+        </div>
+
+        <button id="checkBtn" type="button">Check amount / পরিমাণ দেখুন</button>
+
+        <div class="box" id="quoteBox" hidden>
+            <div id="custName" style="color:var(--muted);font-size:14px"></div>
+            <div class="amount">৳ <span id="amountText"></span></div>
+            <button id="payBtn" type="button">Pay with Nagad</button>
+            <button id="editBtn" type="button" class="secondary">Change</button>
+        </div>
+
+        <div class="error" id="errorBox" hidden></div>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
+const $ = (id) => document.getElementById(id);
+
+const months = $("months");
+for (let i = 1; i <= 12; i++) {
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = String(i);
+    months.appendChild(o);
+}
+
+function showError(message) {
+    $("errorBox").textContent = message || "";
+    $("errorBox").hidden = !message;
+}
+
+function form() {
+    return {
+        slug,
+        customer_id: $("customerId").value.trim(),
+        bill_type: $("billType").value,
+        recharge_month: Number($("months").value),
+        advance: Number($("advance").value || 0)
+    };
+}
+
+async function post(url) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form())
+    });
+
+    return response.json().catch(() => ({ success: false, message: "Unexpected response." }));
+}
+
+function resetQuote() {
+    $("quoteBox").hidden = true;
+    $("checkBtn").hidden = false;
+}
+
+$("billType").addEventListener("change", () => {
+    const advance = $("billType").value === "Advance";
+    $("advanceBox").hidden = !advance;
+    $("monthsBox").hidden = advance;
+    resetQuote();
+});
+
+["customerId", "months", "advance"].forEach((id) => $(id).addEventListener("input", resetQuote));
+$("editBtn").addEventListener("click", resetQuote);
+
+$("checkBtn").addEventListener("click", async () => {
+    showError("");
+
+    if (!$("customerId").value.trim()) {
+        return showError("Enter your Customer ID.");
+    }
+
+    $("checkBtn").disabled = true;
+
+    const data = await post("/api/payment-gateway/public/quote");
+
+    $("checkBtn").disabled = false;
+
+    if (!data.success) {
+        return showError(data.message || "Unable to check the amount.");
+    }
+
+    $("custName").textContent = data.customer_name || "";
+    $("amountText").textContent = Number(data.amount).toFixed(2);
+    $("quoteBox").hidden = false;
+    $("checkBtn").hidden = true;
+});
+
+$("payBtn").addEventListener("click", async () => {
+    showError("");
+    $("payBtn").disabled = true;
+
+    const data = await post("/api/payment-gateway/public/create");
+
+    if (!data.success || !data.redirect_url) {
+        $("payBtn").disabled = false;
+        return showError(data.message || "Unable to start the payment.");
+    }
+
+    location.href = data.redirect_url;
+});
+</script>
+</body>
+</html>

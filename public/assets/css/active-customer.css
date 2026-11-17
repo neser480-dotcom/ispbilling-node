@@ -192,3 +192,26 @@ body {
     .col-check, .col-action, .active-table td:last-child, .active-table td:first-child { display: none !important; }
     .active-table { min-width: 0; }
 }
+
+/* ACTIVE ICONS (patch-active-icons-1) */
+.active-header-btn .ac-icon {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+}
+.active-header-btn .ac-icon-filter { stroke-width: 1.6; }
+/* /ACTIVE ICONS */
+
+/* ACTIVE STATUS BADGES (patch-active-customer-2) */
+.status-badge.status-active { background: #0b5fd6; }
+.status-badge.status-inactive { background: #6c757d; }
+.status-badge.status-expired { background: #dc3545; }
+.status-badge.status-offline { background: #dc3545; }
+.status-badge.status-pending, .status-badge.status-suspended, .status-badge.status-disabled { background: #6c757d; }
+.uptime-off { color: #dc3545; }
+/* /ACTIVE STATUS BADGES */

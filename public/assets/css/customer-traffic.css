@@ -1,245 +1,126 @@
-/*
-|--------------------------------------------------------------------------
-| CUSTOMER TRAFFIC
-|--------------------------------------------------------------------------
-*/
-
-.traffic-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    background: #0d6efd;
-    color: #fff;
-    padding: 18px 22px;
-    border-radius: 12px;
-    margin-bottom: 18px;
+/* =========================================================
+   CUSTOMER TRAFFIC  (same look as Active Customer)
+========================================================= */
+:root {
+    --ct-blue: #2f8ae8;
+    --ct-blue-2: #3a95f0;
+    --ct-dark: #1a5fb5;
+    --ct-text: #2b3445;
 }
 
-.traffic-header h3 {
+* { box-sizing: border-box; }
+
+body {
     margin: 0;
-    font-size: 20px;
-    font-weight: 600;
+    background: #f1f4f8;
+    color: var(--ct-text);
+    font-family: "Hind Siliguri", "Segoe UI", Arial, sans-serif;
 }
 
-.router-name {
-    margin-top: 4px;
-    font-size: 13px;
-    opacity: .85;
+.ct-page {
+    margin-left: 250px;
+    padding: 72px 12px 20px;
+    min-height: 100vh;
 }
 
-.traffic-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* ---------- header ---------- */
+.ct-header {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 58px; padding: 0 22px;
+    background: linear-gradient(90deg, var(--ct-blue), var(--ct-blue-2));
+    color: #fff; border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,.15);
+}
+.ct-title { margin: 0; font-size: 22px; font-weight: 600; color: #fff; white-space: nowrap; }
+.ct-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.ct-header-btn {
+    width: 36px; height: 36px; min-width: 36px; padding: 0;
+    border: 0; border-radius: 5px; background: #fff; color: var(--ct-blue);
+    font-size: 15px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.ct-header-btn:hover { background: #e8f2fd; }
+.ct-header-btn.busy .ct-icon { animation: ct-spin .8s linear infinite; }
+@keyframes ct-spin { to { transform: rotate(360deg); } }
+
+.ct-icon {
+    width: 22px; height: 22px; display: block;
+    fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
 }
 
-.traffic-header-actions select {
-    min-width: 190px;
+/* ---------- body ---------- */
+.ct-body {
+    background: #fff; border-top: 3px solid #eef1f5;
+    padding: 12px 20px 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 
-.traffic-summary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    margin-bottom: 18px;
+/* ---------- chart ---------- */
+.ct-chart-wrap { margin: 0 0 14px; }
+.ct-chart { width: 100%; height: 400px; }
+.ct-chart-empty {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    color: #7b8798; font-size: 14px;
 }
 
-.traffic-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+/* ---------- toolbar ---------- */
+.ct-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 50px; padding: 8px 14px; margin: 0 0 22px;
+    background: #338ee9; color: #fff; border-radius: 6px;
+    box-shadow: 0 3px 8px rgba(47,138,232,.35);
 }
-
-.traffic-card-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #eef5ff;
-    color: #0d6efd;
-    font-size: 20px;
-    flex-shrink: 0;
+.tb-ico { font-size: 15px; }
+.tb-text { font-size: 15px; margin-left: 2px; white-space: nowrap; }
+.tb-pill {
+    background: var(--ct-dark); color: #fff; font-size: 14px; font-weight: 600;
+    min-width: 54px; padding: 3px 14px; border-radius: 14px; text-align: center;
 }
-
-.traffic-card span {
-    display: block;
-    font-size: 12px;
-    color: #777;
+.tb-search { margin-left: auto; width: 315px; max-width: 100%; }
+.tb-search input {
+    width: 100%; height: 36px; padding: 0 12px;
+    border: 0; border-radius: 4px; outline: 0;
+    background: rgba(26,95,181,.55); color: #fff; font-size: 14px;
 }
+.tb-search input::placeholder { color: #dbeafe; }
 
-.traffic-card strong {
-    display: block;
-    margin-top: 3px;
-    font-size: 21px;
-    font-weight: 700;
-    color: #222;
+/* ---------- table ---------- */
+.ct-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ct-table { margin: 0; width: 100%; min-width: 860px; font-size: 14px; text-align: left; }
+.ct-table thead th {
+    background: #fff; color: #333; font-weight: 600; font-size: 14px;
+    text-align: left; vertical-align: bottom; white-space: nowrap;
+    padding: 10px 12px 14px; border-bottom: 0;
 }
+.ct-table thead th.sortable { cursor: pointer; user-select: none; }
+.sort { display: inline-flex; margin-left: 2px; font-size: 10px; color: var(--ct-blue); }
 
-.traffic-card small {
-    display: block;
-    margin-top: 3px;
-    color: #777;
-    font-size: 12px;
+.ct-table tbody td {
+    padding: 14px 12px; vertical-align: middle; text-align: left;
+    border: 0; background: #fff; line-height: 1.45;
 }
+.ct-table tbody tr:nth-child(odd) td { background: #f2f2f2; }
+.ct-table tbody tr:hover td { background: #e9f1fb; }
 
-.last-update {
-    font-size: 14px !important;
+.ct-name { font-weight: 500; }
+.ct-sub { color: #444; }
+
+.loading-row, .empty-row, .error-row {
+    text-align: center !important; color: #7b8798; padding: 35px !important; background: #fff !important;
 }
+.error-row { color: #dc2626; }
 
-.traffic-panel {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
-    margin-bottom: 18px;
-    overflow: hidden;
-}
-
-.traffic-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 15px 18px;
-    border-bottom: 1px solid #eee;
-}
-
-.traffic-panel-header h5 {
-    margin: 0;
-    font-size: 16px;
-}
-
-.live-indicator {
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.traffic-chart {
-    height: 360px;
-    width: 100%;
-    padding: 8px;
-}
-
-.traffic-table-tools {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 15px 18px;
-    border-bottom: 1px solid #eee;
-}
-
-.traffic-search {
-    position: relative;
-    flex: 1;
-}
-
-.traffic-search i {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
-}
-
-.traffic-search input {
-    width: 100%;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 9px 12px 9px 36px;
-    outline: none;
-}
-
-.traffic-search input:focus {
-    border-color: #0d6efd;
-}
-
-#trafficTable {
-    margin-bottom: 0;
-}
-
-#trafficTable th {
-    white-space: nowrap;
-    font-size: 13px;
-}
-
-#trafficTable td {
-    font-size: 13px;
-}
-
-.customer-name {
-    font-weight: 600;
-}
-
-.customer-pppoe {
-    display: block;
-    margin-top: 2px;
-    color: #777;
-    font-size: 12px;
-}
-
-.speed-value {
-    font-weight: 600;
-}
-
-.speed-unit {
-    color: #777;
-    font-size: 11px;
-}
-
-.mikrotik-only-badge {
-    display: inline-block;
-    margin-left: 5px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    background: #fff3cd;
-    color: #856404;
-}
-
-.live-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #198754;
-    margin-right: 5px;
-}
-
-@media (max-width: 1100px) {
-
-    .traffic-summary {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-}
-
-@media (max-width: 768px) {
-
-    .traffic-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .traffic-header-actions {
-        width: 100%;
-    }
-
-    .traffic-header-actions select {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .traffic-summary {
-        grid-template-columns: 1fr;
-    }
-
-    .traffic-chart {
-        height: 300px;
-    }
-
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 850px) {
+    .ct-page { margin-left: 0; padding: 64px 3px 14px; }
+    .ct-header { height: 58px; padding: 0 10px; gap: 6px; }
+    .ct-title { font-size: 20px; }
+    .ct-body { padding: 8px 8px 16px; }
+    .ct-chart { height: 320px; }
+    .ct-toolbar { gap: 8px; padding: 8px 10px; margin-bottom: 14px; }
+    .tb-search { flex: 1 1 auto; width: auto; min-width: 0; }
+    .ct-table { min-width: 800px; }
 }

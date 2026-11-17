@@ -1002,12 +1002,15 @@
                                     Public Key
                                 </label>
 
-                                <input
-                                    type="text"
+                                <textarea
                                     class="form-control"
                                     id="nagadPublicKey"
+                                    rows="4"
                                     autocomplete="off"
-                                >
+                                    spellcheck="false"
+                                    style="font-family:monospace;font-size:12px;"
+                                    placeholder="Nagad PG public key (PEM or base64). Leave blank to keep the saved key."
+                                ></textarea>
 
                             </div>
 
@@ -1021,12 +1024,15 @@
                                     Private Key
                                 </label>
 
-                                <input
-                                    type="password"
+                                <textarea
                                     class="form-control"
                                     id="nagadPrivateKey"
-                                    autocomplete="new-password"
-                                >
+                                    rows="4"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    style="font-family:monospace;font-size:12px;"
+                                    placeholder="Merchant private key (PEM or base64). Leave blank to keep the saved key."
+                                ></textarea>
 
                             </div>
 
@@ -1058,23 +1064,124 @@
                             </div>
 
 
+                            <div class="col-md-6">
+
+                                <label
+                                    class="form-label"
+                                    for="nagadMerchantNumber"
+                                >
+                                    Merchant Wallet Number (optional)
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="nagadMerchantNumber"
+                                    autocomplete="off"
+                                >
+
+                            </div>
+
+
+                            <div class="col-md-6">
+
+                                <label
+                                    class="form-label"
+                                    for="nagadScope"
+                                >
+                                    Merchant Account
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    id="nagadScope"
+                                >
+
+                                    <option value="customer">
+                                        ISP account - Customer bills
+                                    </option>
+
+                                    <option
+                                        value="central"
+                                        id="nagadScopeCentral"
+                                    >
+                                        Central account - Software billing (Super Admin)
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="col-md-6" id="nagadCompanyBox">
+
+                                <label
+                                    class="form-label"
+                                    for="nagadCompanyId"
+                                >
+                                    ISP Company ID
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="1"
+                                    class="form-control"
+                                    id="nagadCompanyId"
+                                    autocomplete="off"
+                                    placeholder="Which ISP these credentials belong to"
+                                >
+
+                            </div>
+
+
+                            <div class="col-md-6" id="nagadSlugBox">
+
+                                <label
+                                    class="form-label"
+                                    for="nagadSlug"
+                                >
+                                    Customer Payment Link Name
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="nagadSlug"
+                                    autocomplete="off"
+                                    placeholder="e.g. my-isp"
+                                >
+
+                                <div class="form-text" id="nagadSlugHint">
+                                    Customers pay without login at /api/payment-gateway/pay/&lt;name&gt;
+                                </div>
+
+                            </div>
+
+
                             <div class="col-12">
 
                                 <label
                                     class="form-label"
                                     for="nagadCallback"
                                 >
-                                    Callback / Return URL
+                                    Callback URL (automatic)
                                 </label>
 
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="nagadCallback"
-                                    placeholder="/api/payments/nagad/callback"
+                                    readonly
+                                    value="/api/payment-gateway/nagad/callback/&lt;transaction&gt;"
                                 >
 
+                                <div class="form-text">
+                                    Created automatically for every payment. Nothing to enter here.
+                                </div>
+
                             </div>
+
+                        </div>
 
                         </div>
 
@@ -2368,17 +2475,164 @@
 
         /*
         |--------------------------------------------------------------------------
-        | SAVE BUTTON
+        | SAVE / LOAD  (Nagad is connected to the secure server API)
         |--------------------------------------------------------------------------
-        |
-        | Backend API is intentionally not invented here.
-        |
-        | Next backend endpoint:
-        |
-        | POST /api/payment-gateways/save
-        |
+        | Secrets are never sent back by the server. A blank key field means
+        | "keep the saved key".
         |--------------------------------------------------------------------------
         */
+
+        const API = "/api/payment-gateway";
+
+        let csrfToken = null;
+
+        async function loadCsrf() {
+
+            const response = await fetch(
+                `${API}/csrf`,
+                { credentials: "same-origin" }
+            );
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || "Not logged in.");
+            }
+
+            csrfToken = data.csrf_token;
+
+            if (data.is_super_admin) {
+                const central = document.getElementById("nagadScopeCentral");
+
+                if (central) {
+                    central.hidden = false;
+                }
+            }
+
+        }
+
+        function nagadValue(id) {
+            return document.getElementById(id).value.trim();
+        }
+
+        async function loadNagad() {
+
+            const scope = nagadValue("nagadScope");
+            const companyId = nagadValue("nagadCompanyId");
+
+            const response = await fetch(
+                `${API}/list?scope=${encodeURIComponent(scope)}` +
+                (scope === "customer" && companyId
+                    ? `&company_id=${encodeURIComponent(companyId)}`
+                    : ""),
+                { credentials: "same-origin" }
+            );
+
+            const data = await response.json();
+
+            if (!data.success) {
+                showMessage(data.message || "Unable to load settings.", "danger");
+                return;
+            }
+
+            const row = (data.gateways || []).find(
+                (g) => g.gateway === "nagad"
+            );
+
+            if (!row) {
+                return;
+            }
+
+            const set = row.credentials_set || {};
+            const pub = row.credentials_public || {};
+
+            document.getElementById("nagadEnabled").checked = row.enabled;
+            document.getElementById("nagadEnvironment").value = row.environment;
+            document.getElementById("nagadMerchantId").value = pub.merchantId || "";
+            document.getElementById("nagadMerchantNumber").value = pub.merchantNumber || "";
+            document.getElementById("nagadSlug").value = (row.settings || {}).slug || "";
+
+            document.getElementById("nagadPublicKey").value = "";
+            document.getElementById("nagadPrivateKey").value = "";
+
+            document.getElementById("nagadPublicKey").placeholder = set.publicKey
+                ? "A public key is saved. Paste a new one only to replace it."
+                : "Nagad PG public key (PEM or base64)";
+
+            document.getElementById("nagadPrivateKey").placeholder = set.privateKey
+                ? "A private key is saved. Paste a new one only to replace it."
+                : "Merchant private key (PEM or base64)";
+
+            document.getElementById("nagadSlugBox").style.display =
+                scope === "central" ? "none" : "";
+
+            document.getElementById("nagadCompanyBox").style.display =
+                scope === "central" ? "none" : "";
+
+            updateGatewayStatus("nagad");
+
+        }
+
+        async function saveNagad(button) {
+
+            const scope = nagadValue("nagadScope");
+
+            const body = {
+                csrf_token: csrfToken,
+                gateway: "nagad",
+                scope,
+                company_id: scope === "customer"
+                    ? nagadValue("nagadCompanyId")
+                    : undefined,
+                enabled: document.getElementById("nagadEnabled").checked,
+                environment: nagadValue("nagadEnvironment"),
+                credentials: {
+                    merchantId: nagadValue("nagadMerchantId"),
+                    merchantNumber: nagadValue("nagadMerchantNumber"),
+                    publicKey: nagadValue("nagadPublicKey"),
+                    privateKey: nagadValue("nagadPrivateKey")
+                },
+                settings: scope === "customer"
+                    ? { slug: nagadValue("nagadSlug") }
+                    : {}
+            };
+
+            button.disabled = true;
+
+            try {
+
+                const response = await fetch(`${API}/save`, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-Token": csrfToken
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                showMessage(
+                    data.message || (data.success ? "Saved." : "Save failed."),
+                    data.success ? "success" : "danger"
+                );
+
+                if (data.success) {
+                    await loadNagad();
+                }
+
+            } catch (error) {
+
+                showMessage("Unable to save. Please try again.", "danger");
+
+            } finally {
+
+                button.disabled = false;
+
+            }
+
+        }
 
         document
             .querySelectorAll(".save-gateway")
@@ -2392,12 +2646,10 @@
                             const gateway =
                                 button.dataset.gateway;
 
-
-                            /*
-                            |--------------------------------------------------------------------------
-                            | TEMPORARY SAFETY MESSAGE
-                            |--------------------------------------------------------------------------
-                            */
+                            if (gateway === "nagad") {
+                                saveNagad(button);
+                                return;
+                            }
 
                             showMessage(
                                 `${gateway} configuration UI is ready, but the secure server-side gateway API has not been connected yet. No credentials were saved.`,
@@ -2409,6 +2661,20 @@
 
                 }
             );
+
+        document
+            .getElementById("nagadScope")
+            .addEventListener("change", loadNagad);
+
+        document
+            .getElementById("nagadCompanyId")
+            .addEventListener("change", loadNagad);
+
+        loadCsrf()
+            .then(loadNagad)
+            .catch(function (error) {
+                showMessage(error.message || "Unable to load settings.", "danger");
+            });
 
     </script>
 

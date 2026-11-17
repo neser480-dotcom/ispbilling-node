@@ -763,7 +763,7 @@ router.post("/", async (req, res) => {
         |--------------------------------------------------------------------------
         */
 
-        await connection.execute(
+        const [billingResult] = await connection.execute(
             `
             INSERT INTO software_billing_notifications
             (
@@ -816,6 +816,7 @@ router.post("/", async (req, res) => {
             (
                 company_id,
                 user_id,
+                billing_id,
                 type,
                 message_type,
                 amount,
@@ -825,6 +826,7 @@ router.post("/", async (req, res) => {
             )
             VALUES
             (
+                ?,
                 ?,
                 ?,
                 'registration',
@@ -838,6 +840,7 @@ router.post("/", async (req, res) => {
             [
                 companyId,
                 userId,
+                billingResult.insertId,
                 finalSignupFee,
                 TRIAL_HOURS
             ]

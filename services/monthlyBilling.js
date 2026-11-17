@@ -69,6 +69,8 @@ async function generate() {
         if (Number(lock.ok) !== 1) return 0;
 
         try {
+            await conn.beginTransaction();
+
             const [result] = await conn.execute(
                 `
                 INSERT IGNORE INTO software_billing_notifications
@@ -101,7 +103,52 @@ async function generate() {
                 [wall(due), period, nowWall, nowWall, period, wall(monthStart), wall(nextMonth), wall(monthStart)]
             );
 
+            /*
+             * Create missing Software Invoices for this billing period.
+             * Never duplicate an invoice for the same billing_id.
+             */
+            await conn.execute(
+                `
+                INSERT INTO invoices
+                (
+                    company_id,
+                    user_id,
+                    billing_id,
+                    type,
+                    message_type,
+                    amount,
+                    status,
+                    invoice_date,
+                    due_date
+                )
+                SELECT
+                    b.company_id,
+                    b.user_id,
+                    b.id,
+                    'monthly',
+                    NULL,
+                    b.amount,
+                    'unpaid',
+                    NOW(),
+                    b.due_date
+                FROM software_billing_notifications b
+                WHERE b.billing_type = 'monthly'
+                  AND b.billing_period = ?
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM invoices i
+                      WHERE i.billing_id = b.id
+                  )
+                `,
+                [period]
+            );
+
+            await conn.commit();
+
             return result.affectedRows || 0;
+        } catch (error) {
+            await conn.rollback();
+            throw error;
         } finally {
             await conn.query("SELECT RELEASE_LOCK('netfee_monthly_billing')");
         }
@@ -136,3 +183,4 @@ function start() {
 }
 
 module.exports = { start, generate };
+

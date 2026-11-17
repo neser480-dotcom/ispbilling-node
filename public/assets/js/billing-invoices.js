@@ -394,6 +394,24 @@
 
             if (menu && shouldOpen) {
                 menu.hidden = false;
+                const rect = trigger.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+
+                let left = rect.right - menuWidth;
+                let top = rect.bottom + 6;
+
+                left = Math.max(
+                    8,
+                    Math.min(left, window.innerWidth - menuWidth - 8)
+                );
+
+                if (top + menuHeight > window.innerHeight - 8) {
+                    top = Math.max(8, rect.top - menuHeight - 6);
+                }
+
+                menu.style.left = `${left}px`;
+                menu.style.top = `${top}px`;
                 trigger.setAttribute("aria-expanded", "true");
             }
 

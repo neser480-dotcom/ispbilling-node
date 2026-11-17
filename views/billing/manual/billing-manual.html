@@ -95,9 +95,93 @@
         </div>
 
 
+
         <!-- =========================================
-             BILLING CONTENT
+             PENDING MANUAL PAYMENTS
         ========================================= -->
+
+        <div class="row mb-4">
+
+            <div class="col-12">
+
+                <div class="billing-card">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
+                        <div>
+                            <h4 class="mb-1">Pending Manual Payments</h4>
+                            <p class="text-muted mb-0">
+                                Review ISP Admin submitted payments
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="refreshPendingPayments"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            <i class="fa-solid fa-rotate"></i>
+                            Refresh
+                        </button>
+
+                    </div>
+
+                    <div id="pendingPaymentsLoading" class="notice">
+                        Loading pending payments...
+                    </div>
+
+                    <div
+                        id="pendingPaymentsEmpty"
+                        class="notice"
+                        style="display:none;"
+                    >
+                        No pending manual payments found.
+                    </div>
+
+                    <div
+                        id="pendingPaymentsMessage"
+                        class="notice"
+                        style="display:none;"
+                    ></div>
+
+                    <div
+                        id="pendingPaymentsTableWrapper"
+                        class="table-responsive"
+                        style="display:none;"
+                    >
+
+                        <table class="table table-bordered table-hover align-middle">
+
+                            <thead>
+                                <tr>
+                                    <th>Payment ID</th>
+                                    <th>ISP Admin</th>
+                                    <th>Company</th>
+                                    <th>Billing</th>
+                                    <th>Method / Reference</th>
+                                    <th>Amount</th>
+                                    <th>Note</th>
+                                    <th>Submitted</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="pendingPaymentsTableBody"></tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+        <div class="row mb-3">
+            <div class="col-12">
+                <h4 class="mb-0">Billing Content</h4>
+            </div>
+        </div>
 
         <div class="row">
 

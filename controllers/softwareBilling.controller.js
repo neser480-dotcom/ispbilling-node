@@ -356,6 +356,210 @@ async function manualPay(req, res) {
     let connection = null;
 
     try {
+        if (isSuperAdmin(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "ISP Admin access required."
+            });
+        }
+
+        if (!verifyCsrf(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid CSRF token.",
+                csrf_token: ensureCsrf(req)
+            });
+        }
+
+        const uid = userId(req);
+        const cid = companyId(req);
+        const billingId = Number(req.body.billing_id || 0);
+
+        if (!uid || !cid || !Number.isInteger(billingId) || billingId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid billing information."
+            });
+        }
+
+        const method = String(
+            req.body.payment_method || req.body.method || "Other"
+        ).trim().slice(0, 100);
+
+        const reference = String(req.body.reference || "")
+            .trim().slice(0, 150);
+
+        const note = String(req.body.note || "")
+            .trim().slice(0, 1000);
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [billingRows] = await connection.execute(
+            `
+            SELECT id, company_id, user_id, amount, status
+            FROM software_billing_notifications
+            WHERE id = ?
+              AND company_id = ?
+              AND user_id = ?
+            LIMIT 1
+            FOR UPDATE
+            `,
+            [billingId, cid, uid]
+        );
+
+        if (!billingRows.length) {
+            throw new Error("Billing record not found.");
+        }
+
+        const billing = billingRows[0];
+
+        if (String(billing.status).toLowerCase() !== "unpaid") {
+            throw new Error("This billing is not unpaid.");
+        }
+
+        const amount = Number(billing.amount || 0);
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new Error("Invalid billing amount.");
+        }
+
+        const [pendingRows] = await connection.execute(
+            `
+            SELECT id
+            FROM software_billing_payments
+            WHERE billing_id = ?
+              AND company_id = ?
+              AND user_id = ?
+              AND payment_mode = 'manual'
+              AND status = 'pending'
+            LIMIT 1
+            FOR UPDATE
+            `,
+            [billing.id, cid, uid]
+        );
+
+        if (pendingRows.length) {
+            throw new Error("A manual payment is already pending for this billing.");
+        }
+
+        const paymentNote =
+            "Method: " + method + (note ? " | " + note : "");
+
+        const [insertResult] = await connection.execute(
+            `
+            INSERT INTO software_billing_payments
+            (
+                billing_id, company_id, user_id,
+                payment_mode, gateway, transaction_id,
+                reference_no, amount, currency, status,
+                payment_note, created_by, paid_at
+            )
+            VALUES (?, ?, ?, 'manual', NULL, NULL, ?, ?, 'BDT',
+                    'pending', ?, ?, NULL)
+            `,
+            [
+                billing.id,
+                cid,
+                uid,
+                reference || null,
+                amount,
+                paymentNote,
+                uid
+            ]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            success: true,
+            message: "Manual payment submitted. Waiting for Super Admin approval.",
+            billing_id: billing.id,
+            payment_id: Number(insertResult.insertId),
+            status: "pending"
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("MANUAL PAYMENT ROLLBACK ERROR:", rollbackError);
+            }
+        }
+
+        console.error("MANUAL PAYMENT ERROR:", error);
+
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Payment submission failed."
+        });
+
+    } finally {
+        if (connection) connection.release();
+    }
+}
+
+
+async function pendingManualPayments(req, res) {
+    try {
+        if (!isSuperAdmin(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "Super Admin access required."
+            });
+        }
+
+        const [rows] = await db.execute(
+            `
+            SELECT
+                p.id,
+                p.billing_id,
+                p.company_id,
+                p.user_id,
+                p.payment_mode,
+                p.reference_no,
+                p.amount,
+                p.currency,
+                p.status,
+                p.payment_note,
+                p.created_at,
+                s.billing_type,
+                s.package_code,
+                COALESCE(u.name, u.username, CONCAT('User #', p.user_id)) AS user_name
+            FROM software_billing_payments p
+            INNER JOIN software_billing_notifications s
+                ON s.id = p.billing_id
+               AND s.company_id = p.company_id
+               AND s.user_id = p.user_id
+            LEFT JOIN users u
+                ON u.id = p.user_id
+            WHERE p.payment_mode = 'manual'
+              AND p.status = 'pending'
+            ORDER BY p.created_at ASC, p.id ASC
+            `
+        );
+
+        return res.json({
+            success: true,
+            rows
+        });
+
+    } catch (error) {
+        console.error("PENDING MANUAL PAYMENTS ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to load pending manual payments."
+        });
+    }
+}
+
+
+async function reviewManualPayment(req, res, decision) {
+    let connection = null;
+
+    try {
         if (!isSuperAdmin(req)) {
             return res.status(403).json({
                 success: false,
@@ -371,159 +575,152 @@ async function manualPay(req, res) {
             });
         }
 
-        const billingId = Number(req.body.billing_id || 0);
-
-        if (!Number.isInteger(billingId) || billingId <= 0) {
+        if (decision !== "approve" && decision !== "reject") {
             return res.status(400).json({
                 success: false,
-                message: "Invalid billing ID."
+                message: "Invalid payment decision."
             });
         }
 
-        const method = String(req.body.method || "Other")
-            .trim()
-            .slice(0, 100);
+        const paymentId = Number(
+            req.params.id || req.body.payment_id || 0
+        );
 
-        const reference = String(req.body.reference || "")
-            .trim()
-            .slice(0, 150);
-
-        const note = String(req.body.note || "")
-            .trim()
-            .slice(0, 1000);
+        if (!Number.isInteger(paymentId) || paymentId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment ID."
+            });
+        }
 
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        const [billingRows] = await connection.execute(
+        const [paymentRows] = await connection.execute(
             `
             SELECT
-                id,
-                company_id,
-                user_id,
-                billing_type,
-                amount,
-                status
-            FROM software_billing_notifications
-            WHERE id = ?
+                p.id,
+                p.billing_id,
+                p.company_id,
+                p.user_id,
+                p.status AS payment_status,
+                s.status AS billing_status
+            FROM software_billing_payments p
+            INNER JOIN software_billing_notifications s
+                ON s.id = p.billing_id
+               AND s.company_id = p.company_id
+               AND s.user_id = p.user_id
+            WHERE p.id = ?
+              AND p.payment_mode = 'manual'
             LIMIT 1
             FOR UPDATE
             `,
-            [billingId]
+            [paymentId]
         );
 
-        if (!billingRows.length) {
-            throw new Error("Billing record not found.");
+        if (!paymentRows.length) {
+            throw new Error("Manual payment not found.");
         }
 
-        const billing = billingRows[0];
+        const payment = paymentRows[0];
 
-        if (String(billing.status).toLowerCase() !== "unpaid") {
-            throw new Error("This billing is already paid.");
+        if (String(payment.payment_status).toLowerCase() !== "pending") {
+            throw new Error("This payment has already been reviewed.");
         }
 
-        const amount = Number(billing.amount || 0);
+        if (decision === "approve") {
+            if (String(payment.billing_status).toLowerCase() !== "unpaid") {
+                throw new Error("Billing is not unpaid. Approval is not allowed.");
+            }
 
-        if (!Number.isFinite(amount) || amount <= 0) {
-            throw new Error("Invalid billing amount.");
+            const [billingUpdate] = await connection.execute(
+                `
+                UPDATE software_billing_notifications
+                SET status = 'paid',
+                    paid_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = ?
+                  AND company_id = ?
+                  AND user_id = ?
+                  AND status = 'unpaid'
+                LIMIT 1
+                `,
+                [
+                    payment.billing_id,
+                    payment.company_id,
+                    payment.user_id
+                ]
+            );
+
+            if (billingUpdate.affectedRows !== 1) {
+                throw new Error("Billing could not be marked paid.");
+            }
+
+            const [invoiceUpdate] = await connection.execute(
+                `
+                UPDATE invoices
+                SET status = 'paid',
+                    paid_date = NOW()
+                WHERE billing_id = ?
+                  AND company_id = ?
+                  AND user_id = ?
+                  AND status = 'unpaid'
+                `,
+                [
+                    payment.billing_id,
+                    payment.company_id,
+                    payment.user_id
+                ]
+            );
+
+            if (invoiceUpdate.affectedRows < 1) {
+                throw new Error(
+                    "Software invoice not found or already paid. Approval cancelled."
+                );
+            }
+
+            const [paymentUpdate] = await connection.execute(
+                `
+                UPDATE software_billing_payments
+                SET status = 'paid',
+                    paid_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = ?
+                  AND status = 'pending'
+                LIMIT 1
+                `,
+                [paymentId]
+            );
+
+            if (paymentUpdate.affectedRows !== 1) {
+                throw new Error("Payment approval could not be saved.");
+            }
+
+        } else {
+            const [paymentUpdate] = await connection.execute(
+                `
+                UPDATE software_billing_payments
+                SET status = 'rejected',
+                    updated_at = NOW()
+                WHERE id = ?
+                  AND status = 'pending'
+                LIMIT 1
+                `,
+                [paymentId]
+            );
+
+            if (paymentUpdate.affectedRows !== 1) {
+                throw new Error("Payment rejection could not be saved.");
+            }
         }
-
-        const paymentNote =
-            "Manual method: " +
-            method +
-            (note ? " | " + note : "");
-
-        const [paymentResult] = await connection.execute(
-            `
-            INSERT INTO software_billing_payments
-            (
-                billing_id,
-                company_id,
-                user_id,
-                payment_mode,
-                gateway,
-                transaction_id,
-                reference_no,
-                amount,
-                currency,
-                status,
-                payment_note,
-                gateway_response,
-                created_by,
-                paid_at
-            )
-            VALUES
-            (?, ?, ?, 'manual', NULL, NULL, ?, ?, 'BDT',
-             'paid', ?, NULL, ?, NOW())
-            `,
-            [
-                billing.id,
-                billing.company_id,
-                billing.user_id,
-                reference || null,
-                amount,
-                paymentNote,
-                userId(req)
-            ]
-        );
-
-        const paymentId = Number(paymentResult.insertId);
-
-        if (paymentId <= 0) {
-            throw new Error("Payment record was not created.");
-        }
-
-        const [billingUpdate] = await connection.execute(
-            `
-            UPDATE software_billing_notifications
-            SET
-                status = 'paid',
-                paid_at = NOW(),
-                updated_at = NOW()
-            WHERE id = ?
-              AND status = 'unpaid'
-            LIMIT 1
-            `,
-            [billing.id]
-        );
-
-        if (billingUpdate.affectedRows !== 1) {
-            throw new Error("Billing status could not be updated.");
-        }
-
-        /*
-         * Invoice is linked by billing_id.
-         * This avoids accidentally updating another invoice
-         * belonging to the same user with the same amount.
-         */
-        await connection.execute(
-            `
-            UPDATE invoices
-            SET
-                status = 'paid',
-                paid_date = NOW()
-            WHERE billing_id = ?
-              AND company_id = ?
-              AND user_id = ?
-              AND status = 'unpaid'
-            `,
-            [
-                billing.id,
-                billing.company_id,
-                billing.user_id
-            ]
-        );
 
         await connection.commit();
 
         return res.json({
             success: true,
-            message: "Payment recorded successfully.",
-            billing_id: billing.id,
-            payment_id: paymentId,
-            csrf_token: ensureCsrf(req),
-            redirect:
-                `/software-billing/receipt?billing_id=${billing.id}&payment_id=${paymentId}`
+            message: decision === "approve"
+                ? "Payment approved. Billing and invoice marked paid."
+                : "Payment rejected. Billing remains unpaid."
         });
 
     } catch (error) {
@@ -531,19 +728,15 @@ async function manualPay(req, res) {
             try {
                 await connection.rollback();
             } catch (rollbackError) {
-                console.error(
-                    "MANUAL PAYMENT ROLLBACK ERROR:",
-                    rollbackError
-                );
+                console.error("PAYMENT REVIEW ROLLBACK ERROR:", rollbackError);
             }
         }
 
-        console.error("MANUAL PAYMENT ERROR:", error);
+        console.error("MANUAL PAYMENT REVIEW ERROR:", error);
 
         return res.status(400).json({
             success: false,
-            message: error.message || "Payment failed.",
-            csrf_token: ensureCsrf(req)
+            message: error.message || "Unable to review payment."
         });
 
     } finally {
@@ -551,6 +744,15 @@ async function manualPay(req, res) {
             connection.release();
         }
     }
+}
+
+async function approveManualPayment(req, res) {
+    return reviewManualPayment(req, res, "approve");
+}
+
+
+async function rejectManualPayment(req, res) {
+    return reviewManualPayment(req, res, "reject");
 }
 
 /*
@@ -685,6 +887,9 @@ module.exports = {
     history,
     adminList,
     manualPay,
+    pendingManualPayments,
+    approveManualPayment,
+    rejectManualPayment,
     receipt,
     csrf
 };

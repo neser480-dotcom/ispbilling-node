@@ -341,13 +341,13 @@ document.addEventListener(
             ) {
 
                 packageInfo.innerHTML =
-                    "প্যাকেজ নির্বাচন করলে এখানে package details দেখাবে.";
+                    "প্যাকেজ নির্বাচন করলে এখানে প্যাকেজের বিস্তারিত দেখাবে।";
 
 
                 if (discountSummary) {
 
                     discountSummary.innerHTML =
-                        "Payable amount দেখানো হবে.";
+                        "পরিশোধযোগ্য পরিমাণ দেখানো হবে।";
                 }
 
                 return;
@@ -640,7 +640,7 @@ document.addEventListener(
                         true;
 
                     registerButton.textContent =
-                        "রেজিস্টার হচ্ছে...";
+                        "রেজিস্ট্রেশন";
                 }
 
 
@@ -765,7 +765,7 @@ document.addEventListener(
                             false;
 
                         registerButton.textContent =
-                            "রেজিস্টার";
+                            "রেজিস্ট্রেশন";
                     }
                 }
 

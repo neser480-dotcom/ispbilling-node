@@ -1098,18 +1098,9 @@ router.post("/login", async (req, res) => {
 
                 await db.execute(
                     `
-                    INSERT INTO user_remember_tokens (
-                        user_id,
-                        token_hash,
-                        expires_at
-                    )
-                    VALUES (?, ?, ?)
+                    INSERT INTO user_remember_tokens (user_id, user_type, selector, token_hash, expires_at) VALUES (?, ?, ?, ?, ?)
                     `,
-                    [
-                        matchedUser.id,
-                        tokenHash,
-                        expiresAt
-                    ]
+                    [matchedUser.id, "user", tokenHash.slice(0, 32), tokenHash, expiresAt]
                 );
 
 

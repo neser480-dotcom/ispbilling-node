@@ -30,4 +30,9 @@ router.get(
     controller.live
 );
 
+router.get(
+    "/monthly",
+    controller.monthly
+);
+
 module.exports = router;

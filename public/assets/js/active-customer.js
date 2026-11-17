@@ -248,12 +248,21 @@ document.addEventListener("DOMContentLoaded", () => {
             ? `<i class="fa-solid fa-wifi wifi-on"></i>`
             : `<i class="fa-solid fa-wifi wifi-off"></i>`;
 
-        const badge = isActive
-            ? `<span class="status-badge status-active">active</span>`
-            : `<span class="status-badge status-offline">offline</span>`;
+        const cs = String(row.customer_status || (isActive ? "active" : "offline")).toLowerCase();
+        const csClass = "status-" + cs.replace(/[^a-z0-9]+/g, "-");
+        const badge = `<span class="status-badge ${csClass}">${esc(cs)}</span>`;
 
-        const ip = esc(row.address || "—");
-        const mac = esc(row.caller_id || "—");
+        const ip = isActive ? esc(row.address || "—") : "";
+        const mac = isActive ? esc(row.caller_id || "—") : "";
+
+        const trafficCell = isActive
+            ? `<td><span class="t-up">${esc(row.upload_display || "0 MB")}</span>
+                <span class="t-down">${esc(row.download_display || "0 MB")}</span></td>`
+            : `<td></td>`;
+
+        const uptimeCell = isActive
+            ? `<td>${esc(row.uptime || "—")}</td>`
+            : `<td><span class="uptime-off">${esc(row.uptime || "—")}</span></td>`;
 
         const macCell = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i.test(String(row.caller_id || ""))
             ? '<span class="mac-link" data-act="vendor" data-mac="' + mac + '" data-user="' + esc(row.username) + '" title="Show vendor">' + mac + '</span>'
@@ -268,16 +277,15 @@ document.addEventListener("DOMContentLoaded", () => {
         <tr data-status="${esc(row.status)}">
             <td class="col-check"><input type="checkbox" class="active-user-check" value="${esc(row.username)}"></td>
             <td class="col-wifi">${wifi}</td>
-            <td>${esc(row.id ?? "—")}</td>
+            <td>${esc(row.id === "" || row.id === null || row.id === undefined ? "—" : row.id)}</td>
             <td>
                 <div class="c-name">${esc(row.customer_name || "—")}</div>
                 <div class="c-sub">${esc(row.username || "—")}</div>
             </td>
             <td><div>${ip}</div><div>${macCell}</div></td>
             <td>${esc(row.package || "PPPoE")}</td>
-            <td><span class="t-up">${esc(row.upload_display || "0 MB")}</span>
-                <span class="t-down">${esc(row.download_display || "0 MB")}</span></td>
-            <td>${esc(row.uptime || "—")}</td>
+            ${trafficCell}
+            ${uptimeCell}
             <td><div>${esc(row.login_time || "—")}</div><div>${esc(row.logout_time && row.logout_time !== "—" ? row.logout_time : "")}</div></td>
             <td>${badge}</td>
             <td class="col-action">
@@ -457,7 +465,14 @@ document.addEventListener("DOMContentLoaded", () => {
         loadData();
     });
 
-    areaFilter.addEventListener("change", loadSubAreas);
+    areaFilter.addEventListener("change", async () => {
+        await loadSubAreas();
+        loadData();
+    });
+
+    packageFilter.addEventListener("change", loadData);
+    subAreaFilter.addEventListener("change", loadData);
+    statusFilter.addEventListener("change", loadData);
 
     toggleBtn?.addEventListener("click", () => {
         extraTools.hidden = !extraTools.hidden;

@@ -364,7 +364,17 @@ async function rechargeCustomer({
     user,
     customerDbId,
     input,
-    session = null
+    session = null,
+    /*
+     * Online gateway support (all optional - existing callers unchanged):
+     *   dryRun         : calculate only, roll back, return the quote
+     *   expectedAmount : abort if the real cash amount differs
+     *   beforeCommit   : async (conn, result) run inside the same DB
+     *                    transaction, right before COMMIT
+     */
+    dryRun = false,
+    expectedAmount = null,
+    beforeCommit = null
 }) {
     customerDbId = Number(customerDbId);
 
@@ -636,6 +646,40 @@ async function rechargeCustomer({
         const paymentComment =
             noteParts.join(" | ").slice(0, 255);
 
+        if (dryRun) {
+            await conn.rollback();
+
+            return {
+                dry_run: true,
+                customer_id: softwareId,
+                database_customer_id: customerDbId,
+                customer_name: customer.name || "",
+                amount: cashAmount,
+                subscription_amount: subscriptionAmount,
+                previous_due: previousDue,
+                from_balance: fromBalance,
+                extra_to_balance: extraToWallet,
+                advance,
+                bill_type: opts.billType,
+                billing_type: opts.billingType,
+                recharge_month: opts.rechargeMonth,
+                selected_days: opts.selectedDays
+            };
+        }
+
+        if (
+            expectedAmount !== null &&
+            expectedAmount !== undefined &&
+            Math.abs(cashAmount - roundMoney(expectedAmount)) > 0.009
+        ) {
+            const mismatch = new RechargeError(
+                "Customer due changed after the payment was created."
+            );
+            mismatch.code = "AMOUNT_CHANGED";
+            mismatch.actualAmount = cashAmount;
+            throw mismatch;
+        }
+
         /*
          * WALLET RULE
          * balance = real money. The bill is taken from it; advance is added.
@@ -857,6 +901,13 @@ async function rechargeCustomer({
                 "Recharge activity log warning:",
                 logError.message
             );
+        }
+
+        if (typeof beforeCommit === "function") {
+            await beforeCommit(conn, {
+                payment_id: pay.insertId,
+                amount: cashAmount
+            });
         }
 
         await conn.commit();

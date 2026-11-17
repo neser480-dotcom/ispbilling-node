@@ -637,21 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
             await loadHistory();
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | RELOAD
-            |--------------------------------------------------------------------------
-            | If payment has been completed, the billing gate
-            | should allow the dashboard again.
-            |--------------------------------------------------------------------------
-            */
 
-            setTimeout(() => {
-
-                window.location.href =
-                    "/dashboard";
-
-            }, 1200);
 
 
         } catch (error) {

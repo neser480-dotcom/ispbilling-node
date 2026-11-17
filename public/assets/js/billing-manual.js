@@ -293,12 +293,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     const actionHtml =
                         status === "unpaid"
                             ? `
-                                <a
-                                    class="manual"
-                                    href="/billing/manual/mark-paid?id=${id}"
-                                >
-                                    Manual Paid
-                                </a>
+                                <span class="text-muted">—</span>
                               `
                             : `
                                 <span>
@@ -824,6 +819,312 @@ document.addEventListener("DOMContentLoaded", function () {
     if (paymentContent) {
 
         loadPaymentPage();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PENDING MANUAL PAYMENT REVIEW
+    |--------------------------------------------------------------------------
+    */
+
+    const pendingPaymentsBody =
+        document.getElementById("pendingPaymentsTableBody");
+
+    const pendingPaymentsLoading =
+        document.getElementById("pendingPaymentsLoading");
+
+    const pendingPaymentsEmpty =
+        document.getElementById("pendingPaymentsEmpty");
+
+    const pendingPaymentsWrapper =
+        document.getElementById("pendingPaymentsTableWrapper");
+
+    const pendingPaymentsMessage =
+        document.getElementById("pendingPaymentsMessage");
+
+    const refreshPendingPaymentsButton =
+        document.getElementById("refreshPendingPayments");
+
+
+    async function loadPendingManualPayments() {
+
+        if (!pendingPaymentsBody) {
+            return;
+        }
+
+        if (pendingPaymentsLoading) {
+            pendingPaymentsLoading.style.display = "block";
+        }
+
+        hideElement(pendingPaymentsEmpty);
+        hideElement(pendingPaymentsMessage);
+        hideElement(pendingPaymentsWrapper);
+
+        try {
+
+            const response = await fetch(
+                "/api/software-billing/admin/manual-payments/pending",
+                {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                        "Accept": "application/json"
+                    },
+                    cache: "no-store"
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Unable to load pending payments."
+                );
+            }
+
+            const rows = Array.isArray(data.rows)
+                ? data.rows
+                : [];
+
+            pendingPaymentsBody.innerHTML = "";
+
+            if (pendingPaymentsLoading) {
+                pendingPaymentsLoading.style.display = "none";
+            }
+
+            if (!rows.length) {
+                if (pendingPaymentsEmpty) {
+                    pendingPaymentsEmpty.style.display = "block";
+                }
+                return;
+            }
+
+            pendingPaymentsBody.innerHTML = rows.map(function (row) {
+
+                const paymentId = Number(row.id || 0);
+
+                const submittedAt = row.created_at
+                    ? new Date(row.created_at).toLocaleString("en-BD")
+                    : "";
+
+                const method = escapeHtml(row.payment_mode || "Manual");
+                const reference = escapeHtml(row.reference_no || "—");
+
+                return `
+                    <tr>
+                        <td>#${paymentId}</td>
+
+                        <td>
+                            ${escapeHtml(row.user_name || ("User #" + row.user_id))}
+                        </td>
+
+                        <td>${escapeHtml(row.company_id ?? "")}</td>
+
+                        <td>
+                            <div>${escapeHtml(row.billing_type || "")}</div>
+                            <small class="text-muted">
+                                ${escapeHtml(row.package_code || "")}
+                            </small>
+                            <div>
+                                <small class="text-muted">
+                                    Billing #${Number(row.billing_id || 0)}
+                                </small>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div>${method}</div>
+                            <small class="text-muted">
+                                ${reference}
+                            </small>
+                        </td>
+
+                        <td>
+                            ${escapeHtml(row.currency || "BDT")}
+                            ${formatMoney(row.amount)}
+                        </td>
+
+                        <td>
+                            ${escapeHtml(row.payment_note || "—")}
+                        </td>
+
+                        <td>${escapeHtml(submittedAt)}</td>
+
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-success btn-sm"
+                                    data-payment-action="approve"
+                                    data-payment-id="${paymentId}"
+                                >
+                                    Approve
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-danger btn-sm"
+                                    data-payment-action="reject"
+                                    data-payment-id="${paymentId}"
+                                >
+                                    Reject
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+            }).join("");
+
+            if (pendingPaymentsWrapper) {
+                pendingPaymentsWrapper.style.display = "block";
+            }
+
+        } catch (error) {
+
+            if (pendingPaymentsLoading) {
+                pendingPaymentsLoading.style.display = "none";
+            }
+
+            showMessage(
+                pendingPaymentsMessage,
+                error.message
+            );
+        }
+    }
+
+
+    async function reviewPendingManualPayment(paymentId, decision, button) {
+
+        if (!Number.isInteger(paymentId) || paymentId <= 0) {
+            return;
+        }
+
+        const actionLabel =
+            decision === "approve" ? "approve" : "reject";
+
+        if (!window.confirm(
+            "Are you sure you want to " +
+            actionLabel +
+            " payment #" +
+            paymentId +
+            "?"
+        )) {
+            return;
+        }
+
+        const originalText = button
+            ? button.textContent
+            : "";
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Processing...";
+        }
+
+        try {
+
+            const csrfToken = await getCsrfToken();
+
+            const response = await fetch(
+                "/api/software-billing/admin/manual-payments/" +
+                    paymentId +
+                    "/" +
+                    decision,
+                {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        csrf_token: csrfToken
+                    })
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Payment review failed."
+                );
+            }
+
+            await loadPendingManualPayments();
+            await loadBillingList();
+
+            showMessage(
+                pendingPaymentsMessage,
+                data.message || "Payment updated successfully."
+            );
+
+        } catch (error) {
+
+            showMessage(
+                pendingPaymentsMessage,
+                error.message
+            );
+
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+    }
+
+
+    if (pendingPaymentsBody) {
+
+        pendingPaymentsBody.addEventListener(
+            "click",
+            function (event) {
+
+                const button = event.target.closest(
+                    "button[data-payment-action]"
+                );
+
+                if (!button) {
+                    return;
+                }
+
+                const paymentId = Number(
+                    button.getAttribute("data-payment-id")
+                );
+
+                const decision = button.getAttribute(
+                    "data-payment-action"
+                );
+
+                if (
+                    decision !== "approve" &&
+                    decision !== "reject"
+                ) {
+                    return;
+                }
+
+                reviewPendingManualPayment(
+                    paymentId,
+                    decision,
+                    button
+                );
+            }
+        );
+    }
+
+
+    if (refreshPendingPaymentsButton) {
+
+        refreshPendingPaymentsButton.addEventListener(
+            "click",
+            loadPendingManualPayments
+        );
+    }
+
+
+    if (pendingPaymentsBody) {
+        loadPendingManualPayments();
     }
 
 });

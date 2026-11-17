@@ -54,7 +54,25 @@ function normalizePurpose(value) {
 |--------------------------------------------------------------------------
 */
 
-function generateTransactionId() {
+function generateTransactionId(short = false) {
+
+    /*
+     * short=true: Nagad orderId must be short (kept <= 20 chars).
+     */
+    if (short) {
+
+        return (
+            "N" +
+            Date.now()
+                .toString(36)
+                .toUpperCase() +
+            crypto
+                .randomBytes(5)
+                .toString("hex")
+                .toUpperCase()
+        );
+
+    }
 
     return (
         "ISP" +
@@ -402,9 +420,58 @@ function mergeCredentials(
 |--------------------------------------------------------------------------
 */
 
+const CENTRAL_COMPANY_ID = 0;
+
+const SCOPES = ["customer", "central"];
+
+function normalizeScope(value) {
+
+    const scope =
+        String(value || "customer")
+            .trim()
+            .toLowerCase();
+
+    if (!SCOPES.includes(scope)) {
+
+        throw new Error("Invalid gateway scope.");
+
+    }
+
+    return scope;
+
+}
+
+/*
+ * customer scope -> the ISP's own merchant account (company_id = ISP)
+ * central scope  -> Amader Bill's central merchant account (company_id = 0)
+ *
+ * There is NO fallback between the two. A missing ISP configuration never
+ * silently uses the central account (and vice versa).
+ */
+function scopeCompanyId(scope, companyId) {
+
+    if (scope === "central") {
+
+        return CENTRAL_COMPANY_ID;
+
+    }
+
+    const numeric = Number(companyId);
+
+    if (!Number.isInteger(numeric) || numeric <= 0) {
+
+        throw new Error("Invalid company ID.");
+
+    }
+
+    return numeric;
+
+}
+
 async function getGateway(
     companyId,
-    gateway
+    gateway,
+    scope = "customer"
 ) {
 
     gateway =
@@ -424,6 +491,12 @@ async function getGateway(
     }
 
 
+    scope = normalizeScope(scope);
+
+    const rowCompanyId =
+        scopeCompanyId(scope, companyId);
+
+
     const [rows] =
         await db.execute(
             `
@@ -432,18 +505,14 @@ async function getGateway(
             FROM payment_gateways
             WHERE
                 gateway = ?
-                AND (
-                    company_id = ?
-                    OR company_id IS NULL
-                )
-            ORDER BY
-                company_id IS NULL ASC,
-                id DESC
+                AND scope = ?
+                AND company_id = ?
             LIMIT 1
             `,
             [
                 gateway,
-                Number(companyId) || 0
+                scope,
+                rowCompanyId
             ]
         );
 
@@ -489,6 +558,8 @@ async function saveGateway({
 
     companyId,
 
+    scope = "customer",
+
     gateway,
 
     enabled,
@@ -520,20 +591,19 @@ async function saveGateway({
     }
 
 
+    scope = normalizeScope(scope);
+
     const numericCompanyId =
-        Number(companyId);
+        scopeCompanyId(scope, companyId);
 
+    environment =
+        String(environment || "sandbox")
+            .trim()
+            .toLowerCase();
 
-    if (
-        !Number.isInteger(
-            numericCompanyId
-        ) ||
-        numericCompanyId <= 0
-    ) {
+    if (!["sandbox", "live"].includes(environment)) {
 
-        throw new Error(
-            "Invalid company ID."
-        );
+        throw new Error("Invalid environment.");
 
     }
 
@@ -552,11 +622,13 @@ async function saveGateway({
             FROM payment_gateways
             WHERE
                 company_id = ?
+                AND scope = ?
                 AND gateway = ?
             LIMIT 1
             `,
             [
                 numericCompanyId,
+                scope,
                 gateway
             ]
         );
@@ -626,13 +698,14 @@ async function saveGateway({
         `
         INSERT INTO payment_gateways (
             company_id,
+            scope,
             gateway,
             enabled,
             environment,
             credentials,
             settings
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
 
         ON DUPLICATE KEY UPDATE
 
@@ -655,12 +728,13 @@ async function saveGateway({
 
             numericCompanyId,
 
+            scope,
+
             gateway,
 
             enabled ? 1 : 0,
 
-            environment ||
-                "sandbox",
+            environment,
 
             encryptedCredentials,
 
@@ -692,9 +766,15 @@ async function createTransaction({
 
     purpose,
 
+    scope = "customer",
+
     amount,
 
-    currency = "BDT"
+    currency = "BDT",
+
+    shortId = false,
+
+    metadata = null
 
 }) {
 
@@ -772,8 +852,10 @@ async function createTransaction({
     }
 
 
+    scope = normalizeScope(scope);
+
     const transactionId =
-        generateTransactionId();
+        generateTransactionId(shortId);
 
 
     const [result] =
@@ -786,12 +868,18 @@ async function createTransaction({
                 invoice_id,
                 gateway,
                 purpose,
+                scope,
                 amount,
+                quoted_amount,
                 currency,
                 transaction_id,
+                metadata,
                 status
             )
             VALUES (
+                ?,
+                ?,
+                ?,
                 ?,
                 ?,
                 ?,
@@ -821,13 +909,23 @@ async function createTransaction({
 
                 purpose,
 
+                scope,
+
+                numericAmount.toFixed(
+                    2
+                ),
+
                 numericAmount.toFixed(
                     2
                 ),
 
                 currency,
 
-                transactionId
+                transactionId,
+
+                metadata
+                    ? JSON.stringify(metadata)
+                    : null
 
             ]
         );
@@ -843,6 +941,8 @@ async function createTransaction({
         gateway,
 
         purpose,
+
+        scope,
 
         amount:
             numericAmount,
@@ -941,7 +1041,13 @@ async function updateTransaction(
 
         "verified_at",
 
-        "metadata"
+        "metadata",
+
+        "applied_at",
+
+        "applied_payment_id",
+
+        "applied_ref"
 
     ];
 
@@ -1002,6 +1108,64 @@ async function updateTransaction(
 
 /*
 |--------------------------------------------------------------------------
+| ATOMIC STATUS CHANGE (compare-and-set)
+|--------------------------------------------------------------------------
+|
+| Returns true only for the single caller that actually changed the row.
+| Used so concurrent / duplicate callbacks cannot both process a payment.
+|
+|--------------------------------------------------------------------------
+*/
+
+async function changeStatus(
+    id,
+    fromStatuses,
+    toStatus,
+    extra = {},
+    conn = db
+) {
+
+    const sets = ["status = ?"];
+    const values = [toStatus];
+
+    for (const [field, value] of Object.entries(extra)) {
+
+        if (!["gateway_transaction_id", "gateway_session_id",
+            "payment_date", "verified_at", "metadata"].includes(field)) {
+
+            continue;
+
+        }
+
+        sets.push(`${field} = ?`);
+        values.push(value);
+
+    }
+
+    values.push(id);
+
+    const placeholders =
+        fromStatuses.map(() => "?").join(", ");
+
+    values.push(...fromStatuses);
+
+    const [result] = await conn.execute(
+        `
+        UPDATE payment_transactions
+        SET ${sets.join(", ")}
+        WHERE id = ?
+          AND status IN (${placeholders})
+        `,
+        values
+    );
+
+    return result.affectedRows === 1;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | EXPORTS
 |--------------------------------------------------------------------------
 */
@@ -1011,6 +1175,16 @@ module.exports = {
     SUPPORTED_GATEWAYS,
 
     SUPPORTED_PURPOSES,
+
+    SCOPES,
+
+    CENTRAL_COMPANY_ID,
+
+    normalizeScope,
+
+    parseJson,
+
+    changeStatus,
 
     getGateway,
 

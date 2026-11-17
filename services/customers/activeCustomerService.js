@@ -196,6 +196,73 @@ function extractPppoeUsername(value) {
         .trim();
 }
 
+/* ACTIVE CUSTOMER PATCH 1: customer id, package filter, sorting */
+const ROUTER_MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+
+function parseRouterLogoutTime(value) {
+    const t = clean(value);
+    if (!t) { return null; }
+    let m = t.match(/^([a-z]{3})\/(\d{1,2})\/(\d{4})[\sT]+(\d{1,2}):(\d{2}):(\d{2})/i);
+    if (m) {
+        const mo = ROUTER_MONTHS[m[1].toLowerCase()];
+        if (mo === undefined) { return null; }
+        return new Date(+m[3], mo, +m[2], +m[4], +m[5], +m[6]);
+    }
+    m = t.match(/^(\d{4})-(\d{2})-(\d{2})[\sT]+(\d{1,2}):(\d{2}):(\d{2})/);
+    if (m) { return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]); }
+    return null;
+}
+
+function formatRouterDuration(seconds) {
+    let v = Math.max(0, Math.floor(Number(seconds) || 0));
+    const w = Math.floor(v / 604800); v %= 604800;
+    const d = Math.floor(v / 86400); v %= 86400;
+    const h = Math.floor(v / 3600); v %= 3600;
+    const m = Math.floor(v / 60);
+    const sec = v % 60;
+    let out = "";
+    if (w) { out += w + "w"; }
+    if (d) { out += d + "d"; }
+    if (h) { out += h + "h"; }
+    if (m) { out += m + "m"; }
+    if (sec) { out += sec + "s"; }
+    return out || "0s";
+}
+
+function buildSecretLogoutMap(rows) {
+    const map = new Map();
+    for (const row of rows) {
+        const name = normalizeUsername(row.name);
+        if (!name) { continue; }
+        const date = parseRouterLogoutTime(row["last-logged-out"] || row.lastLoggedOut);
+        if (date) { map.set(name, date); }
+    }
+    return map;
+}
+
+function displayId(customer) {
+    const v = clean(customer && customer.customer_id);
+    if (!v) { return ""; }
+    return /^\d+$/.test(v) ? Number(v) : v;
+}
+
+function packageOk(row, packageFilter) {
+    if (!packageFilter) { return true; }
+    return clean(row.package).toLowerCase() === clean(packageFilter).toLowerCase();
+}
+
+function compareById(a, b) {
+    const x = a.id;
+    const y = b.id;
+    const xe = x === "" || x === null || x === undefined;
+    const ye = y === "" || y === null || y === undefined;
+    if (xe && ye) { return clean(a.customer_name).localeCompare(clean(b.customer_name)); }
+    if (xe) { return 1; }
+    if (ye) { return -1; }
+    if (typeof x === "number" && typeof y === "number") { return x - y; }
+    return String(x).localeCompare(String(y), undefined, { numeric: true });
+}
+
 function getRouterField(router, field, fallback = "") {
     if (
         router &&
@@ -341,7 +408,8 @@ async function getCustomers(user) {
                 c.monthly_bill,
                 c.area_id,
                 c.sub_area_id,
-                c.company_id
+                c.company_id,
+                c.status
             FROM customers c
             WHERE ${scope.sql}
             AND c.pppoe_username IS NOT NULL
@@ -690,7 +758,13 @@ function buildActiveRow({
     }
 
     return {
-        id: 0,
+        id: displayId(customer),
+
+        customer_id: clean(customer?.customer_id),
+
+        area_id: customer?.area_id ?? null,
+
+        sub_area_id: customer?.sub_area_id ?? null,
 
         username,
 
@@ -757,6 +831,9 @@ function buildActiveRow({
 
         status: "active",
 
+        customer_status:
+            clean(customer?.status).toLowerCase() || "active",
+
         interface:
             interfaceName,
 
@@ -773,7 +850,8 @@ function buildActiveRow({
 
 function buildOfflineRow(
     customer,
-    packageMap
+    packageMap,
+    logoutMap
 ) {
     const username =
         clean(customer.pppoe_username);
@@ -786,8 +864,16 @@ function buildOfflineRow(
         clean(customer.package_name) ||
         "PPPoE";
 
+    const logoutDate =
+        (logoutMap && logoutMap.get(normalized)) || null;
+
+    const offlineSeconds =
+        logoutDate
+            ? Math.max(0, Math.floor((Date.now() - logoutDate.getTime()) / 1000))
+            : 0;
+
     return {
-        id: 0,
+        id: displayId(customer),
 
         username,
 
@@ -795,10 +881,9 @@ function buildOfflineRow(
             clean(customer.name) ||
             username,
 
-        address:
-            clean(customer.address),
+        address: "",
 
-        caller_id: "—",
+        caller_id: "",
 
         package:
             packageName,
@@ -819,17 +904,22 @@ function buildOfflineRow(
 
         upload_mbps: "0.00",
 
-        download_display: "0 MB",
+        download_display: "",
 
-        upload_display: "0 MB",
+        upload_display: "",
 
-        uptime: "—",
+        uptime:
+            logoutDate ? formatRouterDuration(offlineSeconds) : "—",
 
-        login_time: "—",
+        login_time:
+            logoutDate ? formatDateTime(logoutDate) : "—",
 
         logout_time: "—",
 
         status: "offline",
+
+        customer_status:
+            clean(customer.status).toLowerCase() || "offline",
 
         interface:
             `pppoe-${username}`,
@@ -910,6 +1000,9 @@ async function getData({
                 secrets
             );
 
+        const logoutMap =
+            buildSecretLogoutMap(secrets);
+
         const trafficMap1 =
             buildInterfaceMap(
                 interfaces1
@@ -971,11 +1064,15 @@ async function getData({
             |--------------------------------------------------------------------------
             */
 
+            if ((areaFilter || subAreaFilter) && !customer) {
+                continue;
+            }
+
             if (
                 customer &&
                 !matchFilter(
                     customer,
-                    packageFilter,
+                    "",
                     areaFilter,
                     subAreaFilter
                 )
@@ -989,22 +1086,6 @@ async function getData({
             | does not exist in DB, compare MikroTik profile.
             |--------------------------------------------------------------------------
             */
-
-            if (
-                packageFilter &&
-                !customer
-            ) {
-                const mikrotikPackage =
-                    packageMap.get(key) ||
-                    clean(active.service);
-
-                if (
-                    mikrotikPackage.toLowerCase() !==
-                    packageFilter.toLowerCase()
-                ) {
-                    continue;
-                }
-            }
 
             const row =
                 buildActiveRow({
@@ -1022,7 +1103,9 @@ async function getData({
                 true
             );
 
-            rows.push(row);
+            if (packageOk(row, packageFilter)) {
+                rows.push(row);
+            }
         }
 
         /*
@@ -1063,7 +1146,7 @@ async function getData({
                 if (
                     !matchFilter(
                         customer,
-                        packageFilter,
+                        "",
                         areaFilter,
                         subAreaFilter
                     )
@@ -1071,12 +1154,16 @@ async function getData({
                     continue;
                 }
 
-                rows.push(
+                const offlineRow =
                     buildOfflineRow(
                         customer,
-                        packageMap
-                    )
-                );
+                        packageMap,
+                        logoutMap
+                    );
+
+                if (packageOk(offlineRow, packageFilter)) {
+                    rows.push(offlineRow);
+                }
             }
         }
 
@@ -1112,12 +1199,7 @@ async function getData({
         }
 
         filteredRows =
-            filteredRows.map(
-                (row, index) => ({
-                    ...row,
-                    id: index + 1
-                })
-            );
+            [...filteredRows].sort(compareById);
 
         const activeCount =
             filteredRows.filter(
