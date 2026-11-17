@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Pricing Management</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    <!-- =====================================================
+         FONT AWESOME
+    ====================================================== -->
+
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        rel="stylesheet"
+    >
+    <link
+        rel="stylesheet"
+        href="/assets/css/sidebar.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/assets/css/topbar.css"
+    >
+
+    <style>
+        body {
+            background: #f5f7fb;
+        }
+
+        .pricing-page {
+            padding: 20px;
+        }
+
+        .pricing-card {
+            border: 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 16px;
+        }
+
+        .company-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .company-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .company-meta {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .fee-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .fee-box {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .fee-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .price-line {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .price-effective {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .price-old {
+            text-decoration: line-through;
+            color: #adb5bd;
+            font-size: 14px;
+            margin-right: 6px;
+        }
+
+        .fee-note {
+            font-size: 12px;
+            color: #6c757d;
+            word-break: break-word;
+        }
+
+        .fee-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: auto;
+            padding-top: 6px;
+        }
+
+        .state-empty {
+            padding: 35px;
+            text-align: center;
+            color: #777;
+        }
+
+        .preview-box {
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #f1f5ff;
+            font-size: 14px;
+        }
+
+        .history-table th,
+        .history-table td {
+            font-size: 13px;
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        .history-table td.note-cell {
+            white-space: normal;
+            min-width: 160px;
+        }
+
+        @media (max-width: 991px) {
+            .fee-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .pricing-page {
+                padding: 12px;
+            }
+        }
+/* Pricing content starts below fixed topbar */
+.pricing-page {
+    padding: 20px;
+    padding-top: 86px;
+}
+
+@media (max-width: 850px) {
+    .pricing-page {
+        padding: 78px 12px 12px;
+    }
+}
+    </style>
+</head>
+
+<body>
+
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+
+        <div class="container-fluid pricing-page">
+
+            <div
+                class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3"
+            >
+                <div>
+                    <h4 class="mb-1">Pricing Management</h4>
+                    <div class="text-muted">
+                        Company-wise negotiated registration and subscription prices
+                    </div>
+                </div>
+            </div>
+
+            <div class="card pricing-card">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+
+                        <div class="col-md-6">
+                            <label
+                                for="searchInput"
+                                class="form-label fw-semibold"
+                            >
+                                Search company
+                            </label>
+
+                            <input
+                                type="search"
+                                id="searchInput"
+                                class="form-control"
+                                placeholder="Company, owner, username, mobile or company ID"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <label
+                                for="filterSelect"
+                                class="form-label fw-semibold"
+                            >
+                                Offer status
+                            </label>
+
+                            <select id="filterSelect" class="form-select">
+                                <option value="all">All companies</option>
+                                <option value="custom">Has negotiated price</option>
+                                <option value="active">Active offer</option>
+                                <option value="expired">Expired offer</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="d-flex align-items-center gap-2">
+                                <button
+                                    type="button"
+                                    id="refreshBtn"
+                                    class="btn btn-outline-primary"
+                                >
+                                    Refresh
+                                </button>
+
+                                <span
+                                    id="countText"
+                                    class="text-muted small"
+                                ></span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="pageMessage" class="alert d-none"></div>
+
+            <div id="companyList">
+                <div class="state-empty">Loading companies...</div>
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- RULE MODAL -->
+    <div
+        class="modal fade"
+        id="ruleModal"
+        tabindex="-1"
+        aria-labelledby="ruleModalTitle"
+        aria-hidden="true"
+    >
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">
+                        Set price
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div id="ruleError" class="alert alert-danger d-none"></div>
+
+                    <div class="mb-3">
+                        <div class="fw-semibold" id="ruleCompany"></div>
+                        <div class="text-muted small" id="ruleDefault"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ruleMode" class="form-label">Type</label>
+
+                        <select id="ruleMode" class="form-select">
+                            <option value="special_price">Special price</option>
+                            <option value="fixed_discount">Fixed discount (৳)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label
+                            for="ruleValue"
+                            class="form-label"
+                            id="ruleValueLabel"
+                        >
+                            Special price (৳)
+                        </label>
+
+                        <input
+                            type="number"
+                            id="ruleValue"
+                            class="form-control"
+                            min="0.01"
+                            step="0.01"
+                            inputmode="decimal"
+                        >
+                    </div>
+
+                    <div id="rulePreview" class="preview-box mb-3"></div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label for="ruleStarts" class="form-label">
+                                Offer start (optional)
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                id="ruleStarts"
+                                class="form-control"
+                            >
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="ruleExpires" class="form-label">
+                                Offer expiry (optional)
+                            </label>
+
+                            <input
+                                type="datetime-local"
+                                id="ruleExpires"
+                                class="form-control"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="text-muted small mb-3">
+                        Times are Bangladesh time. After expiry the default
+                        price is used automatically.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ruleNote" class="form-label">
+                            Negotiation reason / note
+                        </label>
+
+                        <textarea
+                            id="ruleNote"
+                            class="form-control"
+                            rows="2"
+                            maxlength="500"
+                        ></textarea>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            id="ruleEnabled"
+                            checked
+                        >
+
+                        <label class="form-check-label" for="ruleEnabled">
+                            Offer enabled
+                        </label>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="ruleSaveBtn"
+                    >
+                        Save
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- HISTORY MODAL -->
+    <div
+        class="modal fade"
+        id="historyModal"
+        tabindex="-1"
+        aria-labelledby="historyModalTitle"
+        aria-hidden="true"
+    >
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historyModalTitle">
+                        Pricing history
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+                </div>
+
+                <div class="modal-body" id="historyBody"></div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+    <script>
+        "use strict";
+
+        const API = "/super-admin/pricing/api";
+
+        const FEES = [
+            { key: "registration", label: "Registration fee" },
+            { key: "monthly", label: "Monthly subscription" },
+            { key: "yearly", label: "Yearly subscription" }
+        ];
+
+        const searchInput = document.getElementById("searchInput");
+        const filterSelect = document.getElementById("filterSelect");
+        const refreshBtn = document.getElementById("refreshBtn");
+        const countText = document.getElementById("countText");
+        const pageMessage = document.getElementById("pageMessage");
+        const companyList = document.getElementById("companyList");
+
+        const ruleModalEl = document.getElementById("ruleModal");
+        const historyModalEl = document.getElementById("historyModal");
+        const ruleError = document.getElementById("ruleError");
+        const ruleMode = document.getElementById("ruleMode");
+        const ruleValue = document.getElementById("ruleValue");
+        const ruleValueLabel = document.getElementById("ruleValueLabel");
+        const rulePreview = document.getElementById("rulePreview");
+        const ruleStarts = document.getElementById("ruleStarts");
+        const ruleExpires = document.getElementById("ruleExpires");
+        const ruleNote = document.getElementById("ruleNote");
+        const ruleEnabled = document.getElementById("ruleEnabled");
+        const ruleSaveBtn = document.getElementById("ruleSaveBtn");
+
+        let companies = [];
+        let csrfToken = "";
+        let searchTimer = null;
+        let loadSeq = 0;
+        let editing = null;
+
+        const ruleModal = new bootstrap.Modal(ruleModalEl);
+        const historyModal = new bootstrap.Modal(historyModalEl);
+
+
+        /* ---------------- helpers ---------------- */
+
+        function esc(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function money(value) {
+            if (value === null || value === undefined || value === "") {
+                return "—";
+            }
+
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return "—";
+            }
+
+            return "৳" + number.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function shortDate(value) {
+            return value ? String(value).slice(0, 16) : "";
+        }
+
+        function toInputDate(value) {
+            return value ? String(value).slice(0, 16).replace(" ", "T") : "";
+        }
+
+        function feeLabel(key) {
+            const found = FEES.find(f => f.key === key);
+            return found ? found.label : key;
+        }
+
+        function showMessage(message, type = "danger") {
+            pageMessage.className = `alert alert-${type}`;
+            pageMessage.textContent = message;
+        }
+
+        function hideMessage() {
+            pageMessage.classList.add("d-none");
+        }
+
+        function modeText(mode) {
+            return mode === "special_price"
+                ? "Special price"
+                : mode === "fixed_discount"
+                    ? "Fixed discount"
+                    : "";
+        }
+
+        function describe(mode, value, enabled) {
+            if (!mode) {
+                return "Default";
+            }
+
+            return (
+                modeText(mode) + " " + money(value) +
+                (enabled === false ? " (disabled)" : "")
+            );
+        }
+
+        function stateBadge(rule) {
+            if (!rule) {
+                return '<span class="badge text-bg-secondary">Default</span>';
+            }
+
+            const map = {
+                active: ["success", "Active"],
+                scheduled: ["info", "Scheduled"],
+                expired: ["warning", "Expired"],
+                disabled: ["secondary", "Disabled"]
+            };
+
+            const item = map[rule.state] || ["secondary", rule.state];
+
+            return `<span class="badge text-bg-${item[0]}">${item[1]}</span>`;
+        }
+
+
+        /* ---------------- API ---------------- */
+
+        async function loadCsrfToken() {
+            try {
+                const response = await fetch("/api/auth/csrf", {
+                    credentials: "same-origin"
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+
+                    csrfToken = result.csrf_token || result.token || "";
+                }
+            } catch (_) {
+                csrfToken = "";
+            }
+        }
+
+        async function api(method, url, body) {
+            const options = {
+                method,
+                credentials: "same-origin",
+                headers: {}
+            };
+
+            if (method !== "GET") {
+                if (!csrfToken) {
+                    await loadCsrfToken();
+                }
+
+                options.headers["Content-Type"] = "application/json";
+                options.body = JSON.stringify({
+                    ...(body || {}),
+                    csrf_token: csrfToken
+                });
+            }
+
+            const response = await fetch(url, options);
+
+            let result = null;
+
+            try {
+                result = await response.json();
+            } catch (_) {
+                result = null;
+            }
+
+            if (!response.ok || !result || !result.success) {
+                if (response.status === 403 && method !== "GET") {
+                    await loadCsrfToken();
+                }
+
+                throw new Error(
+                    (result && result.message) ||
+                    "Request failed (" + response.status + ")."
+                );
+            }
+
+            return result;
+        }
+
+
+        /* ---------------- list ---------------- */
+
+        function passesFilter(company) {
+            const rules = FEES
+                .map(f => company.rules[f.key])
+                .filter(Boolean);
+
+            switch (filterSelect.value) {
+                case "custom":
+                    return rules.length > 0;
+                case "active":
+                    return rules.some(r => r.state === "active");
+                case "expired":
+                    return rules.some(r => r.state === "expired");
+                default:
+                    return true;
+            }
+        }
+
+        function feeBox(company, fee) {
+            const rule = company.rules[fee.key];
+            const defaultAmount = company.defaults[fee.key];
+            const effective = company.effective[fee.key];
+            const isYearly = fee.key === "yearly";
+            const active = rule && rule.state === "active";
+
+            let priceHtml;
+
+            if (isYearly) {
+                priceHtml = rule
+                    ? `<div class="price-effective">${money(rule.value)}</div>`
+                    : '<div class="price-effective text-muted">—</div>';
+            } else if (active && effective.source !== "default") {
+                priceHtml =
+                    `<div><span class="price-old">${money(defaultAmount)}</span>` +
+                    `<span class="price-effective">${money(effective.amount)}</span></div>`;
+            } else {
+                priceHtml =
+                    `<div class="price-effective">${money(effective.amount)}</div>`;
+            }
+
+            let infoHtml = `<div class="price-line">Default: ${money(defaultAmount)}</div>`;
+
+            if (isYearly) {
+                infoHtml =
+                    '<div class="price-line">Stored only. Used when yearly billing is enabled.</div>';
+            }
+
+            let ruleHtml = "";
+
+            if (rule) {
+                ruleHtml =
+                    `<div class="fee-note">${esc(describe(rule.mode, rule.value, rule.is_enabled))}`;
+
+                if (rule.starts_at || rule.expires_at) {
+                    ruleHtml +=
+                        `<br>${esc(shortDate(rule.starts_at) || "—")} → ` +
+                        `${esc(shortDate(rule.expires_at) || "no expiry")}`;
+                }
+
+                if (rule.note) {
+                    ruleHtml += `<br>${esc(rule.note)}`;
+                }
+
+                ruleHtml += "</div>";
+            }
+
+            const id = Number(company.company_id);
+
+            let actions;
+
+            if (!rule) {
+                actions =
+                    `<button type="button" class="btn btn-sm btn-primary" ` +
+                    `data-action="edit" data-company="${id}" data-fee="${fee.key}">` +
+                    "Set price</button>";
+            } else {
+                actions =
+                    `<button type="button" class="btn btn-sm btn-outline-primary" ` +
+                    `data-action="edit" data-company="${id}" data-fee="${fee.key}">Edit</button>` +
+                    `<button type="button" class="btn btn-sm btn-outline-secondary" ` +
+                    `data-action="toggle" data-company="${id}" data-fee="${fee.key}" ` +
+                    `data-enable="${rule.is_enabled ? "0" : "1"}">` +
+                    (rule.is_enabled ? "Disable" : "Enable") + "</button>" +
+                    `<button type="button" class="btn btn-sm btn-outline-danger" ` +
+                    `data-action="reset" data-company="${id}" data-fee="${fee.key}">` +
+                    "Reset to default</button>";
+            }
+
+            return `
+                <div class="fee-box">
+                    <div class="fee-title">
+                        <span>${esc(fee.label)}</span>
+                        ${stateBadge(rule)}
+                    </div>
+                    ${priceHtml}
+                    ${infoHtml}
+                    ${ruleHtml}
+                    <div class="fee-actions">${actions}</div>
+                </div>
+            `;
+        }
+
+        function companyCard(company) {
+            const id = Number(company.company_id);
+
+            return `
+                <div class="card pricing-card">
+                    <div class="card-body">
+                        <div class="company-head">
+                            <div>
+                                <h5 class="company-name">${esc(company.company_name || "Company #" + id)}</h5>
+                                <div class="company-meta">
+                                    ID ${id}
+                                    ${company.owner_name ? " · " + esc(company.owner_name) : ""}
+                                    ${company.mobile ? " · " + esc(company.mobile) : ""}
+                                    ${company.package_code ? " · " + esc(company.package_code) : " · No package"}
+                                    ${company.status !== "active" ? " · " + esc(company.status) : ""}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-dark"
+                                data-action="history"
+                                data-company="${id}"
+                            >
+                                History
+                            </button>
+                        </div>
+
+                        <div class="fee-grid">
+                            ${FEES.map(fee => feeBox(company, fee)).join("")}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function render() {
+            const visible = companies.filter(passesFilter);
+
+            countText.textContent = `${visible.length} / ${companies.length}`;
+
+            if (!visible.length) {
+                companyList.innerHTML =
+                    '<div class="state-empty">No companies found.</div>';
+                return;
+            }
+
+            companyList.innerHTML = visible.map(companyCard).join("");
+        }
+
+        async function loadCompanies() {
+            const seq = ++loadSeq;
+
+            try {
+                const result = await api(
+                    "GET",
+                    `${API}/companies?search=${encodeURIComponent(searchInput.value.trim())}`
+                );
+
+                if (seq !== loadSeq) {
+                    return;
+                }
+
+                companies = result.companies || [];
+                render();
+            } catch (error) {
+                if (seq !== loadSeq) {
+                    return;
+                }
+
+                companies = [];
+                companyList.innerHTML = "";
+                showMessage(error.message);
+            }
+        }
+
+        function replaceCompany(updated) {
+            const index = companies.findIndex(
+                c => Number(c.company_id) === Number(updated.company_id)
+            );
+
+            if (index >= 0) {
+                companies[index] = updated;
+            }
+
+            render();
+        }
+
+        function findCompany(id) {
+            return companies.find(c => Number(c.company_id) === Number(id));
+        }
+
+
+        /* ---------------- rule modal ---------------- */
+
+        function currentDefault() {
+            if (!editing) {
+                return null;
+            }
+
+            const value = editing.company.defaults[editing.fee];
+
+            return Number.isFinite(Number(value)) && value !== null
+                ? Number(value)
+                : null;
+        }
+
+        function updatePreview() {
+            const isDiscount = ruleMode.value === "fixed_discount";
+            const value = Number(ruleValue.value);
+            const base = currentDefault();
+
+            ruleValueLabel.textContent = isDiscount
+                ? "Discount amount (৳)"
+                : "Special price (৳)";
+
+            if (!Number.isFinite(value) || value <= 0) {
+                rulePreview.textContent = "Enter an amount to see the result.";
+                return;
+            }
+
+            if (!isDiscount) {
+                rulePreview.innerHTML =
+                    `Company will pay <strong>${money(value)}</strong>` +
+                    (base ? ` instead of ${money(base)}.` : ".");
+                return;
+            }
+
+            if (base === null || base <= 0) {
+                rulePreview.textContent = "No default price is available for a discount.";
+                return;
+            }
+
+            if (value >= base) {
+                rulePreview.innerHTML =
+                    `<span class="text-danger">Discount must be less than ${money(base)}.</span>`;
+                return;
+            }
+
+            rulePreview.innerHTML =
+                `Company will pay <strong>${money(base - value)}</strong> ` +
+                `(${money(base)} − ${money(value)}).`;
+        }
+
+        function openRule(companyId, feeKey) {
+            const company = findCompany(companyId);
+
+            if (!company) {
+                return;
+            }
+
+            const rule = company.rules[feeKey];
+
+            editing = { company, fee: feeKey };
+
+            document.getElementById("ruleModalTitle").textContent =
+                (rule ? "Edit " : "Set ") + feeLabel(feeKey).toLowerCase();
+
+            document.getElementById("ruleCompany").textContent =
+                company.company_name || "Company #" + company.company_id;
+
+            const base = company.defaults[feeKey];
+
+            document.getElementById("ruleDefault").textContent =
+                feeKey === "yearly"
+                    ? "No default yearly price exists. Only a special price can be saved."
+                    : "Default price: " + money(base);
+
+            const discountOption = ruleMode.querySelector('option[value="fixed_discount"]');
+
+            discountOption.disabled = feeKey === "yearly";
+
+            ruleMode.value = rule ? rule.mode : "special_price";
+            ruleValue.value = rule ? Number(rule.value).toFixed(2) : "";
+            ruleStarts.value = rule ? toInputDate(rule.starts_at) : "";
+            ruleExpires.value = rule ? toInputDate(rule.expires_at) : "";
+            ruleNote.value = rule ? rule.note : "";
+            ruleEnabled.checked = rule ? rule.is_enabled : true;
+
+            ruleError.classList.add("d-none");
+            updatePreview();
+            ruleModal.show();
+        }
+
+        async function saveRule() {
+            if (!editing) {
+                return;
+            }
+
+            ruleError.classList.add("d-none");
+            ruleSaveBtn.disabled = true;
+            ruleSaveBtn.textContent = "Saving...";
+
+            try {
+                const result = await api(
+                    "POST",
+                    `${API}/companies/${editing.company.company_id}/rules`,
+                    {
+                        fee_type: editing.fee,
+                        mode: ruleMode.value,
+                        value: ruleValue.value,
+                        is_enabled: ruleEnabled.checked,
+                        starts_at: ruleStarts.value,
+                        expires_at: ruleExpires.value,
+                        note: ruleNote.value
+                    }
+                );
+
+                replaceCompany(result.company);
+                ruleModal.hide();
+                showMessage(result.message || "Saved.", "success");
+            } catch (error) {
+                ruleError.textContent = error.message;
+                ruleError.classList.remove("d-none");
+            } finally {
+                ruleSaveBtn.disabled = false;
+                ruleSaveBtn.textContent = "Save";
+            }
+        }
+
+
+        /* ---------------- toggle / reset / history ---------------- */
+
+        async function toggleRule(companyId, feeKey, enable) {
+            try {
+                const result = await api(
+                    "POST",
+                    `${API}/companies/${companyId}/rules/${feeKey}/toggle`,
+                    { enabled: enable }
+                );
+
+                replaceCompany(result.company);
+                showMessage(result.message, "success");
+            } catch (error) {
+                showMessage(error.message);
+            }
+        }
+
+        async function resetRule(companyId, feeKey) {
+            const company = findCompany(companyId);
+
+            const ok = window.confirm(
+                "Reset " + feeLabel(feeKey) + " of " +
+                ((company && company.company_name) || "this company") +
+                " to the default price? The change will be kept in history."
+            );
+
+            if (!ok) {
+                return;
+            }
+
+            try {
+                const result = await api(
+                    "POST",
+                    `${API}/companies/${companyId}/rules/${feeKey}/reset`,
+                    {}
+                );
+
+                replaceCompany(result.company);
+                showMessage(result.message, "success");
+            } catch (error) {
+                showMessage(error.message);
+            }
+        }
+
+        async function openHistory(companyId) {
+            const company = findCompany(companyId);
+            const body = document.getElementById("historyBody");
+
+            document.getElementById("historyModalTitle").textContent =
+                "Pricing history — " +
+                ((company && company.company_name) || "Company #" + companyId);
+
+            body.innerHTML = '<div class="state-empty">Loading...</div>';
+            historyModal.show();
+
+            try {
+                const result = await api("GET", `${API}/companies/${companyId}`);
+                const rows = result.history || [];
+
+                if (!rows.length) {
+                    body.innerHTML =
+                        '<div class="state-empty">No pricing changes yet.</div>';
+                    return;
+                }
+
+                body.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-sm history-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Fee</th>
+                                    <th>Action</th>
+                                    <th>Change</th>
+                                    <th>Valid period</th>
+                                    <th>By</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.map(h => `
+                                    <tr>
+                                        <td>${esc(shortDate(h.created_at))}</td>
+                                        <td>${esc(feeLabel(h.fee_type))}</td>
+                                        <td>${esc(h.action)}</td>
+                                        <td>
+                                            ${esc(describe(h.old_mode, h.old_value, h.old_enabled))}
+                                            →
+                                            ${esc(describe(h.new_mode, h.new_value, h.new_enabled))}
+                                        </td>
+                                        <td>
+                                            ${esc(shortDate(h.starts_at) || "—")} →
+                                            ${esc(shortDate(h.expires_at) || "—")}
+                                        </td>
+                                        <td>${esc(h.changed_by_name)}</td>
+                                        <td class="note-cell">${esc(h.note)}</td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (error) {
+                body.innerHTML =
+                    `<div class="alert alert-danger">${esc(error.message)}</div>`;
+            }
+        }
+
+
+        /* ---------------- events ---------------- */
+
+        companyList.addEventListener("click", event => {
+            const button = event.target.closest("button[data-action]");
+
+            if (!button) {
+                return;
+            }
+
+            hideMessage();
+
+            const companyId = Number(button.dataset.company);
+            const feeKey = button.dataset.fee;
+
+            switch (button.dataset.action) {
+                case "edit":
+                    openRule(companyId, feeKey);
+                    break;
+                case "toggle":
+                    toggleRule(companyId, feeKey, button.dataset.enable === "1");
+                    break;
+                case "reset":
+                    resetRule(companyId, feeKey);
+                    break;
+                case "history":
+                    openHistory(companyId);
+                    break;
+            }
+        });
+
+        searchInput.addEventListener("input", () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(loadCompanies, 300);
+        });
+
+        filterSelect.addEventListener("change", render);
+
+        refreshBtn.addEventListener("click", () => {
+            hideMessage();
+            loadCompanies();
+        });
+
+        ruleMode.addEventListener("change", updatePreview);
+        ruleValue.addEventListener("input", updatePreview);
+        ruleSaveBtn.addEventListener("click", saveRule);
+
+        (async () => {
+            await loadCsrfToken();
+            await loadCompanies();
+        })();
+    </script>
+
+    <script src="/assets/js/i18n.js?v=mw7ynpem"></script>
+</body>
+</html>

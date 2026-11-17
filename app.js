@@ -25,7 +25,8 @@ const adminProfileRoutes =
 
 const adminPermissionsRoutes =
     require("./routes/admin/permissions");
-
+const adminPricingRoutes =
+    require("./routes/admin/pricing");
 const billingManualRoutes =
     require("./routes/billing/billingManual");
 
@@ -531,7 +532,11 @@ app.use(
     adminPermissionsRoutes
 );
 
-
+app.use(
+    "/super-admin/pricing",
+    requireSoftwareBilling,
+    adminPricingRoutes
+);
 /*
 |--------------------------------------------------------------------------
 | AREA API

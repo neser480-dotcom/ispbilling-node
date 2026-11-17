@@ -9,12 +9,18 @@
 |  - bill is created NOTICE_DAYS (7) days before the due date, so the
 |    dashboard notice (which already shows only inside the 7-day window)
 |    appears exactly 7 days before.
-|  - amount    : software_packages.monthly_fee of the user's package
+|  - amount    : software_packages.monthly_fee of the user's package,
+|               or the company's active negotiated price
+|               (company_pricing_rules, fee_type = 'monthly').
+|               An expired / disabled / not-yet-started offer is ignored,
+|               so the default price is used automatically.
+|               Bills that already exist are never changed.
 |  - never creates a second bill for the same user in the same month, and
 |    never while an older monthly bill is still unpaid.
 */
 
 const db = require("../config/database");
+const pricing = require("./billing/pricing.service");
 
 const DUE_DAY = Math.min(28, Math.max(1, Number(process.env.BILLING_DUE_DAY || 7)));
 const NOTICE_DAYS = 7;
@@ -45,6 +51,10 @@ async function generate() {
     const nextMonth = new Date(Date.UTC(y, mo + 1, 1));
     const period = `${y}-${pad(mo + 1)}`;
     const due = dueWall;
+    const nowWall = wall(bd);               /* BD "now" for offer start/expiry */
+
+    const ruleJoin = pricing.activeRuleJoinSql("cpr", "u.company_id", "monthly");
+    const amountExpr = pricing.effectiveAmountSql("p.monthly_fee", "cpr");
 
     /* one connection: the named lock must be taken and released on it.
        GET_LOCK stops two app instances (pm2 cluster, double start) from
@@ -65,14 +75,15 @@ async function generate() {
                     (company_id, user_id, billing_type, package_id, package_code,
                      amount, status, due_date, billing_period)
                 SELECT u.company_id, u.id, 'monthly', p.id, p.package_code,
-                       p.monthly_fee, 'unpaid', ?, ?
+                       ${amountExpr}, 'unpaid', ?, ?
                 FROM users u
                 JOIN software_packages p
                   ON p.id = u.package_id AND p.status = 'active'
+                ${ruleJoin}
                 WHERE u.role = 'admin'
                   AND u.status = 'active'
                   AND u.company_id > 0
-                  AND p.monthly_fee > 0
+                  AND ${amountExpr} > 0
                   AND NOT EXISTS (
                         SELECT 1 FROM software_billing_notifications r
                         WHERE r.user_id = u.id
@@ -87,7 +98,7 @@ async function generate() {
                                OR (m.due_date >= ? AND m.due_date < ?)
                                OR m.created_at >= ?))
                 `,
-                [wall(due), period, period, wall(monthStart), wall(nextMonth), wall(monthStart)]
+                [wall(due), period, nowWall, nowWall, period, wall(monthStart), wall(nextMonth), wall(monthStart)]
             );
 
             return result.affectedRows || 0;
