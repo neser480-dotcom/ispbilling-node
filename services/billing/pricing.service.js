@@ -216,13 +216,9 @@ function effectiveAmount(defaultAmount, rule) {
                 };
             }
 
-            if (
-                rule.mode === "fixed_discount" &&
-                hasBase &&
-                value < base
-            ) {
+            if (rule.mode === "fixed_discount" && hasBase) {
                 return {
-                    amount: Number((base - value).toFixed(2)),
+                    amount: Number(Math.max(0, base - value).toFixed(2)),
                     source: "fixed_discount"
                 };
             }
@@ -290,8 +286,8 @@ function effectiveAmountSql(defaultExpr, alias) {
                 THEN ${alias}.value
             WHEN ${alias}.mode = 'fixed_discount'
                  AND ${alias}.value > 0
-                 AND ${alias}.value < ${defaultExpr}
-                THEN ${defaultExpr} - ${alias}.value
+
+                THEN GREATEST(${defaultExpr} - ${alias}.value, 0)
             ELSE ${defaultExpr}
         END)
     `;

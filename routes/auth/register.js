@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 
 const db = require("../../config/database");
+const pricing = require("../../services/billing/pricing.service");
 
 const router = express.Router();
 
@@ -461,7 +462,7 @@ router.post("/", async (req, res) => {
             selectedPackage.signup_fee
         );
 
-        const monthlyFee = parseMoney(
+        let monthlyFee = parseMoney(
             selectedPackage.monthly_fee
         );
 
@@ -493,7 +494,7 @@ router.post("/", async (req, res) => {
             }
         }
 
-        const finalSignupFee = Number(
+        let finalSignupFee = Number(
             (signupFee - finalDiscount).toFixed(2)
         );
 
@@ -569,7 +570,6 @@ router.post("/", async (req, res) => {
         connection = await db.getConnection();
 
         await connection.beginTransaction();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -672,6 +672,68 @@ router.post("/", async (req, res) => {
             companyId = userId;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Company negotiated pricing
+        |--------------------------------------------------------------------------
+        */
+
+        if (companyId > 0) {
+            const registrationPrice = await pricing.resolveEffectivePrice(
+                companyId,
+                "registration",
+                signupFee,
+                connection
+            );
+
+            const monthlyPrice = await pricing.resolveEffectivePrice(
+                companyId,
+                "monthly",
+                monthlyFee,
+                connection
+            );
+
+            if (registrationPrice.source !== "default") {
+                finalSignupFee = Number(
+                    Number(registrationPrice.effective_amount).toFixed(2)
+                );
+
+                finalDiscount = Number(
+                    Math.max(0, signupFee - finalSignupFee).toFixed(2)
+                );
+            } else {
+                finalSignupFee = Number(
+                    (signupFee - finalDiscount).toFixed(2)
+                );
+            }
+
+            monthlyFee = Number(
+                monthlyPrice.effective_amount ?? monthlyFee
+            );
+
+            registrationSettings.registration_discount = finalDiscount;
+            registrationSettings.registration_amount = finalSignupFee;
+            registrationSettings.monthly_fee = monthlyFee;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Save negotiated pricing settings
+        |--------------------------------------------------------------------------
+        */
+
+        await connection.execute(
+            `
+            UPDATE users
+            SET settings = ?
+            WHERE id = ?
+            `,
+            [
+                JSON.stringify(registrationSettings),
+                userId
+            ]
+        );
 
         /*
         |--------------------------------------------------------------------------
