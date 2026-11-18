@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Software Bill - Online Pay</title>
+<style>
+    :root { --bg:#f4f6fa; --card:#fff; --text:#1c2333; --muted:#667085; --brand:#1f6feb; --line:#d9dee8; }
+    @media (prefers-color-scheme: dark) {
+        :root { --bg:#12151d; --card:#1b2030; --text:#eef1f7; --muted:#9aa3b5; --line:#2d3550; --brand:#4c8dff; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+    .wrap { max-width:440px; margin:0 auto; padding:32px 16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    p.sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+    .amount { font-size:30px; font-weight:bold; margin:8px 0 18px; }
+    button { width:100%; margin-top:10px; padding:12px; border:0; border-radius:8px; font-size:15px;
+        font-weight:bold; color:#fff; background:var(--brand); cursor:pointer; }
+    button.secondary { background:transparent; color:var(--text); border:1px solid var(--line); }
+    button:disabled { opacity:.6; cursor:default; }
+    .error { margin-top:14px; color:#d92d20; font-size:14px; }
+    [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1 id="title">Software Bill</h1>
+        <p class="sub">Pay online securely. Your account is updated automatically after payment.</p>
+
+        <div id="loading">Loading...</div>
+
+        <div id="content" hidden>
+            <div>Amount to pay</div>
+            <div class="amount">৳ <span id="amount"></span></div>
+            <div id="buttons"></div>
+        </div>
+
+        <button type="button" class="secondary" id="back">Back to Dashboard</button>
+        <div class="error" id="error" hidden></div>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay" };
+
+let info = null;
+
+function showError(message) {
+    $("error").textContent = message || "";
+    $("error").hidden = !message;
+}
+
+async function pay(gateway, button) {
+    showError("");
+    button.disabled = true;
+
+    const response = await fetch("/api/payment-gateway/create", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": info.csrf_token },
+        body: JSON.stringify({
+            csrf_token: info.csrf_token,
+            gateway,
+            purpose: info.billing_type === "registration" ? "software_registration" : "software_billing",
+            billing_id: info.billing_id
+        })
+    });
+
+    const data = await response.json().catch(() => ({ success: false, message: "Unexpected response." }));
+
+    if (!data.success || !data.redirect_url) {
+        button.disabled = false;
+        return showError(data.message || "Unable to start the payment.");
+    }
+
+    location.href = data.redirect_url;
+}
+
+async function load() {
+    const params = new URLSearchParams(location.search);
+    const billingId = params.get("billing_id");
+
+    const response = await fetch(
+        "/api/payment-gateway/software/info" + (billingId ? `?billing_id=${encodeURIComponent(billingId)}` : ""),
+        { credentials: "same-origin" }
+    );
+
+    const data = await response.json().catch(() => ({ success: false, message: "Unexpected response." }));
+
+    $("loading").hidden = true;
+
+    if (!data.success) {
+        return showError(data.message || "Unable to load the bill.");
+    }
+
+    info = data;
+
+    $("title").textContent = data.billing_type === "registration" ? "Registration Fee" : "Monthly Software Bill";
+    $("amount").textContent = Number(data.amount).toFixed(2);
+    $("content").hidden = false;
+
+    if (!data.gateways.length) {
+        return showError("Online payment is not available right now. Please use Manual Submit.");
+    }
+
+    data.gateways.forEach((gateway) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `Pay with ${LABELS[gateway] || gateway}`;
+        button.addEventListener("click", () => pay(gateway, button));
+        $("buttons").appendChild(button);
+    });
+}
+
+$("back").addEventListener("click", () => { location.href = "/dashboard"; });
+
+load();
+</script>
+</body>
+</html>

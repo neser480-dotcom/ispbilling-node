@@ -86,11 +86,20 @@ router.get("/pay/:slug", publicLimiter, controller.publicPage);
 router.post("/public/quote", publicLimiter, sameHostOnly, controller.publicQuote);
 router.post("/public/create", publicLimiter, sameHostOnly, controller.publicCreate);
 
-/* ---------------- Nagad ---------------- */
-router.get(
-    "/nagad/callback/:transactionId",
+router.post("/public/gateways", publicLimiter, sameHostOnly, controller.publicGateways);
+
+/* ---------------- software billing (registration fee / monthly bill) ---------------- */
+router.get("/software/pay", controller.softwarePage);
+router.get("/software/info", controller.softwareInfo);
+
+/* ---------------- gateway callback (browser return; GET or POST) ----------------
+ * bKash / Nagad / ShurjoPay redirect with GET, SSLCommerz posts.
+ * Nothing in the request is trusted; the payment is verified server-side.
+ */
+router.all(
+    "/:gateway/callback/:transactionId",
     callbackLimiter,
-    controller.nagadCallback
+    controller.gatewayCallback
 );
 
 /* ---------------- generic IPN (disabled except where supported) ---------------- */

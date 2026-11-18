@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual Payments</title>
+<style>
+    :root { --bg:#f4f6fa; --card:#fff; --text:#1c2333; --muted:#667085; --brand:#1f6feb; --line:#d9dee8; --ok:#16794c; --bad:#d92d20; --warn:#b54708; }
+    @media (prefers-color-scheme: dark) {
+        :root { --bg:#12151d; --card:#1b2030; --text:#eef1f7; --muted:#9aa3b5; --line:#2d3550; --brand:#4c8dff; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+    .wrap { max-width:1000px; margin:0 auto; padding:24px 16px; }
+    h1 { font-size:22px; margin:0 0 16px; }
+    h2 { font-size:16px; margin:0 0 12px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
+    label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    input[type=text], textarea { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
+        background:transparent; color:var(--text); font-size:14px; }
+    .full { grid-column:1 / -1; }
+    button { padding:9px 16px; border:0; border-radius:8px; font-weight:bold; cursor:pointer; color:#fff; background:var(--brand); }
+    button.ok { background:var(--ok); } button.bad { background:var(--bad); }
+    button:disabled { opacity:.6; cursor:default; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-weight:normal; font-size:12px; }
+    .table-wrap { overflow-x:auto; }
+    .tag { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; border:1px solid var(--line); }
+    .awaiting_approval { color:var(--warn); } .paid { color:var(--ok); } .failed { color:var(--bad); } .needs_review { color:var(--bad); }
+    #msg { display:none; padding:10px 14px; border-radius:8px; margin-bottom:16px; border:1px solid var(--line); }
+    .hint { color:var(--muted); font-size:13px; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Manual Payments (Send Money)</h1>
+    <div id="msg"></div>
+
+    <div class="card">
+        <h2>Your receiving numbers &amp; payment link</h2>
+        <div class="grid">
+            <div class="full">
+                <label><input type="checkbox" id="enabled"> Enable manual payments</label>
+            </div>
+            <div>
+                <label for="nagad">Nagad number (Personal)</label>
+                <input type="text" id="nagad" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX">
+            </div>
+            <div>
+                <label for="bkash">bKash number (Personal)</label>
+                <input type="text" id="bkash" maxlength="11" inputmode="numeric" placeholder="01XXXXXXXXX">
+            </div>
+            <div>
+                <label for="slug">Payment link name</label>
+                <input type="text" id="slug" maxlength="40" placeholder="my-isp">
+                <p class="hint" id="linkHint"></p>
+            </div>
+            <div>
+                <label for="note">Note shown to customers (optional)</label>
+                <input type="text" id="note" maxlength="300" placeholder="Use Send Money, not Payment">
+            </div>
+        </div>
+        <p><button id="saveBtn" type="button">Save</button></p>
+    </div>
+
+    <div class="card">
+        <h2>Payments waiting for approval</h2>
+        <p class="hint">Open your Nagad / bKash app, find the TrxID and confirm the amount, then Approve.</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Customer</th><th>Method</th><th>TrxID</th><th>Sender</th><th>Amount</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody id="rows"><tr><td colspan="8">Loading...</td></tr></tbody>
+            </table>
+        </div>
+        <p><button id="refreshBtn" type="button">Refresh</button></p>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const API = "/api/payment-gateway/manual";
+const $ = (id) => document.getElementById(id);
+let csrf = "";
+
+function msg(text, ok) {
+    const box = $("msg");
+    box.textContent = text;
+    box.style.display = "block";
+    box.style.color = ok ? "var(--ok)" : "var(--bad)";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function call(url, method, body) {
+    const response = await fetch(url, {
+        method,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: body ? JSON.stringify({ ...body, csrf_token: csrf }) : undefined
+    });
+
+    return response.json().catch(() => ({ success: false, message: "Unexpected response." }));
+}
+
+function updateHint() {
+    const slug = $("slug").value.trim();
+    $("linkHint").textContent = slug
+        ? `Customer link: ${location.origin}/api/payment-gateway/pay/${slug}`
+        : "";
+}
+
+async function loadSettings() {
+    const data = await call(`${API}/settings`, "GET");
+
+    if (!data.success) return msg(data.message || "Unable to load settings.", false);
+
+    csrf = data.csrf_token;
+    const s = data.settings || {};
+    $("enabled").checked = data.enabled;
+    $("nagad").value = s.nagad_number || "";
+    $("bkash").value = s.bkash_number || "";
+    $("slug").value = s.slug || "";
+    $("note").value = s.note || "";
+    updateHint();
+}
+
+async function save() {
+    $("saveBtn").disabled = true;
+
+    const data = await call(`${API}/settings`, "POST", {
+        enabled: $("enabled").checked,
+        nagad_number: $("nagad").value.trim(),
+        bkash_number: $("bkash").value.trim(),
+        slug: $("slug").value.trim(),
+        note: $("note").value.trim()
+    });
+
+    $("saveBtn").disabled = false;
+    msg(data.message || (data.success ? "Saved." : "Save failed."), data.success);
+}
+
+function cell(text) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    return td;
+}
+
+async function act(item, action, button) {
+    if (action === "approve" &&
+        !confirm(`Approve ৳${item.amount.toFixed(2)} from ${item.customer_id} (TrxID ${item.trx_id})?\nCheck it in your wallet app first.`)) {
+        return;
+    }
+
+    let reason = "";
+
+    if (action === "reject") {
+        reason = prompt("Reason (optional):") || "";
+    }
+
+    button.disabled = true;
+
+    const data = await call(`${API}/${action}`, "POST", {
+        transaction_id: item.transaction_id,
+        reason
+    });
+
+    msg(data.message || "Done.", data.success);
+    await loadList();
+}
+
+async function loadList() {
+    const data = await call(`${API}/list`, "GET");
+    const body = $("rows");
+    body.textContent = "";
+
+    if (!data.success) {
+        const tr = document.createElement("tr");
+        const td = cell(data.message || "Unable to load.");
+        td.colSpan = 8;
+        tr.appendChild(td);
+        body.appendChild(tr);
+        return;
+    }
+
+    csrf = data.csrf_token || csrf;
+
+    if (!data.items.length) {
+        const tr = document.createElement("tr");
+        const td = cell("No payments yet.");
+        td.colSpan = 8;
+        tr.appendChild(td);
+        body.appendChild(tr);
+        return;
+    }
+
+    data.items.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(cell(new Date(item.created_at).toLocaleString()));
+        tr.appendChild(cell(`${item.customer_id} ${item.customer_name}`.trim()));
+        tr.appendChild(cell(String(item.method).toUpperCase()));
+        tr.appendChild(cell(item.trx_id));
+        tr.appendChild(cell(item.sender_number));
+        tr.appendChild(cell(`৳ ${item.amount.toFixed(2)}`));
+
+        const status = document.createElement("td");
+        const tag = document.createElement("span");
+        tag.className = `tag ${item.status}`;
+        tag.textContent = item.status.replace("_", " ");
+        status.appendChild(tag);
+        tr.appendChild(status);
+
+        const actions = document.createElement("td");
+
+        if (item.status === "awaiting_approval" || item.status === "verified") {
+            const ok = document.createElement("button");
+            ok.className = "ok";
+            ok.textContent = "Approve";
+            ok.addEventListener("click", () => act(item, "approve", ok));
+            actions.appendChild(ok);
+        }
+
+        if (item.status === "awaiting_approval") {
+            actions.appendChild(document.createTextNode(" "));
+            const no = document.createElement("button");
+            no.className = "bad";
+            no.textContent = "Reject";
+            no.addEventListener("click", () => act(item, "reject", no));
+            actions.appendChild(no);
+        }
+
+        tr.appendChild(actions);
+        body.appendChild(tr);
+    });
+}
+
+$("saveBtn").addEventListener("click", save);
+$("refreshBtn").addEventListener("click", loadList);
+$("slug").addEventListener("input", updateHint);
+
+loadSettings().then(loadList);
+</script>
+</body>
+</html>

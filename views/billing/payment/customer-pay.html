@@ -25,6 +25,7 @@
     button:disabled { opacity:.6; cursor:default; }
     .box { margin-top:18px; padding:14px; border-radius:8px; border:1px dashed var(--line); }
     .amount { font-size:26px; font-weight:bold; }
+    .hint { color:var(--muted); font-size:13px; }
     .error { margin-top:14px; color:#d92d20; font-size:14px; }
     [hidden] { display:none !important; }
 </style>
@@ -59,7 +60,8 @@
         <div class="box" id="quoteBox" hidden>
             <div id="custName" style="color:var(--muted);font-size:14px"></div>
             <div class="amount">৳ <span id="amountText"></span></div>
-            <button id="payBtn" type="button">Pay with Nagad</button>
+            <div id="payButtons"></div>
+
             <button id="editBtn" type="button" class="secondary">Change</button>
         </div>
 
@@ -142,21 +144,56 @@ $("checkBtn").addEventListener("click", async () => {
     $("amountText").textContent = Number(data.amount).toFixed(2);
     $("quoteBox").hidden = false;
     $("checkBtn").hidden = true;
+
+    showGateways();
 });
 
-$("payBtn").addEventListener("click", async () => {
-    showError("");
-    $("payBtn").disabled = true;
+const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay" };
 
-    const data = await post("/api/payment-gateway/public/create");
+async function pay(gateway, button) {
+    showError("");
+    button.disabled = true;
+
+    const response = await fetch("/api/payment-gateway/public/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form(), gateway })
+    });
+
+    const data = await response.json().catch(() => ({ success: false, message: "Unexpected response." }));
 
     if (!data.success || !data.redirect_url) {
-        $("payBtn").disabled = false;
+        button.disabled = false;
         return showError(data.message || "Unable to start the payment.");
     }
 
     location.href = data.redirect_url;
-});
+}
+
+async function showGateways() {
+    const holder = $("payButtons");
+    holder.textContent = "";
+
+    const response = await fetch("/api/payment-gateway/public/gateways", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug })
+    });
+
+    const data = await response.json().catch(() => ({ success: false }));
+
+    if (!data.success || !data.gateways.length) {
+        return showError("No online payment method is available right now.");
+    }
+
+    data.gateways.forEach((gateway) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = `Pay with ${LABELS[gateway] || gateway}`;
+        button.addEventListener("click", () => pay(gateway, button));
+        holder.appendChild(button);
+    });
+}
 </script>
 </body>
 </html>

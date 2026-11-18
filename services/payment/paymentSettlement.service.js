@@ -274,21 +274,48 @@ async function settle(transaction, { clientIp } = {}) {
         /*
          * Claim: only one request moves pending -> verified.
          */
-        const claimed = await paymentService.changeStatus(
-            transaction.id,
-            ["pending"],
-            "verified",
-            {
-                gateway_transaction_id:
-                    verification.gatewayTransactionId || null,
-                payment_date: new Date(),
-                verified_at: new Date(),
-                metadata: JSON.stringify({
-                    ...metadataOf(transaction),
-                    verification: verification.raw
-                })
+        let claimed;
+
+        try {
+            claimed = await paymentService.changeStatus(
+                transaction.id,
+                ["pending"],
+                "verified",
+                {
+                    gateway_transaction_id:
+                        verification.gatewayTransactionId || null,
+                    payment_date: new Date(),
+                    verified_at: new Date(),
+                    metadata: JSON.stringify({
+                        ...metadataOf(transaction),
+                        verification: verification.raw
+                    })
+                }
+            );
+        } catch (error) {
+            if (error.code !== "ER_DUP_ENTRY") {
+                throw error;
             }
-        );
+
+            /* same gateway reference already used by another payment */
+            await paymentService.changeStatus(
+                transaction.id,
+                ["pending"],
+                "needs_review",
+                {
+                    metadata: JSON.stringify({
+                        ...metadataOf(transaction),
+                        verification: verification.raw,
+                        apply_error: "Duplicate gateway reference."
+                    })
+                }
+            );
+
+            return {
+                state: "needs_review",
+                transaction: await reload(transaction.id)
+            };
+        }
 
         transaction = await reload(transaction.id);
 

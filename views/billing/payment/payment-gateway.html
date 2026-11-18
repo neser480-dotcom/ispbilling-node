@@ -536,6 +536,40 @@
                 class="alert"
             ></div>
 
+            <div class="gateway-card open" id="sharedBar" style="margin-bottom:16px;">
+                <div class="gateway-body" style="display:block;">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label" for="gwScope">Merchant Account</label>
+                            <select class="form-select" id="gwScope">
+                                <option value="central">Central - Software fee (registration / monthly)</option>
+                                <option value="customer">ISP account - Customer bills</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4" id="gwCompanyBox">
+                            <label class="form-label" for="gwCompanyId">ISP Company ID</label>
+                            <input type="number" min="1" class="form-control" id="gwCompanyId"
+                                   autocomplete="off" placeholder="Which ISP these credentials belong to">
+                        </div>
+
+                        <div class="col-md-4" id="gwSlugBox">
+                            <label class="form-label" for="gwSlug">Customer Payment Link Name</label>
+                            <input type="text" class="form-control" id="gwSlug" maxlength="40"
+                                   autocomplete="off" placeholder="e.g. my-isp">
+                            <div class="form-text">Customers pay without login at /api/payment-gateway/pay/&lt;name&gt;</div>
+                        </div>
+
+                    </div>
+                    <div class="form-text mt-2">
+                        Rocket and Bank have no payment-confirmation API, so they stay on Manual Submit.
+                        A blank secret field keeps the saved value.
+                    </div>
+                </div>
+            </div>
+
+
 
             <!-- ===================================================== -->
             <!-- BKASH -->
@@ -1079,81 +1113,6 @@
                                     id="nagadMerchantNumber"
                                     autocomplete="off"
                                 >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label
-                                    class="form-label"
-                                    for="nagadScope"
-                                >
-                                    Merchant Account
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    id="nagadScope"
-                                >
-
-                                    <option value="customer">
-                                        ISP account - Customer bills
-                                    </option>
-
-                                    <option
-                                        value="central"
-                                        id="nagadScopeCentral"
-                                    >
-                                        Central account - Software billing (Super Admin)
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div class="col-md-6" id="nagadCompanyBox">
-
-                                <label
-                                    class="form-label"
-                                    for="nagadCompanyId"
-                                >
-                                    ISP Company ID
-                                </label>
-
-                                <input
-                                    type="number"
-                                    min="1"
-                                    class="form-control"
-                                    id="nagadCompanyId"
-                                    autocomplete="off"
-                                    placeholder="Which ISP these credentials belong to"
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6" id="nagadSlugBox">
-
-                                <label
-                                    class="form-label"
-                                    for="nagadSlug"
-                                >
-                                    Customer Payment Link Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    id="nagadSlug"
-                                    autocomplete="off"
-                                    placeholder="e.g. my-isp"
-                                >
-
-                                <div class="form-text" id="nagadSlugHint">
-                                    Customers pay without login at /api/payment-gateway/pay/&lt;name&gt;
-                                </div>
 
                             </div>
 
@@ -2475,16 +2434,61 @@
 
         /*
         |--------------------------------------------------------------------------
-        | SAVE / LOAD  (Nagad is connected to the secure server API)
+        | SAVE / LOAD  (bKash, Nagad, SSLCommerz, ShurjoPay -> secure server API)
         |--------------------------------------------------------------------------
-        | Secrets are never sent back by the server. A blank key field means
-        | "keep the saved key".
+        | Secrets are never sent back by the server. A blank secret field means
+        | "keep the saved value".
         |--------------------------------------------------------------------------
         */
 
         const API = "/api/payment-gateway";
 
+        /* gateway -> { element id prefix, credential key -> element id } */
+        const GATEWAY_FIELDS = {
+            nagad: {
+                env: "nagadEnvironment",
+                fields: {
+                    merchantId: "nagadMerchantId",
+                    merchantNumber: "nagadMerchantNumber",
+                    publicKey: "nagadPublicKey",
+                    privateKey: "nagadPrivateKey"
+                },
+                secrets: ["publicKey", "privateKey"]
+            },
+            bkash: {
+                env: "bkashEnvironment",
+                fields: {
+                    app_key: "bkashAppKey",
+                    app_secret: "bkashAppSecret",
+                    username: "bkashUsername",
+                    password: "bkashPassword"
+                },
+                secrets: ["app_secret", "password"]
+            },
+            sslcommerz: {
+                env: "sslEnvironment",
+                fields: {
+                    store_id: "sslStoreId",
+                    store_password: "sslStorePassword"
+                },
+                secrets: ["store_password"]
+            },
+            shurjopay: {
+                env: "shurjopayEnvironment",
+                fields: {
+                    username: "shurjopayUsername",
+                    password: "shurjopayPassword",
+                    prefix: "shurjopayPrefix"
+                },
+                secrets: ["password"]
+            }
+        };
+
         let csrfToken = null;
+
+        function value(id) {
+            return document.getElementById(id).value.trim();
+        }
 
         async function loadCsrf() {
 
@@ -2501,28 +2505,34 @@
 
             csrfToken = data.csrf_token;
 
-            if (data.is_super_admin) {
-                const central = document.getElementById("nagadScopeCentral");
+        }
 
-                if (central) {
-                    central.hidden = false;
-                }
+        function updateScopeUi() {
+
+            const customer = value("gwScope") === "customer";
+
+            document.getElementById("gwCompanyBox").style.display =
+                customer ? "" : "none";
+
+            document.getElementById("gwSlugBox").style.display =
+                customer ? "" : "none";
+
+        }
+
+        async function loadGateways() {
+
+            updateScopeUi();
+
+            const scope = value("gwScope");
+            const companyId = value("gwCompanyId");
+
+            if (scope === "customer" && !companyId) {
+                return;
             }
-
-        }
-
-        function nagadValue(id) {
-            return document.getElementById(id).value.trim();
-        }
-
-        async function loadNagad() {
-
-            const scope = nagadValue("nagadScope");
-            const companyId = nagadValue("nagadCompanyId");
 
             const response = await fetch(
                 `${API}/list?scope=${encodeURIComponent(scope)}` +
-                (scope === "customer" && companyId
+                (scope === "customer"
                     ? `&company_id=${encodeURIComponent(companyId)}`
                     : ""),
                 { credentials: "same-origin" }
@@ -2535,66 +2545,83 @@
                 return;
             }
 
-            const row = (data.gateways || []).find(
-                (g) => g.gateway === "nagad"
-            );
+            let slug = "";
 
-            if (!row) {
-                return;
-            }
+            (data.gateways || []).forEach(function (row) {
 
-            const set = row.credentials_set || {};
-            const pub = row.credentials_public || {};
+                const config = GATEWAY_FIELDS[row.gateway];
 
-            document.getElementById("nagadEnabled").checked = row.enabled;
-            document.getElementById("nagadEnvironment").value = row.environment;
-            document.getElementById("nagadMerchantId").value = pub.merchantId || "";
-            document.getElementById("nagadMerchantNumber").value = pub.merchantNumber || "";
-            document.getElementById("nagadSlug").value = (row.settings || {}).slug || "";
+                if (!config) {
+                    return;
+                }
 
-            document.getElementById("nagadPublicKey").value = "";
-            document.getElementById("nagadPrivateKey").value = "";
+                const enabled = document.querySelector(
+                    `.gateway-enabled[data-gateway="${row.gateway}"]`
+                );
 
-            document.getElementById("nagadPublicKey").placeholder = set.publicKey
-                ? "A public key is saved. Paste a new one only to replace it."
-                : "Nagad PG public key (PEM or base64)";
+                if (enabled) {
+                    enabled.checked = row.enabled;
+                }
 
-            document.getElementById("nagadPrivateKey").placeholder = set.privateKey
-                ? "A private key is saved. Paste a new one only to replace it."
-                : "Merchant private key (PEM or base64)";
+                document.getElementById(config.env).value = row.environment;
 
-            document.getElementById("nagadSlugBox").style.display =
-                scope === "central" ? "none" : "";
+                const pub = row.credentials_public || {};
+                const set = row.credentials_set || {};
 
-            document.getElementById("nagadCompanyBox").style.display =
-                scope === "central" ? "none" : "";
+                Object.entries(config.fields).forEach(function ([key, id]) {
 
-            updateGatewayStatus("nagad");
+                    const input = document.getElementById(id);
+
+                    if (config.secrets.includes(key)) {
+
+                        input.value = "";
+
+                        input.placeholder = set[key]
+                            ? "Saved. Enter a new value only to replace it."
+                            : "";
+
+                    } else {
+
+                        input.value = pub[key] || (set[key] ? "" : "");
+
+                    }
+
+                });
+
+                if (!slug && (row.settings || {}).slug) {
+                    slug = row.settings.slug;
+                }
+
+                updateGatewayStatus(row.gateway);
+
+            });
+
+            document.getElementById("gwSlug").value = slug;
 
         }
 
-        async function saveNagad(button) {
+        async function saveGateway(gateway, button) {
 
-            const scope = nagadValue("nagadScope");
+            const config = GATEWAY_FIELDS[gateway];
+            const scope = value("gwScope");
+
+            const credentials = {};
+
+            Object.entries(config.fields).forEach(function ([key, id]) {
+                credentials[key] = value(id);
+            });
 
             const body = {
                 csrf_token: csrfToken,
-                gateway: "nagad",
+                gateway,
                 scope,
-                company_id: scope === "customer"
-                    ? nagadValue("nagadCompanyId")
-                    : undefined,
-                enabled: document.getElementById("nagadEnabled").checked,
-                environment: nagadValue("nagadEnvironment"),
-                credentials: {
-                    merchantId: nagadValue("nagadMerchantId"),
-                    merchantNumber: nagadValue("nagadMerchantNumber"),
-                    publicKey: nagadValue("nagadPublicKey"),
-                    privateKey: nagadValue("nagadPrivateKey")
-                },
-                settings: scope === "customer"
-                    ? { slug: nagadValue("nagadSlug") }
-                    : {}
+                company_id: scope === "customer" ? value("gwCompanyId") : undefined,
+                enabled: document.querySelector(
+                    `.gateway-enabled[data-gateway="${gateway}"]`
+                ).checked,
+                environment: value(config.env),
+                credentials,
+                settings: scope === "customer" ? { slug: value("gwSlug") } : {}
             };
 
             button.disabled = true;
@@ -2619,7 +2646,7 @@
                 );
 
                 if (data.success) {
-                    await loadNagad();
+                    await loadGateways();
                 }
 
             } catch (error) {
@@ -2646,13 +2673,22 @@
                             const gateway =
                                 button.dataset.gateway;
 
-                            if (gateway === "nagad") {
-                                saveNagad(button);
+                            if (GATEWAY_FIELDS[gateway]) {
+
+                                if (
+                                    value("gwScope") === "customer" &&
+                                    !value("gwCompanyId")
+                                ) {
+                                    showMessage("Enter the ISP Company ID first.", "warning");
+                                    return;
+                                }
+
+                                saveGateway(gateway, button);
                                 return;
                             }
 
                             showMessage(
-                                `${gateway} configuration UI is ready, but the secure server-side gateway API has not been connected yet. No credentials were saved.`,
+                                `${gateway} has no payment-confirmation API, so it stays on Manual Submit. Nothing was saved.`,
                                 "warning"
                             );
 
@@ -2662,16 +2698,11 @@
                 }
             );
 
-        document
-            .getElementById("nagadScope")
-            .addEventListener("change", loadNagad);
-
-        document
-            .getElementById("nagadCompanyId")
-            .addEventListener("change", loadNagad);
+        document.getElementById("gwScope").addEventListener("change", loadGateways);
+        document.getElementById("gwCompanyId").addEventListener("change", loadGateways);
 
         loadCsrf()
-            .then(loadNagad)
+            .then(loadGateways)
             .catch(function (error) {
                 showMessage(error.message || "Unable to load settings.", "danger");
             });

@@ -31,7 +31,15 @@ const recharge = require("../../services/customers/customer-recharge.service");
 const softwarePayment = require("../../services/billing/softwareBillingPayment.service");
 
 /* Gateways that use the verified server-side flow. */
-const CHECKOUT_GATEWAYS = ["nagad"];
+const CHECKOUT_GATEWAYS = ["nagad", "bkash", "sslcommerz", "shurjopay"];
+
+/* credential fields accepted per gateway (anything else is dropped) */
+const CREDENTIAL_KEYS = {
+    nagad: ["merchantId", "merchantNumber", "publicKey", "privateKey"],
+    bkash: ["app_key", "app_secret", "username", "password"],
+    sslcommerz: ["store_id", "store_password"],
+    shurjopay: ["username", "password", "prefix"]
+};
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
 
@@ -221,10 +229,6 @@ function page(req, res) {
 |--------------------------------------------------------------------------
 */
 
-const NAGAD_CREDENTIAL_KEYS = [
-    "merchantId", "merchantNumber", "publicKey", "privateKey"
-];
-
 async function slugTakenByAnotherCompany(slug, companyId) {
     const [rows] = await db.execute(
         `SELECT company_id, settings
@@ -272,62 +276,64 @@ async function save(req, res) {
                 ? 0
                 : await resolveTargetCompany(req, body.company_id);
 
-        let credentials = body.credentials || {};
-        let settings = body.settings || {};
+        if (!CHECKOUT_GATEWAYS.includes(gateway)) {
+            throw new CheckoutError(
+                "Unsupported gateway: online payment is not available for it."
+            );
+        }
 
+        const incoming = body.credentials || {};
+        const credentials = {};
+
+        for (const key of CREDENTIAL_KEYS[gateway]) {
+            if (typeof incoming[key] === "string") {
+                credentials[key] = incoming[key].trim().slice(0, 4000);
+            }
+        }
+
+        /* reject bad Nagad keys now instead of at payment time */
         if (gateway === "nagad") {
-            const clean = {};
-
-            for (const key of NAGAD_CREDENTIAL_KEYS) {
-                if (typeof credentials[key] === "string") {
-                    clean[key] = credentials[key].trim();
-                }
+            if (credentials.publicKey) {
+                nagad._test.loadPublicKey(credentials.publicKey);
             }
 
-            /* reject bad keys now instead of at payment time */
-            if (clean.publicKey) {
-                nagad._test.loadPublicKey(clean.publicKey);
+            if (credentials.privateKey) {
+                nagad._test.loadPrivateKey(credentials.privateKey);
             }
+        }
 
-            if (clean.privateKey) {
-                nagad._test.loadPrivateKey(clean.privateKey);
-            }
+        const settings = {};
+        const rawSettings = body.settings || {};
+        const slug = String(rawSettings.slug || "").trim().toLowerCase();
 
-            credentials = clean;
-
-            const cleanSettings = {};
-            const slug = String(settings.slug || "").trim().toLowerCase();
-
-            if (slug) {
-                if (scope !== "customer") {
-                    throw new Error("Checkout link applies to ISP gateways only.");
-                }
-
-                if (!SLUG_RE.test(slug)) {
-                    throw new Error(
-                        "Checkout link: use 3-40 letters, digits or hyphens."
-                    );
-                }
-
-                if (await slugTakenByAnotherCompany(slug, companyId)) {
-                    throw new Error("This checkout link name is already taken.");
-                }
-
-                cleanSettings.slug = slug;
-            }
-
-            if (settings.baseUrl) {
-                const baseUrl = String(settings.baseUrl).trim();
-
-                nagad._test.resolveBaseUrl(
-                    body.environment || "sandbox",
-                    { baseUrl }
+        if (slug) {
+            if (scope !== "customer") {
+                throw new CheckoutError(
+                    "Checkout link applies to ISP gateways only."
                 );
-
-                cleanSettings.baseUrl = baseUrl;
             }
 
-            settings = cleanSettings;
+            if (!SLUG_RE.test(slug)) {
+                throw new CheckoutError(
+                    "Checkout link: use 3-40 letters, digits or hyphens."
+                );
+            }
+
+            if (await slugTakenByAnotherCompany(slug, companyId)) {
+                throw new CheckoutError(
+                    "This checkout link name is already taken."
+                );
+            }
+
+            settings.slug = slug;
+        }
+
+        if (rawSettings.baseUrl && gateway === "nagad") {
+            const baseUrl = String(rawSettings.baseUrl).trim();
+
+            nagad._test.resolveBaseUrl(body.environment || "sandbox", { baseUrl });
+
+            settings.baseUrl = baseUrl;
         }
 
         await paymentService.saveGateway({
@@ -348,6 +354,7 @@ async function save(req, res) {
         const known =
             error.status ||
             error.name === "NagadError" ||
+            error.name === "CheckoutError" ||
             /Invalid|Unsupported|required|taken|Checkout|Only|company/.test(
                 error.message || ""
             );
@@ -371,7 +378,9 @@ async function save(req, res) {
 |--------------------------------------------------------------------------
 */
 
-const PUBLIC_CREDENTIAL_KEYS = ["merchantId", "merchantNumber"];
+const PUBLIC_CREDENTIAL_KEYS = [
+    "merchantId", "merchantNumber", "app_key", "username", "store_id", "prefix"
+];
 
 async function list(req, res) {
     if (!requireLoginJson(req, res)) {
@@ -569,7 +578,8 @@ async function startPayment({
     scope,
     purpose,
     amount,
-    request
+    request,
+    customerName
 }) {
     const transaction = await paymentService.createTransaction({
         companyId,
@@ -579,7 +589,7 @@ async function startPayment({
         scope,
         amount,
         currency: "BDT",
-        shortId: gateway === "nagad",
+        shortId: true,
         metadata: { request }
     });
 
@@ -591,6 +601,7 @@ async function startPayment({
             environment: gatewayRow.environment,
             settings: gatewayRow.settings,
             transaction,
+            customer: { name: customerName || "Customer" },
             clientIp: clientIpV4(req),
             urls: {
                 callback:
@@ -743,7 +754,8 @@ async function createPayment(req, res) {
                         ? "software_registration"
                         : "software_billing",
                 amount: billing.amount,
-                request: { billing_id: billing.id }
+                request: { billing_id: billing.id },
+                customerName: req.session?.name || req.session?.username
             });
 
             return res.json({ success: true, ...result });
@@ -781,7 +793,8 @@ async function createPayment(req, res) {
             scope: "customer",
             purpose: "customer_bill",
             amount: quote.amount,
-            request
+            request,
+            customerName: quote.customer_name
         });
 
         return res.json({ success: true, ...result });
@@ -796,8 +809,10 @@ async function createPayment(req, res) {
 |--------------------------------------------------------------------------
 */
 
-async function companyFromSlug(slug, gateway) {
+async function companyFromSlug(slug, gateways) {
     slug = String(slug || "").trim().toLowerCase();
+
+    const list = Array.isArray(gateways) ? gateways : [gateways];
 
     if (!SLUG_RE.test(slug)) {
         throw new CheckoutError("Payment link not found.", 404);
@@ -807,10 +822,10 @@ async function companyFromSlug(slug, gateway) {
         `SELECT company_id, settings
          FROM payment_gateways
          WHERE scope = 'customer'
-           AND gateway = ?
+           AND gateway IN (${list.map(() => "?").join(", ")})
            AND enabled = 1
            AND settings LIKE ?`,
-        [gateway, `%"slug":"${slug}"%`]
+        [...list, `%"slug":"${slug}"%`]
     );
 
     const match = rows.find(
@@ -837,10 +852,9 @@ function publicPage(req, res) {
 async function publicQuote(req, res) {
     try {
         const body = req.body || {};
-        const gateway = "nagad";
-        const companyId = await companyFromSlug(body.slug, gateway);
-
-        await loadEnabledGateway(companyId, gateway, "customer");
+        const companyId = await companyFromSlug(
+            body.slug, CHECKOUT_GATEWAYS
+        );
 
         const { quote } = await quoteCustomerBill({
             companyId,
@@ -862,8 +876,8 @@ async function publicQuote(req, res) {
 async function publicCreate(req, res) {
     try {
         const body = req.body || {};
-        const gateway = "nagad";
-        const companyId = await companyFromSlug(body.slug, gateway);
+        const gateway = String(body.gateway || "").trim().toLowerCase();
+        const companyId = await companyFromSlug(body.slug, CHECKOUT_GATEWAYS);
 
         const gatewayRow = await loadEnabledGateway(
             companyId, gateway, "customer"
@@ -884,12 +898,125 @@ async function publicCreate(req, res) {
             scope: "customer",
             purpose: "customer_bill",
             amount: quote.amount,
-            request
+            request,
+            customerName: quote.customer_name
         });
 
         return res.json({ success: true, ...result });
     } catch (error) {
         return sendCheckoutError(res, error, "PUBLIC CREATE ERROR:");
+    }
+}
+
+async function publicGateways(req, res) {
+    try {
+        const companyId = await companyFromSlug(
+            req.body?.slug, CHECKOUT_GATEWAYS
+        );
+
+        const gateways = [];
+
+        for (const gateway of CHECKOUT_GATEWAYS) {
+            const row = await paymentService.getGateway(
+                companyId, gateway, "customer"
+            );
+
+            if (row && row.enabled) {
+                gateways.push(gateway);
+            }
+        }
+
+        return res.json({ success: true, gateways });
+    } catch (error) {
+        return sendCheckoutError(res, error, "PUBLIC GATEWAYS ERROR:");
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| SOFTWARE BILLING - ONLINE PAY PAGE  (registration fee / monthly bill)
+|--------------------------------------------------------------------------
+| The dashboard "Online Pay" button opens
+|     /api/payment-gateway/software/pay[?billing_id=ID]
+| The page lists the CENTRAL gateways that Super Admin enabled and starts
+| the payment through POST /create. Amount = billing row, never the browser.
+|--------------------------------------------------------------------------
+*/
+
+function softwarePage(req, res) {
+    if (!requireLogin(req, res)) {
+        return;
+    }
+
+    return res.sendFile(
+        path.join(
+            __dirname, "..", "..", "views", "billing", "payment",
+            "software-pay.html"
+        )
+    );
+}
+
+async function softwareInfo(req, res) {
+    if (!requireLoginJson(req, res)) {
+        return;
+    }
+
+    try {
+        const companyId = getCompanyId(req);
+        const userId = Number(req.session.user_id);
+
+        if (!companyId || isSuperAdmin(req)) {
+            throw new CheckoutError(
+                "No software billing is payable for this account."
+            );
+        }
+
+        let billingId = Number(req.query?.billing_id || 0);
+
+        if (!billingId) {
+            /* same pick as the billing gate: registration first, newest */
+            const [rows] = await db.execute(
+                `SELECT id
+                 FROM software_billing_notifications
+                 WHERE user_id = ? AND company_id = ? AND status = 'unpaid'
+                 ORDER BY CASE WHEN billing_type = 'registration' THEN 0 ELSE 1 END,
+                          id DESC
+                 LIMIT 1`,
+                [userId, companyId]
+            );
+
+            if (!rows.length) {
+                throw new CheckoutError("You have no unpaid software bill.");
+            }
+
+            billingId = Number(rows[0].id);
+        }
+
+        const billing = await softwarePayment.getPayableBilling({
+            billingId, companyId, userId
+        });
+
+        const gateways = [];
+
+        for (const gateway of CHECKOUT_GATEWAYS) {
+            const row = await paymentService.getGateway(0, gateway, "central");
+
+            if (row && row.enabled) {
+                gateways.push(gateway);
+            }
+        }
+
+        return res.json({
+            success: true,
+            csrf_token: getCsrfToken(req),
+            billing_id: billing.id,
+            billing_type: billing.billing_type,
+            amount: billing.amount,
+            currency: "BDT",
+            gateways
+        });
+    } catch (error) {
+        return sendCheckoutError(res, error, "SOFTWARE INFO ERROR:");
     }
 }
 
@@ -939,7 +1066,25 @@ const RESULT_TEXT = {
     }
 };
 
+function receiptFor(transaction) {
+    if (
+        transaction.status !== "paid" ||
+        !transaction.applied_payment_id ||
+        !String(transaction.purpose).startsWith("software_")
+    ) {
+        return null;
+    }
+
+    const request = paymentService.parseJson(transaction.metadata, {}).request || {};
+
+    return request.billing_id
+        ? `/software-billing/receipt?billing_id=${Number(request.billing_id)}&payment_id=${Number(transaction.applied_payment_id)}`
+        : null;
+}
+
 function renderResult(res, transaction, receipt) {
+    receipt = receipt || receiptFor(transaction);
+
     const state = RESULT_TEXT[transaction.status]
         ? transaction.status
         : "pending";
@@ -1014,7 +1159,7 @@ async function settleAndRender(req, res, transaction) {
 |--------------------------------------------------------------------------
 */
 
-async function nagadCallback(req, res) {
+async function gatewayCallback(req, res) {
     try {
         const transactionId = String(
             req.params.transactionId || ""
@@ -1027,28 +1172,20 @@ async function nagadCallback(req, res) {
         const transaction =
             await paymentService.getTransactionByTransactionId(transactionId);
 
-        if (!transaction || transaction.gateway !== "nagad") {
+        if (
+            !transaction ||
+            !CHECKOUT_GATEWAYS.includes(transaction.gateway) ||
+            transaction.gateway !==
+                String(req.params.gateway || "").toLowerCase()
+        ) {
             return renderNotFound(res);
         }
 
-        const orderId = String(req.query?.order_id || "").trim();
-        const refId = String(req.query?.payment_ref_id || "").trim();
-
-        if (
-            (orderId && orderId !== transaction.transaction_id) ||
-            (refId &&
-                transaction.gateway_session_id &&
-                refId !== transaction.gateway_session_id)
-        ) {
-            console.error(
-                "NAGAD CALLBACK: query does not match transaction",
-                { transactionId, orderId, refId }
-            );
-        }
+        /* query/body are never used: the gateway is asked server-side */
 
         return settleAndRender(req, res, transaction);
     } catch (error) {
-        console.error("NAGAD CALLBACK ERROR:", error);
+        console.error("GATEWAY CALLBACK ERROR:", error);
 
         return res.status(500).send("Unable to process the payment result.");
     }
@@ -1105,7 +1242,11 @@ module.exports = {
     publicPage,
     publicQuote,
     publicCreate,
-    nagadCallback,
+    gatewayCallback,
+    nagadCallback: gatewayCallback,
+    publicGateways,
+    softwarePage,
+    softwareInfo,
     result,
     ipn,
 
