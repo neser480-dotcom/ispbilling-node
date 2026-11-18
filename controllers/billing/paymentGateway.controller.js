@@ -27,6 +27,7 @@ const paymentService = require("../../services/payment/payment.service");
 const { getProvider } = require("../../services/payment/payment.factory");
 const settlement = require("../../services/payment/paymentSettlement.service");
 const nagad = require("../../services/payment/nagad.service");
+const demo = require("../../services/payment/demoMode");
 const recharge = require("../../services/customers/customer-recharge.service");
 const softwarePayment = require("../../services/billing/softwareBillingPayment.service");
 
@@ -40,6 +41,29 @@ const CREDENTIAL_KEYS = {
     sslcommerz: ["store_id", "store_password"],
     shurjopay: ["username", "password", "prefix"]
 };
+
+/*
+ * Rocket and DBBL have no stand-alone merchant API. They are paid THROUGH
+ * SSLCommerz (same credentials, same verify flow); the SSLCommerz page is
+ * limited to that method with multi_card_name (values from SSLCommerz docs).
+ */
+const ALIASES = {
+    rocket: { gateway: "sslcommerz", method: "dbblmobilebanking", label: "Rocket" },
+    dbbl: {
+        gateway: "sslcommerz",
+        method: "dbbl_nexus,dbbl_visa,dbbl_master",
+        label: "DBBL Nexus / Card"
+    }
+};
+
+function resolveGateway(input) {
+    const name = String(input || "").trim().toLowerCase();
+    const alias = ALIASES[name];
+
+    return alias
+        ? { gateway: alias.gateway, method: alias.method, key: name }
+        : { gateway: name, method: null, key: name };
+}
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{2,39}$/;
 
@@ -498,8 +522,13 @@ async function loadEnabledGateway(companyId, gateway, scope) {
     }
 
     const row = await paymentService.getGateway(companyId, gateway, scope);
+    const mode = demo.modeFor(gateway, row);
 
-    if (!row || !row.enabled) {
+    if (mode === "demo") {
+        return { __demo: true };
+    }
+
+    if (mode !== "real") {
         throw new CheckoutError(
             "This payment method is not available right now."
         );
@@ -579,7 +608,8 @@ async function startPayment({
     purpose,
     amount,
     request,
-    customerName
+    customerName,
+    method
 }) {
     const transaction = await paymentService.createTransaction({
         companyId,
@@ -590,8 +620,21 @@ async function startPayment({
         amount,
         currency: "BDT",
         shortId: true,
-        metadata: { request }
+        metadata: { request, method: method || null }
     });
+
+    if (gatewayRow && gatewayRow.__demo) {
+        await paymentService.updateTransaction(transaction.id, {
+            metadata: JSON.stringify({ request, demo: true, method: method || null })
+        });
+
+        return {
+            transaction_id: transaction.transactionId,
+            redirect_url:
+                `/api/payment-gateway/demo/${transaction.transactionId}`,
+            demo: true
+        };
+    }
 
     const provider = getProvider(gateway);
 
@@ -599,7 +642,10 @@ async function startPayment({
         const result = await provider.initiate({
             credentials: gatewayRow.credentials,
             environment: gatewayRow.environment,
-            settings: gatewayRow.settings,
+            settings: {
+                ...(gatewayRow.settings || {}),
+                ...(method ? { multi_card_name: method } : {})
+            },
             transaction,
             customer: { name: customerName || "Customer" },
             clientIp: clientIpV4(req),
@@ -613,6 +659,7 @@ async function startPayment({
             gateway_session_id: result.sessionKey || null,
             metadata: JSON.stringify({
                 request,
+                method: method || null,
                 initiate: result.raw || {}
             })
         });
@@ -717,7 +764,7 @@ async function createPayment(req, res) {
 
     try {
         const body = req.body || {};
-        const gateway = String(body.gateway || "").trim().toLowerCase();
+        const { gateway, method } = resolveGateway(body.gateway);
         const purposeIn = String(body.purpose || "").trim().toLowerCase();
 
         if (!paymentService.SUPPORTED_PURPOSES.includes(purposeIn)) {
@@ -755,7 +802,8 @@ async function createPayment(req, res) {
                         : "software_billing",
                 amount: billing.amount,
                 request: { billing_id: billing.id },
-                customerName: req.session?.name || req.session?.username
+                customerName: req.session?.name || req.session?.username,
+                method
             });
 
             return res.json({ success: true, ...result });
@@ -794,7 +842,8 @@ async function createPayment(req, res) {
             purpose: "customer_bill",
             amount: quote.amount,
             request,
-            customerName: quote.customer_name
+            customerName: quote.customer_name,
+            method
         });
 
         return res.json({ success: true, ...result });
@@ -876,7 +925,7 @@ async function publicQuote(req, res) {
 async function publicCreate(req, res) {
     try {
         const body = req.body || {};
-        const gateway = String(body.gateway || "").trim().toLowerCase();
+        const { gateway, method } = resolveGateway(body.gateway);
         const companyId = await companyFromSlug(body.slug, CHECKOUT_GATEWAYS);
 
         const gatewayRow = await loadEnabledGateway(
@@ -899,7 +948,8 @@ async function publicCreate(req, res) {
             purpose: "customer_bill",
             amount: quote.amount,
             request,
-            customerName: quote.customer_name
+            customerName: quote.customer_name,
+            method
         });
 
         return res.json({ success: true, ...result });
@@ -921,12 +971,22 @@ async function publicGateways(req, res) {
                 companyId, gateway, "customer"
             );
 
-            if (row && row.enabled) {
+            const mode = demo.modeFor(gateway, row);
+
+            if (mode) {
                 gateways.push(gateway);
+
+                if (gateway === "sslcommerz") {
+                    gateways.push("rocket", "dbbl");
+                }
             }
         }
 
-        return res.json({ success: true, gateways });
+        return res.json({
+            success: true,
+            gateways,
+            demo: demo.enabled()
+        });
     } catch (error) {
         return sendCheckoutError(res, error, "PUBLIC GATEWAYS ERROR:");
     }
@@ -997,11 +1057,23 @@ async function softwareInfo(req, res) {
         });
 
         const gateways = [];
+        const allGateways = [];
 
         for (const gateway of CHECKOUT_GATEWAYS) {
             const row = await paymentService.getGateway(0, gateway, "central");
+            const mode = demo.modeFor(gateway, row);
+            const enabled = Boolean(mode);
 
-            if (row && row.enabled) {
+            allGateways.push({ gateway, enabled, demo: mode === "demo" });
+
+            if (gateway === "sslcommerz") {
+                /* Rocket / DBBL ride on the SSLCommerz account */
+                for (const extra of ["rocket", "dbbl"]) {
+                    allGateways.push({ gateway: extra, enabled, demo: mode === "demo" });
+                }
+            }
+
+            if (enabled) {
                 gateways.push(gateway);
             }
         }
@@ -1013,7 +1085,8 @@ async function softwareInfo(req, res) {
             billing_type: billing.billing_type,
             amount: billing.amount,
             currency: "BDT",
-            gateways
+            gateways,
+            all_gateways: allGateways
         });
     } catch (error) {
         return sendCheckoutError(res, error, "SOFTWARE INFO ERROR:");
@@ -1159,6 +1232,315 @@ async function settleAndRender(req, res, transaction) {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| SUPER ADMIN - PAYMENT REVIEW  (needs_review / stuck payments)
+|--------------------------------------------------------------------------
+*/
+
+function reviewPage(req, res) {
+    if (!requireLogin(req, res)) {
+        return;
+    }
+
+    if (!isSuperAdmin(req)) {
+        return res.status(403).send("Only Super Admin can review payments.");
+    }
+
+    return res.sendFile(
+        path.join(
+            __dirname, "..", "..", "views", "billing", "payment",
+            "payment-review.html"
+        )
+    );
+}
+
+async function reviewList(req, res) {
+    if (!requireLoginJson(req, res)) {
+        return;
+    }
+
+    if (!isSuperAdmin(req)) {
+        return res.status(403).json({ success: false, message: "Forbidden." });
+    }
+
+    try {
+        const filter = String(req.query?.filter || "attention");
+
+        const where = {
+            attention:
+                "(status IN ('needs_review','verified') OR " +
+                "(status = 'pending' AND created_at <= (NOW() - INTERVAL 30 MINUTE)))",
+            needs_review: "status = 'needs_review'",
+            all: "1 = 1"
+        }[filter] || "status = 'needs_review'";
+
+        const [rows] = await db.execute(
+            `SELECT id, transaction_id, company_id, user_id, gateway, scope,
+                    purpose, amount, status, gateway_transaction_id,
+                    created_at, verified_at, applied_at, metadata
+             FROM payment_transactions
+             WHERE ${where}
+             ORDER BY id DESC
+             LIMIT 200`
+        );
+
+        return res.json({
+            success: true,
+            csrf_token: getCsrfToken(req),
+            demo_mode: demo.enabled(),
+            items: rows.map((row) => {
+                const meta = settlement.metadataOf(row);
+
+                return {
+                    id: row.id,
+                    transaction_id: row.transaction_id,
+                    company_id: row.company_id,
+                    gateway: row.gateway,
+                    scope: row.scope,
+                    purpose: row.purpose,
+                    amount: row.amount,
+                    status: row.status,
+                    gateway_transaction_id: row.gateway_transaction_id,
+                    created_at: row.created_at,
+                    verified_at: row.verified_at,
+                    applied_at: row.applied_at,
+                    demo: Boolean(meta.demo),
+                    reason: meta.apply_error || meta.initiate_error || null,
+                    review_note: meta.review_note || null,
+                    review_done: Boolean(meta.review_done)
+                };
+            })
+        });
+    } catch (error) {
+        console.error("REVIEW LIST ERROR:", error);
+
+        return res.status(500).json({ success: false, message: "Unable to load." });
+    }
+}
+
+/*
+ * retry   : ask the gateway / retry the ledger step again (safe, idempotent)
+ * resolve : admin handled it by hand (refund / manual entry); note required
+ */
+async function reviewAction(req, res) {
+    if (!requireLoginJson(req, res)) {
+        return;
+    }
+
+    if (!isSuperAdmin(req)) {
+        return res.status(403).json({ success: false, message: "Forbidden." });
+    }
+
+    if (!verifyCsrf(req)) {
+        return res.status(419).json({ success: false, message: "Invalid CSRF token." });
+    }
+
+    try {
+        const body = req.body || {};
+        const action = String(body.action || "");
+        const transaction = await paymentService.getTransactionById(
+            Number(body.id)
+        );
+
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: "Not found." });
+        }
+
+        if (action === "retry") {
+            if (transaction.status === "needs_review") {
+                return res.status(409).json({
+                    success: false,
+                    message: "needs_review cannot be retried automatically. " +
+                        "Fix it by hand, then press Resolve."
+                });
+            }
+
+            const outcome = await settlement.settle(transaction, {
+                clientIp: clientIpV4(req)
+            });
+
+            return res.json({ success: true, state: outcome.state });
+        }
+
+        if (action === "resolve") {
+            const note = String(body.note || "").trim().slice(0, 300);
+
+            if (note.length < 3) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please write what was done (note)."
+                });
+            }
+
+            await settlement.patchMetadata(transaction, {
+                review_done: true,
+                review_note: note,
+                review_by: Number(req.session.user_id),
+                review_at: new Date().toISOString()
+            });
+
+            return res.json({ success: true });
+        }
+
+        return res.status(400).json({ success: false, message: "Unknown action." });
+    } catch (error) {
+        console.error("REVIEW ACTION ERROR:", error);
+
+        return res.status(500).json({ success: false, message: "Action failed." });
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| STATUS (JSON) - for the mobile app / polling after returning from the gateway
+|--------------------------------------------------------------------------
+| Logged in; only the owner company (Super Admin: any).
+*/
+
+async function statusJson(req, res) {
+    if (!requireLoginJson(req, res)) {
+        return;
+    }
+
+    try {
+        const id = String(req.params.transactionId || "").trim();
+
+        if (!/^[A-Za-z0-9]{6,40}$/.test(id)) {
+            return res.status(404).json({ success: false, message: "Not found." });
+        }
+
+        let transaction =
+            await paymentService.getTransactionByTransactionId(id);
+
+        const owner =
+            transaction &&
+            (isSuperAdmin(req) ||
+                Number(transaction.company_id) === Number(getCompanyId(req)) ||
+                (transaction.scope === "central" &&
+                    Number(transaction.user_id) === Number(req.session.user_id)));
+
+        if (!owner) {
+            return res.status(404).json({ success: false, message: "Not found." });
+        }
+
+        if (["pending", "verified"].includes(transaction.status)) {
+            try {
+                const outcome = await settlement.settle(transaction, {
+                    clientIp: clientIpV4(req)
+                });
+
+                transaction = outcome.transaction || transaction;
+            } catch (error) {
+                console.error("STATUS SETTLE ERROR:", error);
+            }
+        }
+
+        return res.json({
+            success: true,
+            transaction_id: transaction.transaction_id,
+            status: transaction.status,
+            paid: transaction.status === "paid",
+            final: ["paid", "failed", "needs_review"].includes(transaction.status),
+            amount: transaction.amount,
+            gateway: transaction.gateway
+        });
+    } catch (error) {
+        console.error("STATUS ERROR:", error);
+
+        return res.status(500).json({ success: false, message: "Unable to load." });
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| DEMO PAYMENT PAGE  (only when PAYMENT_DEMO_MODE=1)
+|--------------------------------------------------------------------------
+*/
+
+async function demoTransaction(req) {
+    const id = String(req.params.transactionId || "").trim();
+
+    if (!demo.enabled() || !/^[A-Za-z0-9]{6,40}$/.test(id)) {
+        return null;
+    }
+
+    const transaction = await paymentService.getTransactionByTransactionId(id);
+
+    if (
+        !transaction ||
+        !settlement.metadataOf(transaction).demo ||
+        transaction.status !== "pending"
+    ) {
+        return null;
+    }
+
+    return transaction;
+}
+
+async function demoPage(req, res) {
+    try {
+        const transaction = await demoTransaction(req);
+
+        if (!transaction) {
+            return renderNotFound(res);
+        }
+
+        const id = escapeHtml(transaction.transaction_id);
+        const form = (outcome, label, color) =>
+            `<form method="POST" action="/api/payment-gateway/demo/${id}/complete" style="margin:10px 0">` +
+            `<input type="hidden" name="outcome" value="${outcome}">` +
+            `<button style="width:100%;padding:13px;border:0;border-radius:8px;color:#fff;` +
+            `font-size:15px;font-weight:bold;background:${color};cursor:pointer">${label}</button></form>`;
+
+        return res.send(
+            `<!DOCTYPE html><html><head><meta charset="UTF-8">` +
+            `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+            `<title>DEMO Payment</title></head>` +
+            `<body style="font-family:Arial;background:#f4f6fa;margin:0">` +
+            `<div style="max-width:420px;margin:40px auto;background:#fff;border:2px dashed #f59e0b;` +
+            `border-radius:12px;padding:24px;text-align:center">` +
+            `<div style="background:#fef3c7;color:#92400e;padding:8px;border-radius:6px;font-weight:bold">` +
+            `DEMO MODE - no real money</div>` +
+            `<h2>${escapeHtml(String(settlement.metadataOf(transaction).method || transaction.gateway).toUpperCase())} (demo)</h2>` +
+            `<div style="font-size:30px;font-weight:bold">৳ ${Number(transaction.amount).toFixed(2)}</div>` +
+            `<p style="color:#667085;font-size:13px">Ref: ${id}</p>` +
+            form("success", "Simulate SUCCESS", "#16a34a") +
+            form("fail", "Simulate FAIL", "#dc2626") +
+            form("cancel", "Cancel", "#64748b") +
+            `</div></body></html>`
+        );
+    } catch (error) {
+        console.error("DEMO PAGE ERROR:", error);
+        return res.status(500).send("Demo page error.");
+    }
+}
+
+async function demoComplete(req, res) {
+    try {
+        const transaction = await demoTransaction(req);
+
+        if (!transaction) {
+            return renderNotFound(res);
+        }
+
+        const outcome = String(req.body?.outcome || "");
+
+        if (outcome === "success" || outcome === "fail") {
+            await settlement.patchMetadata(transaction, {
+                demo_outcome: outcome
+            });
+        }
+
+        return res.redirect(
+            `/api/payment-gateway/result/${transaction.transaction_id}`
+        );
+    } catch (error) {
+        console.error("DEMO COMPLETE ERROR:", error);
+        return res.status(500).send("Demo error.");
+    }
+}
+
 async function gatewayCallback(req, res) {
     try {
         const transactionId = String(
@@ -1243,6 +1625,12 @@ module.exports = {
     publicQuote,
     publicCreate,
     gatewayCallback,
+    reviewPage,
+    reviewList,
+    reviewAction,
+    statusJson,
+    demoPage,
+    demoComplete,
     nagadCallback: gatewayCallback,
     publicGateways,
     softwarePage,

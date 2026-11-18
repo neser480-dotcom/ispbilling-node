@@ -148,7 +148,7 @@ $("checkBtn").addEventListener("click", async () => {
     showGateways();
 });
 
-const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay" };
+const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay", rocket: "Rocket (DBBL)", dbbl: "DBBL Nexus / Card" };
 
 async function pay(gateway, button) {
     showError("");
@@ -189,7 +189,7 @@ async function showGateways() {
     data.gateways.forEach((gateway) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = `Pay with ${LABELS[gateway] || gateway}`;
+        button.textContent = `Pay with ${LABELS[gateway] || gateway}${data.demo ? " (DEMO)" : ""}`;
         button.addEventListener("click", () => pay(gateway, button));
         holder.appendChild(button);
     });

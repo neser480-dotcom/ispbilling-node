@@ -771,6 +771,17 @@
         const monthly = Number(form.dataset.monthlyBill || 0);
         const previousDue = Number(form.dataset.previousDue || 0);
 
+        /* Due the cashier chooses to collect now (0..previousDue) */
+        const dueInput = form.querySelector("[data-recharge-due]");
+
+        if (dueInput && Number(dueInput.value) > previousDue) {
+            dueInput.value = String(previousDue);
+        }
+
+        const duePay = dueInput
+            ? Math.min(previousDue, Math.max(0, Number(dueInput.value || 0)))
+            : previousDue;
+
         const typeSelect = form.querySelector("[data-recharge-billing-type]");
         const monthSelect = form.querySelector("[data-recharge-month]");
         const daySelect = form.querySelector("[data-recharge-days]");
@@ -807,10 +818,10 @@
         const billTypeSelect = form.querySelector('[name="bill_type"]');
         const deposit = !!billTypeSelect && billTypeSelect.value === "Advance";
         const total = deposit
-            ? previousDue + advance
+            ? duePay + advance
             : (paidAlready
-                ? previousDue
-                : Math.max(0, chargeNow - credit) + extra + previousDue + advance);
+                ? duePay
+                : Math.max(0, chargeNow - credit) + extra + duePay + advance);
 
         const fmt = function (n) { return "৳" + n.toFixed(2); };
 

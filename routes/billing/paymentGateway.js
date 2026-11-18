@@ -23,6 +23,9 @@ const express = require("express");
 
 const router = express.Router();
 
+/* background safety net: re-checks stuck payments every 5 min */
+require("../../services/payment/paymentReconcile.service").start();
+
 const controller = require("../../controllers/billing/paymentGateway.controller");
 const security = require("../../middleware/security");
 
@@ -89,6 +92,11 @@ router.post("/public/create", publicLimiter, sameHostOnly, controller.publicCrea
 router.post("/public/gateways", publicLimiter, sameHostOnly, controller.publicGateways);
 
 /* ---------------- software billing (registration fee / monthly bill) ---------------- */
+router.get("/review", controller.reviewPage);
+router.get("/review/list", controller.reviewList);
+router.post("/review/action", controller.reviewAction);
+router.get("/status/:transactionId", controller.statusJson);
+
 router.get("/software/pay", controller.softwarePage);
 router.get("/software/info", controller.softwareInfo);
 
@@ -96,6 +104,15 @@ router.get("/software/info", controller.softwareInfo);
  * bKash / Nagad / ShurjoPay redirect with GET, SSLCommerz posts.
  * Nothing in the request is trusted; the payment is verified server-side.
  */
+router.get("/demo/:transactionId", callbackLimiter, controller.demoPage);
+router.post(
+    "/demo/:transactionId/complete",
+    callbackLimiter,
+    sameHostOnly,
+    express.urlencoded({ extended: false }),
+    controller.demoComplete
+);
+
 router.all(
     "/:gateway/callback/:transactionId",
     callbackLimiter,

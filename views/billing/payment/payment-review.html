@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Payment Review</title>
+<style>
+    :root { --bg:#f4f6fa; --card:#fff; --text:#1c2333; --muted:#667085; --brand:#1f6feb; --line:#d9dee8; }
+    @media (prefers-color-scheme: dark) {
+        :root { --bg:#12151d; --card:#1b2030; --text:#eef1f7; --muted:#9aa3b5; --line:#2d3550; --brand:#4c8dff; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+    .wrap { max-width:1100px; margin:0 auto; padding:20px 16px; }
+    h1 { font-size:20px; margin:0 0 12px; }
+    .bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+    select, button, input { padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); }
+    button { cursor:pointer; background:var(--brand); color:#fff; border:0; font-weight:bold; }
+    button.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+    .tbl { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:10px; }
+    table { border-collapse:collapse; width:100%; font-size:13px; }
+    th, td { padding:9px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    .tag { padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold; }
+    .needs_review { background:#fee2e2; color:#991b1b; }
+    .verified { background:#fef3c7; color:#92400e; }
+    .pending { background:#e0e7ff; color:#3730a3; }
+    .paid { background:#dcfce7; color:#166534; }
+    .failed { background:#e5e7eb; color:#374151; }
+    .muted { color:var(--muted); font-size:12px; }
+    #msg { margin:10px 0; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Payment Review (Super Admin)</h1>
+    <div class="bar">
+        <select id="filter">
+            <option value="attention">Needs attention</option>
+            <option value="needs_review">needs_review only</option>
+            <option value="all">All (latest 200)</option>
+        </select>
+        <button id="reload" type="button">Reload</button>
+        <button class="ghost" type="button" onclick="location.href='/api/payment-gateway'">Gateway settings</button>
+        <span id="demo" class="muted"></span>
+    </div>
+    <div id="msg"></div>
+    <div class="tbl">
+        <table>
+            <thead><tr>
+                <th>ID / Ref</th><th>ISP</th><th>Gateway</th><th>Purpose</th><th>Amount</th>
+                <th>Status</th><th>Reason / Note</th><th>Created</th><th>Action</th>
+            </tr></thead>
+            <tbody id="rows"><tr><td colspan="9">Loading...</td></tr></tbody>
+        </table>
+    </div>
+    <p class="muted">
+        <b>Retry</b> = gateway-কে আবার জিজ্ঞেস করা / ledger আবার চেষ্টা (নিরাপদ)।
+        <b>Resolve</b> = আপনি হাতে মিটিয়েছেন (refund / manual entry), নোট লিখে চিহ্নিত করুন।
+        needs_review মানে টাকা এসেছে কিন্তু বিল নিজে আপডেট হয়নি।
+    </p>
+</div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+let csrf = "";
+
+function esc(v) {
+    return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function say(t, bad) { $("msg").textContent = t || ""; $("msg").style.color = bad ? "#d92d20" : "inherit"; }
+
+async function post(body) {
+    const r = await fetch("/api/payment-gateway/review/action", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({ ...body, csrf_token: csrf })
+    });
+    return r.json().catch(() => ({ success: false, message: "Unexpected response." }));
+}
+
+async function act(id, action) {
+    let note = "";
+    if (action === "resolve") {
+        note = prompt("কী করা হয়েছে? (যেমন: Nagad থেকে refund করা হয়েছে)") || "";
+        if (note.trim().length < 3) return;
+    }
+    const d = await post({ id, action, note });
+    say(d.success ? (d.state ? "Result: " + d.state : "Saved.") : d.message, !d.success);
+    load();
+}
+
+async function load() {
+    const r = await fetch("/api/payment-gateway/review/list?filter=" + $("filter").value, { credentials: "same-origin" });
+    const d = await r.json().catch(() => ({ success: false }));
+    if (!d.success) { $("rows").innerHTML = '<tr><td colspan="9">Unable to load.</td></tr>'; return; }
+    csrf = d.csrf_token;
+    $("demo").textContent = d.demo_mode ? "DEMO MODE ON" : "";
+    if (!d.items.length) { $("rows").innerHTML = '<tr><td colspan="9">Nothing to review.</td></tr>'; return; }
+    $("rows").innerHTML = d.items.map((t) => {
+        const canRetry = ["pending", "verified"].includes(t.status);
+        const canResolve = t.status === "needs_review" && !t.review_done;
+        return `<tr>
+            <td>#${t.id}<br><span class="muted">${esc(t.transaction_id)}<br>${esc(t.gateway_transaction_id || "")}</span></td>
+            <td>${t.scope === "central" ? "Software (central)" : "ISP " + esc(t.company_id)}</td>
+            <td>${esc(t.gateway)}${t.demo ? " <b>(DEMO)</b>" : ""}</td>
+            <td>${esc(t.purpose)}</td>
+            <td>৳ ${Number(t.amount).toFixed(2)}</td>
+            <td><span class="tag ${esc(t.status)}">${esc(t.status)}</span>${t.review_done ? "<br><span class='muted'>handled</span>" : ""}</td>
+            <td>${esc(t.review_note || t.reason || "")}</td>
+            <td class="muted">${esc(String(t.created_at).replace("T"," ").slice(0,19))}</td>
+            <td>${canRetry ? `<button type="button" onclick="act(${t.id},'retry')">Retry</button>` : ""}
+                ${canResolve ? `<button class="ghost" type="button" onclick="act(${t.id},'resolve')">Resolve</button>` : ""}</td>
+        </tr>`;
+    }).join("");
+}
+
+$("reload").addEventListener("click", load);
+$("filter").addEventListener("change", load);
+load();
+</script>
+</body>
+</html>

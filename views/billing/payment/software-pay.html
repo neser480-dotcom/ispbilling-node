@@ -48,7 +48,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay" };
+const LABELS = { nagad: "Nagad", bkash: "bKash", sslcommerz: "Card / Mobile banking (SSLCommerz)", shurjopay: "ShurjoPay", rocket: "Rocket (DBBL)", dbbl: "DBBL Nexus / Card" };
 
 let info = null;
 
@@ -106,17 +106,25 @@ async function load() {
     $("amount").textContent = Number(data.amount).toFixed(2);
     $("content").hidden = false;
 
-    if (!data.gateways.length) {
-        return showError("Online payment is not available right now. Please use Manual Submit.");
-    }
+    const list = data.all_gateways ||
+        data.gateways.map((g) => ({ gateway: g, enabled: true }));
 
-    data.gateways.forEach((gateway) => {
+    list.forEach(({ gateway, enabled, demo }) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = `Pay with ${LABELS[gateway] || gateway}`;
-        button.addEventListener("click", () => pay(gateway, button));
+        button.textContent = enabled
+            ? `Pay with ${LABELS[gateway] || gateway}${demo ? " (DEMO)" : ""}`
+            : `${LABELS[gateway] || gateway} (not set up yet)`;
+        button.disabled = !enabled;
+        if (enabled) {
+            button.addEventListener("click", () => pay(gateway, button));
+        }
         $("buttons").appendChild(button);
     });
+
+    if (!data.gateways.length) {
+        showError("No gateway is active yet. Please use Manual Submit (Rocket / Bank / others).");
+    }
 }
 
 $("back").addEventListener("click", () => { location.href = "/dashboard"; });

@@ -52,6 +52,7 @@ const managerRoutes = require("./routes/staff/manager/manager.routes");
 const authRoutes =
     require("./routes/auth/auth");
 
+const mobileRoutes = require("./routes/mobile");
 const registerRoutes =
     require("./routes/auth/register");
 const noticeRoutes = require("./routes/notices/notices");
@@ -406,6 +407,14 @@ app.use(
     authRoutes
 );
 
+
+/*
+|--------------------------------------------------------------------------
+| MOBILE API (Bearer token; Web session/CSRF থেকে আলাদা)
+|--------------------------------------------------------------------------
+*/
+
+app.use("/api/mobile", mobileRoutes);
 
 /*
 |--------------------------------------------------------------------------

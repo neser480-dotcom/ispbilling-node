@@ -58,3 +58,26 @@ Secret ফাঁকা রাখলে আগেরটা থাকে; সে�
 
 ## ৮. লাইভের আগে
 প্রতিটি গেটওয়ের production credential, `environment=live`, `APP_BASE_URL=https://…`, sandbox-এ §৬-এর সব আইটেম যাচাই, `needs_review` লেনদেন দেখার প্রক্রিয়া (টাকা এসেছে কিন্তু বিল আপডেট হয়নি), পুরনো pending-এর auto-reconcile (cron) এখনো নেই, `trust proxy`, HTTPS।
+
+---
+
+## Extra: Payment Review, auto re-check, mobile app
+
+**Payment Review (Super Admin):** open `/api/payment-gateway/review`.
+Shows `needs_review` (money received but bill not updated), stuck `verified`
+and `pending` older than 30 min. *Retry* asks the gateway again / retries the
+ledger step (safe). *Resolve* = you fixed it by hand (refund / manual entry);
+a note is required. A `needs_review` payment is never applied automatically.
+
+**Auto re-check:** every 5 minutes the server re-verifies `verified` payments
+and `pending` payments (3 min – 24 h old) with the gateway. It never marks a
+payment failed by itself. Disable with `PAYMENT_RECONCILE=0` in `.env`.
+It starts when `routes/billing/paymentGateway.js` is loaded (no app.js change).
+
+**Flutter / mobile:** keep the login cookie, then
+1. `GET /api/payment-gateway/software/info` -> `csrf_token`, `billing_id`, `amount`, `all_gateways`
+2. `POST /api/payment-gateway/create` (JSON: `gateway`, `purpose`, `billing_id`, `csrf_token`)
+   -> `redirect_url`: open it in a WebView / external browser
+3. After returning, poll `GET /api/payment-gateway/status/<transaction_id>`
+   -> `{status, paid, final}`; stop when `final` is true.
+No separate token API was added; it reuses the same session.

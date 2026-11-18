@@ -1,0 +1,29 @@
+--- a/app.js	2026-11-17 07:53:49.988951176 +0000
++++ b/app.js	2026-11-17 07:53:49.997273069 +0000
+@@ -52,6 +52,7 @@
+ const authRoutes =
+     require("./routes/auth/auth");
+ 
++const mobileRoutes = require("./routes/mobile");
+ const registerRoutes =
+     require("./routes/auth/register");
+ const noticeRoutes = require("./routes/notices/notices");
+@@ -407,6 +408,18 @@
+ );
+ 
+ 
++/*
++|--------------------------------------------------------------------------
++| MOBILE API (Bearer token; Web session/CSRF থেকে সম্পূর্ণ আলাদা)
++|--------------------------------------------------------------------------
++*/
++
++app.use(
++    "/api/mobile",
++    mobileRoutes
++);
++
++
+ /*
+ |--------------------------------------------------------------------------
+ | REGISTER API

@@ -42,7 +42,7 @@ function readCredentials(credentials) {
     return { storeId, storePassword };
 }
 
-async function initiate({ credentials, environment, transaction, customer, urls }) {
+async function initiate({ credentials, environment, settings, transaction, customer, urls }) {
     const cred = readCredentials(credentials);
     const endpoints = api(environment);
 
@@ -72,7 +72,11 @@ async function initiate({ credentials, environment, transaction, customer, urls 
             product_category: "ISP Billing",
             product_profile: "non-physical-goods",
             shipping_method: "NO",
-            num_of_item: "1"
+            num_of_item: "1",
+            /* Rocket / DBBL: restrict the SSLCommerz page to that method */
+            ...(settings && settings.multi_card_name
+                ? { multi_card_name: String(settings.multi_card_name) }
+                : {})
         }
     });
 

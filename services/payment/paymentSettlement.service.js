@@ -29,8 +29,30 @@ const paymentService = require("./payment.service");
 const { getProvider } = require("./payment.factory");
 const recharge = require("../customers/customer-recharge.service");
 const softwarePayment = require("../billing/softwareBillingPayment.service");
+const demo = require("./demoMode");
+
+const LABELS = {
+    nagad: "Nagad",
+    bkash: "bKash",
+    sslcommerz: "SSLCommerz",
+    shurjopay: "ShurjoPay"
+};
 
 const FINAL = new Set(["paid", "failed", "needs_review"]);
+
+function methodLabel(transaction) {
+    const method = String(metadataOf(transaction).method || "");
+
+    if (method === "dbblmobilebanking") {
+        return "Rocket";
+    }
+
+    if (method.startsWith("dbbl_")) {
+        return "DBBL";
+    }
+
+    return LABELS[transaction.gateway] || transaction.gateway;
+}
 
 function metadataOf(transaction) {
     return paymentService.parseJson(transaction.metadata, {});
@@ -124,9 +146,10 @@ async function applyToLedger(transaction, verification) {
 
         const input = {
             ...(request.input || {}),
-            payment_method: "Nagad",
+            payment_method: methodLabel(transaction),
             discount: 0,
-            comment: `Nagad ${transaction.transaction_id}` +
+            comment: `${metadataOf(transaction).demo ? "DEMO " : ""}` +
+                `${methodLabel(transaction)} ${transaction.transaction_id}` +
                 (gatewayRef ? ` / ${gatewayRef}` : "")
         };
 
@@ -196,7 +219,48 @@ async function settle(transaction, { clientIp } = {}) {
      * "verified" = money confirmed earlier, ledger step did not finish
      * (e.g. database error). Retry only the ledger step.
      */
-    if (transaction.status !== "verified") {
+    if (transaction.status !== "verified" && metadataOf(transaction).demo) {
+        /* demo transaction: never talk to a gateway */
+        if (!demo.enabled()) {
+            return { state: "pending", transaction };
+        }
+
+        const outcome = metadataOf(transaction).demo_outcome;
+
+        if (outcome === "fail") {
+            await paymentService.changeStatus(
+                transaction.id, ["pending"], "failed", {}
+            );
+
+            return { state: "failed", transaction: await reload(transaction.id) };
+        }
+
+        if (outcome !== "success") {
+            return { state: "pending", transaction };
+        }
+
+        const claimedDemo = await paymentService.changeStatus(
+            transaction.id,
+            ["pending"],
+            "verified",
+            {
+                gateway_transaction_id: `DEMO-${transaction.transaction_id}`,
+                payment_date: new Date(),
+                verified_at: new Date()
+            }
+        );
+
+        transaction = await reload(transaction.id);
+
+        if (!claimedDemo) {
+            return { state: transaction.status, transaction };
+        }
+
+        verification = {
+            gatewayTransactionId: `DEMO-${transaction.transaction_id}`,
+            raw: { demo: true }
+        };
+    } else if (transaction.status !== "verified") {
         const gatewayRow = await paymentService.getGateway(
             transaction.company_id,
             transaction.gateway,
