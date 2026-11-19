@@ -7,7 +7,7 @@
 const db = require("../config/database");
 const tokens = require("../services/mobile/token.service");
 
-const ADMIN_ROLES = ["super_admin", "admin", "manager", "collector", "staff"];
+const ADMIN_ROLES = ["super_admin", "admin", "manager", "collector", "staff", "employee", "reseller"];
 const FULL_ACCESS_ROLES = ["super_admin", "admin"];   // permission.js-এর মতোই
 
 function deny(res, status, code, message) {

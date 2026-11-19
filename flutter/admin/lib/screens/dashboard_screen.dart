@@ -54,9 +54,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final l = Lang.i;
       return AdminScaffold(
         current: 'dashboard',
-        title: 'নেটফি',
+        title: 'আমাদের বিল',
         actions: [
-          IconButton(icon: const Icon(Icons.sync, size: 30), onPressed: _refresh),
+          IconButton(
+              icon: const Icon(Icons.sync, size: 30), onPressed: _refresh),
           const SizedBox(width: 6),
         ],
         body: ListView(
@@ -74,8 +75,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             _chartSection(l),
             _radioRow([
-              (l.t('collector'), _people == 'collector', () => _setPeople('collector')),
-              (l.t('reseller'), _people == 'reseller', () => _setPeople('reseller')),
+              (
+                l.t('collector'),
+                _people == 'collector',
+                () => _setPeople('collector')
+              ),
+              (
+                l.t('reseller'),
+                _people == 'reseller',
+                () => _setPeople('reseller')
+              ),
             ]),
             _peopleSection(l),
           ],
@@ -105,7 +114,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.fromLTRB(14, 20, 14, 12),
           child: Row(
             children: [
-              Expanded(child: _amountBox(l.t('potential'), s?.potential, AppColors.text, CrossAxisAlignment.start)),
+              Expanded(
+                  child: _amountBox(l.t('potential'), s?.potential,
+                      AppColors.text, CrossAxisAlignment.start)),
               SizedBox(
                 width: 104,
                 height: 104,
@@ -132,13 +143,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Text(
                         l.digits('${percent.toStringAsFixed(1)}%'),
-                        style: const TextStyle(fontSize: 20, color: AppColors.text),
+                        style: const TextStyle(
+                            fontSize: 20, color: AppColors.text),
                       ),
                     ),
                   ],
                 ),
               ),
-              Expanded(child: _amountBox(l.t('collection'), s?.collection, AppColors.sky, CrossAxisAlignment.end)),
+              Expanded(
+                  child: _amountBox(l.t('collection'), s?.collection,
+                      AppColors.sky, CrossAxisAlignment.end)),
             ],
           ),
         );
@@ -146,16 +160,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _amountBox(String label, double? v, Color color, CrossAxisAlignment a) {
+  Widget _amountBox(
+      String label, double? v, Color color, CrossAxisAlignment a) {
     return Column(
       crossAxisAlignment: a,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16, color: AppColors.muted)),
+        Text(label,
+            style: const TextStyle(fontSize: 16, color: AppColors.muted)),
         const SizedBox(height: 4),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(v == null ? '-' : inr(v),
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
+              style: TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.bold, color: color)),
         ),
       ],
     );
@@ -166,43 +183,203 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return FutureBuilder<DashboardSummary>(
       future: _summary,
       builder: (context, snap) {
-        final s = snap.data;
-        String n(num? v) => v == null ? '-' : '$v';
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snap.hasError || !snap.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Dashboard cards could not be loaded'),
+          );
+        }
+
+        final s = snap.data!;
+        final cards = <Widget>[];
+        final admin = s.admin ?? {};
+        final collector = s.collector ?? {};
+        final superAdmin = s.superAdmin ?? {};
+
+        String count(dynamic v) => '${v ?? 0}';
+        String money(dynamic v) => '৳${inr((v as num?) ?? 0)}';
+
+        void add(
+          String title,
+          IconData icon,
+          Color color,
+          dynamic value, {
+          String footer = '',
+          dynamic footerValue,
+          bool isMoney = false,
+        }) {
+          cards.add(_SumCard(
+            color: color,
+            title: title,
+            icon: icon,
+            value: isMoney ? money(value) : count(value),
+            footerLabel: footer,
+            footerValue: footerValue == null
+                ? ''
+                : (isMoney ? money(footerValue) : count(footerValue)),
+          ));
+        }
+
+        if (s.type == 'super_admin') {
+          add('Registered Users', Icons.people_outline, AppColors.orange,
+              superAdmin['registered_users']);
+          add('Active Users', Icons.verified_user_outlined, AppColors.teal,
+              superAdmin['active_users']);
+          add('Registration Invoices', Icons.receipt_long, AppColors.pink,
+              superAdmin['registration_invoices']);
+          add('Registration Collection', Icons.payments_outlined, AppColors.sky,
+              superAdmin['registration_collection'],
+              isMoney: true);
+          add('Paid Registration', Icons.check_circle_outline, AppColors.teal,
+              superAdmin['paid_registration']);
+          add('Unpaid Registration', Icons.pending_actions, AppColors.orange,
+              superAdmin['unpaid_registration']);
+          add('Software Payments', Icons.account_balance_wallet_outlined,
+              AppColors.pink, superAdmin['software_payments'],
+              isMoney: true);
+        } else {
+          if (s.hasCustomers) {
+            add('Total Customer', Icons.people_outline, AppColors.orange,
+                s.totalCustomers,
+                footer: 'New Customer', footerValue: s.newCustomers);
+            add('Active Customer', Icons.wifi, AppColors.teal,
+                s.connectedCustomers,
+                footer: 'New Active', footerValue: s.activeNew);
+            add('Paid Customer', Icons.person_search_outlined, AppColors.pink,
+                s.paidCustomers,
+                footer: 'New Paid', footerValue: s.paidNew);
+            add('Unpaid Customer', Icons.money_off, AppColors.orange,
+                s.unpaidCustomers,
+                footer: 'New Unpaid', footerValue: s.unpaidNew);
+            add('Expired Customer', Icons.timer_off_outlined, AppColors.sky,
+                s.expiredCustomers,
+                footer: 'New Expired', footerValue: s.expiredNew);
+            add('Inactive Customer', Icons.person_off_outlined, AppColors.pink,
+                s.inactiveCustomers,
+                footer: 'New Inactive', footerValue: s.inactiveNew);
+            add('Free Customer', Icons.card_giftcard, AppColors.teal,
+                s.freeCustomers);
+          }
+
+          if (s.hasCollection) {
+            add('Total Collection (With New)', Icons.payments_outlined,
+                AppColors.teal, s.collection,
+                footer: 'New Collection',
+                footerValue: s.paidNewAmount,
+                isMoney: true);
+            add('Total Bill & Connection Fee', Icons.receipt_long,
+                AppColors.sky, s.billAndFee,
+                isMoney: true);
+            add('Today Collection', Icons.today, AppColors.orange,
+                s.todayCollection,
+                isMoney: true);
+          }
+
+          if (s.hasFinance) {
+            add('Total Connection Fee', Icons.add_card, AppColors.pink,
+                s.connectionFee,
+                footer: 'Today',
+                footerValue: s.todayConnectionFee,
+                isMoney: true);
+            add('Total Discount', Icons.discount_outlined, AppColors.orange,
+                s.discount,
+                footer: 'Today', footerValue: s.todayDiscount, isMoney: true);
+            add('Total Expenditure', Icons.money_off_csred_outlined,
+                AppColors.sky, s.expenditure,
+                footer: 'Today',
+                footerValue: s.todayExpenditure,
+                isMoney: true);
+            add('Total Salary', Icons.payments, AppColors.teal, s.salary,
+                isMoney: true);
+            add('Business Balance', Icons.account_balance, AppColors.orange,
+                s.balance,
+                isMoney: true);
+          }
+
+          if (s.hasAdmin) {
+            add('Admin Collection', Icons.payments, AppColors.teal,
+                admin['collection'],
+                isMoney: true,
+                footer: 'Today',
+                footerValue: admin['today_collection']);
+            add('Admin Connection Fee', Icons.add_card, AppColors.sky,
+                admin['connection_fee'],
+                isMoney: true,
+                footer: 'Today',
+                footerValue: admin['today_connection_fee']);
+            add('Own Expenditure', Icons.money_off, AppColors.orange,
+                admin['expenditure'],
+                isMoney: true);
+            add('Admin Discount', Icons.discount, AppColors.pink,
+                admin['discount'],
+                isMoney: true,
+                footer: 'Today',
+                footerValue: admin['today_discount']);
+            add('Admin Salary', Icons.payments_outlined, AppColors.teal,
+                admin['salary'],
+                isMoney: true);
+            add('Deposit Collection', Icons.account_balance_wallet,
+                AppColors.sky, admin['deposit'],
+                isMoney: true);
+            add('Own Balance', Icons.account_balance, AppColors.orange,
+                admin['balance'],
+                isMoney: true);
+
+            final messages = admin['messages'] is Map
+                ? Map<String, dynamic>.from(admin['messages'])
+                : <String, dynamic>{};
+            add('Messages', Icons.message_outlined, AppColors.pink,
+                messages['masking'],
+                footer: 'Non Masking / Fixed',
+                footerValue:
+                    '${messages['non_masking'] ?? 0} / ${messages['fixed'] ?? 0}');
+          }
+
+          if (s.hasCollector) {
+            add('All Collector', Icons.groups, AppColors.orange,
+                collector['total'],
+                footer: 'Today Collection',
+                footerValue: collector['today_collection'],
+                isMoney: false);
+            add('Collector Connection Fee', Icons.add_card, AppColors.teal,
+                collector['connection_fee'],
+                isMoney: true);
+            add('Collector Deposit', Icons.account_balance_wallet,
+                AppColors.sky, collector['deposit'],
+                isMoney: true);
+            add('Collector Expenditure', Icons.money_off, AppColors.pink,
+                collector['expenditure'],
+                isMoney: true);
+            add('Collector Balance', Icons.account_balance, AppColors.orange,
+                collector['balance'],
+                isMoney: true);
+          }
+
+          if (s.hasMikrotik) {
+            add('MikroTik Routers', Icons.router, AppColors.teal,
+                s.mikrotik?['total']);
+          }
+        }
+
+        if (cards.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No dashboard cards available for your permissions'),
+          );
+        }
+
         return SizedBox(
           height: 100,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 1),
-            children: [
-              _SumCard(
-                color: AppColors.orange,
-                title: l.t('total_customers'),
-                icon: Icons.people_outline,
-                value: n(s?.totalCustomers),
-                footerLabel: l.t('new_customers'),
-                footerValue: n(s?.newCustomers),
-              ),
-              _SumCard(
-                color: AppColors.teal,
-                title: l.t('connected_customers'),
-                icon: Icons.manage_accounts_outlined,
-                value: s == null
-                    ? '-'
-                    : '${s.connectedCustomers} ৳${inr(s.connectedAmount)}',
-                footerLabel: l.t('new_customers'),
-                footerValue:
-                    s == null ? '-' : '${s.connectedNew}/৳${inr(s.connectedNewAmount)}',
-              ),
-              _SumCard(
-                color: AppColors.pink,
-                title: l.t('paid_customers'),
-                icon: Icons.person_search_outlined,
-                value: n(s?.paidCustomers),
-                footerLabel: l.t('new_customers'),
-                footerValue:
-                    s == null ? '-' : '${s.paidNew}/৳${inr(s.paidNewAmount)}',
-              ),
-            ],
+            children: cards,
           ),
         );
       },
@@ -246,14 +423,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               builder: (context, snap) {
                 final opts = [
                   SimpleOption(id: 'all', name: l.t('all')),
-                  ...(snap.data ?? const <SimpleOption>[]),
+                  ...(snap.data ?? const <SimpleOption>[])
+                      .where((o) => o.id != 'all'),
                 ];
-                final value = opts.any((o) => o.id == _medium) ? _medium : 'all';
+                final value =
+                    opts.any((o) => o.id == _medium) ? _medium : 'all';
                 return _pill<String>(
                   value: value,
                   items: [
                     for (final o in opts)
-                      DropdownMenuItem(value: o.id, child: Text(o.name, overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                          value: o.id,
+                          child: Text(o.name, overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) => setState(() {
                     _medium = v ?? 'all';
@@ -285,7 +466,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 for (var m = 1; m <= 12; m++)
                   DropdownMenuItem(
                       value: m,
-                      child: Text(l.months[m - 1], overflow: TextOverflow.ellipsis)),
+                      child: Text(l.months[m - 1],
+                          overflow: TextOverflow.ellipsis)),
               ],
               onChanged: (v) => setState(() {
                 _month = v ?? _month;
@@ -299,7 +481,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ---------- রেডিও সারি ----------
-  Widget _radioRow(List<(String, bool, VoidCallback)> opts, {bool alignStart = false}) {
+  Widget _radioRow(List<(String, bool, VoidCallback)> opts,
+      {bool alignStart = false}) {
     return Padding(
       padding: EdgeInsets.fromLTRB(alignStart ? 16 : 0, 14, 0, 6),
       child: Row(
@@ -314,12 +497,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      o.$2 ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      o.$2
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
                       size: 34,
                       color: o.$2 ? AppColors.sky : const Color(0xFF666666),
                     ),
                     const SizedBox(width: 8),
-                    Text(o.$1, style: const TextStyle(fontSize: 18, color: Color(0xFF333333))),
+                    Text(o.$1,
+                        style: const TextStyle(
+                            fontSize: 18, color: Color(0xFF333333))),
                   ],
                 ),
               ),
@@ -350,10 +537,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.only(left: 46, top: 2),
               child: Row(
                 children: [
-                  Container(width: 14, height: 14, color: const Color(0xFF8FE3FF)),
+                  Container(
+                      width: 14, height: 14, color: const Color(0xFF8FE3FF)),
                   const SizedBox(width: 8),
                   Text(l.t('chart'),
-                      style: const TextStyle(fontSize: 14, color: AppColors.text)),
+                      style:
+                          const TextStyle(fontSize: 14, color: AppColors.text)),
                 ],
               ),
             ),
@@ -378,7 +567,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Center(
-              child: Text(snap.error.toString().replaceFirst('Exception: ', '')),
+              child:
+                  Text(snap.error.toString().replaceFirst('Exception: ', '')),
             ),
           );
         }
@@ -390,12 +580,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Text('${l.t('balance')} ${inr(d.balance)} Tk.',
-                    style: const TextStyle(fontSize: 19, color: AppColors.text)),
+                    style:
+                        const TextStyle(fontSize: 19, color: AppColors.text)),
               ),
             ),
             for (final p in d.items)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: const BoxDecoration(
                   border: Border(top: BorderSide(color: AppColors.line)),
                 ),
@@ -413,7 +605,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.text)),
                           Text(p.name.toUpperCase(),
-                              style: const TextStyle(fontSize: 18, color: AppColors.text)),
+                              style: const TextStyle(
+                                  fontSize: 18, color: AppColors.text)),
                         ],
                       ),
                     ),
@@ -458,7 +651,8 @@ class _SumCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 17)),
+          Text(title,
+              style: const TextStyle(color: Colors.white, fontSize: 17)),
           Row(
             children: [
               Icon(icon, color: Colors.white, size: 40),
@@ -513,7 +707,14 @@ class BarChartPainter extends CustomPainter {
     final raw = maxV / 4;
     final mag = math.pow(10, (math.log(raw) / math.ln10).floor()).toDouble();
     final n = raw / mag;
-    final step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+    final step = (n <= 1
+            ? 1
+            : n <= 2
+                ? 2
+                : n <= 5
+                    ? 5
+                    : 10) *
+        mag;
     return step * 4;
   }
 
@@ -549,14 +750,19 @@ class BarChartPainter extends CustomPainter {
       final y = plot.bottom - plot.height * i / 4;
       canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), grid);
       final label = l.digits(intl(top * i / 4));
-      _text(canvas, label, Offset(plot.left - 4, y), size: 12, align: TextAlign.right);
-      _text(canvas, label, Offset(plot.right + 4, y), size: 12, align: TextAlign.left);
+      _text(canvas, label, Offset(plot.left - 4, y),
+          size: 12, align: TextAlign.right);
+      _text(canvas, label, Offset(plot.right + 4, y),
+          size: 12, align: TextAlign.left);
     }
 
-    final dayW = plot.width / 31;
-    canvas.drawLine(Offset(plot.left, plot.top), Offset(plot.left, plot.bottom), grid);
-    canvas.drawLine(Offset(plot.right, plot.top), Offset(plot.right, plot.bottom), grid);
-    for (var d = 5; d <= 30; d += 5) {
+    final dayCount = values.isEmpty ? 1 : values.length;
+    final dayW = plot.width / dayCount;
+    canvas.drawLine(
+        Offset(plot.left, plot.top), Offset(plot.left, plot.bottom), grid);
+    canvas.drawLine(
+        Offset(plot.right, plot.top), Offset(plot.right, plot.bottom), grid);
+    for (var d = 5; d <= dayCount; d += 5) {
       final x = plot.left + dayW * (d - 0.5);
       if (d >= 10) {
         canvas.drawLine(Offset(x, plot.top), Offset(x, plot.bottom), grid);
@@ -565,13 +771,15 @@ class BarChartPainter extends CustomPainter {
     }
 
     // বার + মান লেবেল
-    for (var i = 0; i < values.length && i < 31; i++) {
+    for (var i = 0; i < values.length; i++) {
       final v = values[i];
       final h = top == 0 ? 0.0 : plot.height * v / top;
-      final rect = Rect.fromLTWH(plot.left + dayW * i + 1, plot.bottom - h, dayW - 2, h);
+      final rect =
+          Rect.fromLTWH(plot.left + dayW * i + 1, plot.bottom - h, dayW - 2, h);
       canvas.drawRect(rect, Paint()..color = _colors[i % _colors.length]);
       final label = l.digits(isAmount ? intl(v) : v.toStringAsFixed(0));
-      _text(canvas, label, Offset(plot.left + dayW * (i + 0.5), plot.bottom - h - 6),
+      _text(canvas, label,
+          Offset(plot.left + dayW * (i + 0.5), plot.bottom - h - 6),
           size: 6.5);
     }
   }

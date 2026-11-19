@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../core/lang.dart';
+import '../core/api_client.dart';
 import '../core/theme.dart';
 import '../services/api_service.dart';
 import '../widgets/lang_builder.dart';
 import 'dashboard_screen.dart';
+import 'registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +19,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pass = TextEditingController();
   bool _showPass = false;
   bool _loading = false;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberMe();
+  }
+
+  Future<void> _loadRememberMe() async {
+    final enabled = await ApiClient.getRememberMe();
+    final username = await ApiClient.getRememberedUsername();
+    if (!mounted) return;
+    setState(() {
+      _rememberMe = enabled;
+      if (enabled && username != null) _phone.text = username;
+    });
+  }
 
   @override
   void dispose() {
@@ -29,20 +48,26 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   Future<void> _login() async {
+    if (_loading) return;
     if (_phone.text.trim().isEmpty || _pass.text.isEmpty) {
       _toast(Lang.i.t('fill_all'));
       return;
     }
+
     setState(() => _loading = true);
     try {
       await ApiService.login(_phone.text.trim(), _pass.text);
+      await ApiClient.saveRememberMe(_rememberMe, _phone.text.trim());
+
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } catch (e) {
-      _toast(e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) {
+        _toast(e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -50,8 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   InputDecoration _dec(IconData icon) => InputDecoration(
         prefixIcon: Icon(icon, color: AppColors.sky, size: 34),
-        enabledBorder:
-            const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.sky)),
+        enabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: AppColors.sky)),
         focusedBorder: const UnderlineInputBorder(
             borderSide: BorderSide(color: AppColors.sky, width: 2)),
       );
@@ -64,7 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
             activeColor: AppColors.sky,
             side: const BorderSide(color: AppColors.sky, width: 2),
           ),
-          Text(label, style: const TextStyle(fontSize: 18, color: AppColors.sky)),
+          Text(label,
+              style: const TextStyle(fontSize: 18, color: AppColors.sky)),
         ],
       );
 
@@ -82,7 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 child: Stack(
                   children: [
-                    Positioned.fill(child: CustomPaint(painter: _WavePainter())),
+                    Positioned.fill(
+                        child: CustomPaint(painter: _WavePainter())),
                     Positioned(
                       left: 0,
                       right: 0,
@@ -99,7 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: AppColors.sky, size: 40),
                           ),
                           const SizedBox(height: 4),
-                          const Text('\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09AC\u09BF\u09B2',
+                          const Text(
+                              '\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09AC\u09BF\u09B2',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 38,
@@ -144,6 +172,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: _dec(Icons.person_pin),
                     ),
                     const SizedBox(height: 14),
+                    _check('Remember Me', _rememberMe,
+                        (v) => setState(() => _rememberMe = v ?? false)),
                     _check(l.t('view_pw'), _showPass,
                         (v) => setState(() => _showPass = v ?? false)),
                     const SizedBox(height: 22),
@@ -178,7 +208,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         fixedSize: const Size(150, 42),
                         shape: const StadiumBorder(),
                       ),
-                      onPressed: () => _toast(l.t('coming_soon')),
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegistrationScreen(),
+                                ),
+                              );
+                            },
                       child: Text(l.t('register'),
                           style: const TextStyle(fontSize: 17)),
                     ),

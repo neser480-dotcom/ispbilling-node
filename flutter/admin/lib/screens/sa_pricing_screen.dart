@@ -70,10 +70,15 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
   }
 
   void _replace(Map<String, dynamic> updated) {
-    final id = numOf(updated['company_id']).toInt();
-    final i = _companies.indexWhere((c) => numOf(c['company_id']).toInt() == id);
+    final company = mapOf(updated['company']).isNotEmpty
+        ? mapOf(updated['company'])
+        : updated;
+    final id = numOf(company['company_id']).toInt();
+    final i =
+        _companies.indexWhere((c) => numOf(c['company_id']).toInt() == id);
+    if (i < 0 || !mounted) return;
     setState(() {
-      if (i >= 0) _companies[i] = updated;
+      _companies[i] = company;
     });
   }
 
@@ -169,16 +174,19 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                     fee == 'yearly'
                         ? l.t('yearly_note')
                         : '${l.t('default_price')}: ${taka(numOf(mapOf(company['defaults'])[fee]))}',
-                    style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                    style:
+                        const TextStyle(color: AppColors.muted, fontSize: 13)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: mode,
                   items: [
                     DropdownMenuItem(
-                        value: 'special_price', child: Text(l.t('special_price'))),
+                        value: 'special_price',
+                        child: Text(l.t('special_price'))),
                     if (fee != 'yearly')
                       DropdownMenuItem(
-                          value: 'fixed_discount', child: Text(l.t('fixed_discount'))),
+                          value: 'fixed_discount',
+                          child: Text(l.t('fixed_discount'))),
                   ],
                   onChanged: fee == 'yearly'
                       ? null
@@ -186,7 +194,8 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                 ),
                 TextField(
                   controller: valueC,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(labelText: l.t('price_value')),
                 ),
                 _dateField(ctx, l.t('start_date'), startC),
@@ -210,7 +219,8 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                 onPressed: () => Navigator.pop(ctx, false),
                 child: Text(l.t('cancel'))),
             TextButton(
-                onPressed: () => Navigator.pop(ctx, true), child: Text(l.t('save'))),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l.t('save'))),
           ],
         ),
       ),
@@ -227,15 +237,16 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
     };
     if (ok != true) return;
     try {
-      final updated =
-          await ApiService.pricingSave(numOf(company['company_id']).toInt(), body);
+      final updated = await ApiService.pricingSave(
+          numOf(company['company_id']).toInt(), body);
       if (mounted) _replace(updated);
     } catch (e) {
       if (mounted) _toast(e);
     }
   }
 
-  Future<void> _toggle(Map<String, dynamic> company, String fee, bool enable) async {
+  Future<void> _toggle(
+      Map<String, dynamic> company, String fee, bool enable) async {
     try {
       final updated = await ApiService.pricingToggle(
           numOf(company['company_id']).toInt(), fee, enable);
@@ -254,20 +265,113 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
         content: Text('${_feeLabel(l, fee)}: ${l.t('reset_default')}?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false), child: Text(l.t('cancel'))),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.t('cancel'))),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true), child: Text(l.t('reset_default'))),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l.t('reset_default'))),
         ],
       ),
     );
     if (ok != true) return;
     try {
-      final updated =
-          await ApiService.pricingReset(numOf(company['company_id']).toInt(), fee);
+      final updated = await ApiService.pricingReset(
+          numOf(company['company_id']).toInt(), fee);
       if (mounted) _replace(updated);
     } catch (e) {
       if (mounted) _toast(e);
     }
+  }
+
+  String _historyChange(dynamic mode, dynamic value, dynamic enabled) {
+    if (mode == null && value == null && enabled == null) return '—';
+    if (enabled == false || enabled == 0 || enabled == '0') return 'Disabled';
+    if (mode == null || '$mode'.isEmpty) return 'Enabled';
+    final label = mode == 'fixed_discount' ? 'Fixed discount' : 'Special price';
+    return '$label: ${value == null ? '—' : taka(numOf(value))}';
+  }
+
+  Future<void> _openHistory(Map<String, dynamic> company) async {
+    final id = numOf(company['company_id']).toInt();
+    final companyName = '${company['company_name'] ?? 'Company #$id'}';
+    final future = ApiService.pricingCompanyDetail(id);
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pricing history — $companyName'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 440,
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: future,
+            builder: (ctx, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(snapshot.error
+                      .toString()
+                      .replaceFirst('Exception: ', '')),
+                );
+              }
+              final raw = snapshot.data?['history'];
+              final rows = raw is List
+                  ? raw
+                      .whereType<Map>()
+                      .map((e) => Map<String, dynamic>.from(e))
+                      .toList()
+                  : <Map<String, dynamic>>[];
+              if (rows.isEmpty) {
+                return const Center(child: Text('No pricing changes yet.'));
+              }
+              return SingleChildScrollView(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Time')),
+                      DataColumn(label: Text('Fee')),
+                      DataColumn(label: Text('Action')),
+                      DataColumn(label: Text('Change')),
+                      DataColumn(label: Text('Valid period')),
+                      DataColumn(label: Text('By')),
+                      DataColumn(label: Text('Note')),
+                    ],
+                    rows: rows.map((h) {
+                      final start = dateOnly(h['starts_at']);
+                      final end = dateOnly(h['expires_at']);
+                      return DataRow(cells: [
+                        DataCell(Text(dateOnly(h['created_at']))),
+                        DataCell(
+                            Text(_feeLabel(Lang.i, '${h['fee_type'] ?? ''}'))),
+                        DataCell(Text('${h['action'] ?? '—'}')),
+                        DataCell(Text(
+                          '${_historyChange(h['old_mode'], h['old_value'], h['old_enabled'])} → '
+                          '${_historyChange(h['new_mode'], h['new_value'], h['new_enabled'])}',
+                        )),
+                        DataCell(Text(
+                            '${start.isEmpty ? '—' : start} → ${end.isEmpty ? '—' : end}')),
+                        DataCell(Text('${h['changed_by_name'] ?? '—'}')),
+                        DataCell(SizedBox(
+                          width: 180,
+                          child: Text('${h['note'] ?? '—'}', softWrap: true),
+                        )),
+                      ]);
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 
   Widget _feeRow(Lang l, Map<String, dynamic> company, String fee) {
@@ -298,7 +402,9 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
               children: [
                 Text(_feeLabel(l, fee),
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.text)),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text)),
                 Row(
                   children: [
                     if (changed)
@@ -319,15 +425,18 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                 ),
                 if (isReg)
                   Text(l.t('reg_fixed_note'),
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.muted)),
                 if (isYearly)
                   Text(l.t('yearly_note'),
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.muted)),
                 if (hasRule)
                   Text(
                       '${'${rule['starts_at'] ?? ''}'.isEmpty ? '' : '${dateOnly(rule['starts_at'])} → '}'
                       '${'${rule['expires_at'] ?? ''}'.isEmpty ? '' : dateOnly(rule['expires_at'])}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.muted)),
               ],
             ),
           ),
@@ -341,7 +450,9 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                       color: _stateColor('${rule['state']}'))),
             ),
           if (!isReg && !hasRule)
-            TextButton(onPressed: () => _edit(company, fee), child: Text(l.t('set_price'))),
+            TextButton(
+                onPressed: () => _edit(company, fee),
+                child: Text(l.t('set_price'))),
           if (!isReg && hasRule)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: AppColors.sky),
@@ -358,8 +469,11 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
                 PopupMenuItem(value: 'edit', child: Text(l.t('edit'))),
                 PopupMenuItem(
                     value: 'toggle',
-                    child: Text(rule['is_enabled'] == true ? l.t('disable') : l.t('enable'))),
-                PopupMenuItem(value: 'reset', child: Text(l.t('reset_default'))),
+                    child: Text(rule['is_enabled'] == true
+                        ? l.t('disable')
+                        : l.t('enable'))),
+                PopupMenuItem(
+                    value: 'reset', child: Text(l.t('reset_default'))),
               ],
             ),
         ],
@@ -386,8 +500,19 @@ class _SaPricingScreenState extends State<SaPricingScreen> {
         children: [
           Text(name.isEmpty ? 'Company #${c['company_id']}' : name,
               style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.text)),
-          Text(meta, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text)),
+          Text(meta,
+              style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => _openHistory(c),
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('History'),
+            ),
+          ),
           const Divider(height: 16),
           for (final fee in _fees) _feeRow(l, c, fee),
         ],

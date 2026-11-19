@@ -78,6 +78,15 @@ router.post("/admin/login", loginLimiter, async (req, res, next) => {
             return bad(res, 403, "অ্যাকাউন্টে বৈধ Company নেই।", "NO_COMPANY");
         }
 
+        const passwordRounds = bcrypt.getRounds(String(u.password));
+        if (passwordRounds < 12) {
+            const upgradedHash = await bcrypt.hash(password, 12);
+            await db.execute(
+                "UPDATE users SET password = ? WHERE id = ?",
+                [upgradedHash, u.id]
+            );
+        }
+
         await clearFails(key);
         await db.execute("UPDATE users SET last_login = NOW() WHERE id = ?", [u.id]);
         const t = await tokens.startSession({
