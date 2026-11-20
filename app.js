@@ -6,6 +6,7 @@ const MySQLStore =
     require("express-mysql-session")(session);
 const cookieParser = require("cookie-parser");
 const path = require("path");
+
 const security = require("./middleware/security");
 
 require("dotenv").config();
@@ -175,7 +176,6 @@ const app =
 app.disable("x-powered-by");
 app.use(security.headers());
 if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
-
 
 /*
 |--------------------------------------------------------------------------

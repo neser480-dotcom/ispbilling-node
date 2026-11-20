@@ -7,7 +7,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Mobile Bearer-token client: Access Token + Refresh Token rotation.
 /// Token রাখা হয় Keystore/Keychain-এ। Password কখনো সংরক্ষণ করা হয় না।
 class ApiClient {
-  static const String baseUrl = 'https://amaderbill.com/api/mobile';
+ static const String baseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://amaderbill.com/api/mobile',
+);
 
   static const _accessKey = 'm_access';
   static const _refreshKey = 'm_refresh';

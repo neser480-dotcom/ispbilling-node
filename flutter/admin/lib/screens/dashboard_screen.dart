@@ -652,10 +652,12 @@ class _SumCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
-              style: const TextStyle(color: Colors.white, fontSize: 17)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 13)),
           Row(
             children: [
-              Icon(icon, color: Colors.white, size: 40),
+              Icon(icon, color: Colors.white, size: 28),
               const SizedBox(width: 8),
               Expanded(
                 child: FittedBox(
@@ -664,7 +666,7 @@ class _SumCard extends StatelessWidget {
                   child: Text(value,
                       style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -676,10 +678,10 @@ class _SumCard extends StatelessWidget {
               Flexible(
                 child: Text(footerLabel,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                    style: const TextStyle(color: Colors.white, fontSize: 10)),
               ),
               Text(footerValue,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  style: const TextStyle(color: Colors.white, fontSize: 10))
             ],
           ),
         ],

@@ -1,14 +1,14 @@
-﻿"use strict";
+"use strict";
 /*
-| routes/mobile/adminSuper.js   (mount: /api/mobile/admin/super)  â€” à¦¶à§à¦§à§ Super Admin
-|  GET  /software-billing            à¦¸à¦¬ ISP-à¦° Software Bill (à¦¸à¦¾à¦°à¦¾à¦‚à¦¶à¦¸à¦¹), read-only
-|  GET  /pricing/companies           Company-wise Pricing à¦¤à¦¾à¦²à¦¿à¦•à¦¾
-|  GET  /pricing/companies/:id       à¦à¦• Company + History
-|  POST /pricing/companies/:id/rules                      Rule à¦¸à¦‚à¦°à¦•à§à¦·à¦£
+| routes/mobile/adminSuper.js   (mount: /api/mobile/admin/super)  — শুধু Super Admin
+|  GET  /software-billing            সব ISP-র Software Bill (সারাংশসহ), read-only
+|  GET  /pricing/companies           Company-wise Pricing তালিকা
+|  GET  /pricing/companies/:id       এক Company + History
+|  POST /pricing/companies/:id/rules                      Rule সংরক্ষণ
 |  POST /pricing/companies/:id/rules/:feeType/toggle     Enable/Disable
-|  POST /pricing/companies/:id/rules/:feeType/reset      Default-à¦ à¦«à§‡à¦°à¦¾
-| Pricing-à¦à¦° à¦¸à¦¬ à¦¨à¦¿à¦¯à¦¼à¦®/à¦¯à¦¾à¦šà¦¾à¦‡ services/billing/pricing.service.js-à¦ (Web à¦ªà§‡à¦œà§‡à¦° à¦¸à¦™à§à¦—à§‡ à¦à¦•à¦‡)à¥¤
-| à¦¸à§‡à¦‡ Service à¦‡à¦¨à¦¸à§à¦Ÿà¦² à¦¨à¦¾ à¦¥à¦¾à¦•à¦²à§‡ à¦¶à§à¦§à§ Pricing endpoint à§«à§¦à§§ à¦¦à§‡à¦¯à¦¼; à¦¬à¦¾à¦•à¦¿ Mobile API à¦…à¦•à§à¦·à¦¤à¥¤
+|  POST /pricing/companies/:id/rules/:feeType/reset      Default-এ ফেরা
+| Pricing-এর সব নিয়ম/যাচাই services/billing/pricing.service.js-এ (Web পেজের সঙ্গে একই)।
+| সেই Service ইনস্টল না থাকলে শুধু Pricing endpoint ৫০১ দেয়; বাকি Mobile API অক্ষত।
 */
 const express = require("express");
 const db = require("../../config/database");
@@ -19,7 +19,7 @@ const DT = "%Y-%m-%d %H:%i:%s";
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const likeEscape = (s) => s.replace(/[\\%_]/g, (c) => "\\" + c);
 
-/* Super Admin à¦›à¦¾à¦¡à¦¼à¦¾ à¦•à§‡à¦‰ à¦¨à¦¯à¦¼ (req.auth Bearer + DB à¦¥à§‡à¦•à§‡ à¦¯à¦¾à¦šà¦¾à¦‡ à¦¹à¦“à¦¯à¦¼à¦¾) */
+/* Super Admin ছাড়া কেউ নয় (req.auth Bearer + DB থেকে যাচাই হওয়া) */
 router.use((req, res, next) => {
     if (!req.auth || req.auth.type !== "admin" || !req.auth.isSuperAdmin) {
         return res.status(403).json({
@@ -105,7 +105,7 @@ router.get("/software-billing", async (req, res, next) => {
     } catch (e) { next(e); }
 });
 
-/* ---------------- Pricing (pricing.service.js à¦ªà§à¦¨à¦ƒà¦¬à§à¦¯à¦¬à¦¹à¦¾à¦°) ---------------- */
+/* ---------------- Pricing (pricing.service.js পুনঃব্যবহার) ---------------- */
 
 function pricingService(res) {
     try {
@@ -113,7 +113,7 @@ function pricingService(res) {
     } catch (_) {
         res.status(501).json({
             success: false, code: "PRICING_NOT_INSTALLED",
-            message: "Pricing module à¦‡à¦¨à¦¸à§à¦Ÿà¦² à¦•à¦°à¦¾ à¦¨à§‡à¦‡à¥¤"
+            message: "Pricing module ইনস্টল করা নেই।"
         });
         return null;
     }

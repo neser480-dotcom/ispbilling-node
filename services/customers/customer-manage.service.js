@@ -745,6 +745,12 @@ async function updateCustomer({ user, body }) {
     for (const field of ["phone", "nid_no", "address", "email"]) {
         if (has(field)) put(field, String(body[field] || "").trim());
     }
+// Reference details
+for (const field of ["reference_name", "reference_mobile"]) {
+    if (has(field)) {
+        put(field, String(body[field] || "").trim());
+    }
+}
 
     // Division / District / Upazila are stored as text names.
     for (const field of ["division", "district", "upazila"]) {

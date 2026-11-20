@@ -15,14 +15,21 @@ function webSession(auth) {
     };
 }
 
-function invokeRouter(router, mobileReq, { method = "GET", url, query = {}, body = {} }, timeoutMs = 20000) {
+function invokeRouter(router, mobileReq, { method = "GET", url, query = {}, body = {}, csrf = false }, timeoutMs = 20000) {
     if (!mobileReq.auth || mobileReq.auth.type !== "admin") {
         return Promise.reject(new Error("webBridge: unauthenticated"));
     }
     return new Promise((resolve, reject) => {
         const inner = Object.create(mobileReq);
-        const own = { method, url, originalUrl: url, baseUrl: "", params: {}, query, body,
-            session: webSession(mobileReq.auth), _parsedUrl: undefined };
+        const session = webSession(mobileReq.auth);
+        let bodyOut = body;
+        if (csrf) {   // Web handler-এর CSRF শর্ত পূরণ: অনুরোধ আগেই Bearer দিয়ে যাচাইকৃত, তাই নিরাপদ
+            const tok = require("crypto").randomBytes(24).toString("hex");
+            session.csrf_token = tok;
+            bodyOut = { ...body, csrf_token: tok };
+        }
+        const own = { method, url, originalUrl: url, baseUrl: "", params: {}, query, body: bodyOut,
+            session, _parsedUrl: undefined };
         for (const [k, v] of Object.entries(own)) {
             Object.defineProperty(inner, k, { value: v, writable: true, configurable: true, enumerable: true });
         }

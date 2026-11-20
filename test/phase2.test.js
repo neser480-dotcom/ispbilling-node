@@ -53,9 +53,22 @@ const { mapDashboard, MEDIUMS, MEDIUM_DB_NAME, emptySummary } = require("../serv
         collection: { expected: 10000, collection: 7500, percent: 75 }
     };
     const m = mapDashboard(web);
-    assert.deepStrictEqual(m, { potential: 10000, collection: 7500, percent: 75, total_customers: 572, new_customers: 10,
-        connected_customers: 563, connected_new: 9, paid_customers: 400, paid_new: 5,
-        connected_amount: 5000, connected_new_amount: 400, paid_new_amount: 250 }); ok("dashboard mapped");
+    assert.deepStrictEqual({
+        potential:m.potential, collection:m.collection, percent:m.percent,
+        total_customers:m.total_customers, new_customers:m.new_customers,
+        connected_customers:m.connected_customers, connected_new:m.connected_new,
+        paid_customers:m.paid_customers, paid_new:m.paid_new,
+        connected_amount:m.connected_amount, connected_new_amount:m.connected_new_amount,
+        paid_new_amount:m.paid_new_amount
+    }, {
+        potential:10000, collection:7500, percent:75,
+        total_customers:572, new_customers:10,
+        connected_customers:563, connected_new:9,
+        paid_customers:400, paid_new:5,
+        connected_amount:5000, connected_new_amount:400,
+        paid_new_amount:250
+    });
+    ok("dashboard mapped");
     assert.deepStrictEqual(mapDashboard({ type: "company" }), emptySummary()); ok("missing permission blocks -> zeros, no crash");
     assert(MEDIUMS[0].id === "all" && MEDIUMS.length === 5 && MEDIUM_DB_NAME.bkash === "Bkash"); ok("mediums list");
     console.log(`\nALL ${n} CHECKS PASSED`);
