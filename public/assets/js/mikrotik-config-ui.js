@@ -65,10 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         return;
                     }
 
-                    icon.textContent =
-                        Number(th.dataset.sortCol) === sortCol
-                            ? (sortDir === 1 ? "↑" : "↓")
-                            : "⇅";
+                    icon.classList.toggle("active", Number(th.dataset.sortCol) === sortCol);
 
                 }
             );

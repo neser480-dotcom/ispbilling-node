@@ -983,6 +983,24 @@ app.get(
 );
 
 
+app.get(
+    "/mikrotik/cross-customer",
+    requireSoftwareBilling,
+    (req, res) => {
+
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "mikrotik",
+                "cross-customer.html"
+            )
+        );
+
+    }
+);
+
+
 /*
 |--------------------------------------------------------------------------
 | CUSTOMERS PAGE

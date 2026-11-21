@@ -57,6 +57,17 @@
         href="/assets/css/mikrotik-config.css"
     >
 
+    <!-- স্ক্রিনশট-মিল (সাইজ, ••• মেনু, মডাল) -->
+    <link
+        rel="stylesheet"
+        href="/assets/css/mikrotik-extra.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
+    >
+
 </head>
 
 
@@ -131,7 +142,7 @@
                     id="editRouter"
                 >
                     Edit
-                    <i class="fa fa-pen"></i>
+                    <i class="fa fa-pencil"></i>
                 </button>
 
             </div>
@@ -302,19 +313,19 @@
                                 style="width:70px;"
                                 data-sort-col="0"
                             >
-                                # <span class="sort-icon">⇅</span>
+                                # <span class="sort-icon">⇵</span>
                             </th>
 
                             <th data-sort-col="1">
-                                Package <span class="sort-icon">⇅</span>
+                                Package <span class="sort-icon">⇵</span>
                             </th>
 
                             <th data-sort-col="2">
-                                Rate <span class="sort-icon">⇅</span>
+                                Rate <span class="sort-icon">⇵</span>
                             </th>
 
                             <th data-sort-col="3">
-                                Alias Name <span class="sort-icon">⇅</span>
+                                Alias Name <span class="sort-icon">⇵</span>
                             </th>
 
                             <th
@@ -393,7 +404,10 @@
     ></script>
 
 
-    <!-- MIKROTIK JS (আগের মতোই, কোনো পরিবর্তন নেই) -->
+    <script
+        src="/assets/js/mk-toast.js"
+        defer
+    ></script>
 
     <script
         src="/assets/js/mikrotik.js"
@@ -405,6 +419,12 @@
 
     <script
         src="/assets/js/mikrotik-config-ui.js"
+        defer
+    ></script>
+
+    <!-- Edit চাপলে একই পেজের উপর "Edit Mikrotik" মডাল -->
+    <script
+        src="/assets/js/mikrotik-config-edit.js"
         defer
     ></script>
 

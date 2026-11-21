@@ -7,7 +7,8 @@ const router =
 
 const controller =
     require("../../controllers/mikrotik/router.controller");
-
+const crossController =
+    require("../../controllers/mikrotik/router-cross.controller");
 const {
     requireAuth
 } =
@@ -144,7 +145,16 @@ router.delete(
     controller.packageDelete
 );
 
+/*
+|--------------------------------------------------------------------------
+| CROSS CUSTOMER - MIKROTIK PREVIEW
+|--------------------------------------------------------------------------
+*/
 
+router.get(
+    "/:id/customers/sync-preview",
+    crossController.syncPreview
+);
 /*
 |--------------------------------------------------------------------------
 | CUSTOMER SYNC

@@ -1,0 +1,138 @@
+/* ==================================================
+   MIKROTIK EXTRA  (router.css + mikrotik-config.css এর পরে লোড করুন)
+   যা ওই দুই ফাইলে নেই: ••• মেনু, সাদা হেডারের মডাল, History সারি,
+   Cross Customer পেজ, স্ট্যাটাস আইকন
+================================================== */
+
+/* ---------- ••• ACTION DOTS + BLUE MENU ---------- */
+.cfg-dots {
+    background: transparent;
+    border: 0;
+    color: #2f86e3;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.cfg-dots::after { display: none; }          /* bootstrap caret বন্ধ */
+.cfg-dots:focus { box-shadow: none; }
+
+.cfg-menu {
+    background: #2f86e3;
+    border: 0;
+    border-radius: 6px;
+    min-width: 160px;
+    padding: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .22);
+}
+.cfg-menu .dropdown-item {
+    color: #fff;
+    font-size: 13px;
+    border-radius: 4px;
+    padding: 8px 12px;
+}
+.cfg-menu .dropdown-item i { color: #fff !important; }
+.cfg-menu .dropdown-item:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+
+/* ---------- WHITE-HEADER MODAL (Add / Edit / History) ---------- */
+.rt-modal .modal-content { border: 0; border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+.rt-modal .modal-header { background: transparent; color: #333; border-bottom: 1px solid #dee2e6; padding: 14px 16px; }
+.rt-modal .modal-title { font-size: 20px; font-weight: 500; }
+.rt-modal .modal-body { padding: 14px 16px; }
+.rt-modal .form-label { font-size: 14px; font-weight: 500; color: #555; margin-bottom: 4px; }
+.rt-modal .form-control { font-size: 14px; padding: 8px 12px; }
+.rt-modal .modal-footer { border-top: 0; padding: 4px 16px 16px; }
+.rt-modal .modal-footer .btn { font-size: 14px; font-weight: 600; padding: 7px 14px; }
+
+.rt-history-row { display: flex; padding: 7px 0; font-size: 14px; color: #444; }
+.rt-history-row span:first-child { width: 190px; flex-shrink: 0; }
+
+/* ---------- ROUTER LIST: status + action colours ---------- */
+.router-status i { font-size: 18px; }
+.router-status .st-unknown { color: #8a94a3; }
+.router-status .st-ok { color: #198754; }
+.router-status .st-off { color: #dc3545; }
+
+.router-action.act-cfg   { background: #198754; color: #fff; }
+.router-action.act-check { background: #0d6efd; color: #fff; }
+.router-action.act-hist  { background: #0dcaf0; color: #000; }
+.router-action.act-cross { background: #6c757d; color: #fff; }
+.router-action.act-del   { background: #dc3545; color: #fff; }
+.router-action { border: 0; }
+.router-action:hover { filter: brightness(.92); color: inherit; }
+.router-action.act-cfg:hover, .router-action.act-check:hover,
+.router-action.act-cross:hover, .router-action.act-del:hover { color: #fff; }
+
+.router-sort { color: #2f86e3; font-size: 11px; margin-left: 3px; cursor: pointer; }
+#routerTable thead th[data-sort] { cursor: pointer; user-select: none; }
+
+/* ---------- CROSS CUSTOMER PAGE (mikrotik-config.css এর ক্লাস ব্যবহার করে) ---------- */
+.mk-config-page .mk-top-tabs .nav-link { font-size: 13px; padding: 9px 16px; }
+.mk-config-page .mk-top-tabs .nav-link:not(.active) { color: #2f86e3; }
+.mk-config-page .mk-top-tabs { margin-bottom: 8px; }
+.mk-config-page .mk-nodata { text-align: center; font-size: 16px; color: var(--mk-text); padding: 18px 0 !important; }
+.mk-config-page .sort-icon.active { color: #e5383b; }
+.mk-config-page .mk-table .badge { font-size: 10px; }
+
+/* toast কাছাকাছি স্টাইল (toastr না থাকলে Swal toast) */
+.swal2-popup.mk-toast { color: #fff; font-size: 13px; padding: .7em 1em; }
+
+
+/* ==================================================
+   SCREENSHOT-MATCH: সাইজ/স্পেসিং (উপরের ১২px ভিত্তিক মান ওভাররাইড)
+================================================== */
+
+/* sort আইকন */
+.router-sort.active, .mk-config-page .sort-icon.active { color: #e5383b; }
+.router-sort, .mk-config-page .sort-icon { font-size: 13px; }
+#customerSyncModal .sort-icon { color: var(--mk-accent, #2f86e3); font-size: 13px; }
+#customerSyncModal .sort-icon.active { color: #e5383b; }
+#customerSyncConfirm:disabled { opacity: 1; }
+
+/* ---------- LIST PAGE ---------- */
+.router-wrap { max-width: none; }
+.router-page-header { min-height: 78px; padding: 0 24px; border-radius: 8px; margin-bottom: 6px; }
+.router-page-title { font-size: 32px; font-weight: 500; }
+.router-header-actions { gap: 12px; }
+.header-icon-btn { width: 38px; height: 36px; font-size: 16px; border-radius: 7px; }
+.router-card { padding: 20px 20px 26px; }
+.router-toolbar { height: 53px; padding: 0 12px; border-radius: 8px; margin-bottom: 22px; flex-wrap: nowrap; }
+.router-toolbar-left { font-size: 17px; gap: 8px; }
+.router-toolbar-icon { font-size: 16px; }
+.router-pill { font-size: 14px; padding: 3px 13px; }
+.router-search { flex: 0 0 346px; height: 36px; font-size: 14px; border-radius: 5px; }
+#routerTable thead th { font-size: 14px; padding: 12px 10px; }
+#routerTable tbody td { font-size: 14.5px; padding: 0 10px; height: 50px; }
+.router-action { height: 32px; min-width: 36px; padding: 0 10px; font-size: 13px; border-radius: 5px; margin: 0 3px; }
+.router-action.act-cfg { min-width: 121px; }
+.router-footer { font-size: 16px; margin-top: 48px; }
+
+/* ---------- CONFIG + CROSS CUSTOMER ---------- */
+.mk-config-page .mk-header { min-height: 75px; padding: 0 24px; border-radius: 8px; }
+.mk-config-page .mk-title { font-size: 26px; font-weight: 500; }
+.mk-config-page .mk-back { font-size: 13px; padding: 6px 10px; border-radius: 5px; }
+.mk-config-page .mk-btn-white { font-size: 15px; padding: 7px 12px; }
+.mk-config-page .mk-card { padding: 10px 20px 26px; }
+.mk-config-page .mk-tabs .nav-link { font-size: 14px; padding: 9px 16px; }
+.mk-config-page .mk-top-tabs .nav-link { font-size: 15px; }
+.mk-config-page .mk-select-label { font-size: 18px; }
+.mk-config-page .mk-select-col .form-select { width: 138px; font-size: 14px; padding: 8px 28px 8px 12px; }
+.mk-config-page .mk-router-col { font-size: 15.5px; line-height: 21px; }
+.mk-config-page .mk-btn-blue { font-size: 15px; padding: 8px 13px; border-radius: 5px; }
+.mk-config-page .mk-strip { height: 52px; padding: 0 12px; border-radius: 8px; }
+.mk-config-page .mk-total { font-size: 16px; }
+.mk-config-page .mk-count-pill { font-size: 14px; padding: 3px 13px; }
+.mk-config-page .mk-search-wrap { width: 340px; }
+.mk-config-page .mk-search-wrap input { height: 34px; font-size: 14px; border-radius: 5px; }
+.mk-config-page .mk-table thead th { font-size: 14px; padding: 12px 10px; }
+.mk-config-page .mk-table tbody td { font-size: 14.5px; padding: 0 10px; height: 45px; }
+.mk-config-page .mk-nodata { font-size: 18px; }
+.mk-config-page .mk-footer { font-size: 16px; }
+
+/* ---------- মডাল ---------- */
+.mk-config-page .modal-title, .rt-modal .modal-title { font-size: 22px; font-weight: 500; }
+.mk-config-page .modal-body { font-size: 14px; }
+.mk-config-page .modal-body label, .mk-config-page .modal-body .form-check-label { font-size: 14px; }
+.mk-config-page .modal-footer .btn { font-size: 15px; font-weight: 600; padding: 7px 14px; }
+.mk-config-page .modal-xl .mk-table tbody td { height: 44px; }
+.mk-config-page .modal-xl .mk-table .badge { font-size: 10.5px; }

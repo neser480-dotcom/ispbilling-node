@@ -664,7 +664,7 @@ document.addEventListener(
                                     </td>
 
                                     <td>
-                                        ${price.toFixed(2)}
+                                        ${Number.isInteger(price) ? price : price.toFixed(2)}
                                     </td>
 
                                     <td>
@@ -712,41 +712,8 @@ document.addEventListener(
                 return;
             }
 
-
-            packageSelect.innerHTML = `
-
-                <option value="">
-                    Select Package
-                </option>
-
-            `;
-
-
-            packages.forEach(
-                item => {
-
-                    const option =
-                        document.createElement(
-                            "option"
-                        );
-
-
-                    option.value =
-                        Number(
-                            item.id || 0
-                        );
-
-
-                    option.textContent =
-                        item.package_name || "";
-
-
-                    packageSelect.appendChild(
-                        option
-                    );
-
-                }
-            );
+            packageSelect.innerHTML =
+                '<option value="package">Package</option>';
 
         }
 
@@ -959,30 +926,71 @@ document.addEventListener(
 
         /*
         |--------------------------------------------------------------------------
-        | MANUAL CUSTOMER SYNC
+        | MANUAL CUSTOMER SYNC (MikroTik list থেকে বেছে নিয়ে)
         |--------------------------------------------------------------------------
-        | Automatic নয়।
+        | Automatic নয়।
         |
-        | Button click করলে:
+        | "Customer Sync" চাপলে:
         |
-        | POST /api/router/:id/customers/sync
+        | GET  /api/router/:id/customers/sync-preview
+        |      → MikroTik-এর যে PPPoE user NetFee-তে নেই তাদের তালিকা
+        |
+        | বাছাই করে "Sync" চাপলে:
+        |
+        | POST /api/router/:id/customers/sync-selected
         |
         | Success হলে একই page-এ থাকবে।
         | Customers page-এ redirect করবে না।
         |--------------------------------------------------------------------------
         */
 
-        function askCustomerSync() {
+        function formatBillDate(value) {
+
+            const m =
+                /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(
+                    String(value || "")
+                );
+
+            if (!m) {
+                return "-";
+            }
+
+            const date =
+                new Date(
+                    Number(m[1]),
+                    Number(m[2]) - 1,
+                    Number(m[3]),
+                    Number(m[4]),
+                    Number(m[5])
+                );
+
+            return date
+                .toLocaleString(
+                    "en-US",
+                    {
+                        month: "short",
+                        day: "2-digit",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                    }
+                )
+                .replace(/,/g, "");
+
+        }
+
+
+        function askIncludeInactive() {
 
             return new Promise(resolve => {
 
                 if (!modalRoot) {
-                    resolve({ confirmed: true, includeInactive: false });
+                    resolve({ confirmed: false, includeInactive: false });
                     return;
                 }
 
                 modalRoot.innerHTML = `
-                    <div class="modal fade" id="customerSyncModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal fade" id="inactiveAskModal" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -998,30 +1006,402 @@ document.addEventListener(
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-success btn-sm" id="customerSyncConfirm">Sync</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-success" id="inactiveAskConfirm">Sync</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 `;
 
-                const el = document.getElementById("customerSyncModal");
+                const el = document.getElementById("inactiveAskModal");
                 const modal = bootstrap.Modal.getOrCreateInstance(el);
+
                 let result = { confirmed: false, includeInactive: false };
 
-                el.querySelector("#customerSyncConfirm").addEventListener("click", () => {
+                el.querySelector("#inactiveAskConfirm").addEventListener("click", () => {
+
                     result = {
                         confirmed: true,
                         includeInactive: el.querySelector("#includeInactive").checked
                     };
+
                     modal.hide();
+
                 });
 
-                el.addEventListener("hidden.bs.modal", () => resolve(result), { once: true });
+                el.addEventListener(
+                    "hidden.bs.modal",
+                    () => resolve(result),
+                    { once: true }
+                );
 
                 modal.show();
+
             });
+
+        }
+
+
+        function askCustomerSync(includeInactive = false) {
+
+            return new Promise(resolve => {
+
+                if (!modalRoot) {
+                    resolve({ confirmed: false, usernames: [] });
+                    return;
+                }
+
+                modalRoot.innerHTML = `
+                    <div class="modal fade" id="customerSyncModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">PPPoE Customer Sync</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body" id="customerSyncBody">
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fa fa-spinner fa-spin"></i>
+                                        Loading MikroTik customers...
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-success btn-sm" id="customerSyncConfirm" disabled>Sync</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+const el = document.getElementById("customerSyncModal");
+
+// Keep modal outside page/sidebar stacking contexts.
+document.body.appendChild(el);
+el.style.zIndex = "20000";
+
+const body = el.querySelector("#customerSyncBody");
+                const confirmButton = el.querySelector("#customerSyncConfirm");
+                const modal = bootstrap.Modal.getOrCreateInstance(el);
+
+                let result = { confirmed: false, usernames: [] };
+                let rows = [];
+                let keyword = "";
+                let sortKey = "";
+                let sortDir = 1;
+
+                const selected = new Set();
+
+                const collator =
+                    new Intl.Collator(
+                        undefined,
+                        { numeric: true, sensitivity: "base" }
+                    );
+
+
+                function visibleRows() {
+
+                    let list = rows;
+
+                    if (keyword) {
+
+                        list = list.filter(item =>
+                            [
+                                item.name,
+                                item.pppoe_username,
+                                item.mobile,
+                                item.status,
+                                item.package,
+                                item.monthly
+                            ]
+                                .join(" ")
+                                .toLowerCase()
+                                .includes(keyword)
+                        );
+
+                    }
+
+                    if (sortKey) {
+
+                        list = [...list].sort(
+                            (a, b) =>
+                                collator.compare(
+                                    String(a[sortKey] ?? ""),
+                                    String(b[sortKey] ?? "")
+                                ) * sortDir
+                        );
+
+                    }
+
+                    return list;
+
+                }
+
+
+                function updateFooter() {
+
+                    confirmButton.disabled = selected.size === 0;
+
+                    confirmButton.textContent =
+                        selected.size
+                            ? `Sync (${selected.size})`
+                            : "Sync";
+
+                }
+
+
+                function renderRows() {
+
+                    const list = visibleRows();
+
+                    const tbody = body.querySelector("#customerSyncRows");
+                    const total = body.querySelector("#customerSyncTotal");
+                    const all = body.querySelector("#customerSyncAll");
+
+                    total.textContent = list.length;
+
+                    if (!list.length) {
+
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    No Customer Found
+                                </td>
+                            </tr>
+                        `;
+
+                    } else {
+
+                        tbody.innerHTML = list.map(item => {
+
+                            const active = item.status === "active";
+
+                            return `
+                                <tr>
+                                    <td style="width:40px;">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input cs-check"
+                                            data-user="${escapeHtml(item.pppoe_username)}"
+                                            ${selected.has(item.pppoe_username) ? "checked" : ""}
+                                        >
+                                    </td>
+                                    <td>${escapeHtml(item.name)}</td>
+                                    <td>${escapeHtml(item.pppoe_username)}</td>
+                                    <td>${escapeHtml(item.mobile)}</td>
+                                    <td>
+                                        <span class="badge ${active ? "bg-primary" : "bg-secondary"}">
+                                            ${escapeHtml(item.status)}
+                                        </span>
+                                    </td>
+                                    <td>${escapeHtml(item.package)}</td>
+                                    <td>${Number(item.monthly || 0)}</td>
+                                    <td>${escapeHtml(formatBillDate(item.bill_date))}</td>
+                                </tr>
+                            `;
+
+                        }).join("");
+
+                    }
+
+                    const checked =
+                        list.filter(item => selected.has(item.pppoe_username)).length;
+
+                    all.checked = list.length > 0 && checked === list.length;
+                    all.indeterminate = checked > 0 && checked < list.length;
+
+                    updateFooter();
+
+                }
+
+
+                function renderTable() {
+
+                    const heads = [
+                        ["name", "Name"],
+                        ["pppoe_username", "PPPoE"],
+                        ["mobile", "Mobile"],
+                        ["status", "Status"],
+                        ["package", "Package"],
+                        ["monthly", "Monthly"],
+                        ["bill_date", "Bill Date"]
+                    ];
+
+                    body.innerHTML = `
+                        <div class="mk-strip">
+                            <div class="mk-total">
+                                <i class="fa fa-gear me-2"></i>
+                                Total Data:
+                                <span class="mk-count-pill" id="customerSyncTotal">0</span>
+                            </div>
+                            <div class="mk-search-wrap">
+                                <input type="search" id="customerSyncSearch" class="form-control" placeholder="Search" autocomplete="off">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table mk-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px;">
+                                            <input type="checkbox" class="form-check-input" id="customerSyncAll">
+                                        </th>
+                                        ${heads.map(([key, label]) => `
+                                            <th data-sort-key="${key}" style="cursor:pointer;">
+                                                ${label} <span class="sort-icon">⇵</span>
+                                            </th>
+                                        `).join("")}
+                                    </tr>
+                                </thead>
+                                <tbody id="customerSyncRows"></tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    body.querySelector("#customerSyncSearch")
+                        .addEventListener("input", event => {
+
+                            keyword =
+                                event.target.value.trim().toLowerCase();
+
+                            renderRows();
+
+                        });
+
+                    body.querySelector("#customerSyncAll")
+                        .addEventListener("change", event => {
+
+                            visibleRows().forEach(item => {
+
+                                if (event.target.checked) {
+                                    selected.add(item.pppoe_username);
+                                } else {
+                                    selected.delete(item.pppoe_username);
+                                }
+
+                            });
+
+                            renderRows();
+
+                        });
+
+                    body.querySelector("#customerSyncRows")
+                        .addEventListener("change", event => {
+
+                            const box = event.target.closest(".cs-check");
+
+                            if (!box) {
+                                return;
+                            }
+
+                            if (box.checked) {
+                                selected.add(box.dataset.user);
+                            } else {
+                                selected.delete(box.dataset.user);
+                            }
+
+                            renderRows();
+
+                        });
+
+                    body.querySelectorAll("th[data-sort-key]")
+                        .forEach(th => {
+
+                            th.addEventListener("click", () => {
+
+                                const key = th.dataset.sortKey;
+
+                                if (sortKey === key) {
+                                    sortDir = -sortDir;
+                                } else {
+                                    sortKey = key;
+                                    sortDir = 1;
+                                }
+
+                                body.querySelectorAll("th[data-sort-key]")
+                                    .forEach(other => {
+
+                                        const icon =
+                                            other.querySelector(".sort-icon");
+
+                                        icon.classList.toggle("active", other.dataset.sortKey === sortKey);
+
+                                    });
+
+                                renderRows();
+
+                            });
+
+                        });
+
+                    renderRows();
+
+                }
+
+
+                confirmButton.addEventListener("click", () => {
+
+                    result = {
+                        confirmed: true,
+                        usernames: [...selected]
+                    };
+
+                    modal.hide();
+
+                });
+
+                el.addEventListener(
+                    "hidden.bs.modal",
+                    () => resolve(result),
+                    { once: true }
+                );
+
+modal.show();
+
+requestAnimationFrame(() => {
+    const backdrops = document.querySelectorAll(".modal-backdrop");
+    const backdrop = backdrops[backdrops.length - 1];
+
+    if (backdrop) {
+        backdrop.style.setProperty("z-index", "1000000", "important");
+    }
+
+    el.style.setProperty("z-index", "1000001", "important");
+});
+
+                request(`${API}/${routerId}/customers/sync-preview`)
+                    .then(data => {
+
+                        rows =
+                            Array.isArray(data.customers)
+                                ? data.customers
+                                : [];
+
+                        if (!includeInactive) {
+                            rows = rows.filter(item => item.status === "active");
+                        }
+
+                        renderTable();
+
+                    })
+                    .catch(error => {
+
+                        console.error(
+                            "Customer sync preview error:",
+                            error
+                        );
+
+                        body.innerHTML = `
+                            <div class="text-center text-danger py-4">
+                                ${escapeHtml(error.message)}
+                            </div>
+                        `;
+
+                    });
+
+            });
+
         }
 
 
@@ -1031,13 +1411,20 @@ document.addEventListener(
                 "click",
                 async () => {
 
-                    const choice = await askCustomerSync();
+                    const step1 = await askIncludeInactive();
 
-                    if (!choice.confirmed) {
+                    if (!step1.confirmed) {
                         return;
                     }
 
-                    const includeInactive = choice.includeInactive;
+                    const choice = await askCustomerSync(step1.includeInactive);
+
+                    if (
+                        !choice.confirmed ||
+                        !choice.usernames.length
+                    ) {
+                        return;
+                    }
 
 
                     syncCustomerButton.disabled =
@@ -1072,12 +1459,14 @@ document.addEventListener(
 
                         const data =
                             await request(
-                                `${API}/${routerId}/customers/sync`,
+                                `${API}/${routerId}/customers/sync-selected`,
                                 {
                                     method:
                                         "POST",
 
-                                    body: JSON.stringify({ include_inactive: includeInactive })
+                                    body: JSON.stringify({
+                                        usernames: choice.usernames
+                                    })
                                 }
                             );
 
@@ -1094,14 +1483,21 @@ document.addEventListener(
                         Swal.fire({
 
                             icon:
-                                "success",
+                                Number(data.failed || 0) > 0
+                                    ? "warning"
+                                    : "success",
 
                             title:
                                 "Customer Sync Complete",
 
-                            text:
-                                data.message ||
-                                "Customers synchronized successfully.",
+                            html: `
+                                <div class="text-start">
+                                    <div>Added: <strong>${Number(data.inserted || 0)}</strong></div>
+                                    <div>Restored: <strong>${Number(data.restored || 0)}</strong></div>
+                                    <div>Skipped: <strong>${Number(data.skipped || 0)}</strong></div>
+                                    <div>Failed: <strong>${Number(data.failed || 0)}</strong></div>
+                                </div>
+                            `,
 
                             confirmButtonText:
                                 "OK"
@@ -1155,28 +1551,7 @@ document.addEventListener(
                         true;
 
 
-                    Swal.fire({
-
-                        title:
-                            "Checking Router...",
-
-                        text:
-                            "MikroTik-এর সাথে connection করা হচ্ছে।",
-
-                        allowOutsideClick:
-                            false,
-
-                        allowEscapeKey:
-                            false,
-
-                        didOpen:
-                            () => {
-
-                                Swal.showLoading();
-
-                            }
-
-                    });
+                    
 
 
                     try {
@@ -1258,74 +1633,7 @@ document.addEventListener(
                         |------------------------------------------------------
                         */
 
-                        Swal.fire({
-
-                            icon:
-                                "success",
-
-                            title:
-                                "Router Online",
-
-                            html: `
-
-                                <div class="text-start">
-
-                                    <div class="mb-1">
-
-                                        <strong>
-                                            Identity:
-                                        </strong>
-
-                                        ${escapeHtml(
-                                            data.identity || "-"
-                                        )}
-
-                                    </div>
-
-
-                                    <div class="mb-1">
-
-                                        <strong>
-                                            PPPoE:
-                                        </strong>
-
-                                        ${Number(
-                                            data.pppoe_total || 0
-                                        )}
-
-                                    </div>
-
-
-                                    <div class="mb-1">
-
-                                        <strong>
-                                            Active:
-                                        </strong>
-
-                                        ${Number(
-                                            data.active_total || 0
-                                        )}
-
-                                    </div>
-
-
-                                    <div>
-
-                                        <strong>
-                                            Profiles:
-                                        </strong>
-
-                                        ${Number(
-                                            data.profile_total || 0
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            `
-
-                        });
+                        MkToast.success(`${(routerName && routerName.textContent) || "Mikrotik"} এর কানেকশন ঠিক আছে`);
 
 
                     } catch (error) {
@@ -1336,11 +1644,7 @@ document.addEventListener(
                         );
 
 
-                        Swal.fire(
-                            "Router Offline",
-                            error.message,
-                            "error"
-                        );
+                        MkToast.error(error.message);
 
 
                     } finally {
@@ -1368,8 +1672,7 @@ document.addEventListener(
                 "click",
                 () => {
 
-                    window.location.href =
-                        `/mikrotik?id=${routerId}&edit=1`;
+                    window.dispatchEvent(new CustomEvent("mk:edit-router", { detail: { id: routerId } }));
 
                 }
             );
