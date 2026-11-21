@@ -335,6 +335,19 @@ function normalizeInput(body = {}) {
         throw new RechargeError("Invalid discount amount.");
     }
 
+    /* Due to collect now. Absent = whole due (old callers unchanged). */
+    let dueAmount = null;
+
+    if (body.due_amount !== undefined && body.due_amount !== null) {
+        const rawDue = Number(String(body.due_amount).trim() === "" ? 0 : body.due_amount);
+
+        if (!Number.isFinite(rawDue) || rawDue < 0) {
+            throw new RechargeError("Invalid due amount.");
+        }
+
+        dueAmount = roundMoney(rawDue);
+    }
+
     const comment = String(body.comment || "").trim();
 
     if (comment.length > 255) {
@@ -350,6 +363,7 @@ function normalizeInput(body = {}) {
         selectedDays,
         paymentMethod: method,
         discount: roundMoney(rawDiscount),
+        dueAmount,
         comment
     };
 }
@@ -479,6 +493,23 @@ async function rechargeCustomer({
         );
 
         /*
+         * PARTIAL DUE PAYMENT
+         * Only the entered due is collected. The rest stays as a minus
+         * balance (still due) and can be collected later.
+         */
+        if (opts.dueAmount !== null && opts.dueAmount > previousDue + 0.009) {
+            throw new RechargeError(
+                `Due amount cannot be more than the current due (৳${previousDue}).`
+            );
+        }
+
+        const dueCollected = opts.dueAmount === null
+            ? previousDue
+            : roundMoney(Math.min(opts.dueAmount, previousDue));
+
+        const dueLeft = roundMoney(previousDue - dueCollected);
+
+        /*
          * Calculate the subscription charge.
          */
         let subscriptionAmount;
@@ -532,7 +563,7 @@ async function rechargeCustomer({
          * Total collected amount = discounted subscription + previous due.
          */
         const amount = roundMoney(
-            subscriptionAmount + previousDue
+            subscriptionAmount + dueCollected
         );
 
         if (!Number.isFinite(amount) || amount <= 0) {
@@ -621,13 +652,13 @@ async function rechargeCustomer({
                 : 0
         );
 
-        if (alreadyPaid && advance <= 0) {
-            throw new RechargeError("Enter the advance amount (greater than 0).");
+        if (alreadyPaid && advance <= 0 && dueCollected <= 0) {
+            throw new RechargeError("Enter the due or advance amount (greater than 0).");
         }
 
         /* cash needed for this bill (old due + subscription not covered by wallet) */
         const billCash = roundMoney(
-            chargeNow + previousDue - fromBalance
+            chargeNow + dueCollected - fromBalance
         );
 
         /* all cash received now */
@@ -642,6 +673,7 @@ async function rechargeCustomer({
         if (alreadyPaid) noteParts.push("Advance deposit - kept in balance");
         else if (extraToWallet > 0) noteParts.push(`Extra months kept in balance: ${money(extraToWallet)}`);
         if (advance > 0) noteParts.push(`Advance kept: ${money(advance)}`);
+        if (dueLeft > 0) noteParts.push(`Due left: ৳${money(dueLeft)}`);
 
         const paymentComment =
             noteParts.join(" | ").slice(0, 255);
@@ -657,6 +689,8 @@ async function rechargeCustomer({
                 amount: cashAmount,
                 subscription_amount: subscriptionAmount,
                 previous_due: previousDue,
+                due_collected: dueCollected,
+                due_left: dueLeft,
                 from_balance: fromBalance,
                 extra_to_balance: extraToWallet,
                 advance,
@@ -688,7 +722,7 @@ async function rechargeCustomer({
          *   -200 (due), bill 500, paid 700                 -> balance 0
          */
         const newBalance = roundMoney(
-            credit - fromBalance + extraToWallet + advance
+            credit - fromBalance + extraToWallet + advance - dueLeft
         );
 
         /*
@@ -839,9 +873,11 @@ async function rechargeCustomer({
             [
                 newBalance,
                 /* balance kept (before promise end): show PAID once the balance covers a month */
-                alreadyPaid
+                newBalance < 0
+                    ? "unpaid"
+                    : alreadyPaid
                     ? (
-                        monthlyBill > 0 && newBalance >= monthlyBill
+                        (monthlyBill > 0 && newBalance >= monthlyBill) || previousDue > 0
                             ? "paid"
                             : (customer.payment_status || "unpaid")
                     )
@@ -862,6 +898,8 @@ async function rechargeCustomer({
             ` | Customer ID: ${softwareId}` +
             ` | Subscription: ৳${money(subscriptionAmount)}` +
             ` | Previous Due: ৳${money(previousDue)}` +
+            ` | Due Collected: ৳${money(dueCollected)}` +
+            ` | Due Left: ৳${money(dueLeft)}` +
             ` | Total Paid: ৳${money(cashAmount)}` +
             ` | From Balance: ৳${money(fromBalance)}` +
             ` | Advance: ৳${money(advance)}` +
@@ -918,6 +956,8 @@ async function rechargeCustomer({
             payment_id: pay.insertId,
             subscription_amount: subscriptionAmount,
             previous_due: previousDue,
+            due_collected: dueCollected,
+            due_left: dueLeft,
             amount: cashAmount,
             from_balance: fromBalance,
             extra_to_balance: extraToWallet,
@@ -1259,6 +1299,39 @@ async function rechargeFragment({ user, id }) {
     });
 
     const currentMonthName = monthChoices[0];
+
+    /*
+     * Months that are still DUE (before the current billing month), newest
+     * first allocation: October due 500 -> "October ৳500". The tickboxes
+     * fill the Due field; the Due field can also be typed by hand.
+     */
+    const dueMonths = [];
+
+    if (previousDue > 0 && monthlyBill > 0) {
+        let rest = roundMoney(previousDue);
+        let k = 0;
+
+        while (rest > 0.004 && k < 24) {
+            k += 1;
+            const amt = roundMoney(Math.min(monthlyBill, rest));
+            rest = roundMoney(rest - amt);
+            const d = new Date(baseYear, baseDate.getMonth() - k, 1);
+            dueMonths.push({
+                name: MONTH_NAMES[d.getMonth()] +
+                    (d.getFullYear() !== baseYear ? " " + d.getFullYear() : ""),
+                amt
+            });
+        }
+    }
+
+    const dueMonthsHtml = dueMonths.length
+        ? `<div class="nf-rc-wide" data-due-months>
+            <label class="nf-rc-lbl">Due Months <small class="text-muted">(untick = pay later)</small></label>
+            <div class="nf-due-list">${dueMonths.slice().reverse().map(m =>
+                `<label class="nf-due-opt"><input type="checkbox" data-due-month data-amt="${m.amt}" checked onchange="var f=this.closest('form'),t=0;f.querySelectorAll('[data-due-month]:checked').forEach(function(c){t+=Number(c.dataset.amt)});f.querySelector('[data-recharge-due]').value=Math.round(t*100)/100;">${m.name} ৳${m.amt}</label>`
+            ).join("")}</div>
+        </div>`
+        : "";
     const credit = Math.max(0, Number(balance) || 0);
     const balanceClass = balance < 0 ? "nf-rc-neg" : "nf-rc-pos";
 
@@ -1278,6 +1351,8 @@ async function rechargeFragment({ user, id }) {
 .nf-chips-item { padding: 6px 10px; font-size: 13px; cursor: pointer; }
 .nf-chips-item:hover { background: #e8f0fe; }
 .nf-chips-item.picked { display: none; }
+.nf-due-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.nf-due-opt { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #f1b0b7; background: #fff5f5; color: #842029; border-radius: 4px; padding: 3px 9px; font-size: 13px; cursor: pointer; margin: 0; }
 </style>
 <form action="/api/customers/recharge"
       method="POST"
@@ -1347,7 +1422,15 @@ async function rechargeFragment({ user, id }) {
 
         <div>
             <label class="nf-rc-lbl">Due</label>
-            <input type="text" class="form-control" value="${Number(previousDue)}" readonly>
+            <input type="number"
+                   name="due_amount"
+                   class="form-control"
+                   min="0"
+                   max="${roundMoney(previousDue)}"
+                   step="0.01"
+                   value="${roundMoney(previousDue)}"
+                   data-recharge-due
+                   ${previousDue > 0 ? "" : "readonly"}>
         </div>
 
         <div>
@@ -1361,6 +1444,8 @@ async function rechargeFragment({ user, id }) {
         </div>
 
         <div></div>
+
+        ${dueMonthsHtml}
 
         <div class="nf-rc-wide" data-recharge-month-wrap>
             <label class="nf-rc-lbl">Select Month</label>
