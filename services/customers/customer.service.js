@@ -114,11 +114,7 @@ function buildCompanyScope(user, alias = "c") {
 function buildDeletedScope(alias = "c") {
 
     return `
-        AND (
-            ${alias}.deleted_at IS NULL
-            OR ${alias}.deleted_at = ''
-            OR ${alias}.deleted_at = '0000-00-00 00:00:00'
-        )
+        AND ${alias}.deleted_at IS NULL
     `;
 
 }
