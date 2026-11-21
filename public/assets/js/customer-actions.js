@@ -834,6 +834,8 @@
         const discountInput = form.querySelector("[data-recharge-discount]");
 
         const daily = !!(typeSelect && typeSelect.value === "Daily");
+        const noMonthsSelected =
+            !!(chipsWrap && !daily && selectedMonthKeys.length === 0);
 
         const monthWrap = form.querySelector("[data-recharge-month-wrap]");
         const dayWrap = form.querySelector("[data-recharge-day-wrap]");
@@ -854,9 +856,11 @@
         const billInput =
             form.querySelector("[data-recharge-subtotal-input]");
 
-        const subtotal = billInput && billInput.dataset.userEdited === "1"
-            ? Math.max(0, Number(billInput.value || 0))
-            : calculatedSubtotal;
+        const subtotal = noMonthsSelected
+            ? 0
+            : (billInput && billInput.dataset.userEdited === "1"
+                ? Math.max(0, Number(billInput.value || 0))
+                : calculatedSubtotal);
 
         const discount =
             Math.max(0, Number((discountInput && discountInput.value) || 0));
@@ -870,11 +874,13 @@
         const extra = net - chargeNow;
         const billTypeSelect = form.querySelector('[name="bill_type"]');
         const deposit = !!billTypeSelect && billTypeSelect.value === "Advance";
-        const total = deposit
-            ? duePay + advance
-            : (paidAlready
-                ? duePay
-                : Math.max(0, chargeNow - credit) + extra + duePay + advance);
+        const total = noMonthsSelected
+            ? 0
+            : (deposit
+                ? duePay + advance
+                : (paidAlready
+                    ? duePay
+                    : Math.max(0, chargeNow - credit) + extra + duePay + advance));
 
         const fmt = function (n) { return "৳" + n.toFixed(2); };
 
@@ -887,7 +893,10 @@
         set("[data-recharge-discount-label]", fmt(discount));
         set("[data-recharge-total]", fmt(total));
 
-        if (billInput && billInput.dataset.userEdited !== "1") {
+        if (billInput && noMonthsSelected) {
+            billInput.value = "0";
+            billInput.dataset.userEdited = "0";
+        } else if (billInput && billInput.dataset.userEdited !== "1") {
             billInput.value = String(Math.round(subtotal * 100) / 100);
         } // SINGLE_RECHARGE_PRESERVE_BILL
     }
@@ -914,6 +923,7 @@
     /*
     |--------------------------------------------------------------------------
     // Single Recharge month-chip selection.
+    */
     document.addEventListener("click", function (event) {
         const chipWrap = event.target.closest("[data-nf-chips]");
         const form = event.target.closest(".netfee-recharge-form");
@@ -926,7 +936,7 @@
 
         const menu = chipWrap.querySelector(".nf-chips-menu");
         const chipX = event.target.closest(".nf-chip-x");
-        const clear = event.target.closest(".nf-chips-clear");
+
         const item = event.target.closest(".nf-chips-item");
         const box = event.target.closest(".nf-chips-box");
 
@@ -961,11 +971,7 @@
             event.stopPropagation();
 
             chipX.closest(".nf-chip").remove(); // SINGLE_RECHARGE_REMOVE_LAST
-        } else if (clear) {
-            event.preventDefault();
-            event.stopPropagation();
 
-            list.innerHTML = ""; // SINGLE_RECHARGE_CLEAR_ALL
         } else if (item) {
             event.preventDefault();
 
