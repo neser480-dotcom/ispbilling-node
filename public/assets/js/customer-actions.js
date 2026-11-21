@@ -784,6 +784,52 @@
 
         const typeSelect = form.querySelector("[data-recharge-billing-type]");
         const monthSelect = form.querySelector("[data-recharge-month]");
+        const chipsWrap = form.querySelector("[data-nf-chips]");
+        const selectedMonthsInput = form.querySelector("[data-selected-months]");
+        const runningMonthInput = form.querySelector("[data-selected-running-month]");
+        const runningMonthLabel = form.querySelector("[data-running-month-label]");
+
+        let selectedMonthKeys = [];
+
+        if (chipsWrap) {
+            selectedMonthKeys = Array.from(
+                chipsWrap.querySelectorAll(".nf-chip[data-month-key]")
+            ).map(chip => chip.dataset.monthKey).sort();
+
+            if (selectedMonthsInput) {
+                selectedMonthsInput.value = JSON.stringify(selectedMonthKeys);
+            }
+
+            if (selectedMonthKeys.length) {
+                const latestKey = selectedMonthKeys[selectedMonthKeys.length - 1];
+
+                if (runningMonthInput) {
+                    runningMonthInput.value = latestKey;
+                }
+
+                const latestChip = Array.from(
+                    chipsWrap.querySelectorAll(".nf-chip[data-month-key]")
+                ).find(chip => chip.dataset.monthKey === latestKey);
+
+                if (runningMonthLabel && latestChip) {
+                    runningMonthLabel.textContent = "Running Month: " +
+                        latestChip.dataset.name;
+                }
+            }
+
+            if (monthSelect && selectedMonthKeys.length) {
+                monthSelect.value = String(selectedMonthKeys.length);
+            }
+
+            chipsWrap.querySelectorAll(".nf-chips-item").forEach(item => {
+                item.classList.toggle(
+                    "picked",
+                    selectedMonthKeys.includes(item.dataset.monthKey)
+                );
+            });
+        }
+
+        const selectedMonthCount = selectedMonthKeys.length || 1;
         const daySelect = form.querySelector("[data-recharge-days]");
         const discountInput = form.querySelector("[data-recharge-discount]");
 
@@ -801,9 +847,16 @@
         const daysThisMonth =
             new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-        const subtotal = daily
+        const calculatedSubtotal = daily
             ? (monthly / daysThisMonth) * Number((daySelect && daySelect.value) || 1)
-            : monthly * Number((monthSelect && monthSelect.value) || 1);
+            : monthly * selectedMonthKeys.length;
+
+        const billInput =
+            form.querySelector("[data-recharge-subtotal-input]");
+
+        const subtotal = billInput && billInput.dataset.userEdited === "1"
+            ? Math.max(0, Number(billInput.value || 0))
+            : calculatedSubtotal;
 
         const discount =
             Math.max(0, Number((discountInput && discountInput.value) || 0));
@@ -834,11 +887,9 @@
         set("[data-recharge-discount-label]", fmt(discount));
         set("[data-recharge-total]", fmt(total));
 
-        const billInput = form.querySelector("[data-recharge-subtotal-input]");
-
-        if (billInput) {
+        if (billInput && billInput.dataset.userEdited !== "1") {
             billInput.value = String(Math.round(subtotal * 100) / 100);
-        }
+        } // SINGLE_RECHARGE_PRESERVE_BILL
     }
 
     ["change", "input"].forEach(function (type) {
@@ -848,9 +899,99 @@
                 event.target.closest(".netfee-recharge-form");
 
             if (form) {
+                if (
+                    event.type === "input" &&
+                    event.target.matches("[data-recharge-subtotal-input]")
+                ) {
+                    event.target.dataset.userEdited = "1";
+                }
+
                 rechargeRecalculate(form);
             }
         });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    // Single Recharge month-chip selection.
+    document.addEventListener("click", function (event) {
+        const chipWrap = event.target.closest("[data-nf-chips]");
+        const form = event.target.closest(".netfee-recharge-form");
+
+        if (!chipWrap || !form) {
+            document.querySelectorAll("[data-nf-chips] .nf-chips-menu.open")
+                .forEach(menu => menu.classList.remove("open"));
+            return;
+        }
+
+        const menu = chipWrap.querySelector(".nf-chips-menu");
+        const chipX = event.target.closest(".nf-chip-x");
+        const clear = event.target.closest(".nf-chips-clear");
+        const item = event.target.closest(".nf-chips-item");
+        const box = event.target.closest(".nf-chips-box");
+
+        const list = chipWrap.querySelector(".nf-chips-list");
+
+        function addChip(key, name) {
+            if (list.querySelector(`.nf-chip[data-month-key="${key}"]`)) return;
+
+            const chip = document.createElement("span");
+            chip.className = "nf-chip";
+            chip.dataset.monthKey = key;
+            chip.dataset.name = name;
+
+            chip.appendChild(document.createTextNode(name));
+
+            const remove = document.createElement("b");
+            remove.className = "nf-chip-x";
+            remove.innerHTML = "&times;";
+            chip.appendChild(remove);
+
+            list.appendChild(chip);
+        }
+
+        function sortChips() {
+            Array.from(list.querySelectorAll(".nf-chip"))
+                .sort((a, b) => a.dataset.monthKey.localeCompare(b.dataset.monthKey))
+                .forEach(chip => list.appendChild(chip));
+        }
+
+        if (chipX) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            chipX.closest(".nf-chip").remove(); // SINGLE_RECHARGE_REMOVE_LAST
+        } else if (clear) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            list.innerHTML = ""; // SINGLE_RECHARGE_CLEAR_ALL
+        } else if (item) {
+            event.preventDefault();
+
+            const existing = list.querySelector(
+                `.nf-chip[data-month-key="${item.dataset.monthKey}"]`
+            );
+
+            if (existing) {
+                existing.remove();
+            } else {
+                addChip(item.dataset.monthKey, item.dataset.name);
+            } // SINGLE_RECHARGE_DESELECT_LAST
+        } else if (box) {
+            event.preventDefault();
+            menu.classList.toggle("open");
+        } else {
+            return;
+        }
+
+        sortChips();
+        rechargeRecalculate(form);
+    });
+
+    document.addEventListener("shown.bs.modal", function (event) {
+        const form = event.target.querySelector(".netfee-recharge-form");
+        if (form) rechargeRecalculate(form);
     });
 
     /*
@@ -995,6 +1136,39 @@
                 return;
             }
 
+
+        if (form.classList.contains("netfee-recharge-form")) {
+            const billingTypeInput =
+                form.querySelector('[name="billing_type"]');
+
+            const selectedMonthsInput =
+                form.querySelector("[data-selected-months]");
+
+            const billingType = billingTypeInput
+                ? String(billingTypeInput.value || "").trim().toLowerCase()
+                : "";
+
+            if (billingType === "monthly" && selectedMonthsInput) {
+                let selectedMonths = [];
+
+                try {
+                    selectedMonths = JSON.parse(
+                        selectedMonthsInput.value || "[]"
+                    );
+                } catch {
+                    selectedMonths = [];
+                }
+
+                if (
+                    !Array.isArray(selectedMonths) ||
+                    selectedMonths.length < 1
+                ) {
+                    event.preventDefault();
+                    window.alert("Single Recharge requires at least one selected month.");
+                    return;
+                }
+            }
+        }
 
             event.preventDefault();
 

@@ -284,6 +284,14 @@
 
         if (!form) return;
 
+        const selectedMonthInput = form.querySelector("[data-selected-running-month]");
+        const selectedChips = root.querySelectorAll(".nf-chip");
+        const lastChip = selectedChips[selectedChips.length - 1];
+
+        if (selectedMonthInput && lastChip && lastChip.dataset.monthKey) {
+            selectedMonthInput.value = lastChip.dataset.monthKey;
+        }
+
         const select = form.querySelector("[data-recharge-month]");
 
         if (select) {
@@ -298,7 +306,7 @@
         }
     }
 
-    function chipsAdd(root, name) {
+    function chipsAdd(root, name, monthKey) {
 
         if (!name) return;
 
@@ -309,6 +317,7 @@
         const chip = document.createElement("span");
         chip.className = "nf-chip";
         chip.dataset.name = name;
+        if (monthKey) chip.dataset.monthKey = monthKey;
         chip.appendChild(document.createTextNode(name));
 
         const x = document.createElement("b");
@@ -342,7 +351,7 @@
             root.querySelectorAll(".nf-chip").forEach(function (chip) { chip.remove(); });
 
             items.slice(0, index + 1).forEach(function (it) {
-                chipsAdd(root, it.dataset.name);
+                chipsAdd(root, it.dataset.name, it.dataset.monthKey);
             });
 
             chipsSync(root);

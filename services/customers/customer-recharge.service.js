@@ -304,6 +304,59 @@ function normalizeInput(body = {}) {
         throw new RechargeError("Invalid recharge month.");
     }
 
+    const selectedRunningMonth = String(
+        body.selected_running_month || ""
+    ).trim();
+
+    if (
+        selectedRunningMonth &&
+        !/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedRunningMonth)
+    ) {
+        throw new RechargeError("Invalid selected running month.");
+    }
+    let selectedMonths = null;
+
+    if (body.selected_months !== undefined && body.selected_months !== null) {
+        try {
+            selectedMonths = Array.isArray(body.selected_months)
+                ? body.selected_months
+                : JSON.parse(String(body.selected_months));
+        } catch {
+            throw new RechargeError("Invalid selected months.");
+        }
+
+        if (
+            !Array.isArray(selectedMonths) ||
+            selectedMonths.length < 1 ||
+            selectedMonths.length > 12 ||
+            selectedMonths.some(month =>
+                typeof month !== "string" ||
+                !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)
+            ) ||
+            new Set(selectedMonths).size !== selectedMonths.length
+        ) {
+            throw new RechargeError("Invalid selected months.");
+        }
+
+        selectedMonths = [...selectedMonths].sort();
+    }
+
+    let billAmount = null;
+
+    if (body.bill_amount !== undefined && body.bill_amount !== null) {
+        const rawBill = Number(body.bill_amount);
+
+        if (
+            !Number.isFinite(rawBill) ||
+            rawBill <= 0 ||
+            rawBill > 10000000
+        ) {
+            throw new RechargeError("Invalid bill amount.");
+        }
+
+        billAmount = roundMoney(rawBill);
+    }
+
     const selectedDays = Number.parseInt(
         body.selected_days ?? 30,
         10
@@ -360,6 +413,9 @@ function normalizeInput(body = {}) {
         billType,
         billingType,
         rechargeMonth,
+        selectedRunningMonth,
+        selectedMonths,
+        billAmount,
         selectedDays,
         paymentMethod: method,
         discount: roundMoney(rawDiscount),
@@ -532,6 +588,10 @@ async function rechargeCustomer({
         } else {
             subscriptionAmount =
                 monthlyBill * opts.rechargeMonth;
+        }
+
+        if (opts.billAmount !== null) {
+            subscriptionAmount = opts.billAmount;
         }
 
         subscriptionAmount = roundMoney(subscriptionAmount);
@@ -773,11 +833,75 @@ async function rechargeCustomer({
             );
         }
 
+        let selectedRunningMonthDate = null;
+
+        if (opts.billingType === "Monthly" && opts.selectedMonths) {
+            const baseIndex = keyDate.getFullYear() * 12 + keyDate.getMonth();
+
+            const selectedIndexes = opts.selectedMonths.map(month => {
+                const [year, monthNumber] = month.split("-").map(Number);
+                return year * 12 + monthNumber - 1;
+            });
+
+            if (
+                opts.selectedMonths.length !== opts.rechargeMonth ||
+                selectedIndexes.some(index => index < baseIndex || index > baseIndex + 11)
+            ) {
+                throw new RechargeError("Selected months do not match the recharge months.");
+            }
+
+            const latestIndex = Math.max(...selectedIndexes);
+            const latestYear = Math.floor(latestIndex / 12);
+            const latestMonth = (latestIndex % 12) + 1;
+            const latestKey = `${latestYear}-${String(latestMonth).padStart(2, "0")}`;
+
+            if (opts.selectedRunningMonth !== latestKey) {
+                throw new RechargeError("Running month does not match selected months.");
+            }
+
+            const selectedDay = Math.min(
+                base.getDate(),
+                daysInMonth(latestYear, latestMonth)
+            );
+
+            selectedRunningMonthDate = new Date(
+                latestYear,
+                latestMonth - 1,
+                selectedDay
+            );
+        } else if (opts.billingType === "Monthly" && opts.selectedRunningMonth) {
+            const parts = opts.selectedRunningMonth.split("-").map(Number);
+            const selectedYear = parts[0];
+            const selectedMonth = parts[1];
+
+            const selectedIndex = selectedYear * 12 + selectedMonth - 1;
+            const baseIndex = keyDate.getFullYear() * 12 + keyDate.getMonth();
+            const monthOffset = selectedIndex - baseIndex;
+
+            if (
+                monthOffset < 0 ||
+                monthOffset > 11 ||
+                opts.rechargeMonth !== monthOffset + 1
+            ) {
+                throw new RechargeError("Selected month does not match the recharge months.");
+            }
+
+            const selectedDay = Math.min(
+                base.getDate(),
+                daysInMonth(selectedYear, selectedMonth)
+            );
+
+            selectedRunningMonthDate = new Date(
+                selectedYear,
+                selectedMonth - 1,
+                selectedDay
+            );
+        }
         const next = opts.billingType === "Daily"
             ? addDays(base, opts.selectedDays)
-            : addMonthsClamped(
-                base,
-                1
+            : (
+                selectedRunningMonthDate ||
+                addMonthsClamped(base, 1)
             );
 
         /* keep the time of day of the billing cycle (e.g. 12:19 PM) */
@@ -1298,40 +1422,29 @@ async function rechargeFragment({ user, id }) {
         return label;
     });
 
+    const monthChoiceKeys = Array.from({ length: 12 }, (_, index) => {
+        const d = new Date(baseYear, baseMonth + index, 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    });
     const currentMonthName = monthChoices[0];
 
-    /*
-     * Months that are still DUE (before the current billing month), newest
-     * first allocation: October due 500 -> "October ৳500". The tickboxes
-     * fill the Due field; the Due field can also be typed by hand.
-     */
-    const dueMonths = [];
+    const dueMonthCount = monthlyBill > 0
+        ? Math.ceil(Math.max(0, previousDue) / monthlyBill)
+        : 0;
 
-    if (previousDue > 0 && monthlyBill > 0) {
-        let rest = roundMoney(previousDue);
-        let k = 0;
+    const defaultSelectedCount = Math.min(
+        12,
+        Math.max(1, dueMonthCount + 1)
+    );
 
-        while (rest > 0.004 && k < 24) {
-            k += 1;
-            const amt = roundMoney(Math.min(monthlyBill, rest));
-            rest = roundMoney(rest - amt);
-            const d = new Date(baseYear, baseDate.getMonth() - k, 1);
-            dueMonths.push({
-                name: MONTH_NAMES[d.getMonth()] +
-                    (d.getFullYear() !== baseYear ? " " + d.getFullYear() : ""),
-                amt
-            });
-        }
-    }
+    const defaultSelectedMonthKeys = monthChoiceKeys.slice(0, defaultSelectedCount);
 
-    const dueMonthsHtml = dueMonths.length
-        ? `<div class="nf-rc-wide" data-due-months>
-            <label class="nf-rc-lbl">Due Months <small class="text-muted">(untick = pay later)</small></label>
-            <div class="nf-due-list">${dueMonths.slice().reverse().map(m =>
-                `<label class="nf-due-opt"><input type="checkbox" data-due-month data-amt="${m.amt}" checked onchange="var f=this.closest('form'),t=0;f.querySelectorAll('[data-due-month]:checked').forEach(function(c){t+=Number(c.dataset.amt)});f.querySelector('[data-recharge-due]').value=Math.round(t*100)/100;">${m.name} ৳${m.amt}</label>`
-            ).join("")}</div>
-        </div>`
-        : "";
+    const defaultSelectedChips = defaultSelectedMonthKeys.map(key => {
+        const index = monthChoiceKeys.indexOf(key);
+        const name = monthChoices[index];
+        return `<span class="nf-chip" data-name="${escapeHtml(name)}" data-month-key="${key}">${escapeHtml(name)}<b class="nf-chip-x">&times;</b></span>`;
+    }).join("");
+
     const credit = Math.max(0, Number(balance) || 0);
     const balanceClass = balance < 0 ? "nf-rc-neg" : "nf-rc-pos";
 
@@ -1351,8 +1464,6 @@ async function rechargeFragment({ user, id }) {
 .nf-chips-item { padding: 6px 10px; font-size: 13px; cursor: pointer; }
 .nf-chips-item:hover { background: #e8f0fe; }
 .nf-chips-item.picked { display: none; }
-.nf-due-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.nf-due-opt { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #f1b0b7; background: #fff5f5; color: #842029; border-radius: 4px; padding: 3px 9px; font-size: 13px; cursor: pointer; margin: 0; }
 </style>
 <form action="/api/customers/recharge"
       method="POST"
@@ -1417,7 +1528,13 @@ async function rechargeFragment({ user, id }) {
 
         <div>
             <label class="nf-rc-lbl">Bill</label>
-            <input type="text" class="form-control" value="${Number(monthlyBill)}" readonly data-recharge-subtotal-input>
+            <input type="number"
+                   name="bill_amount"
+                   class="form-control"
+                   min="0.01"
+                   step="0.01"
+                   value="${roundMoney(monthlyBill * defaultSelectedCount)}"
+                   data-recharge-subtotal-input>
         </div>
 
         <div>
@@ -1430,7 +1547,7 @@ async function rechargeFragment({ user, id }) {
                    step="0.01"
                    value="${roundMoney(previousDue)}"
                    data-recharge-due
-                   ${previousDue > 0 ? "" : "readonly"}>
+                   >
         </div>
 
         <div>
@@ -1445,23 +1562,26 @@ async function rechargeFragment({ user, id }) {
 
         <div></div>
 
-        ${dueMonthsHtml}
+        
 
         <div class="nf-rc-wide" data-recharge-month-wrap>
             <label class="nf-rc-lbl">Select Month</label>
             <div class="nf-chips" data-nf-chips>
                 <div class="nf-chips-box" tabindex="0">
                     <span class="nf-chips-list">
-                        <span class="nf-chip" data-name="${currentMonthName}">${currentMonthName}<b class="nf-chip-x">&times;</b></span>
+                        ${defaultSelectedChips}
                     </span>
                     <span class="nf-chips-clear" title="Clear">&times;</span>
                     <span class="nf-chips-caret"><i class="fa fa-chevron-down"></i></span>
                 </div>
                 <div class="nf-chips-menu">
-                    ${monthChoices.map(name => `<div class="nf-chips-item" data-name="${name}">${name}</div>`).join("")}
+                    ${monthChoices.map((name, index) => `<div class="nf-chips-item" data-name="${name}" data-month-key="${monthChoiceKeys[index]}">${name}</div>`).join("")}
                 </div>
             </div>
             <input type="hidden" name="base_month" value="${baseMonthKey}">
+            <input type="hidden" name="selected_months" value="${escapeHtml(JSON.stringify(defaultSelectedMonthKeys))}" data-selected-months>
+            <input type="hidden" name="selected_running_month" value="${defaultSelectedMonthKeys[defaultSelectedMonthKeys.length - 1]}" data-selected-running-month>
+            <div class="small text-muted mt-1" data-running-month-label>Running Month: ${escapeHtml(monthChoices[defaultSelectedCount - 1])}</div>
             <select name="recharge_month"
                     class="d-none"
                     data-recharge-month>
