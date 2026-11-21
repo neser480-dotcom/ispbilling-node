@@ -308,6 +308,109 @@ class ApiService {
       });
 
   // Super Admin: Software Billing list
+
+  // Customer form: MikroTik routers
+  static Future<Map<String, dynamic>> customerMikrotiks() =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/customers/mikrotiks');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Divisions
+  static Future<Map<String, dynamic>> customerDivisions() =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/customers/divisions');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Areas by MikroTik
+  static Future<Map<String, dynamic>> customerAreas(int mikrotikId) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/customers/areas',
+          queryParameters: {'mikrotik_id': mikrotikId},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Packages by router
+  static Future<Map<String, dynamic>> customerPackages(int routerId) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/customers/packages',
+          queryParameters: {'router_id': routerId},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Sub areas
+  static Future<Map<String, dynamic>> customerSubAreas(int areaId) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/customers/sub-areas',
+          queryParameters: {'area_id': areaId},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Districts by division
+  static Future<Map<String, dynamic>> customerDistricts(int divisionId) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/customers/districts',
+          queryParameters: {'division_id': divisionId},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Customer form: Upazilas by district
+  static Future<Map<String, dynamic>> customerUpazilas(int districtId) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/customers/upazilas',
+          queryParameters: {'district_id': districtId},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Create customer
+  static Future<Map<String, dynamic>> createCustomer(
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/customers',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Update customer
+  static Future<Map<String, dynamic>> updateCustomer(
+    int id,
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.put(
+          '/admin/customers/$id',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // Delete customer
+  static Future<Map<String, dynamic>> deleteCustomer(
+    int id, {
+    bool deleteMikrotik = false,
+  }) =>
+      _run(() async {
+        final r = await ApiClient.dio.delete(
+          '/admin/customers/$id',
+          data: {'delete_mikrotik': deleteMikrotik},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
   static Future<Map<String, dynamic>> softwareBills({
     String status = '',
     int page = 1,
@@ -323,7 +426,18 @@ class ApiService {
         return Map<String, dynamic>.from(r.data);
       });
 
-  // Super Admin: Company pricing list
+  
+  // Super Admin: Company pricing detail and history
+  static Future<Map<String, dynamic>> pricingCompanyDetail(
+    int companyId,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/pricing/companies/$companyId',
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
   static Future<List<Map<String, dynamic>>> pricingCompanies(
     String search,
   ) =>
@@ -473,6 +587,296 @@ class ApiService {
       _run(() async {
         await ApiClient.dio.post('/admin/expenditures',
             data: {'type_id': typeId, 'name': name, 'amount': amount});
+      });
+
+  // ==================== MikroTik API ====================
+
+  static Future<Map<String, dynamic>> mikrotikRouters() =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/mikrotik');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikCreate(
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/mikrotik',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikUpdate(
+    int id,
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.put(
+          '/admin/mikrotik/$id',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikDelete(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.delete('/admin/mikrotik/$id');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikCheck(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/mikrotik/$id/check');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikHistory(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/mikrotik/$id/history');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikPackages(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/mikrotik/$id/packages');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikSyncPackages(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/mikrotik/$id/packages/sync',
+          data: {},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikUpdatePackage(
+    int id,
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.put(
+          '/admin/mikrotik/packages/$id',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikDeletePackage(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.delete('/admin/mikrotik/packages/$id');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikSyncCustomers(
+    int id, {
+    bool includeInactive = false,
+  }) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/mikrotik/$id/customers/sync',
+          data: {'include_inactive': includeInactive},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> mikrotikActiveCustomers(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/mikrotik/$id/customers');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // ==================== Super Admin Users ====================
+
+  static Future<List<Map<String, dynamic>>> superUsers(String search) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/users',
+          queryParameters: {'search': search},
+        );
+        return _list(r.data['users'] ?? r.data['data'] ?? []);
+      });
+
+  static Future<Map<String, dynamic>> superUserDetail(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/super/users/$id');
+        return Map<String, dynamic>.from(r.data['data']);
+      });
+
+  // ==================== Super Admin Permissions ====================
+
+  static Future<Map<String, dynamic>> superUserPermissions(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/super/permissions/$id');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> superSavePermissions(
+    int userId,
+    List<String> permissions,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/permissions/update',
+          data: {
+            'user_id': userId,
+            'permissions': permissions,
+          },
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // ==================== Registration Invoices ====================
+
+  static Future<Map<String, dynamic>> registrationInvoices() =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/registration-invoices',
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> registrationInvoiceDetail(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/registration-invoices/$id',
+        );
+        return Map<String, dynamic>.from(r.data['invoice']);
+      });
+
+  // ==================== Manual Payments ====================
+
+  static Future<List<Map<String, dynamic>>> manualPendingPayments() =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/manual-payments/pending',
+        );
+        return _list(r.data['rows'] ?? []);
+      });
+
+  static Future<Map<String, dynamic>> approveManualPayment(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/manual-payments/$id/approve',
+          data: {},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> rejectManualPayment(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/manual-payments/$id/reject',
+          data: {},
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // ==================== Billing Extend ====================
+
+  static Future<List<Map<String, dynamic>>> superBillingExtendList() =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/billing-extend/list',
+        );
+        return _list(r.data['rows'] ?? []);
+      });
+
+  static Future<Map<String, dynamic>> superExtendBillingDueDate(
+    int billingId,
+    String dueDate,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/billing-extend',
+          data: {
+            'billing_id': billingId,
+            'due_date': dueDate,
+          },
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // ==================== Super Admin Notices ====================
+
+  static Future<List<Map<String, dynamic>>> superNoticesList() =>
+      _run(() async {
+        final r = await ApiClient.dio.get('/admin/super/notices/list');
+        return _list(r.data['rows'] ?? []);
+      });
+
+  static Future<Map<String, dynamic>> superNoticeCreate(
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/notices',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> superNoticeUpdate(
+    int id,
+    Map<String, dynamic> body,
+  ) =>
+      _run(() async {
+        final r = await ApiClient.dio.put(
+          '/admin/super/notices/$id',
+          data: body,
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> superNoticeDelete(int id) =>
+      _run(() async {
+        final r = await ApiClient.dio.delete('/admin/super/notices/$id');
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  // ==================== Payment Gateways ====================
+
+  static Future<Map<String, dynamic>> superPaymentGateways(
+    String scope, {
+    int? companyId,
+  }) =>
+      _run(() async {
+        final r = await ApiClient.dio.get(
+          '/admin/super/payment-gateways/list',
+          queryParameters: {
+            'scope': scope,
+            if (companyId != null) 'company_id': companyId,
+          },
+        );
+        return Map<String, dynamic>.from(r.data);
+      });
+
+  static Future<Map<String, dynamic>> superSavePaymentGateway({
+    required String scope,
+    required String gateway,
+    int? companyId,
+    required bool enabled,
+    required String environment,
+    required Map<String, String> credentials,
+    required Map<String, dynamic> settings,
+  }) =>
+      _run(() async {
+        final r = await ApiClient.dio.post(
+          '/admin/super/payment-gateways/save',
+          data: {
+            'scope': scope,
+            'gateway': gateway,
+            if (companyId != null) 'company_id': companyId,
+            'enabled': enabled,
+            'environment': environment,
+            'credentials': credentials,
+            'settings': settings,
+          },
+        );
+        return Map<String, dynamic>.from(r.data);
       });
 
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
 import '../core/lang.dart';
 import '../core/theme.dart';
@@ -180,7 +180,7 @@ class _DepositScreenState extends State<DepositScreen> {
             child: Row(children: [
               Expanded(
                 child: DropdownButtonFormField<int?>(
-                  value: _collectorId,
+                  initialValue: _collectorId,
                   isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 
@@ -245,15 +245,16 @@ class _SaPaymentGatewaysScreenState extends State<SaPaymentGatewaysScreen> {
               onChanged: (value) => setState(() => _enabled[gateway] = value),
             ),
             DropdownButtonFormField<String>(
-              value: _environment[gateway],
+              initialValue: _environment[gateway],
               decoration: const InputDecoration(labelText: 'Environment'),
               items: const [
                 DropdownMenuItem(value: 'sandbox', child: Text('Sandbox')),
                 DropdownMenuItem(value: 'live', child: Text('Live')),
               ],
               onChanged: (value) {
-                if (value != null)
+                if (value != null) {
                   setState(() => _environment[gateway] = value);
+                }
               },
             ),
             const SizedBox(height: 12),
@@ -321,7 +322,7 @@ class _SaPaymentGatewaysScreenState extends State<SaPaymentGatewaysScreen> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _scope,
+              initialValue: _scope,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: 'Account scope',

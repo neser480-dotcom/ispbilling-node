@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 
@@ -263,12 +263,14 @@ class _SaNoticesScreenState extends State<SaNoticesScreen> {
                             await ApiService.superNoticeCreate(body);
                           } else {
                             final id = int.tryParse(_v(row, 'id'));
-                            if (id == null)
+                            if (id == null) {
                               throw Exception('Invalid notice ID.');
+                            }
                             await ApiService.superNoticeUpdate(id, body);
                           }
-                          if (dialogContext.mounted)
+                          if (dialogContext.mounted) {
                             Navigator.pop(dialogContext, true);
+                          }
                         } catch (e) {
                           refresh(() => saving = false);
                           if (dialogContext.mounted) {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 
@@ -311,7 +311,7 @@ class _SaPermissionsScreenState extends State<SaPermissionsScreen> {
             child: _loadingUsers
                 ? const LinearProgressIndicator()
                 : DropdownButtonFormField<int>(
-                    value: _selectedUserId,
+                    initialValue: _selectedUserId,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Select User',

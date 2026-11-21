@@ -1,5 +1,5 @@
-﻿import 'dart:async';
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
 import '../core/lang.dart';
 import '../core/theme.dart';
@@ -432,10 +432,10 @@ class _CustomerFormState extends State<_CustomerForm> {
     });
     if (id == null) return;
     try {
-      final results = await Future.wait([
-        ApiService.customerAreas(id),
-        ApiService.customerPackages(id),
-      ]);
+final results = await Future.wait<Map<String, dynamic>>([
+  ApiService.customerAreas(id),
+  ApiService.customerPackages(id),
+]);
       if (!mounted) return;
       setState(() {
         _areas = _rows(results[0]['data']);
@@ -536,7 +536,7 @@ class _CustomerFormState extends State<_CustomerForm> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonFormField<int>(
-        value: selected,
+        initialValue: selected,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,

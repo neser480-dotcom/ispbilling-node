@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../core/api_client.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';

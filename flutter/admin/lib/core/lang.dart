@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// বাংলা/ইংরেজি ভাষা পরিবর্তন। UI-তে Lang.i.t('key') ব্যবহার করুন।

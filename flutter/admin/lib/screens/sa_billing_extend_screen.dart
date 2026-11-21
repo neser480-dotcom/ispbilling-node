@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
 import '../core/theme.dart';
 import '../services/api_service.dart';
@@ -25,7 +25,7 @@ class _SaBillingExtendScreenState extends State<SaBillingExtendScreen> {
 
   DateTime? _parseDate(dynamic value) {
     if (value == null || '$value'.isEmpty) return null;
-    return DateTime.tryParse('${value}'.replaceFirst(' ', 'T'));
+    return DateTime.tryParse('$value'.replaceFirst(' ', 'T'));
   }
 
   String _dateText(DateTime value) {
@@ -81,19 +81,20 @@ class _SaBillingExtendScreenState extends State<SaBillingExtendScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, refresh) {
           Future<void> chooseDate() async {
+            final pageContext = context;
             final current = DateTime.now();
             final picked = await showDatePicker(
-              context: context,
+              context: pageContext,
               initialDate: selected.isBefore(current) ? current : selected,
               firstDate: DateTime(current.year, current.month, current.day),
               lastDate: current.add(const Duration(days: 90)),
             );
-            if (picked == null) return;
+            if (!pageContext.mounted || picked == null) return;
             final time = await showTimePicker(
-              context: context,
+              context: pageContext,
               initialTime: TimeOfDay.fromDateTime(selected),
             );
-            if (time == null) return;
+            if (!pageContext.mounted || time == null) return;
             refresh(() {
               selected = DateTime(
                 picked.year,
