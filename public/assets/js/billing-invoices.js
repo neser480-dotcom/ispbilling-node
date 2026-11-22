@@ -59,17 +59,15 @@
         });
     }
 
-    function formatAmount(value) {
+        function formatAmount(value) {
         const amount = Number(value);
-        if (!Number.isFinite(amount)) return "0.00";
+        if (!Number.isFinite(amount)) return "0";
 
-        return amount.toLocaleString("en-BD", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        return Math.round(amount).toLocaleString("en-BD");
     }
 
-    function statusClass(status) {
+
+function statusClass(status) {
         const value = String(status || "").toLowerCase();
 
         if (value === "paid") return "paid";

@@ -26,12 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function taka(v) {
         const n = Number(v);
-        return Number.isFinite(n) ? "৳ " + nf.format(n) : "—";
+        return Number.isFinite(n) ? "৳ " + Math.round(n).toLocaleString("en-IN") : "—";
     }
 
     function takaShort(v) {
         const n = Number(v);
-        return Number.isFinite(n) ? "৳" + nf.format(n) : "";
+        return Number.isFinite(n) ? "৳" + Math.round(n).toLocaleString("en-IN") : "";
     }
 
     function setText(id, value) {

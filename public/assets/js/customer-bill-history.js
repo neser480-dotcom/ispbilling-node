@@ -48,7 +48,7 @@
         const amount = Number(value);
 
         return "৳" +
-            (Number.isFinite(amount) ? amount.toFixed(2) : "0.00");
+            (Number.isFinite(amount) ? Math.round(amount).toLocaleString("en-IN") : "0");
     }
 
     function formatDate(value) {

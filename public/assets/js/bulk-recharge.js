@@ -191,8 +191,8 @@
 
 
         return Number.isFinite(number)
-            ? number.toFixed(2)
-            : "0.00";
+            ? Math.round(number).toLocaleString("en-IN")
+            : "0";
 
     }
 

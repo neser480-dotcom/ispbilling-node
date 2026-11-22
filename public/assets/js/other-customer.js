@@ -23,7 +23,7 @@
     function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
     function str(v) { return String(v == null ? "" : v).trim(); }
     function taka(v) {
-        return num(v).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return Math.round(num(v)).toLocaleString("en-IN");
     }
 
     /* ---------- field helpers (customer.js এর মতো) ---------- */

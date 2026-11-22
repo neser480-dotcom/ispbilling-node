@@ -882,7 +882,7 @@
                     ? duePay
                     : Math.max(0, chargeNow - credit) + extra + duePay + advance));
 
-        const fmt = function (n) { return "৳" + n.toFixed(2); };
+        const fmt = function (n) { return "৳" + Math.round(n).toLocaleString("en-IN"); };
 
         const set = function (selector, text) {
             const el = form.querySelector(selector);

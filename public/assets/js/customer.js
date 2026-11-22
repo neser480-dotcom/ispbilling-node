@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 (function () {
 
@@ -266,19 +266,12 @@
     |--------------------------------------------------------------------------
     */
 
-    function taka(value) {
-
-        return number(value).toLocaleString(
-            "en-IN",
-            {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            }
-        );
+        function taka(value) {
+        return Math.round(number(value)).toLocaleString("en-IN");
     }
 
 
-    function dateTimeDisplay(value) {
+function dateTimeDisplay(value) {
 
         if (!value) {
             return "";
