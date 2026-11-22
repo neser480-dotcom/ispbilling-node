@@ -126,7 +126,7 @@ class _OltMonitorScreenState extends State<OltMonitorScreen> {
       width: 104,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -165,7 +165,8 @@ class _OltMonitorScreenState extends State<OltMonitorScreen> {
     final ids = olts.map((o) => numOf(o['id']).toInt()).toList();
     final value = ids.contains(_oltId) ? _oltId : ids.first;
     return DropdownButtonFormField<int>(
-      value: value,
+      key: ValueKey('olt-select-$value'),
+      initialValue: value,
       isDense: true,
       decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'OLT'),
       items: [

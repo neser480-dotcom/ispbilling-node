@@ -26,7 +26,7 @@ class _LiveFaultScreenState extends State<LiveFaultScreen> {
 
   String _severity = '';
   final List<Map<String, dynamic>> _rows = [];
-  int _page = 1, _totalPages = 1, _total = 0, _critical = 0, _warning = 0;
+  int _page = 1, _totalPages = 1, _critical = 0, _warning = 0;
   bool _loading = true;
   bool _loadingMore = false;
   String? _error;
@@ -63,7 +63,6 @@ class _LiveFaultScreenState extends State<LiveFaultScreen> {
     }
     final s = d['summary'];
     if (s is Map) {
-      _total = numOf(s['total']).toInt();
       _critical = numOf(s['critical']).toInt();
       _warning = numOf(s['warning']).toInt();
     }

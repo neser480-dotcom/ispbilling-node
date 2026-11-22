@@ -9,6 +9,7 @@ import '../services/recharge_api.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/lang_builder.dart';
 import '../widgets/letter_avatar.dart';
+import '../widgets/netfee_ui.dart';
 
 /// গ্রাহক রিচার্জ। প্রথমে গ্রাহক খুঁজে বাছাই, তারপর রিচার্জ ফর্ম (Bottom Sheet)।
 /// Backend: GET /admin/recharge/form, POST /admin/recharge/quote, POST /admin/recharge
@@ -200,17 +201,18 @@ class _CustomerRechargeScreenState extends State<CustomerRechargeScreen> {
   }
 }
 
-/// অন্য স্ক্রিন (যেমন Customer বিস্তারিত) থেকেও ডাকা যায়।
-/// রিচার্জ সফল হলে true ফেরত দেয়।
+
+/// অন্য স্ক্রিন (যেমন Customer লিস্ট/বিস্তারিত) থেকেও ডাকা যায়।
+/// রিচার্জ সফল হলে true ফেরত দেয়। স্ক্রিনশটের মতো পূর্ণ পেজ (Bill Recharge)।
 Future<bool?> showRechargeSheet(
   BuildContext context, {
   required int customerId,
   String name = '',
 }) {
-  return showModalBottomSheet<bool>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => _RechargeSheet(customerId: customerId, name: name),
+  return Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => _RechargeSheet(customerId: customerId, name: name),
+    ),
   );
 }
 
@@ -224,6 +226,7 @@ class _RechargeSheet extends StatefulWidget {
 }
 
 class _RechargeSheetState extends State<_RechargeSheet> {
+  bool _extra = false; // "Note And Month" চেকবক্স
   Map<String, dynamic>? _form;
   String? _loadError;
   bool _loading = true;
@@ -385,90 +388,29 @@ class _RechargeSheetState extends State<_RechargeSheet> {
     return y != baseYear ? '$name $y' : name;
   }
 
-  Widget _row(String label, String value, {bool bold = false, Color? color}) {
-    final style = TextStyle(
-      fontSize: bold ? 17 : 14,
-      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-      color: color ?? AppColors.text,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(child: Text(label, style: style)),
-          Text(value, style: style),
-        ],
-      ),
-    );
-  }
+  Widget _label(String t) => Padding(
+        padding: const EdgeInsets.only(top: 14, bottom: 4, left: 2),
+        child: Text(t,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF666666))),
+      );
 
-  Widget _dropdown<T>({
-    required String label,
-    required T value,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      isExpanded: true,
+  Widget _readonly(String label, String value) {
+    return TextFormField(
+      key: ValueKey('$label|$value'),
+      initialValue: value,
+      enabled: false,
+      style: const TextStyle(fontSize: 26, color: Color(0xFFB0B0B0)),
       decoration: InputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-      ),
-      items: items,
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _quoteBox() {
-    if (_quoteError != null) {
-      return Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDECEA),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(_quoteError!, style: const TextStyle(color: Colors.red)),
-      );
-    }
-    final q = _quote;
-    if (q == null) {
-      return _quoting
-          ? const Center(child: CircularProgressIndicator())
-          : const SizedBox.shrink();
-    }
-    final due = numOf(q['previous_due']);
-    final fromBal = numOf(q['from_balance']);
-    final extra = numOf(q['extra_to_balance']);
-    final adv = numOf(q['advance']);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.skyLight,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        children: [
-          if (_billType == 'Bill')
-            _row(tr('সাবস্ক্রিপশন', 'Subscription'),
-                taka(numOf(q['subscription_amount']))),
-          if (due > 0) _row(tr('আগের বকেয়া', 'Previous due'), taka(due)),
-          if (fromBal > 0)
-            _row(tr('ব্যালেন্স থেকে', 'From balance'), '− ${taka(fromBal)}'),
-          if (extra > 0)
-            _row(tr('বাকি মাস ব্যালেন্সে', 'Extra months to balance'), taka(extra)),
-          if (adv > 0) _row(tr('অ্যাডভান্স', 'Advance'), taka(adv)),
-          const Divider(),
-          _row(tr('আদায়যোগ্য মোট', 'Total to collect'), taka(numOf(q['amount'])),
-              bold: true, color: AppColors.navy),
-        ],
+        labelStyle: const TextStyle(fontSize: 20, color: Color(0xFF666666)),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        disabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFBDBDBD))),
       ),
     );
   }
 
-  Widget _content() {
+  Widget _content(double w) {
     final f = _form!;
     final c = mapOf(f['customer']);
     final opts = mapOf(f['options']);
@@ -481,9 +423,10 @@ class _RechargeSheetState extends State<_RechargeSheet> {
         ? (opts['payment_methods'] as List).map((e) => '$e').toList()
         : <String>['Hand Cash', 'Bkash', 'Nagad', 'Bank'];
     final allowDaily = f['allow_daily'] == true;
-    final bal = numOf(c['balance']);
     final isAdvance = _billType == 'Advance';
     final alreadyPaid = c['already_paid'] == true;
+    final billing =
+        (_billingType == 'Daily' && !allowDaily) ? 'Monthly' : _billingType;
 
     final canSubmit = !_saving &&
         !_quoting &&
@@ -491,195 +434,159 @@ class _RechargeSheetState extends State<_RechargeSheet> {
         _quoteError == null &&
         numOf(_quote?['amount']) > 0;
 
-    return ListView(
-      shrinkWrap: true,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-      children: [
-        Row(children: [
-          LetterAvatar(text: '${c['name'] ?? ''}', radius: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${c['name'] ?? ''}',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text)),
-                Text(
-                  [
-                    '${c['customer_code'] ?? ''}',
-                    '${c['phone'] ?? ''}',
-                  ].where((e) => e.isNotEmpty).join(' · '),
-                  style: const TextStyle(color: AppColors.muted),
+    final amountText = _quote == null ? '' : intl(numOf(_quote!['amount']));
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 32),
+      child: Center(
+        child: SizedBox(
+          width: w,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _readonly('Monthly Fee', intl(numOf(c['monthly_bill']))),
+              const SizedBox(height: 6),
+              _readonly('Balance', intl(numOf(c['balance']))),
+              _label('Bill Recharge'),
+              if (alreadyPaid && !isAdvance)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    tr('এই মাস ইতিমধ্যে পরিশোধিত। শুধু ব্যালেন্সে টাকা যোগ করতে "Advance" বাছুন।',
+                        'This month is already paid. Choose "Advance" to only add balance.'),
+                    style: const TextStyle(color: Colors.orange),
+                  ),
+                ),
+              Text('Bill Type',
+                  style: const TextStyle(fontSize: 18, color: Color(0xFF666666))),
+              const SizedBox(height: 4),
+              PillDropdown<String>(
+                width: w,
+                value: isAdvance ? 'Monthly' : billing,
+                values: [
+                  'Monthly',
+                  if (allowDaily) 'Daily',
+                ],
+                label: (v) => v,
+                onChanged: (v) {
+                  setState(() => _billingType = v);
+                  _scheduleQuote();
+                },
+              ),
+              const SizedBox(height: 6),
+              // রিচার্জের টাকা: Bill-এ হিসাব করা পরিমাণ, Advance-এ নিজে লিখতে হয়
+              if (isAdvance)
+                TextField(
+                  controller: _advanceC,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => _scheduleQuote(),
+                  style: const TextStyle(fontSize: 26),
+                  decoration: const InputDecoration(hintText: 'Amount'),
+                )
+              else
+                TextFormField(
+                  key: ValueKey('amt$amountText'),
+                  initialValue: amountText,
+                  readOnly: true,
+                  style: const TextStyle(fontSize: 26),
+                ),
+              _label('Medium'),
+              PillDropdown<String>(
+                width: w,
+                value: methods.contains(_method) ? _method : methods.first,
+                values: methods,
+                label: (v) => v,
+                onChanged: (v) => setState(() => _method = v),
+              ),
+              _label('Bill Type'),
+              PillDropdown<String>(
+                width: w,
+                value: _billType,
+                values: const ['Bill', 'Advance'],
+                label: (v) => v,
+                onChanged: (v) {
+                  setState(() => _billType = v);
+                  _scheduleQuote();
+                },
+              ),
+              const SizedBox(height: 10),
+              InkWell(
+                onTap: () => setState(() => _extra = !_extra),
+                child: Row(children: [
+                  Checkbox(
+                    value: _extra,
+                    onChanged: (v) => setState(() => _extra = v ?? false),
+                  ),
+                  const Text('Note And Month',
+                      style: TextStyle(fontSize: 20, color: AppColors.text)),
+                ]),
+              ),
+              if (_extra) ...[
+                if (!isAdvance && billing == 'Monthly') ...[
+                  _label('Month'),
+                  PillDropdown<int>(
+                    width: w,
+                    value: _months,
+                    values: [for (var n = 1; n <= 12; n++) n],
+                    label: (n) => monthKeys.length >= n
+                        ? (n == 1
+                            ? _monthLabel(monthKeys[0], baseYear)
+                            : '$n ${tr('মাস', 'months')}')
+                        : '$n ${tr('মাস', 'months')}',
+                    onChanged: (v) {
+                      setState(() => _months = v);
+                      _scheduleQuote();
+                    },
+                  ),
+                ],
+                if (!isAdvance && billing == 'Daily') ...[
+                  _label('Days'),
+                  PillDropdown<int>(
+                    width: w,
+                    value: _days,
+                    values: [for (var n = 1; n <= 31; n++) n],
+                    label: (n) => '$n ${tr('দিন', 'days')}',
+                    onChanged: (v) {
+                      setState(() => _days = v);
+                      _scheduleQuote();
+                    },
+                  ),
+                ],
+                if (!isAdvance)
+                  TextField(
+                    controller: _discountC,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => _scheduleQuote(),
+                    decoration: InputDecoration(
+                        labelText: tr('ডিসকাউন্ট', 'Discount')),
+                  ),
+                TextField(
+                  controller: _commentC,
+                  maxLength: 255,
+                  decoration: InputDecoration(labelText: tr('নোট', 'Note')),
                 ),
               ],
-            ),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        _row(tr('মাসিক বিল', 'Monthly bill'), taka(numOf(c['monthly_bill']))),
-        _row(
-          bal < 0 ? tr('বকেয়া', 'Due') : tr('ব্যালেন্স', 'Balance'),
-          taka(bal < 0 ? -bal : bal),
-          color: bal < 0 ? Colors.red : AppColors.text,
-        ),
-        if (dateOnly(c['billing_cycle']).isNotEmpty)
-          _row(tr('বিলিং তারিখ', 'Billing date'), dateOnly(c['billing_cycle'])),
-        if (alreadyPaid && !isAdvance)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              tr('এই মাস ইতিমধ্যে পরিশোধিত। শুধু ব্যালেন্সে টাকা যোগ করতে "Advance" বাছুন।',
-                  'This month is already paid. Choose "Advance" to only add balance.'),
-              style: const TextStyle(color: Colors.orange),
-            ),
-          ),
-        const SizedBox(height: 14),
-        _dropdown<String>(
-          label: tr('বিল ধরন', 'Bill type'),
-          value: _billType,
-          items: [
-            DropdownMenuItem(value: 'Bill', child: Text(tr('বিল', 'Bill'))),
-            DropdownMenuItem(
-                value: 'Advance', child: Text(tr('অ্যাডভান্স', 'Advance'))),
-          ],
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() => _billType = v);
-            _scheduleQuote();
-          },
-        ),
-        if (!isAdvance) ...[
-          const SizedBox(height: 12),
-          _dropdown<String>(
-            label: tr('বিলিং ধরন', 'Billing type'),
-            value: (_billingType == 'Daily' && !allowDaily) ? 'Monthly' : _billingType,
-            items: [
-              DropdownMenuItem(
-                  value: 'Monthly', child: Text(tr('মাসিক', 'Monthly'))),
-              if (allowDaily)
-                DropdownMenuItem(value: 'Daily', child: Text(tr('দৈনিক', 'Daily'))),
+              if (_quoteError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(_quoteError!,
+                      style: const TextStyle(color: Colors.red)),
+                ),
+              const SizedBox(height: 40),
+              Center(
+                child: _saving
+                    ? const CircularProgressIndicator()
+                    : PillButton(
+                        text: 'Submit',
+                        onPressed: canSubmit ? _submit : null,
+                      ),
+              ),
             ],
-            onChanged: (v) {
-              if (v == null) return;
-              setState(() => _billingType = v);
-              _scheduleQuote();
-            },
-          ),
-          const SizedBox(height: 12),
-          if (_billingType == 'Monthly')
-            _dropdown<int>(
-              label: tr('কত মাসের জন্য', 'Months'),
-              value: _months,
-              items: [
-                for (var n = 1; n <= 12; n++)
-                  DropdownMenuItem(
-                    value: n,
-                    child: Text(
-                      monthKeys.length >= n
-                          ? (n == 1
-                              ? _monthLabel(monthKeys[0], baseYear)
-                              : '${Lang.i.digits('$n')} ${tr('মাস', 'months')} '
-                                  '(${_monthLabel(monthKeys[0], baseYear)} – ${_monthLabel(monthKeys[n - 1], baseYear)})')
-                          : '${Lang.i.digits('$n')} ${tr('মাস', 'months')}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _months = v);
-                _scheduleQuote();
-              },
-            )
-          else
-            _dropdown<int>(
-              label: tr('কত দিনের জন্য', 'Days'),
-              value: _days,
-              items: [
-                for (var n = 1; n <= 31; n++)
-                  DropdownMenuItem(
-                      value: n,
-                      child: Text('${Lang.i.digits('$n')} ${tr('দিন', 'days')}')),
-              ],
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _days = v);
-                _scheduleQuote();
-              },
-            ),
-        ],
-        const SizedBox(height: 12),
-        _dropdown<String>(
-          label: tr('পেমেন্ট মাধ্যম', 'Payment method'),
-          value: methods.contains(_method) ? _method : methods.first,
-          items: [
-            for (final m in methods) DropdownMenuItem(value: m, child: Text(m)),
-          ],
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() => _method = v);
-          },
-        ),
-        if (!isAdvance) ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _discountC,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => _scheduleQuote(),
-            decoration: InputDecoration(
-              labelText: tr('ডিসকাউন্ট', 'Discount'),
-              border: const OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-        ],
-        const SizedBox(height: 12),
-        TextField(
-          controller: _advanceC,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          onChanged: (_) => _scheduleQuote(),
-          decoration: InputDecoration(
-            labelText: isAdvance
-                ? tr('অ্যাডভান্স পরিমাণ *', 'Advance amount *')
-                : tr('অতিরিক্ত অ্যাডভান্স (ঐচ্ছিক)', 'Extra advance (optional)'),
-            border: const OutlineInputBorder(),
-            isDense: true,
           ),
         ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _commentC,
-          maxLength: 255,
-          decoration: InputDecoration(
-            labelText: tr('নোট', 'Note'),
-            border: const OutlineInputBorder(),
-            isDense: true,
-          ),
-        ),
-        const SizedBox(height: 4),
-        _quoteBox(),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 48,
-          child: FilledButton(
-            onPressed: canSubmit ? _submit : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : Text(
-                    _quote == null
-                        ? tr('রিচার্জ', 'Recharge')
-                        : '${tr('রিচার্জ', 'Recharge')} · ${taka(numOf(_quote!['amount']))}',
-                    style: const TextStyle(fontSize: 16)),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -687,15 +594,18 @@ class _RechargeSheetState extends State<_RechargeSheet> {
   Widget build(BuildContext context) {
     return LangBuilder(
       builder: (context) {
-        Widget child;
+        final c = mapOf(_form?['customer']);
+        final name = widget.name.isNotEmpty ? widget.name : '${c['name'] ?? ''}';
+        final code = '${c['customer_code'] ?? c['customer_id'] ?? ''}';
+        final w = (MediaQuery.of(context).size.width * 0.61)
+            .clamp(240.0, 420.0)
+            .toDouble();
+
+        Widget body;
         if (_loading) {
-          child = const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          body = const Center(child: CircularProgressIndicator());
         } else if (_loadError != null) {
-          child = Padding(
-            padding: const EdgeInsets.all(24),
+          body = Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(_loadError!, textAlign: TextAlign.center),
               const SizedBox(height: 10),
@@ -704,34 +614,27 @@ class _RechargeSheetState extends State<_RechargeSheet> {
             ]),
           );
         } else {
-          child = Flexible(child: _content());
+          body = _content(w);
         }
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            toolbarHeight: 72,
+            titleSpacing: 0,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
-                  child: Row(children: [
-                    Expanded(
-                      child: Text(tr('গ্রাহক রিচার্জ', 'Customer recharge'),
-                          style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.navy)),
-                    ),
-                    IconButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        icon: const Icon(Icons.close)),
-                  ]),
-                ),
-                child,
+                const Text('Bill Recharge', style: TextStyle(fontSize: 26)),
+                if (name.isNotEmpty)
+                  Text(code.isEmpty ? name : '$name($code)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 20, color: Color(0xCCFFFFFF))),
               ],
             ),
           ),
+          body: body,
         );
       },
     );

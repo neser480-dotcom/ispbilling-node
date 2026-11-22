@@ -453,7 +453,7 @@ class _BulkRechargeScreenState extends State<BulkRechargeScreen> {
           child: Row(children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: _billingType,
+                initialValue: _billingType,
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: tr('বিলিং ধরন', 'Billing type'),
@@ -470,7 +470,7 @@ class _BulkRechargeScreenState extends State<BulkRechargeScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: _medium,
+                initialValue: _medium,
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: tr('পেমেন্ট মাধ্যম', 'Payment medium'),

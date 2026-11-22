@@ -146,7 +146,8 @@ class _InterfaceMonitorScreenState extends State<InterfaceMonitorScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: DropdownButtonFormField<int>(
-                value: _routerId,
+                key: ValueKey('iface-router-$_routerId'),
+                initialValue: _routerId,
                 isExpanded: true,
                 decoration: InputDecoration(
                   isDense: true,

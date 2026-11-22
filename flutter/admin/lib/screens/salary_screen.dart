@@ -304,7 +304,7 @@ class _PayFormState extends State<_PayForm> {
               Row(children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _year,
+                    initialValue: _year,
                     decoration: InputDecoration(
                       labelText: tr('বছর', 'Year'),
                       isDense: true,
@@ -322,7 +322,7 @@ class _PayFormState extends State<_PayForm> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _month,
+                    initialValue: _month,
                     decoration: InputDecoration(
                       labelText: tr('মাস', 'Month'),
                       isDense: true,

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
 import '../core/lang.dart';
@@ -10,6 +10,8 @@ import '../widgets/lang_builder.dart';
 import '../widgets/letter_avatar.dart';
 import '../widgets/netfee_ui.dart';
 import 'customer_recharge_screen.dart';
+import 'customer_pages.dart';
+import '../core/tr.dart';
 
 /// Ã Â¦â€”Ã Â§ÂÃ Â¦Â°Ã Â¦Â¾Ã Â¦Â¹Ã Â¦â€¢ Ã Â¦Â¤Ã Â¦Â¾Ã Â¦Â²Ã Â¦Â¿Ã Â¦â€¢Ã Â¦Â¾ (Ã Â¦Â¶Ã Â§ÂÃ Â¦Â§Ã Â§Â Ã Â¦ÂªÃ Â¦Â¡Ã Â¦Â¼Ã Â¦Â¾) + Ã Â¦Â¬Ã Â¦Â¿Ã Â¦Â¸Ã Â§ÂÃ Â¦Â¤Ã Â¦Â¾Ã Â¦Â°Ã Â¦Â¿Ã Â¦Â¤Ã Â¥Â¤ Backend: GET /admin/customers (permission: customer_list)
 class CustomersScreen extends StatefulWidget {
@@ -21,7 +23,12 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   // স্ক্রিনশটের ট্যাব: DUE | PAID | INACTIVE | EXPIRED
-  static const _tabNames = ['Due', 'Paid', 'Inactive', 'Expired'];
+  List<String> get _tabNames => [
+        tr('বকেয়া', 'Due'),
+        tr('পরিশোধ', 'Paid'),
+        tr('বন্ধ', 'Inactive'),
+        tr('এক্সপায়ার্ড', 'Expired'),
+      ];
   static const _tabStatus = ['Active', 'Active', 'Inactive', 'Expired'];
   static const _tabPay = ['unpaid', 'paid', '', ''];
 
@@ -147,17 +154,256 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Future<void> _open(Map<String, dynamic> c) async {
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _CustomerSheet(summary: c),
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => CustomerProfilePage(summary: c)),
     );
     if (!mounted) return;
-    if (result == 'edit') {
-      await _editCustomer(c);
-    } else if (result == 'deleted') {
+    if (result == 'deleted') _refresh();
+  }
+
+  /// Inactive → MikroTik PPPoE সিক্রেট ডিজেবল; Active → আবার চালু।
+  /// Update ফর্মের মতোই সার্ভারে PUT যায় (শুধু status বদলে), তাই MikroTik সিঙ্ক সার্ভারই করে।
+  Future<void> _setStatus(Map<String, dynamic> row, String status) async {
+    final name = '${row['name'] ?? ''}';
+    final disable = status == 'Inactive';
+    final ok = await _dialogBn(
+      name,
+      disable
+          ? tr('MikroTik-এ এই গ্রাহকের PPPoE বন্ধ হবে।',
+              "This customer's PPPoE will be disabled on MikroTik.")
+          : tr('MikroTik-এ এই গ্রাহকের PPPoE আবার চালু হবে।',
+              "This customer's PPPoE will be enabled again on MikroTik."),
+      cancel: true,
+    );
+    if (!ok || !mounted) return;
+    try {
+      await _putCustomer(row, status: status);
+      if (!mounted) return;
+      _toast(disable ? tr('বন্ধ করা হয়েছে', 'Deactivated') : tr('চালু করা হয়েছে', 'Activated'));
       _refresh();
+    } catch (e) {
+      if (mounted) _toast(e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  /// সার্ভারে গ্রাহকের পুরো তথ্যসহ PUT (শুধু status বা comment বদলে)
+  Future<void> _putCustomer(Map<String, dynamic> row,
+      {String? status, String? comment}) async {
+      final id = numOf(row['id']).toInt();
+      final r = await ApiService.customerDetail(id);
+      final c = Map<String, dynamic>.from(
+          (r['customer'] is Map ? r['customer'] : r) as Map);
+      String v(String k) => '${c[k] ?? ''}'.trim();
+      final auto = v('auto_connection').toLowerCase();
+      final body = <String, dynamic>{
+        'mikrotik_id': c['mikrotik_id'],
+        'package_id': c['package_id'],
+        'pppoe_name': v('pppoe_name').isNotEmpty ? v('pppoe_name') : v('pppoe_username'),
+        'password': v('password').isNotEmpty ? v('password') : v('pppoe_password'),
+        'status': status ?? v('status'),
+        'comment': comment ?? v('comments'),
+        'customer_id': v('customer_id'),
+        'area_id': c['area_id'],
+        'sub_area_id': c['sub_area_id'],
+        'name': v('name'),
+        'address': v('address'),
+        'email': v('email'),
+        'billing_type': v('billing_type').isEmpty ? 'Prepaid' : v('billing_type'),
+        'balance': v('balance').isEmpty ? '0' : v('balance'),
+        'billing_cycle': v('billing_cycle'),
+        'birth_date': v('birth_date'),
+        'connection_date': v('connection_date'),
+        'promise_date': v('promise_date'),
+        'connection_fee': v('connection_fee').isEmpty ? '0' : v('connection_fee'),
+        'reference_name': v('reference_name'),
+        'reference_mobile': v('reference_mobile'),
+        'phone': v('phone'),
+        'nid_no': v('nid_no'),
+        'monthly_bill': numOf(c['monthly_bill']),
+        'division': v('division'),
+        'district': v('district'),
+        'upazila': v('upazila'),
+        'auto_fields': true,
+        'auto_continue': auto == 'will continue' || auto == '1' || auto == 'true',
+        'auto_next_month':
+            num.tryParse('${c['auto_next_month'] ?? 0}') == 1 || auto == 'next month',
+      };
+      await ApiService.updateCustomer(id, body);
+  }
+
+  static final _mobileRe = RegExp(r'(?:\+?88)?(01[3-9]\d{8})');
+
+  List<String> _numbersOf(Map<String, dynamic> c) {
+    final out = <String>[];
+    for (final k in const [
+      'phone', 'mobile', 'whatsapp', 'whatsapp_no', 'alt_phone',
+      'alternate_phone', 'secondary_phone', 'phone2',
+    ]) {
+      for (final m in _mobileRe.allMatches('${c[k] ?? ''}'.replaceAll(RegExp(r'[\s-]'), ''))) {
+        final n = m.group(1)!;
+        if (!out.contains(n)) out.add(n);
+      }
+    }
+    return out;
+  }
+
+  /// দুটো নম্বর থাকলে: Call → প্রথম নম্বর (ফোনের ডায়াল), WhatsApp → দ্বিতীয় নম্বর।
+  /// একটাই থাকলে দুটোতেই সেই নম্বর।
+  Future<void> _contact(Map<String, dynamic> row, bool call) async {
+    var nums = _numbersOf(row);
+    if (nums.length < 2) {
+      // লিস্টে সব নম্বর না-ও থাকতে পারে — বিস্তারিত থেকে দেখা
+      try {
+        final r = await ApiService.customerDetail(numOf(row['id']).toInt());
+        final c = Map<String, dynamic>.from(
+            (r['customer'] is Map ? r['customer'] : r) as Map);
+        final more = _numbersOf(c);
+        if (more.length > nums.length) nums = more;
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    if (nums.isEmpty) {
+      _toast('মোবাইল নাই');
+      return;
+    }
+    final callNo = nums.first;
+    final waNo = nums.length > 1 ? nums[1] : nums.first;
+    final uri = call
+        ? Uri(scheme: 'tel', path: callNo)
+        : Uri.parse('https://wa.me/88$waNo');
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) _toast('খুলতে পারেনি: ${call ? callNo : waNo}');
+    } catch (_) {
+      if (mounted) _toast('খুলতে পারেনি: ${call ? callNo : waNo}');
+    }
+  }
+
+  Future<void> _note(Map<String, dynamic> row) async {
+    final text = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => CustomerNotePage(summary: row)),
+    );
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    try {
+      await _putCustomer(row, comment: text.trim());
+      if (mounted) {
+        _toast('নোট সংরক্ষিত হয়েছে');
+        _refresh();
+      }
+    } catch (e) {
+      if (mounted) _toast(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  String _menuLabel(String k) {
+    switch (k) {
+      case 'Profile':
+        return tr('প্রোফাইল', 'Profile');
+      case 'Call':
+        return tr('কল', 'Call');
+      case 'Whatsapp':
+        return tr('হোয়াটসঅ্যাপ', 'Whatsapp');
+      case 'Update':
+        return tr('আপডেট', 'Update');
+      case 'Bill Recharge':
+        return tr('রিচার্জ করুন', 'Bill Recharge');
+      case 'Bill Report':
+        return tr('বিল রিপোর্ট', 'Bill Report');
+      case 'Inactive':
+        return tr('বন্ধ করুন', 'Inactive');
+      case 'Active':
+        return tr('চালু করুন', 'Active');
+      case 'Note':
+        return tr('নোট', 'Note');
+      case 'Password Reset':
+        return tr('পাসওয়ার্ড রিসেট', 'Password Reset');
+      case 'BandWidth':
+        return tr('ব্যান্ডউইথ', 'BandWidth');
+    }
+    return k;
+  }
+
+  /// স্ক্রিনশটের মতো ডায়ালগ: মাঝে বোল্ড নাম, বার্তা, নিচে নীল-বর্ডার গোল বোতাম
+  Future<bool> _dialogBn(String title, String msg,
+      {bool cancel = false}) async {
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: const RoundedRectangleBorder(),
+        title: Text(title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF555555))),
+        content: Text(msg,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 19, color: Color(0xFF666666))),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.only(bottom: 18),
+        actions: [
+          if (cancel)
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: OutlinedButton.styleFrom(
+                shape: const StadiumBorder(),
+                side: const BorderSide(color: AppColors.sky),
+              ),
+              child: Text(tr('বাতিল', 'Cancel'),
+                  style: const TextStyle(fontSize: 19, color: AppColors.sky)),
+            ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: OutlinedButton.styleFrom(
+              shape: const StadiumBorder(),
+              side: const BorderSide(color: AppColors.sky),
+            ),
+            child: Text(tr('ঠিক আছে', 'OK'),
+                style: const TextStyle(fontSize: 19, color: AppColors.sky)),
+          ),
+        ],
+      ),
+    );
+    return r == true;
+  }
+
+  /// "পাসওয়ার্ড রিসেট" = গ্রাহকের অ্যাপ-অ্যাকাউন্ট (ইউজার) পাসওয়ার্ড; PPPoE পাসওয়ার্ড না।
+  Future<void> _resetPassword(Map<String, dynamic> row) async {
+    final name = '${row['name'] ?? ''}';
+    final ok = await _dialogBn(
+      name,
+      tr('উক্ত ইউজারের পাসওয়ার্ড রিসেট হবে।',
+          "This user's password will be reset."),
+      cancel: true,
+    );
+    if (!ok || !mounted) return;
+    try {
+      final r = await ApiService.resetCustomerMobileAccount(
+          numOf(row['id']).toInt());
+      if (!mounted) return;
+      final pw = '${r['password'] ?? r['new_password'] ?? r['temp_password'] ?? ''}'
+          .trim();
+      await _dialogBn(
+        name,
+        pw.isEmpty
+            ? tr('পাসওয়ার্ড রিসেট হয়েছে।', 'Password has been reset.')
+            : '${tr('নতুন পাসওয়ার্ড', 'New password')}: $pw',
+      );
+    } catch (e) {
+      if (mounted) _toast(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  void _bandwidth(Map<String, dynamic> row) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => CustomerBandwidthPage(summary: row)),
+    );
+  }
+
+  void _billReport(Map<String, dynamic> c) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => CustomerBillReportPage(summary: c)),
+    );
   }
 
   Future<void> _recharge(Map<String, dynamic> c) async {
@@ -170,10 +416,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Future<void> _addCustomer() async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _CustomerForm(),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const _CustomerForm()),
     );
     if (mounted && saved == true) _refresh();
   }
@@ -187,10 +431,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
       final customer = Map<String, dynamic>.from(
         (response['customer'] ?? response) as Map,
       );
-      final saved = await showModalBottomSheet<bool>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => _CustomerForm(customer: customer),
+      final saved = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => _CustomerForm(customer: customer)),
       );
       if (mounted && saved == true) _refresh();
     } catch (e) {
@@ -261,10 +503,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   /// ⋮ মেনু: Profile, Call, Whatsapp, Update, Bill Recharge, Bill Report, Inactive, Note, BandWidth
   void _action(String key, Map<String, dynamic> c) {
-    final phone = _s(c, ['phone', 'mobile']);
     switch (key) {
       case 'Profile':
         _open(c);
+        break;
+      case 'Bill Report':
+        _billReport(c);
+        break;
+      case 'Inactive':
+        _setStatus(c, 'Inactive');
+        break;
+      case 'Active':
+        _setStatus(c, 'Active');
         break;
       case 'Update':
         _editCustomer(c);
@@ -274,12 +524,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
         break;
       case 'Call':
       case 'Whatsapp':
-        if (phone.isEmpty) {
-          _toast('মোবাইল নাই');
-        } else {
-          Clipboard.setData(ClipboardData(text: phone));
-          _toast('$key: $phone কপি হয়েছে');
-        }
+        _contact(c, key == 'Call');
+        break;
+      case 'Note':
+        _note(c);
+        break;
+      case 'Password Reset':
+        _resetPassword(c);
+        break;
+      case 'BandWidth':
+        _bandwidth(c);
         break;
       default:
         _toast('$key শীঘ্রই আসছে');
@@ -379,23 +633,26 @@ class _CustomersScreenState extends State<CustomersScreen> {
             ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: AppColors.sky),
-              color: const Color(0xFF62B8EA),
+              color: AppColors.sky,
               onSelected: (k) => _action(k, c),
               itemBuilder: (_) => [
-                for (final k in const [
+                for (final k in [
                   'Profile',
                   'Call',
                   'Whatsapp',
                   'Update',
                   'Bill Recharge',
                   'Bill Report',
-                  'Inactive',
+                  '${c['status'] ?? ''}'.toLowerCase() == 'active'
+                      ? 'Inactive'
+                      : 'Active',
                   'Note',
+                  'Password Reset',
                   'BandWidth',
                 ])
                   PopupMenuItem<String>(
                     value: k,
-                    child: Text(k,
+                    child: Text(_menuLabel(k),
                         style: const TextStyle(
                             fontSize: 19, color: Colors.white)),
                   ),
@@ -511,7 +768,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
               child: PopupMenuButton<String>(
                 onSelected: (v) => setState(() => _area = v),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: '', child: Text('Area')),
+                  PopupMenuItem(value: '', child: Text(tr('এরিয়া', 'Area'))),
                   for (final a in areas)
                     PopupMenuItem(value: a, child: Text(a)),
                 ],
@@ -527,7 +784,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          _area.isEmpty ? 'Area' : _area,
+                          _area.isEmpty ? tr('এরিয়া', 'Area') : _area,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -554,61 +811,53 @@ class _CustomersScreenState extends State<CustomersScreen> {
               onChanged: _setTab,
             ),
             if (_searching)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: TextField(
-                  controller: _searchC,
-                  autofocus: true,
-                  textInputAction: TextInputAction.search,
-                  onChanged: _onSearchChanged,
-                  onSubmitted: (_) => _load(reset: true),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: l.t('search'),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                if (isDue)
-                  SizedBox(
-                    width: 280,
-                    child: PillDropdown<String>(
-                      value: _sort,
-                      values: const ['Bill Date', 'Promise Date', 'Name'],
-                      label: (v) => v,
-                      width: 280,
-                      onChanged: (v) => setState(() => _sort = v),
-                    ),
-                  )
-                else
-                  const SizedBox.shrink(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(isDue ? 'Due' : 'Balance',
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: AppColors.muted,
-                            decoration: isDue
-                                ? TextDecoration.underline
-                                : TextDecoration.none)),
-                    Text('${l.digits(intl(balance))} Tk.',
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF555555))),
-                  ],
-                ),
-                ],
-              ),
+Padding(
+  padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+  child: Wrap(
+    alignment: WrapAlignment.spaceBetween,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    runSpacing: 8,
+    children: [
+      if (isDue)
+        SizedBox(
+          width: 280,
+          child: PillDropdown<String>(
+            value: _sort,
+            values: const ['Bill Date', 'Promise Date', 'Name'],
+            label: (v) => v,
+            width: 280,
+            onChanged: (v) => setState(() => _sort = v),
+          ),
+        ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            isDue
+                ? tr('বকেয়া', 'Due')
+                : tr('ব্যালেন্স', 'Balance'),
+            style: TextStyle(
+              fontSize: 15,
+              color: AppColors.muted,
+              decoration: isDue
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
             ),
+          ),
+          Text(
+            '${l.digits(intl(balance))} Tk.',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF555555),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
             Expanded(child: _list(l)),
           ],
         ),
@@ -644,6 +893,8 @@ class _CustomerFormState extends State<_CustomerForm> {
   bool _loading = true;
   bool _autoContinue = true;
   bool _autoNextMonth = false;
+  bool _updateBalance = false;
+  bool _showPw = false;
 
   bool get _editing => widget.customer != null;
 
@@ -853,26 +1104,56 @@ final results = await Future.wait<Map<String, dynamic>>([
     );
   }
 
+  InputDecoration _pill(String hint) => InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 20, color: Color(0xFF444444)),
+        isDense: false,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(26),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(26),
+          borderSide: const BorderSide(color: Color(0xFF555555)),
+        ),
+      );
+
   Widget _text(String key, String label, {
     bool required = false,
     TextInputType? keyboard,
     bool obscure = false,
     int lines = 1,
+    bool enabled = true,
+    Widget? suffix,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
         controller: _field(key),
         keyboardType: keyboard,
         obscureText: obscure,
-        maxLines: lines,
+        maxLines: obscure ? 1 : lines,
+        enabled: enabled,
+        style: TextStyle(
+            fontSize: 24,
+            color: enabled ? const Color(0xFF222222) : const Color(0xFFB0B0B0)),
         validator: required
             ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
             : null,
         decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
+          labelText: required ? '$label*' : label,
+          labelStyle:
+              const TextStyle(fontSize: 20, color: Color(0xFF666666)),
+          filled: true,
+          fillColor: const Color(0xFFF4F5F5),
+          suffixIcon: suffix,
+          enabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF888888))),
+          disabledBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFBDBDBD))),
+          border: const UnderlineInputBorder(),
         ),
       ),
     );
@@ -888,15 +1169,14 @@ final results = await Future.wait<Map<String, dynamic>>([
     final validItems = items.where((e) => _id(e['id']) != null).toList();
     final selected = validItems.any((e) => _id(e['id']) == value) ? value : null;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 20),
       child: DropdownButtonFormField<int>(
+        key: ValueKey('$label-${validItems.length}-$selected'),
         initialValue: selected,
         isExpanded: true,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
-        ),
+        icon: const Icon(Icons.arrow_drop_down, size: 34),
+        style: const TextStyle(fontSize: 22, color: Color(0xFF333333)),
+        decoration: _pill(label),
         items: validItems.map((e) => DropdownMenuItem<int>(
           value: _id(e['id']),
           child: Text('${e['name'] ?? e['package_name'] ?? e['title'] ?? ''}'),
@@ -907,8 +1187,78 @@ final results = await Future.wait<Map<String, dynamic>>([
     );
   }
 
+  Widget _strDropdown(String label, String value, List<String> values,
+      ValueChanged<String> changed) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: DropdownButtonFormField<String>(
+        initialValue: values.contains(value) ? value : values.first,
+        isExpanded: true,
+        icon: const Icon(Icons.arrow_drop_down, size: 34),
+        style: const TextStyle(fontSize: 22, color: Color(0xFF333333)),
+        decoration: _pill(label),
+        items: [
+          for (final v in values) DropdownMenuItem(value: v, child: Text(v)),
+        ],
+        onChanged: (v) {
+          if (v != null) changed(v);
+        },
+      ),
+    );
+  }
+
+  /// বিল তারিখ: গোল বক্সে "01-12-2026 10:27 PM", চাপলে তারিখ+সময় বাছাই
+  Widget _billDatePill() {
+    final ctl = _field('billing_cycle');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: () async {
+          final now = DateTime.now();
+          final cur = DateTime.tryParse(ctl.text.trim().replaceFirst(' ', 'T'));
+          final base = (cur == null ? now : (cur.isUtc ? cur.toLocal() : cur));
+          final d = await showDatePicker(
+            context: context,
+            initialDate: base,
+            firstDate: DateTime(2000),
+            lastDate: DateTime(2100),
+          );
+          if (d == null || !mounted) return;
+          final tm = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay(hour: base.hour, minute: base.minute),
+          );
+          if (tm == null) return;
+          String two(int n) => n.toString().padLeft(2, '0');
+          setState(() => ctl.text =
+              '${d.year}-${two(d.month)}-${two(d.day)} ${two(tm.hour)}:${two(tm.minute)}:00');
+        },
+        child: Container(
+          height: 56,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFF555555)),
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Text(
+            fmtDateTime(ctl.text).isEmpty
+                ? 'Billing Cycle*'
+                : fmtDateTime(ctl.text).replaceFirst(' ', '  '),
+            style: const TextStyle(fontSize: 22, color: Color(0xFF666666)),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_field('billing_cycle').text.trim().isEmpty) {
+      _message('Select Billing Cycle date');
+      return;
+    }
 
     if (_routerId == null || _packageId == null ||
         _areaId == null || _subAreaId == null) {
@@ -938,8 +1288,10 @@ final results = await Future.wait<Map<String, dynamic>>([
         'address': _field('address').text.trim(),
         'email': _field('email').text.trim(),
         'billing_type': _billingType,
-        'balance': _field('balance').text.trim().isEmpty
-            ? '0' : _field('balance').text.trim(),
+        'balance': (_editing && !_updateBalance)
+            ? '${widget.customer?['balance'] ?? 0}'
+            : (_field('balance').text.trim().isEmpty
+                ? '0' : _field('balance').text.trim()),
         'billing_cycle': _field('billing_cycle').text.trim(),
         'birth_date': _field('birth_date').text.trim(),
         'connection_date': _field('connection_date').text.trim(),
@@ -997,434 +1349,194 @@ final results = await Future.wait<Map<String, dynamic>>([
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final availableHeight = media.size.height -
-        media.viewInsets.bottom -
-        media.padding.top -
-        media.padding.bottom;
+    final w = MediaQuery.of(context).size.width;
+    final side = (w * 0.14).clamp(16.0, 120.0).toDouble();
+    final cname = '${widget.customer?['name'] ?? ''}';
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-        child: _loading
-            ? const SizedBox(
-                height: 180,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            : SizedBox(
-                height: (availableHeight - 30).clamp(200.0, media.size.height * 0.88),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: [
-                      Text(
-                        _editing ? 'Edit Customer' : 'Add Customer',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      _text('customer_id', 'Customer ID', required: true),
-                      _dropdown('MikroTik', _routers, _routerId, _routerChanged),
-                      _dropdown('Area', _areas, _areaId, _areaChanged),
-                      _dropdown(
-                        'Sub-area',
-                        _subAreas,
-                        _subAreaId,
-                        (v) => setState(() => _subAreaId = v),
-                      ),
-                      _dropdown(
-                        'Package',
-                        _packages,
-                        _packageId,
-                        (v) => setState(() => _packageId = v),
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Monthly Fee',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          child: Text(_selectedPackagePrice),
-                        ),
-                      ),
-
-                      _text('balance', 'Balance',
-                        keyboard: const TextInputType.numberWithOptions(decimal: true)),
-                      _text('pppoe_name', 'PPPoE Username', required: true),
-                      _text(
-                        'password',
-                        _editing
-                            ? 'New PPPoE Password (required)'
-                            : 'PPPoE Password',
-                        required: true,
-                        obscure: true,
-                      ),
-                      _text('name', 'Customer Name', required: true),
-                      _text('mobile', 'Mobile Number',
-                        keyboard: TextInputType.phone),
-                      _text('nid', 'NID'),
-                      _text('birth_date', 'Birth Date'),
-                      _text('address', 'Address', lines: 2),
-                      _text('email', 'Email',
-                        keyboard: TextInputType.emailAddress),
-                      _text('billing_cycle', 'Billing Cycle', required: true),
-                      if (_editing) _text('promise_date', 'Promise Date'),
-                      _text('connection_date', 'Connection Date'),
-                      _text('connection_fee', 'Connection Fee',
-                        keyboard: const TextInputType.numberWithOptions(decimal: true)),
-
-                      DropdownButtonFormField<String>(
-                        initialValue: _billingType,
-                        decoration: const InputDecoration(
-                          labelText: 'Billing Type',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Prepaid',
-                            child: Text('Prepaid'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Postpaid',
-                            child: Text('Postpaid'),
-                          ),
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _billingType = v ?? 'Prepaid'),
-                      ),
-                      const SizedBox(height: 12),
-
-                      _dropdown(
-                        'Division',
-                        _divisions,
-                        _divisionId,
-                        _divisionChanged,
-                        required: false,
-                      ),
-                      _dropdown(
-                        'District',
-                        _districts,
-                        _districtId,
-                        _districtChanged,
-                        required: false,
-                      ),
-                      _dropdown(
-                        'Upazila',
-                        _upazilas,
-                        _upazilaId,
-                        (v) => setState(() => _upazilaId = v),
-                        required: false,
-                      ),
-
-                      _text('comment', 'Comment', lines: 2),
-                      _text('reference_name', 'Reference Name'),
-                      _text('reference_mobile', 'Reference Mobile',
-                        keyboard: TextInputType.phone),
-
-                      if (_editing) ...[
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Automatic Connection'),
-                          subtitle: const Text('Continue automatically'),
-                          value: _autoContinue,
-                          onChanged: (v) =>
-                              setState(() => _autoContinue = v ?? false),
-                        ),
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Automatic Next Month'),
-                          value: _autoNextMonth,
-                          onChanged: (v) =>
-                              setState(() => _autoNextMonth = v ?? false),
-                        ),
-                      ] else ...[
-                        DropdownButtonFormField<String>(
-                          initialValue: _autoConnection,
-                          decoration: const InputDecoration(
-                            labelText: 'Automatic Connection',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Will continue',
-                              child: Text('Will continue'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'Next Month',
-                              child: Text('Next Month'),
-                            ),
-                          ],
-                          onChanged: (v) => setState(
-                            () => _autoConnection = v ?? 'Will continue',
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      DropdownButtonFormField<String>(
-                        initialValue: _status,
-                        decoration: const InputDecoration(
-                          labelText: 'Status',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: 'Active',
-                            child: Text('Active'),
-                          ),
-                          if (_editing) ...[
-                            const DropdownMenuItem(
-                              value: 'Inactive',
-                              child: Text('Inactive'),
-                            ),
-                            const DropdownMenuItem(
-                              value: 'Expired',
-                              child: Text('Expired'),
-                            ),
-                          ],
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _status = v ?? 'Active'),
-                      ),
-                      const SizedBox(height: 16),
-
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _save,
-                        icon: _busy
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.save),
-                        label: Text(_busy ? 'Saving...' : 'Save Customer'),
-                      ),
-                    ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: customerAppBar(_editing ? 'Update' : 'Add Customer', cname),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(side, 28, side, 40),
+                children: [
+                  _dropdown('MikroTik', _routers, _routerId, _routerChanged),
+                  _dropdown(
+                    'Package',
+                    _packages,
+                    _packageId,
+                    (v) => setState(() => _packageId = v),
                   ),
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-class _CustomerSheet extends StatefulWidget {
-  final Map<String, dynamic> summary;
-  const _CustomerSheet({required this.summary});
-
-  @override
-  State<_CustomerSheet> createState() => _CustomerSheetState();
-}
-
-class _CustomerSheetState extends State<_CustomerSheet> {
-  late Future<Map<String, dynamic>> _future;
-
-
-
-  @override
-  void initState() {
-    super.initState();
-    _future = ApiService.customerDetail(numOf(widget.summary['id']).toInt());
-  }
-
-  Widget _row(String k, String v) {
-    if (v.trim().isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-              width: 130,
-              child: Text(k, style: const TextStyle(color: AppColors.muted, fontSize: 14))),
-          Expanded(
-              child: Text(v, style: const TextStyle(color: AppColors.text, fontSize: 15))),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LangBuilder(builder: (_) {
-      final l = Lang.i;
-      return SafeArea(
-        child: ConstrainedBox(
-          constraints:
-              BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-          child: FutureBuilder<Map<String, dynamic>>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const SizedBox(
-                    height: 160, child: Center(child: CircularProgressIndicator()));
-              }
-              if (snap.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(snap.error.toString().replaceFirst('Exception: ', '')),
-                );
-              }
-              final c = snap.data!;
-              final pays = ((c['payments'] ?? []) as List);
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        LetterAvatar(text: '${c['name'] ?? ''}', radius: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${c['name'] ?? ''}',
-                                  style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.text)),
-                              Text('${c['customer_code'] ?? ''}',
-                                  style: const TextStyle(color: AppColors.muted)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.pop(context, 'edit'),
-                          icon: const Icon(Icons.edit),
-                          label: const Text('Edit'),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final ok = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Delete customer?'),
-                                content: const Text(
-                                  'This action may be blocked if payment history exists. '
-                                  'Choose whether to also delete the MikroTik PPPoE secret.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Continue'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (ok != true || !context.mounted) return;
-                            final deleteMikrotik = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('MikroTik secret'),
-                                content: const Text(
-                                  'Also delete this customer PPPoE secret from MikroTik?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Keep secret'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Delete secret'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (deleteMikrotik == null || !context.mounted) return;
-                            try {
-                              await ApiService.deleteCustomer(
-                                numOf(c['id']).toInt(),
-                                deleteMikrotik: deleteMikrotik,
-                              );
-                              if (context.mounted) {
-                                Navigator.pop(context, 'deleted');
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(
-                                    e.toString().replaceFirst('Exception: ', ''))),
-                                );
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.delete_outline),
-                          label: const Text('Delete'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _row(l.t('phone'), '${c['phone'] ?? ''}'),
-                    _row(l.t('address'), '${c['address'] ?? ''}'),
-                    _row(l.t('package_lbl'), '${c['package_name'] ?? ''}'),
-                    _row(l.t('monthly_bill'), taka(numOf(c['monthly_bill']))),
-                    _row(l.t('balance_lbl'), taka(numOf(c['balance']))),
-                    _row(l.t('status'), '${c['status'] ?? ''}'),
-                    _row(l.t('payment_status'), '${c['payment_status'] ?? ''}'),
-                    _row(l.t('promise_date'), dateOnly(c['promise_date'])),
-                    const SizedBox(height: 12),
-                    Text(l.t('recent_payments'),
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.navy)),
-                    const SizedBox(height: 6),
-                    if (pays.isEmpty) Text(l.t('no_data')),
-                    for (final p in pays)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                                child: Text(
-                                    '${Lang.i.digits('${mapOf(p)['month'] ?? ''}')}  ${mapOf(p)['method'] ?? ''}',
-                                    style: const TextStyle(color: AppColors.text))),
-                            Text(taka(numOf(mapOf(p)['amount'])),
-                                style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
+                  _text('customer_id', 'Customer ID', required: true),
+                  // Monthly Fee: প্যাকেজের দাম অনুযায়ী (স্ক্রিনশটের ফিল্ডের মতো)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Monthly Fee*',
+                        labelStyle:
+                            TextStyle(fontSize: 20, color: Color(0xFF666666)),
+                        filled: true,
+                        fillColor: Color(0xFFF4F5F5),
+                        enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF888888))),
+                        border: UnderlineInputBorder(),
                       ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      );
-    });
+                      child: Text(_selectedPackagePrice,
+                          style: const TextStyle(
+                              fontSize: 24, color: Color(0xFF222222))),
+                    ),
+                  ),
+                  _text('balance', 'Balance',
+                      enabled: !_editing || _updateBalance,
+                      keyboard: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true)),
+                  if (_editing)
+                    InkWell(
+                      onTap: () =>
+                          setState(() => _updateBalance = !_updateBalance),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(children: [
+                          Checkbox(
+                            value: _updateBalance,
+                            onChanged: (v) =>
+                                setState(() => _updateBalance = v ?? false),
+                          ),
+                          const Text('Update Balance',
+                              style: TextStyle(fontSize: 22)),
+                        ]),
+                      ),
+                    ),
+                  _text('pppoe_name', 'PPPoE Name', required: true),
+                  _text(
+                    'password',
+                    'Password',
+                    required: true,
+                    obscure: !_showPw,
+                    suffix: IconButton(
+                      icon: Icon(
+                          _showPw ? Icons.visibility : Icons.visibility_off,
+                          size: 30),
+                      onPressed: () => setState(() => _showPw = !_showPw),
+                    ),
+                  ),
+                  if (_editing) ...[
+                    InkWell(
+                      onTap: () => setState(() => _autoContinue = !_autoContinue),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(children: [
+                          Checkbox(
+                            value: _autoContinue,
+                            onChanged: (v) =>
+                                setState(() => _autoContinue = v ?? false),
+                          ),
+                          const Text('Automatic Connection',
+                              style: TextStyle(fontSize: 22)),
+                        ]),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          setState(() => _autoNextMonth = !_autoNextMonth),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(children: [
+                          Checkbox(
+                            value: _autoNextMonth,
+                            onChanged: (v) =>
+                                setState(() => _autoNextMonth = v ?? false),
+                          ),
+                          const Text('Automatic Next Month',
+                              style: TextStyle(fontSize: 22)),
+                        ]),
+                      ),
+                    ),
+                  ] else
+                    _strDropdown('Automatic Connection', _autoConnection,
+                        const ['Will continue', 'Next Month'],
+                        (v) => setState(() => _autoConnection = v)),
+                  _billDatePill(),
+                  _strDropdown(
+                    'Status',
+                    _status,
+                    [
+                      'Active',
+                      if (_editing) ...['Inactive', 'Expired'],
+                    ],
+                    (v) => setState(() => _status = v),
+                  ),
+                  _dropdown('Area', _areas, _areaId, _areaChanged),
+                  _dropdown(
+                    'Sub-area',
+                    _subAreas,
+                    _subAreaId,
+                    (v) => setState(() => _subAreaId = v),
+                  ),
+                  _text('name', 'Name', required: true),
+                  _text('address', 'Address', lines: 2),
+                  _text('email', 'Email',
+                      keyboard: TextInputType.emailAddress),
+                  _strDropdown('Billing Type', _billingType,
+                      const ['Prepaid', 'Postpaid'],
+                      (v) => setState(() => _billingType = v)),
+                  // স্ক্রিনশটে নেই, কিন্তু আগের ফিচার হারাবে না — ভাঁজ করা অংশে
+                  Theme(
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      maintainState: true,
+                      title: const Text('More',
+                          style: TextStyle(
+                              fontSize: 20, color: Color(0xFF666666))),
+                      children: [
+                        const SizedBox(height: 8),
+                        _text('mobile', 'Mobile Number',
+                            keyboard: TextInputType.phone),
+                        _text('nid', 'NID'),
+                        _text('birth_date', 'Birth Date'),
+                        if (_editing) _text('promise_date', 'Promise Date'),
+                        _text('connection_date', 'Connection Date'),
+                        _text('connection_fee', 'Connection Fee',
+                            keyboard: const TextInputType.numberWithOptions(
+                                decimal: true)),
+                        _dropdown('Division', _divisions, _divisionId,
+                            _divisionChanged,
+                            required: false),
+                        _dropdown('District', _districts, _districtId,
+                            _districtChanged,
+                            required: false),
+                        _dropdown(
+                          'Upazila',
+                          _upazilas,
+                          _upazilaId,
+                          (v) => setState(() => _upazilaId = v),
+                          required: false,
+                        ),
+                        _text('comment', 'Comment', lines: 2),
+                        _text('reference_name', 'Reference Name'),
+                        _text('reference_mobile', 'Reference Mobile',
+                            keyboard: TextInputType.phone),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: _busy
+                        ? const CircularProgressIndicator()
+                        : PillButton(
+                            text: _editing ? 'Update' : 'Save',
+                            onPressed: _save,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+    );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

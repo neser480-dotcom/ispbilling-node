@@ -38,7 +38,7 @@ Widget _statusChip(bool online, {String? label}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     decoration: BoxDecoration(
-      color: c.withOpacity(0.12),
+      color: c.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(10),
     ),
     child: Text(
@@ -301,7 +301,7 @@ Future<bool?> showOltForm(BuildContext context, {Map<String, dynamic>? olt}) {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: DropdownButtonFormField<String>(
-                    value: vendor,
+                    initialValue: vendor,
                     isDense: true,
                     decoration: const InputDecoration(
                         labelText: 'Vendor', border: OutlineInputBorder()),
@@ -347,7 +347,7 @@ Future<bool?> showOltForm(BuildContext context, {Map<String, dynamic>? olt}) {
                     };
                     try {
                       if (editing) {
-                        await OltApi.updateOlt(numOf(olt!['id']).toInt(), body);
+                        await OltApi.updateOlt(numOf(olt['id']).toInt(), body);
                       } else {
                         await OltApi.addOlt(body);
                       }

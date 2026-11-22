@@ -484,7 +484,8 @@ class _EmployeeFormState extends State<_EmployeeForm> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: DropdownButtonFormField<String>(
-                    value: _status,
+                    key: ValueKey('employee-status-$_status'),
+                    initialValue: _status,
                     decoration: InputDecoration(
                       labelText: tr('স্ট্যাটাস', 'Status'),
                       isDense: true,

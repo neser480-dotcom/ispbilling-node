@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'core/api_client.dart';
 import 'core/lang.dart';
 import 'core/theme.dart';
-import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,8 @@ class NetfeeApp extends StatelessWidget {
       title: 'আমাদের বিল',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      home: loggedIn ? const DashboardScreen() : const LoginScreen(),
+      // লগইন থাকলে আগে কোম্পানির নামের স্প্ল্যাশ, তারপর ড্যাশবোর্ড
+      home: loggedIn ? const SplashScreen() : const LoginScreen(),
     );
   }
 }

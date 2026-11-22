@@ -170,7 +170,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: c.withOpacity(0.14),
+              color: c.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(_s(l['action'], 'UNKNOWN'),
