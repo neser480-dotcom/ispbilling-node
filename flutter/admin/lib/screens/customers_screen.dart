@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import '../core/format.dart';
 import '../core/lang.dart';
@@ -7,6 +8,8 @@ import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/lang_builder.dart';
 import '../widgets/letter_avatar.dart';
+import '../widgets/netfee_ui.dart';
+import 'customer_recharge_screen.dart';
 
 /// Ã Â¦â€”Ã Â§ÂÃ Â¦Â°Ã Â¦Â¾Ã Â¦Â¹Ã Â¦â€¢ Ã Â¦Â¤Ã Â¦Â¾Ã Â¦Â²Ã Â¦Â¿Ã Â¦â€¢Ã Â¦Â¾ (Ã Â¦Â¶Ã Â§ÂÃ Â¦Â§Ã Â§Â Ã Â¦ÂªÃ Â¦Â¡Ã Â¦Â¼Ã Â¦Â¾) + Ã Â¦Â¬Ã Â¦Â¿Ã Â¦Â¸Ã Â§ÂÃ Â¦Â¤Ã Â¦Â¾Ã Â¦Â°Ã Â¦Â¿Ã Â¦Â¤Ã Â¥Â¤ Backend: GET /admin/customers (permission: customer_list)
 class CustomersScreen extends StatefulWidget {
@@ -17,18 +20,27 @@ class CustomersScreen extends StatefulWidget {
 }
 
 class _CustomersScreenState extends State<CustomersScreen> {
+  // স্ক্রিনশটের ট্যাব: DUE | PAID | INACTIVE | EXPIRED
+  static const _tabNames = ['Due', 'Paid', 'Inactive', 'Expired'];
+  static const _tabStatus = ['Active', 'Active', 'Inactive', 'Expired'];
+  static const _tabPay = ['unpaid', 'paid', '', ''];
+
   final _searchC = TextEditingController();
   final _scroll = ScrollController();
   final List<Map<String, dynamic>> _items = [];
+  final List<int> _counts = [0, 0, 0, 0];
   Timer? _debounce;
+  int _tab = 1; // স্ক্রিনশটে PAID খোলা
   int _page = 1;
   int _total = 0;
+  num? _serverBalance;
   bool _loading = false;
   bool _hasMore = true;
   bool _again = false;
+  bool _searching = false;
   String? _error;
-
-
+  String _area = ''; // খালি = সব Area
+  String _sort = 'Bill Date'; // Due ট্যাবের 'Bill Date ▾'
 
   @override
   void initState() {
@@ -40,6 +52,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       }
     });
     _load(reset: true);
+    _loadCounts();
   }
 
   @override
@@ -50,9 +63,24 @@ class _CustomersScreenState extends State<CustomersScreen> {
     super.dispose();
   }
 
+  /// প্রতিটা ট্যাবের সংখ্যা (limit=1 দিয়ে শুধু total নেওয়া হয়)
+  Future<void> _loadCounts() async {
+    for (var i = 0; i < 4; i++) {
+      try {
+        final d = await ApiService.customers(
+          status: _tabStatus[i],
+          paymentStatus: _tabPay[i],
+          limit: 1,
+        );
+        if (!mounted) return;
+        setState(() => _counts[i] = numOf(d['total']).toInt());
+      } catch (_) {}
+    }
+  }
+
   Future<void> _load({bool reset = false}) async {
     if (_loading) {
-      if (reset) _again = true; // Ã Â¦Å¡Ã Â¦Â²Ã Â¦Â®Ã Â¦Â¾Ã Â¦Â¨ Ã Â¦Â²Ã Â§â€¹Ã Â¦Â¡ Ã Â¦Â¶Ã Â§â€¡Ã Â¦Â· Ã Â¦Â¹Ã Â¦Â²Ã Â§â€¡ Ã Â¦Â¨Ã Â¦Â¤Ã Â§ÂÃ Â¦Â¨ Ã Â¦Â¸Ã Â¦Â¾Ã Â¦Â°Ã Â§ÂÃ Â¦Å¡Ã Â§â€¡ Ã Â¦â€ Ã Â¦Â¬Ã Â¦Â¾Ã Â¦Â° Ã Â¦Â²Ã Â§â€¹Ã Â¦Â¡
+      if (reset) _again = true; // চলমান লোড শেষ হলে নতুন সার্চে আবার লোড
       return;
     }
     if (reset) {
@@ -65,13 +93,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
     setState(() => _loading = true);
     try {
-      final d = await ApiService.customers(search: _searchC.text.trim(), page: _page);
+      final d = await ApiService.customers(
+        search: _searchC.text.trim(),
+        status: _tabStatus[_tab],
+        paymentStatus: _tabPay[_tab],
+        page: _page,
+      );
       if (!mounted) return;
       final list = ((d['items'] ?? []) as List)
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
       setState(() {
         _total = numOf(d['total']).toInt();
+        if (_searchC.text.trim().isEmpty) _counts[_tab] = _total;
+        final tb = d['total_balance'] ?? d['balance_total'];
+        _serverBalance = tb == null ? null : numOf(tb);
         _items.addAll(list);
         _hasMore = list.isNotEmpty && _items.length < _total;
         _page++;
@@ -94,9 +130,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
   }
 
+  void _refresh() {
+    _load(reset: true);
+    _loadCounts();
+  }
+
   void _onSearchChanged(String _) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () => _load(reset: true));
+  }
+
+  void _setTab(int i) {
+    if (i == _tab) return;
+    setState(() => _tab = i);
+    _load(reset: true);
   }
 
   Future<void> _open(Map<String, dynamic> c) async {
@@ -109,8 +156,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
     if (result == 'edit') {
       await _editCustomer(c);
     } else if (result == 'deleted') {
-      _load(reset: true);
+      _refresh();
     }
+  }
+
+  Future<void> _recharge(Map<String, dynamic> c) async {
+    final ok = await showRechargeSheet(
+      context,
+      customerId: numOf(c['id']).toInt(),
+      name: '${c['name'] ?? ''}',
+    );
+    if (mounted && ok == true) _refresh();
   }
 
   Future<void> _addCustomer() async {
@@ -119,7 +175,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       isScrollControlled: true,
       builder: (_) => const _CustomerForm(),
     );
-    if (mounted && saved == true) _load(reset: true);
+    if (mounted && saved == true) _refresh();
   }
 
   Future<void> _editCustomer(Map<String, dynamic> summary) async {
@@ -136,13 +192,219 @@ class _CustomersScreenState extends State<CustomersScreen> {
         isScrollControlled: true,
         builder: (_) => _CustomerForm(customer: customer),
       );
-      if (mounted && saved == true) _load(reset: true);
+      if (mounted && saved == true) _refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
+  }
+
+  // ---------- কার্ডের ছোট হেল্পার ----------
+
+  String _s(Map<String, dynamic> c, List<String> keys) {
+    for (final k in keys) {
+      final v = '${c[k] ?? ''}'.trim();
+      if (v.isNotEmpty && v != 'null') return v;
+    }
+    return '';
+  }
+
+  /// "2026-12-02 12:19:00" → "02-12-2026  12:19 PM"
+  String _fmtDate(String raw) {
+    final d = DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+    if (d == null) return raw;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final h12 = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final ampm = d.hour >= 12 ? 'PM' : 'AM';
+    return '${two(d.day)}-${two(d.month)}-${d.year}  ${two(h12)}:${two(d.minute)} $ampm';
+  }
+
+  List<String> get _areas {
+    final set = <String>{};
+    for (final c in _items) {
+      final a = _s(c, ['area_name', 'area']);
+      if (a.isNotEmpty) set.add(a);
+    }
+    final l = set.toList()..sort();
+    return l;
+  }
+
+  Widget _line(IconData icon, Color color, String text,
+      {double size = 20, Color? textColor, FontWeight? weight}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          Icon(icon, size: size, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                color: textColor ?? AppColors.text,
+                fontWeight: weight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toast(String m) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(m)));
+
+  /// ⋮ মেনু: Profile, Call, Whatsapp, Update, Bill Recharge, Bill Report, Inactive, Note, BandWidth
+  void _action(String key, Map<String, dynamic> c) {
+    final phone = _s(c, ['phone', 'mobile']);
+    switch (key) {
+      case 'Profile':
+        _open(c);
+        break;
+      case 'Update':
+        _editCustomer(c);
+        break;
+      case 'Bill Recharge':
+        _recharge(c);
+        break;
+      case 'Call':
+      case 'Whatsapp':
+        if (phone.isEmpty) {
+          _toast('মোবাইল নাই');
+        } else {
+          Clipboard.setData(ClipboardData(text: phone));
+          _toast('$key: $phone কপি হয়েছে');
+        }
+        break;
+      default:
+        _toast('$key শীঘ্রই আসছে');
+    }
+  }
+
+  Widget _card(Map<String, dynamic> c) {
+    final name = '${c['name'] ?? ''}';
+    final cid = _s(c, ['customer_id', 'customer_code', 'id']);
+    final user = _s(c, ['pppoe_username', 'pppoe_name', 'username']);
+    final phone = _s(c, ['phone', 'mobile']);
+    final date = _fmtDate(_s(c, ['billing_cycle', 'expire_date', 'expiry_date']));
+    final promise = _fmtDate(_s(c, ['promise_date']));
+    final isDue = _tab == 0;
+    final fee = numOf(c['monthly_bill'] ?? c['monthly_fee']);
+    final bal = numOf(c['balance']);
+
+    return InkWell(
+      onTap: () => _open(c),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 10, 0, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            LetterAvatar(text: name, radius: 26),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCE93D8),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('ID',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(Lang.i.digits(cid),
+                          style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF555555))),
+                    ],
+                  ),
+                  _line(Icons.person, AppColors.sky, name),
+                  _line(Icons.language, AppColors.sky, 'pppoe: $user'),
+                  _line(
+                    Icons.smartphone,
+                    const Color(0xFF444444),
+                    phone.isEmpty ? 'মোবাইল নাই' : Lang.i.digits(phone),
+                  ),
+                  if (date.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                          Lang.i.digits(isDue ? 'Billing Cycle: $date' : date),
+                          style: const TextStyle(
+                              fontSize: 15, color: AppColors.muted)),
+                    ),
+                  if (isDue && promise.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(Lang.i.digits('Promise: $promise'),
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.sky)),
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 112,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Monthly Fee: ${Lang.i.digits(intl(fee))}',
+                      style: const TextStyle(
+                          fontSize: 18,
+                          color: AppColors.sky,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text('Balance: ${Lang.i.digits(intl(bal))} Tk.',
+                      style: const TextStyle(
+                          fontSize: 15, color: AppColors.text)),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppColors.sky),
+              color: const Color(0xFF62B8EA),
+              onSelected: (k) => _action(k, c),
+              itemBuilder: (_) => [
+                for (final k in const [
+                  'Profile',
+                  'Call',
+                  'Whatsapp',
+                  'Update',
+                  'Bill Recharge',
+                  'Bill Report',
+                  'Inactive',
+                  'Note',
+                  'BandWidth',
+                ])
+                  PopupMenuItem<String>(
+                    value: k,
+                    child: Text(k,
+                        style: const TextStyle(
+                            fontSize: 19, color: Colors.white)),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _list(Lang l) {
@@ -156,22 +418,31 @@ class _CustomersScreenState extends State<CustomersScreen> {
           children: [
             Text(_error!),
             const SizedBox(height: 10),
-            OutlinedButton(
-                onPressed: () => _load(reset: true), child: Text(l.t('retry'))),
+            OutlinedButton(onPressed: _refresh, child: Text(l.t('retry'))),
           ],
         ),
       );
     }
-    if (_items.isEmpty) {
+    final shown = _area.isEmpty
+        ? List<Map<String, dynamic>>.of(_items)
+        : _items
+            .where((c) => _s(c, ['area_name', 'area']) == _area)
+            .toList();
+    if (_tab == 0 && _sort != 'Bill Date') {
+      shown.sort((a, b) => _sort == 'Name'
+          ? '${a['name']}'.compareTo('${b['name']}')
+          : _s(a, ['promise_date']).compareTo(_s(b, ['promise_date'])));
+    }
+    if (shown.isEmpty) {
       return Center(child: Text(l.t('no_data')));
     }
     final extra = (_hasMore || _loading || _error != null) ? 1 : 0;
     return ListView.separated(
       controller: _scroll,
-      itemCount: _items.length + extra,
+      itemCount: shown.length + extra,
       separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.line),
       itemBuilder: (_, i) {
-        if (i >= _items.length) {
+        if (i >= shown.length) {
           if (_error != null) {
             return TextButton(onPressed: () => _load(), child: Text(l.t('load_more')));
           }
@@ -180,32 +451,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-        final c = _items[i];
-        final name = '${c['name'] ?? ''}';
-        final sub = [
-          '${c['phone'] ?? ''}',
-          '${c['package_name'] ?? ''}',
-        ].where((e) => e.isNotEmpty).join(' Ã‚Â· ');
-        return ListTile(
-          contentPadding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-          leading: LetterAvatar(text: name, radius: 22),
-          title: Text(name,
-              style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.text)),
-          subtitle: Text(sub, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(taka(numOf(c['balance'])),
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.navy)),
-              Text('${c['payment_status'] ?? ''}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-            ],
-          ),
-          onTap: () => _open(c),
-        );
+        return _card(shown[i]);
       },
     );
   }
@@ -214,45 +460,153 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget build(BuildContext context) {
     return LangBuilder(builder: (_) {
       final l = Lang.i;
+      final areas = _areas;
+      final shown = _area.isEmpty
+          ? _items
+          : _items.where((c) => _s(c, ['area_name', 'area']) == _area).toList();
+      final isDue = _tab == 0;
+      // Due ট্যাবে মোট বকেয়া = নেগেটিভ ব্যালেন্সের যোগফল
+      final balance = isDue
+          ? shown.fold<num>(0, (s, c) {
+              final b = numOf(c['balance']);
+              return b < 0 ? s - b : s;
+            })
+          : (_serverBalance ??
+              shown.fold<num>(0, (s, c) => s + numOf(c['balance'])));
+
       return AdminScaffold(
         current: 'customer',
-        title: l.t('customer'),
+        title: 'PPPoE',
         actions: [
           IconButton(
-            tooltip: 'Add customer',
-            icon: const Icon(Icons.person_add_alt_1),
-            onPressed: _addCustomer,
+            tooltip: 'Search',
+            icon: Icon(_searching ? Icons.close : Icons.search, size: 28),
+            onPressed: () {
+              setState(() => _searching = !_searching);
+              if (!_searching && _searchC.text.isNotEmpty) {
+                _searchC.clear();
+                _load(reset: true);
+              }
+            },
           ),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.sync, size: 26),
-            onPressed: () => _load(reset: true),
+            icon: const Icon(Icons.sync, size: 28),
+            onPressed: _refresh,
+          ),
+          IconButton(
+            tooltip: 'Add customer',
+            icon: const Icon(Icons.add, size: 30),
+            onPressed: _addCustomer,
           ),
           const SizedBox(width: 4),
         ],
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-              child: TextField(
-                controller: _searchC,
-                textInputAction: TextInputAction.search,
-                onChanged: _onSearchChanged,
-                onSubmitted: (_) => _load(reset: true),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: l.t('search'),
-                  isDense: true,
-                  border: const OutlineInputBorder(),
+        // নীল বারের নিচে "Area ▾" পিল
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(76),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: PopupMenuButton<String>(
+                onSelected: (v) => setState(() => _area = v),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: '', child: Text('Area')),
+                  for (final a in areas)
+                    PopupMenuItem(value: a, child: Text(a)),
+                ],
+                child: Container(
+                  height: 50,
+                  width: 280,
+                  padding: const EdgeInsets.only(left: 20, right: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white),
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _area.isEmpty ? 'Area' : _area,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 22, color: Colors.white),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down,
+                          color: Colors.white, size: 36),
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+        ),
+        body: Column(
+          children: [
+            NetfeeTabBar(
+              labels: [
+                for (var i = 0; i < 4; i++)
+                  '${_tabNames[i]}\n(${l.digits('${_counts[i]}')})',
+              ],
+              index: _tab,
+              onChanged: _setTab,
+            ),
+            if (_searching)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: TextField(
+                  controller: _searchC,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (_) => _load(reset: true),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: l.t('search'),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('${l.t('total')}: ${Lang.i.digits('$_total')}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                if (isDue)
+                  SizedBox(
+                    width: 280,
+                    child: PillDropdown<String>(
+                      value: _sort,
+                      values: const ['Bill Date', 'Promise Date', 'Name'],
+                      label: (v) => v,
+                      width: 280,
+                      onChanged: (v) => setState(() => _sort = v),
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(isDue ? 'Due' : 'Balance',
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.muted,
+                            decoration: isDue
+                                ? TextDecoration.underline
+                                : TextDecoration.none)),
+                    Text('${l.digits(intl(balance))} Tk.',
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF555555))),
+                  ],
+                ),
+                ],
               ),
             ),
             Expanded(child: _list(l)),

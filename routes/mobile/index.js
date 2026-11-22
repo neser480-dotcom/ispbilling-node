@@ -8,5 +8,9 @@ router.use("/auth", require("./auth"));
 router.use("/customer", require("./customer"));
 router.use("/admin", require("./admin"));               // Billing-গেট এখানেই প্রযোজ্য (সব /admin/* এর আগে)
 router.use("/admin", require("./adminStaffReports"));
+router.use("/admin", require("./adminRecharge"));
+router.use("/admin", require("./adminEmployeeSalary"));
+router.use("/admin", require("./adminMonitoring"));
+router.use("/admin", require("./adminOltActivity"));
 
 module.exports = router;

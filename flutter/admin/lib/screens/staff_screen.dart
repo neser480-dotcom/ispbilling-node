@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/lang_builder.dart';
 import '../widgets/letter_avatar.dart';
+import '../widgets/netfee_ui.dart';
 
 /// Collector / Manager তালিকা + বিস্তারিত (শুধু পড়া)।
 /// Backend: GET /admin/collectors | /admin/managers (শুধু Admin)
@@ -25,6 +26,7 @@ class _StaffScreenState extends State<StaffScreen> {
   Timer? _debounce;
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
+  bool _searching = false;
   String? _error;
 
   String get _path => widget.kind == 'collector' ? 'collectors' : 'managers';
@@ -100,18 +102,38 @@ class _StaffScreenState extends State<StaffScreen> {
       itemBuilder: (_, i) {
         final s = _items[i];
         final name = '${s['name'] ?? ''}';
-        final sub = ['${s['mobile'] ?? ''}', '${s['email'] ?? ''}']
-            .where((e) => e.isNotEmpty)
-            .join(' · ');
-        return ListTile(
-          leading: LetterAvatar(text: name, radius: 22),
-          title: Text(name,
-              style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.text)),
-          subtitle: Text(sub, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
-          trailing: Text('${s['status'] ?? ''}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        final mobile = '${s['mobile'] ?? ''}';
+        final area = '${s['areas'] ?? s['area_name'] ?? s['address'] ?? ''}';
+        return InkWell(
           onTap: () => _open(s),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 0, 8),
+            child: Row(
+              children: [
+                LetterAvatar(text: name, radius: 26),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name.toUpperCase(),
+                          style: const TextStyle(fontSize: 22, color: AppColors.text)),
+                      if (mobile.isNotEmpty)
+                        Text(mobile,
+                            style: const TextStyle(fontSize: 19, color: Color(0xFF333333))),
+                      if (area.isNotEmpty)
+                        Text(area,
+                            style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+                    ],
+                  ),
+                ),
+                DotsMenu(
+                  labels: [tr('বিস্তারিত', 'Details')],
+                  onSelected: (_) => _open(s),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -125,10 +147,21 @@ class _StaffScreenState extends State<StaffScreen> {
         current: widget.kind,
         title: l.t(widget.kind),
         actions: [
+          IconButton(
+            icon: Icon(_searching ? Icons.close : Icons.search, size: 28),
+            onPressed: () {
+              setState(() => _searching = !_searching);
+              if (!_searching && _searchC.text.isNotEmpty) {
+                _searchC.clear();
+                _load();
+              }
+            },
+          ),
           IconButton(icon: const Icon(Icons.sync, size: 30), onPressed: _load),
           const SizedBox(width: 4),
         ],
         body: Column(children: [
+          if (_searching)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: TextField(

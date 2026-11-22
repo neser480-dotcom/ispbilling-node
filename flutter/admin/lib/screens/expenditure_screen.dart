@@ -6,8 +6,10 @@ import '../core/tr.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/lang_builder.dart';
+import '../widgets/letter_avatar.dart';
+import '../widgets/netfee_ui.dart';
 
-/// খরচ তালিকা + নতুন খরচ যোগ (যোগ করা শুধু Admin — Backend যাচাই করে)।
+/// Expenditure Report — Netfee স্টাইল। নতুন খরচ যোগ শুধু Admin (Backend যাচাই করে)।
 /// Backend: GET/POST /admin/expenditures
 class ExpenditureScreen extends StatefulWidget {
   const ExpenditureScreen({super.key});
@@ -20,8 +22,9 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _types = [];
   num _totalAmount = 0;
-  int _totalRows = 0;
-  DateTimeRange? _range;
+  int _year = DateTime.now().year;
+  int _month = 0; // 0 = সব মাস
+  String _role = ''; // ফাঁকা = সব (লোড হওয়া সারির user_role অনুযায়ী ফিল্টার)
   bool _loading = true;
   String? _error;
 
@@ -37,10 +40,8 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
       _error = null;
     });
     try {
-      final d = await ApiService.expenditures(
-        from: _range == null ? '' : ymd(_range!.start),
-        to: _range == null ? '' : ymd(_range!.end),
-      );
+      final r = periodRange(_year, _month);
+      final d = await ApiService.expenditures(from: ymd(r.start), to: ymd(r.end));
       if (!mounted) return;
       List<Map<String, dynamic>> asList(dynamic v) =>
           v is List ? v.map((e) => mapOf(e)).toList() : <Map<String, dynamic>>[];
@@ -49,7 +50,6 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
         _items = asList(d['expenditures']);
         _types = asList(d['types']);
         _totalAmount = numOf(s['total_amount']);
-        _totalRows = numOf(s['total_rows']).toInt();
         _loading = false;
       });
     } catch (e) {
@@ -58,20 +58,6 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
       });
-    }
-  }
-
-  Future<void> _pickRange() async {
-    final now = DateTime.now();
-    final r = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 1),
-      initialDateRange: _range,
-    );
-    if (r != null) {
-      setState(() => _range = r);
-      _load();
     }
   }
 
@@ -89,92 +75,139 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
     if (saved == true) _load();
   }
 
-  Widget _body(Lang l) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+  List<String> get _roles {
+    final set = <String>{};
+    for (final e in _items) {
+      final r = '${e['user_role'] ?? ''}'.trim();
+      if (r.isNotEmpty) set.add(r);
+    }
+    return ['', ...set];
+  }
+
+  List<Map<String, dynamic>> get _shown => _role.isEmpty
+      ? _items
+      : _items.where((e) => '${e['user_role'] ?? ''}'.trim() == _role).toList();
+
+  Widget _row(Map<String, dynamic> e) {
+    final name = '${e['name'] ?? ''}';
+    final type = '${e['expenditure_type'] ?? ''}';
+    final sub = [name, if (name.isEmpty) type].where((x) => x.isNotEmpty).join(' · ');
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: Row(
+        children: [
+          LetterAvatar(text: 'E', radius: 24, color: _avatarColor(e)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tk(numOf(e['amount'])),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.sky)),
+                if (sub.isNotEmpty)
+                  Text(sub, style: const TextStyle(fontSize: 17, color: AppColors.text)),
+                if (name.isNotEmpty && type.isNotEmpty)
+                  Text(type, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+                const SizedBox(height: 4),
+                Text(dateOnly(e['created_at']),
+                    style: const TextStyle(fontSize: 15, color: AppColors.text)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _avatarColor(Map<String, dynamic> e) {
+    var sum = 0;
+    for (final u in '${e['expenditure_type'] ?? e['name'] ?? ''}'.codeUnits) {
+      sum += u;
+    }
+    return AppColors.avatars[sum % AppColors.avatars.length];
+  }
+
+  Widget _list(Lang l) {
+    if (_loading) {
+      return const Padding(
+          padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()));
+    }
     if (_error != null) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(_error!, textAlign: TextAlign.center)),
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(children: [
+          Text(_error!, textAlign: TextAlign.center),
           const SizedBox(height: 10),
           OutlinedButton(onPressed: _load, child: Text(l.t('retry'))),
         ]),
       );
     }
-    if (_items.isEmpty) return Center(child: Text(l.t('no_data')));
-    return ListView.separated(
-      itemCount: _items.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.line),
-      itemBuilder: (_, i) {
-        final e = _items[i];
-        final meta = [
-          '${e['expenditure_type'] ?? ''}',
-          dateOnly(e['created_at']),
-          '${e['user_role'] ?? ''}',
-        ].where((x) => x.isNotEmpty).join(' · ');
-        return ListTile(
-          title: Text('${e['name'] ?? ''}',
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.text)),
-          subtitle: Text(meta, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-          trailing: Text(taka(numOf(e['amount'])),
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.navy)),
-        );
-      },
-    );
+    final rows = _shown;
+    if (rows.isEmpty) {
+      return Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+              child: Text(l.t('no_data'),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 16))));
+    }
+    return Column(children: [for (final e in rows) _row(e)]);
   }
 
   @override
   Widget build(BuildContext context) {
     return LangBuilder(builder: (_) {
       final l = Lang.i;
+      final shownTotal = _role.isEmpty
+          ? _totalAmount
+          : _shown.fold<num>(0, (s, e) => s + numOf(e['amount']));
       return AdminScaffold(
         current: 'expenditure',
-        title: l.t('expenditure'),
+        title: tr('খরচ রিপোর্ট', 'Expenditure Report'),
         actions: [
-          IconButton(
-            icon: Icon(Icons.date_range, size: 28, color: _range == null ? Colors.white : Colors.yellow),
-            onPressed: _pickRange,
-          ),
-          if (_range != null)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() => _range = null);
+          IconButton(icon: const Icon(Icons.sync, size: 30), onPressed: _load),
+          IconButton(icon: const Icon(Icons.add, size: 32), onPressed: _add),
+          const SizedBox(width: 4),
+        ],
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            Container(
+              width: double.infinity,
+              color: AppColors.sky,
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 18),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: PillDropdown<String>(
+                  value: _roles.contains(_role) ? _role : '',
+                  values: _roles,
+                  label: (v) => v.isEmpty ? tr('স্টাফ', 'Staff') : v,
+                  onBlue: true,
+                  width: 150,
+                  onChanged: (v) => setState(() => _role = v),
+                ),
+              ),
+            ),
+            SummaryHeader(label: '${monthName(_month)},$_year', amount: tk(shownTotal)),
+            YearMonthRow(
+              year: _year,
+              month: _month,
+              onYear: (y) {
+                setState(() => _year = y);
+                _load();
+              },
+              onMonth: (m) {
+                setState(() => _month = m);
                 _load();
               },
             ),
-          IconButton(icon: const Icon(Icons.sync, size: 30), onPressed: _load),
-          const SizedBox(width: 4),
-        ],
-        body: Stack(children: [
-          Column(children: [
-            Container(
-              width: double.infinity,
-              color: AppColors.skyLight,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Text(
-                '${tr('মোট', 'Total')}: ${l.digits('$_totalRows')}   ·   '
-                '${tr('মোট খরচ', 'Total expense')}: ${taka(_totalAmount)}'
-                '${_range == null ? '' : '\n${ymd(_range!.start)} → ${ymd(_range!.end)}'}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy),
-              ),
-            ),
-            Expanded(child: _body(l)),
-          ]),
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              backgroundColor: AppColors.sky,
-              foregroundColor: Colors.white,
-              onPressed: _add,
-              child: const Icon(Icons.add),
-            ),
-          ),
-        ]),
+            const SizedBox(height: 6),
+            _list(l),
+          ],
+        ),
       );
     });
   }

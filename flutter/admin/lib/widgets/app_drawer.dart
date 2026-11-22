@@ -3,41 +3,100 @@ import '../services/api_service.dart';
 import '../core/api_client.dart';
 import '../core/lang.dart';
 import '../core/theme.dart';
+import '../core/tr.dart';
 import '../screens/login_screen.dart';
 import '../screens/router.dart';
 import 'lang_builder.dart';
+import 'netfee_ui.dart';
 
 class _Entry {
   final String key;
   final String label;
   final IconData icon;
-  const _Entry(this.key, this.label, this.icon);
+  final String? bn; // বাংলা লেবেল (lang.dart-এ key না থাকলে)
+  const _Entry(this.key, this.label, this.icon, [this.bn]);
 }
 
 class _MenuGroup {
   final String label;
   final IconData icon;
   final List<_Entry> children;
-  const _MenuGroup(this.label, this.icon, this.children);
+  final String? bn;
+  final bool triangle; // Netfee স্টাইল: সাব-আইটেমে নীল ▶
+  const _MenuGroup(this.label, this.icon, this.children,
+      {this.bn, this.triangle = false});
 }
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   final String current;
   const AppDrawer({super.key, required this.current});
 
-  static const _items = [
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  String get current => widget.current;
+
+  /// এখন যে ড্রপডাউন খোলা (একসাথে একটাই খোলা থাকে)।
+  String? _open;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final n in _adminMenu) {
+      if (n is _MenuGroup && n.children.any((e) => e.key == current)) {
+        _open = n.label;
+      }
+    }
+  }
+
+  /// সাধারণ Admin মেনু: Netfee স্ক্রিনশটের ক্রম + নতুন OLT / MikroTik / Monitoring ড্রপডাউন।
+  static const List<Object> _adminMenu = [
     _Entry('dashboard', 'Dashboard', Icons.grid_view_rounded),
     _Entry('area', 'Area', Icons.location_on_outlined),
     _Entry('package', 'Package', Icons.inventory_2_outlined),
-    _Entry('customer', 'Customer', Icons.groups),
+    _MenuGroup('Customer(PPPoE)', Icons.groups, [
+      _Entry('customer', 'PPPoE', Icons.groups, 'PPPoE'),
+      _Entry('active_pppoe', 'Active PPPoE', Icons.play_arrow,
+          'অ্যাক্টিভ PPPoE'),
+      _Entry('bulk_recharge', 'Bulk Recharge',
+          Icons.library_add_check_outlined, 'বাল্ক রিচার্জ'),
+    ], bn: 'গ্রাহক (PPPoE)', triangle: true),
     _Entry('manager', 'Manager', Icons.account_circle),
     _Entry('collector', 'Collector', Icons.directions_walk),
     _Entry('reseller', 'Reseller', Icons.hub_outlined),
+    _Entry('employee', 'Employee', Icons.badge_outlined),
     _Entry('deposit', 'Deposit', Icons.savings_outlined),
-    _Entry('report', 'Report', Icons.bar_chart),
-    _Entry('expenditure', 'Expenditure', Icons.style),
-    _Entry('message', 'Message', Icons.sms_outlined),
-    _Entry('netfee_bill', 'Netfee Bill', Icons.receipt_long_outlined),
+    _MenuGroup('Report', Icons.bar_chart, [
+      _Entry('report', 'Bill Report', Icons.play_arrow, 'বিল রিপোর্ট'),
+      _Entry('deposit_report', 'Deposit Report', Icons.play_arrow,
+          'ডিপোজিট রিপোর্ট'),
+    ], bn: 'রিপোর্ট', triangle: true),
+    _MenuGroup('Expenditure', Icons.style, [
+      _Entry('purpose', 'Purpose', Icons.play_arrow, 'খাত'),
+      _Entry('expenditure', 'Expenditure Report', Icons.play_arrow,
+          'খরচ রিপোর্ট'),
+    ], bn: 'খরচ', triangle: true),
+    _MenuGroup('Message', Icons.sms_outlined, [
+      _Entry('message_accounts', 'Accounts', Icons.play_arrow, 'অ্যাকাউন্টস'),
+      _Entry('message_log', 'Message Log', Icons.play_arrow, 'মেসেজ লগ'),
+    ], bn: 'মেসেজ', triangle: true),
+    _MenuGroup('OLT', Icons.dns, [
+      _Entry('olt', 'OLT List', Icons.play_arrow, 'OLT তালিকা'),
+      _Entry('onu', 'ONU List', Icons.play_arrow, 'ONU তালিকা'),
+    ], bn: 'OLT', triangle: true),
+    _Entry('mikrotik', 'MikroTik', Icons.router, 'MikroTik'),
+    _MenuGroup('Monitoring', Icons.monitor_heart, [
+      _Entry('olt_monitor', 'OLT Monitor', Icons.play_arrow, 'OLT মনিটর'),
+      _Entry('interface_monitor', 'Interface Monitor', Icons.play_arrow,
+          'ইন্টারফেস মনিটর'),
+      _Entry('customer_traffic', 'Customer Traffic', Icons.play_arrow,
+          'গ্রাহক ট্রাফিক'),
+      _Entry('live_fault', 'Live Fault', Icons.play_arrow, 'লাইভ ফল্ট'),
+    ], bn: 'মনিটরিং', triangle: true),
+    _Entry('activity_log', 'Activity Log', Icons.history),
+    _Entry('netfee_bill', 'Amader Bill', Icons.receipt_long_outlined),
     _Entry('last_bill', 'Last Bill', Icons.receipt_long_outlined),
   ];
 
@@ -51,6 +110,7 @@ class AppDrawer extends StatelessWidget {
           Icons.receipt_long),
       _Entry('sa_billing', 'Pay Now', Icons.payments),
       _Entry('sa_manual_payment', 'Manual Payment', Icons.handshake),
+      _Entry('payment_gateways', 'Payment Gateways', Icons.account_balance_wallet),
       _Entry('sa_pricing', 'Negotiated Pricing', Icons.price_change_outlined),
       _Entry('sa_billing_extend', 'Extend Due Date', Icons.event_available),
     ]),
@@ -70,8 +130,12 @@ class AppDrawer extends StatelessWidget {
       _Entry('mikrotik', 'MikroTik', Icons.router),
       _Entry('olt', 'OLT List', Icons.dns),
       _Entry('onu', 'ONU List', Icons.account_tree),
+      _Entry('olt_monitor', 'OLT Monitor', Icons.monitor_heart),
+      _Entry('active_pppoe', 'Active PPPoE', Icons.wifi_tethering),
       _Entry('interface_monitor', 'Interface Monitor', Icons.monitor),
+      _Entry('customer_traffic', 'Customer Traffic', Icons.speed),
       _Entry('live_fault', 'Live Fault', Icons.warning_amber),
+      _Entry('activity_log', 'Activity Log', Icons.history),
     ]),
   ];
 
@@ -104,7 +168,7 @@ class AppDrawer extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        height: 50,
+        height: nested ? 41 : 50,
         padding: EdgeInsets.only(left: nested ? 48 : 16, right: 16),
         decoration: BoxDecoration(
           color: selected ? AppColors.sky.withValues(alpha: 0.10) : null,
@@ -117,7 +181,7 @@ class AppDrawer extends StatelessWidget {
             Icon(icon, color: AppColors.sky, size: nested ? 22 : 28),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
+              child: SmallCapsText(
                 label,
                 style: TextStyle(
                   fontSize: nested ? 15 : 18,
@@ -134,36 +198,69 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  Widget _group(BuildContext context, _MenuGroup group) {
+  String _entryText(_Entry e, Lang l) =>
+      e.bn != null ? tr(e.bn!, e.label) : l.t(e.key);
+
+  Widget _group(BuildContext context, _MenuGroup group,
+      {bool admin = false, Lang? l}) {
+    final open = admin ? _open == group.label : null;
+    final title = (admin && group.bn != null)
+        ? tr(group.bn!, group.label)
+        : group.label;
     final isActive = group.children.any((e) => e.key == current);
     return Theme(
       data: Theme.of(context).copyWith(
-        dividerColor: AppColors.line,
+        dividerColor: Colors.transparent,
         splashColor: AppColors.sky.withValues(alpha: 0.08),
         highlightColor: AppColors.sky.withValues(alpha: 0.04),
       ),
-      child: ExpansionTile(
-        key: PageStorageKey<String>('super_admin_${group.label}'),
-        initiallyExpanded: isActive,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-        childrenPadding: EdgeInsets.zero,
-        leading: Icon(group.icon, color: AppColors.sky, size: 28),
-        title: Text(
-          group.label,
-          style: const TextStyle(fontSize: 17, color: Color(0xFF444444)),
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.line)),
         ),
-        iconColor: AppColors.sky,
-        collapsedIconColor: const Color(0xFF666680),
-        children: [
-          for (final e in group.children)
-            _tile(
-              e.icon,
-              e.label,
-              () => _go(context, e.key),
-              selected: current == e.key,
-              nested: true,
+        child: ExpansionTile(
+          key: admin
+              ? ValueKey<String>('admin_${group.label}_$open')
+              : PageStorageKey<String>('super_admin_${group.label}'),
+          initiallyExpanded: admin ? open == true : isActive,
+          onExpansionChanged: admin
+              ? (v) => setState(() => _open = v ? group.label : null)
+              : null,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: EdgeInsets.zero,
+          leading: Icon(group.icon, color: AppColors.sky, size: 28),
+          title: SmallCapsText(
+            title,
+            style: TextStyle(
+              fontSize: admin ? 18 : 17,
+              color: const Color(0xFF444444),
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             ),
-        ],
+          ),
+          trailing: admin
+              ? Icon(
+                  open == true
+                      ? Icons.keyboard_arrow_up
+                      : Icons.chevron_right,
+                  color: open == true
+                      ? const Color(0xFFD32F2F)
+                      : const Color(0xFF666680),
+                  size: 28,
+                )
+              : null,
+          iconColor: AppColors.sky,
+          collapsedIconColor: const Color(0xFF666680),
+          children: [
+            for (final e in group.children)
+              _tile(
+                group.triangle ? Icons.play_arrow : e.icon,
+                (admin && l != null) ? _entryText(e, l) : e.label,
+                () => _go(context, e.key),
+                selected: current == e.key,
+                nested: true,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -173,7 +270,10 @@ class AppDrawer extends StatelessWidget {
     return LangBuilder(builder: (_) {
       final l = Lang.i;
       return Drawer(
-        width: 290,
+        // স্ক্রিনশটে ড্রয়ার পর্দার ~৭৫%
+        width: (MediaQuery.of(context).size.width * 0.75)
+            .clamp(260.0, 320.0)
+            .toDouble(),
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(),
         child: Column(
@@ -195,7 +295,7 @@ class AppDrawer extends StatelessWidget {
                       final name =
                           '${profile['fullname'] ?? profile['name'] ?? l.t('admin')}';
                       return Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           const Icon(
                             Icons.account_circle_outlined,
@@ -204,14 +304,16 @@ class AppDrawer extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: AppColors.text,
-                                fontWeight: FontWeight.w600,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.text,
+                                ),
                               ),
                             ),
                           ),
@@ -286,13 +388,16 @@ class AppDrawer extends StatelessWidget {
                           selected: current == 'tutorial',
                         ),
                       ] else ...[
-                        for (final e in _items)
-                          _tile(
-                            e.icon,
-                            l.t(e.key),
-                            () => _go(context, e.key),
-                            selected: current == e.key,
-                          ),
+                        for (final n in _adminMenu)
+                          if (n is _MenuGroup)
+                            _group(context, n, admin: true, l: l)
+                          else if (n is _Entry)
+                            _tile(
+                              n.icon,
+                              _entryText(n, l),
+                              () => _go(context, n.key),
+                              selected: current == n.key,
+                            ),
                       ],
                       _tile(
                         Icons.power_settings_new,

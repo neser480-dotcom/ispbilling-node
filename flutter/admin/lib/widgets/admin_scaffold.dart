@@ -7,6 +7,8 @@ class AdminScaffold extends StatelessWidget {
   final String title;
   final List<Widget> actions;
   final Widget body;
+  final Widget? titleWidget; // দিলে সাধারণ টাইটেল টেক্সটের বদলে এটা দেখায়
+  final PreferredSizeWidget? bottom; // অ্যাপ বারের নিচের অংশ (যেমন Area ফিল্টার)
 
   const AdminScaffold({
     super.key,
@@ -14,6 +16,8 @@ class AdminScaffold extends StatelessWidget {
     required this.title,
     required this.body,
     this.actions = const [],
+    this.bottom,
+    this.titleWidget,
   });
 
   @override
@@ -21,8 +25,9 @@ class AdminScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontSize: 22)),
+        title: titleWidget ?? Text(title, style: const TextStyle(fontSize: 22)),
         actions: actions,
+        bottom: bottom,
       ),
       drawer: AppDrawer(current: current),
       body: body,

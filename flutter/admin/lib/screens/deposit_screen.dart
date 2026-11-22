@@ -6,8 +6,11 @@ import '../core/tr.dart';
 import '../services/api_service.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/lang_builder.dart';
+import '../widgets/letter_avatar.dart';
+import '../widgets/netfee_ui.dart';
 
-/// কালেক্টর ডিপোজিট রিপোর্ট (শুধু পড়া)। Backend: GET /admin/reports/collector-deposit
+/// Deposit (শুধু পড়া) — Netfee স্টাইল: অ্যাপ বারে ব্যক্তি ▾, নিচে বছর/মাস ড্রপডাউন।
+/// Backend: GET /admin/reports/collector-deposit
 class DepositScreen extends StatefulWidget {
   const DepositScreen({super.key});
 
@@ -19,7 +22,8 @@ class _DepositScreenState extends State<DepositScreen> {
   final List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _collectors = [];
   int? _collectorId;
-  DateTimeRange? _range;
+  int _year = DateTime.now().year;
+  int _month = 0; // 0 = সব মাস
   int _page = 1;
   int _totalPages = 1;
   num _totalAmount = 0;
@@ -57,10 +61,11 @@ class _DepositScreenState extends State<DepositScreen> {
     }
     setState(() => _loading = true);
     try {
+      final r = periodRange(_year, _month);
       final d = await ApiService.collectorDeposits(
         collectorId: _collectorId,
-        from: _range == null ? '' : ymd(_range!.start),
-        to: _range == null ? '' : ymd(_range!.end),
+        from: ymd(r.start),
+        to: ymd(r.end),
         page: _page,
       );
       if (!mounted) return;
@@ -86,24 +91,18 @@ class _DepositScreenState extends State<DepositScreen> {
     }
   }
 
-  Future<void> _pickRange() async {
-    final now = DateTime.now();
-    final r = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 1),
-      initialDateRange: _range,
-    );
-    if (r != null) {
-      setState(() => _range = r);
-      _load(reset: true);
+  String get _collectorLabel {
+    if (_collectorId == null) return tr('কালেক্টর', 'Collector');
+    for (final c in _collectors) {
+      if (numOf(c['id']).toInt() == _collectorId) return '${c['name'] ?? ''}';
     }
+    return tr('কালেক্টর', 'Collector');
   }
 
   Widget _tile(Map<String, dynamic> d) {
+    final by = '${d['deposit_by'] ?? ''}';
     final meta = [
       dateOnly(d['deposit_date']),
-      '${d['deposit_by'] ?? ''}',
       '${d['status'] ?? ''}',
     ].where((e) => e.isNotEmpty).join(' · ');
     final note = '${d['note'] ?? ''}';
@@ -112,55 +111,75 @@ class _DepositScreenState extends State<DepositScreen> {
       if (received.isNotEmpty) '${tr('গ্রহণ', 'Received')}: $received',
       if (note.isNotEmpty) note,
     ].join(' · ');
-    return ListTile(
-      title: Text(meta,
-          style: const TextStyle(fontSize: 15, color: AppColors.text)),
-      subtitle: extra.isEmpty
-          ? null
-          : Text(extra, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-      trailing: Text(taka(numOf(d['amount'])),
-          style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.navy)),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: Row(
+        children: [
+          LetterAvatar(text: by.isEmpty ? 'D' : by, radius: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tk(numOf(d['amount'])),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.sky)),
+                if (by.isNotEmpty)
+                  Text(by, style: const TextStyle(fontSize: 17, color: AppColors.text)),
+                if (extra.isNotEmpty)
+                  Text(extra, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+                Text(meta, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _list(Lang l) {
-    if (_items.isEmpty && _loading) return const Center(child: CircularProgressIndicator());
+  Widget _rows(Lang l) {
+    if (_items.isEmpty && _loading) {
+      return const Padding(
+          padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()));
+    }
     if (_items.isEmpty && _error != null) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(_error!, textAlign: TextAlign.center)),
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(children: [
+          Text(_error!, textAlign: TextAlign.center),
           const SizedBox(height: 10),
           OutlinedButton(onPressed: () => _load(reset: true), child: Text(l.t('retry'))),
         ]),
       );
     }
     if (!_available) {
-      return Center(
-          child: Padding(
-              padding: const EdgeInsets.all(24),
+      return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
               child: Text(_notice.isEmpty ? l.t('no_data') : _notice,
                   textAlign: TextAlign.center)));
     }
-    if (_items.isEmpty) return Center(child: Text(l.t('no_data')));
+    if (_items.isEmpty) {
+      return Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+              child: Text(l.t('no_data'),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 16))));
+    }
     final hasMore = _page <= _totalPages;
-    return ListView.separated(
-      itemCount: _items.length + 1,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.line),
-      itemBuilder: (_, i) {
-        if (i < _items.length) return _tile(_items[i]);
-        if (_loading) {
-          return const Padding(
-              padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-        }
-        if (_error != null || hasMore) {
-          return TextButton(onPressed: () => _load(), child: Text(l.t('load_more')));
-        }
-        return const SizedBox(height: 24);
-      },
-    );
+    return Column(children: [
+      for (final d in _items) _tile(d),
+      if (_loading)
+        const Padding(
+            padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
+      else if (_error != null || hasMore)
+        TextButton(onPressed: () => _load(), child: Text(l.t('load_more')))
+      else
+        const SizedBox(height: 24),
+    ]);
   }
 
   @override
@@ -171,62 +190,48 @@ class _DepositScreenState extends State<DepositScreen> {
         current: 'deposit',
         title: l.t('deposit'),
         actions: [
-          IconButton(icon: const Icon(Icons.sync, size: 30), onPressed: () => _load(reset: true)),
+          BarDropdown<int>(
+            text: _collectorLabel,
+            values: [-1, ..._collectors.map((c) => numOf(c['id']).toInt())],
+            label: (v) {
+              if (v == -1) return tr('সব', 'All');
+              for (final c in _collectors) {
+                if (numOf(c['id']).toInt() == v) return '${c['name'] ?? ''}';
+              }
+              return '$v';
+            },
+            onSelected: (v) {
+              setState(() => _collectorId = v == -1 ? null : v);
+              _load(reset: true);
+            },
+          ),
+          IconButton(
+              icon: const Icon(Icons.sync, size: 30), onPressed: () => _load(reset: true)),
           const SizedBox(width: 4),
         ],
-        body: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: Row(children: [
-              Expanded(
-                child: DropdownButtonFormField<int?>(
-                  initialValue: _collectorId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                    labelText: l.t('collector'),
-                  ),
-                  items: [
-                    DropdownMenuItem<int?>(value: null, child: Text(tr('সব', 'All'))),
-                    ..._collectors.map((c) => DropdownMenuItem<int?>(
-                          value: numOf(c['id']).toInt(),
-                          child: Text('${c['name'] ?? ''}', overflow: TextOverflow.ellipsis),
-                        )),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _collectorId = v);
-                    _load(reset: true);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: Icon(Icons.date_range, color: _range == null ? AppColors.muted : AppColors.sky),
-                onPressed: _pickRange,
-              ),
-              if (_range != null)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () {
-                    setState(() => _range = null);
-                    _load(reset: true);
-                  },
-                ),
-            ]),
-          ),
-          Container(
-            width: double.infinity,
-            color: AppColors.skyLight,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Text(
-              '${tr('মোট', 'Total')}: ${l.digits('$_totalData')}   ·   '
-              '${tr('মোট জমা', 'Total deposit')}: ${taka(_totalAmount)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy),
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            SummaryHeader(
+              label: '${monthName(_month)},$_year',
+              amount: '${tk(_totalAmount)} (${l.digits('$_totalData')})',
             ),
-          ),
-          Expanded(child: _list(l)),
-        ]),
+            YearMonthRow(
+              year: _year,
+              month: _month,
+              onYear: (y) {
+                setState(() => _year = y);
+                _load(reset: true);
+              },
+              onMonth: (m) {
+                setState(() => _month = m);
+                _load(reset: true);
+              },
+            ),
+            const SizedBox(height: 6),
+            _rows(l),
+          ],
+        ),
       );
     });
   }
