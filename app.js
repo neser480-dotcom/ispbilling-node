@@ -57,7 +57,6 @@ const mobileRoutes = require("./routes/mobile");
 const registerRoutes =
     require("./routes/auth/register");
 const noticeRoutes = require("./routes/notices/notices");
-const appDownloadRoutes = require("./routes/app-download/appDownload");
 
 /*
 |--------------------------------------------------------------------------
@@ -318,6 +317,9 @@ app.use(
     })
 );
 
+app.use(require("./middleware/request-context"));
+require("./config/activity-log-patch")(require("./config/database"));
+
 
 /*
 |--------------------------------------------------------------------------
@@ -386,34 +388,6 @@ app.use("/api/auth/login", security.authLimiter());
 app.use("/api/register", security.authLimiter());
 app.use(security.sameOriginGuard);
 app.use(security.csrfTokenCheck);
-
-/*
-|--------------------------------------------------------------------------
-| APP DOWNLOAD WEBSITE  (app.amaderbill.com)
-|--------------------------------------------------------------------------
-| APP_DOWNLOAD_HOST সেট থাকলে ওই হোস্টে শুধু ডাউনলোড পেজ + পাবলিক GET API চলে;
-| লগইন/অ্যাডমিন সহ বাকি সব পথ ওই সাবডোমেইনে বন্ধ। মূল প্যানেলে /app-download-ও খোলে।
-*/
-const APP_DOWNLOAD_PAGE = path.join(__dirname, "views", "app-download", "index.html");
-const APP_DOWNLOAD_HOST = String(process.env.APP_DOWNLOAD_HOST || "").trim().toLowerCase();
-
-app.get("/app-download", (req, res) => res.sendFile(APP_DOWNLOAD_PAGE));
-
-if (APP_DOWNLOAD_HOST) {
-    app.use((req, res, next) => {
-        if (String(req.hostname || "").toLowerCase() !== APP_DOWNLOAD_HOST) return next();
-
-        if (req.method !== "GET" && req.method !== "HEAD") {
-            return res.status(405).set("Allow", "GET, HEAD").send("Method not allowed");
-        }
-        if (req.path === "/" || req.path === "/app-download") return res.sendFile(APP_DOWNLOAD_PAGE);
-        if (
-            (req.path === "/api/app-download" || req.path.startsWith("/api/app-download/")) &&
-            !req.path.startsWith("/api/app-download/admin/")
-        ) return next();
-        return res.status(404).send("Not found");
-    });
-}
 
 app.use(
     express.static(
@@ -1012,21 +986,29 @@ app.get(
 );
 
 
+app.get(
+    "/mikrotik/cross-customer",
+    requireSoftwareBilling,
+    (req, res) => {
+
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "mikrotik",
+                "cross-customer.html"
+            )
+        );
+
+    }
+);
+
+
 /*
 |--------------------------------------------------------------------------
 | CUSTOMERS PAGE
 |--------------------------------------------------------------------------
 */
-
-app.get(
-    "/mikrotik/cross-customer",
-    requireSoftwareBilling,
-    (req, res) => {
-        return res.sendFile(
-            path.join(__dirname, "views", "mikrotik", "cross-customer.html")
-        );
-    }
-);
 
 app.get(
     "/customers",
@@ -1085,22 +1067,6 @@ app.get(
 | SUPER ADMIN - NOTICE / UPDATE
 |--------------------------------------------------------------------------
 */
-
-/* App Download website + APK/Promotion management (public GET, Super Admin write) */
-app.use("/api/app-download", appDownloadRoutes);
-
-/* App & Promotion Management page (Super Admin only) */
-app.get(
-    "/super-admin/app-management",
-    requireSoftwareBilling,
-    (req, res) => {
-        if (!req.session || !req.session.user_id) return res.redirect("/");
-        if (String(req.session.role || "").trim().toLowerCase().replace(/[\s_-]+/g, "") !== "superadmin") {
-            return res.status(403).send("Super Admin access is required.");
-        }
-        return res.sendFile(path.join(__dirname, "views", "super-admin", "app-management.html"));
-    }
-);
 
 /* Notice Board (Super Admin) */
 app.use(

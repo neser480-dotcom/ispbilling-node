@@ -15,21 +15,43 @@
 
     <!-- Customer profile popup styles -->
     <link rel="stylesheet" href="/assets/css/customer.css?v=20261030">
-    <link rel="stylesheet" href="/assets/css/customer-add.css?v=20261025">
-    <link rel="stylesheet" href="/assets/css/customer-bill-history.css?v=20261123">
+    <link rel="stylesheet" href="/assets/css/customer-add.css?v=20261124">
+    <link rel="stylesheet" href="/assets/css/customer-bill-history.css?v=20261124">
 
     <link rel="stylesheet" href="/assets/css/other-customer.css?v=1">
 
     <style>
-    /* Popup scroll: only the popup content scrolls, never the page behind it. */
-    html:has(#customerActionModal.show),
-    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
-    #customerActionModal.modal { overflow-y: auto !important; overscroll-behavior: contain; }
-    #customerActionModal.modal .modal-dialog { height: auto !important; max-height: calc(100dvh - 1.5rem) !important; margin: .75rem auto !important; }
-    #customerActionModal.modal .modal-content { display: flex !important; flex-direction: column; height: auto !important; max-height: calc(100dvh - 1.5rem) !important; overflow: hidden !important; }
-    #customerActionModal.modal .modal-body { flex: 1 1 auto; min-height: 0; max-height: none !important; overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-    #customerActionModal.modal #customerActionModalBody .cm-body { height: auto !important; max-height: calc(100dvh - 10.5rem) !important; overflow-y: auto !important; overscroll-behavior: contain; }
-    </style>
+    /* Popup scroll: the whole page/popup layer scrolls (no scrollbar inside the
+   main popup). Small scroll areas inside the popup content are untouched. */
+html:has(#customerActionModal.show),
+body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+
+#customerActionModal.modal { overflow-y: auto !important; overscroll-behavior: contain; }
+
+#customerActionModal.modal .modal-dialog {
+    height: auto !important;
+    max-height: none !important;
+    margin: 1.75rem auto !important;
+}
+
+#customerActionModal.modal .modal-content {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+#customerActionModal.modal .modal-body {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+#customerActionModal.modal #customerActionModalBody .cm-body {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+</style>
 
     <meta name="csrf-token" content="">
 </head>

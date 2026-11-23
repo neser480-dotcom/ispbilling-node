@@ -30,17 +30,27 @@ const STYLE = `<style>
 .nf-hr{border:0;border-top:1px solid #d1d5db;margin:10px 0 14px}
 .nf-rp-manual{display:none;margin:6px 0 0 24px}.nf-rp-manual.open{display:block}
 .nf-rp-foot{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #e5e7eb;margin:14px -16px -16px;padding:12px 16px;background:#fff}
-.nf-act-head{background:#2f86e8;color:#fff;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.nf-act-head h5{margin:0;font-weight:700;color:#fff;flex:1;text-align:center}
-.nf-act-head .btn{background:#fff;color:#2f86e8;border:0}
-.nf-act-bar{background:#2f86e8;color:#fff;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.nf-act-bar .badge{background:#1d5fb8}
-.nf-act-bar .nf-act-search{margin-left:auto;width:260px;background:#1d6fd6;border:0;color:#fff}
+.nf-act-head{background:#2f86e8;color:#fff;border-radius:6px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nf-act-head h5{margin:0;font-weight:700;color:#fff;font-size:24px;display:flex;align-items:center;gap:12px}
+.nf-act-head .nf-back{background:transparent;border:0;color:#fff;font-size:16px;padding:0;cursor:pointer}
+.nf-head-btns{display:flex;gap:10px}
+.nf-head-btns .btn{background:#fff;color:#2f86e8;border:0;width:34px;height:34px;border-radius:6px;padding:0}
+.nf-act-bar{background:#2f86e8;color:#fff;border-radius:6px;padding:8px 14px;display:flex;align-items:center;gap:8px;margin-bottom:10px;box-shadow:0 2px 6px rgba(47,134,232,.35)}
+.nf-pill{background:#1d5fb8;border-radius:12px;padding:1px 12px;font-size:12px}
+.nf-act-bar .nf-act-search{margin-left:auto;width:330px;background:#2b7bdc;border:1px solid #5aa0ee;color:#fff}
 .nf-act-bar .nf-act-search::placeholder{color:#dbeafe}
 .nf-act .nf-act-filter{display:none;gap:8px;flex-wrap:wrap;margin-bottom:10px}.nf-act .nf-act-filter.open{display:flex}
-.nf-act table tbody tr:nth-child(odd){background:#f1f1f1}
-.nf-act .badge-act{background:#198754;color:#fff;font-size:10px;padding:3px 6px;border-radius:4px;text-transform:uppercase}
-.nf-act .badge-role{background:#0d6efd;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;display:inline-block}
+.nf-act-table{font-size:13px;color:#555;margin:0}
+.nf-act-table thead th{font-weight:700;color:#444;border-bottom:0;padding:12px 8px;white-space:nowrap;user-select:none}
+.nf-act-table thead th.nf-sort{cursor:pointer}
+.nf-arr{color:#2f86e8;font-size:11px;font-weight:700}
+.nf-act-table tbody td{border:0;padding:10px 8px;vertical-align:middle}
+.nf-act-table tbody tr:nth-child(odd) td{background:#f1f1f1}
+.nf-act-table tbody tr:nth-child(even) td{background:#fff}
+.nf-act .badge-act,.nf-act .badge-del,.nf-act .badge-mod{color:#fff;font-size:10px;font-weight:700;padding:3px 7px;border-radius:5px;text-transform:uppercase;display:inline-block}
+.nf-act .badge-act{background:#198754}.nf-act .badge-del{background:#dc3545}.nf-act .badge-mod{background:#0dcaf0;text-transform:none}
+.nf-act .badge-role{background:#0d6efd;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:inline-block;margin-top:2px}
+.nf-eye{background:#fff;border:1px solid #2f86e8;color:#2f86e8;border-radius:5px;width:28px;height:28px;padding:0;cursor:pointer}
 .nf-act-empty{display:none;text-align:center;padding:24px;color:#888}
 .nf-use-svg{width:100%;height:auto}
 </style>`;
@@ -138,28 +148,42 @@ async function saveNote(user, req) {
 async function activityFragment(user, id) {
     const c = await getCustomer(user, id);
     const [rows] = await db.query(
-        `SELECT user_name, role_name, action, description, ip_address, created_at FROM activity_logs
+        `SELECT user_name, role_name, module, action, description, ip_address, created_at FROM activity_logs
          WHERE customer_id = ? AND (company_id = ? OR company_id IS NULL) ORDER BY id DESC LIMIT 300`,
         [c.id, c.company_id || 0]
     );
+    const uniq = k => [...new Set(rows.map(r => String(r[k] || "")).filter(Boolean))];
+    const opts = arr => arr.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    const actLabel = a => String(a || "").replace(/^customer_/, "").replace(/_/g, " ");
+    const actClass = a => (/delete|remove/i.test(a) ? "badge-del" : "badge-act");
     const body = rows.map((r, i) => `<tr data-author="${esc(r.user_name || "")}" data-action="${esc(r.action || "")}">
-        <td class="nf-act-no">${i + 1}</td><td>${esc(r.description || "")}</td><td>${esc(r.ip_address || "")}</td>
+        <td class="nf-act-no" data-sort="${i + 1}">${i + 1}</td>
+        <td>${esc(r.description || "")}</td>
+        <td><span class="badge-mod">${esc(r.module || "customer")}</span></td>
+        <td>${esc(r.ip_address || "")}</td>
         <td>${esc(r.user_name || "")}<br>${r.role_name ? `<span class="badge-role">${esc(r.role_name)}</span>` : ""}</td>
-        <td><span class="badge-act">${esc(String(r.action || "").replace(/^customer_/, "").replace(/_/g, " "))}</span></td>
-        <td>${esc(fmtDate(r.created_at))}</td>
-        <td><button type="button" class="btn btn-outline-primary btn-sm nf-act-view" data-desc="${esc(r.description || "")}"
+        <td><span class="${actClass(r.action)}">${esc(actLabel(r.action))}</span></td>
+        <td data-sort="${new Date(r.created_at).getTime() || 0}">${esc(fmtDate(r.created_at))}</td>
+        <td><button type="button" class="nf-eye nf-act-view" data-desc="${esc(r.description || "")}"
             data-action="${esc(r.action || "")}" data-author="${esc(r.user_name || "")}" data-ip="${esc(r.ip_address || "")}"
             data-date="${esc(fmtDate(r.created_at))}"><i class="fa-regular fa-eye"></i></button></td></tr>`).join("");
+    const th = (t, sort) => sort ? `<th class="nf-sort">${t} <span class="nf-arr">&#8645;</span></th>` : `<th>${t}</th>`;
     return `${STYLE}<div class="nf-act nf-pad" data-nohead="1" data-width="1140" data-title="${esc(c.name || "")} Activity Log" data-wide="1" data-customer-id="${c.id}">
-        <div class="nf-act-head"><button type="button" class="btn btn-sm" data-bs-dismiss="modal" title="Back"><i class="fa-solid fa-arrow-left"></i></button><h5>${esc(c.name || "")} Activity Log</h5>
-            <button type="button" class="btn btn-sm nf-act-refresh" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div>
-        <div class="nf-act-bar"><i class="fa-solid fa-gear"></i> Total Data: <span class="badge nf-act-count">${rows.length}</span>
-            <input class="form-control form-control-sm nf-act-search" placeholder="Search">
-            <select class="nf-act-by d-none"><option value=""></option></select><select class="nf-act-act d-none"><option value=""></option></select>
-            <button type="button" class="d-none nf-act-toggle"></button><div class="d-none nf-act-filter"></div>
-            <button type="button" class="d-none nf-act-apply"></button><button type="button" class="d-none nf-act-reset"></button></div>
-        <div class="table-responsive"><table class="table table-sm align-middle">
-            <thead><tr><th>#</th><th>Description</th><th>IP Address</th><th>Role</th><th>Action</th><th>Date</th><th>View</th></tr></thead>
+        <div class="nf-act-head">
+            <h5><button type="button" class="nf-back" data-bs-dismiss="modal" title="Back"><i class="fa-solid fa-arrow-left"></i></button>${esc(c.name || "")} Activity Log</h5>
+            <div class="nf-head-btns">
+                <button type="button" class="btn btn-sm nf-act-toggle" title="Filter"><i class="fa-solid fa-filter"></i></button>
+                <button type="button" class="btn btn-sm nf-act-refresh" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+            </div></div>
+        <div class="nf-act-filter">
+            <select class="form-select form-select-sm nf-act-by" style="width:auto"><option value="">All users</option>${opts(uniq("user_name"))}</select>
+            <select class="form-select form-select-sm nf-act-act" style="width:auto"><option value="">All actions</option>${opts(uniq("action"))}</select>
+            <button type="button" class="btn btn-sm btn-success nf-act-apply">Apply</button>
+            <button type="button" class="btn btn-sm btn-secondary nf-act-reset">Reset</button></div>
+        <div class="nf-act-bar"><i class="fa-solid fa-gear"></i> <span>Total Data:</span> <span class="nf-act-count nf-pill">${rows.length}</span>
+            <input class="form-control form-control-sm nf-act-search" placeholder="Search"></div>
+        <div class="table-responsive"><table class="table align-middle nf-act-table">
+            <thead><tr>${th("#", 1)}${th("Description", 1)}${th("Module", 1)}${th("IP Address", 1)}${th("Role", 1)}${th("Action", 1)}${th("Date", 1)}${th("View", 0)}</tr></thead>
             <tbody>${body}</tbody></table></div>
         <div class="nf-act-empty" style="${rows.length ? "" : "display:block"}">Data Not Found!</div></div>`;
 }

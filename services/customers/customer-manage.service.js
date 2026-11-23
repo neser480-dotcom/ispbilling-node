@@ -1447,7 +1447,7 @@ async function profileFragment({ user, id }) {
 .cp-head-right { display:flex; align-items:center; gap:18px; flex-shrink:0; }
 .cp-del { border:0; background:none; color:#333; font-size:14px; padding:0; }
 .cp-del:hover { color:#c0272d; }
-.cp-body { padding:0 14px 14px; max-height:calc(100vh - 150px); overflow-y:auto; }
+.cp-body { padding:0 14px 14px; max-height:none; overflow:visible; }
 .cp-strip { display:grid; grid-template-columns:1fr 1fr 1fr; background:#fff; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.12); margin-bottom:14px; }
 .cp-strip-col { padding:12px 18px; font-size:13px; line-height:1.9; border-right:1px solid #ddd; }
 .cp-strip-col:last-child { border-right:0; }
@@ -1469,7 +1469,7 @@ async function profileFragment({ user, id }) {
 .cp-pane[hidden] { display:none; }
 #customerActionModal .cp-update .cm-wrap { background:transparent; color:inherit; }
 #customerActionModal .cp-update .cm-edit-head { display:none; }
-#customerActionModal .cp-update .cm-body { padding:14px 18px 4px; max-height:calc(100vh - 340px); overflow-y:auto; }
+#customerActionModal .cp-update .cm-body { padding:14px 18px 4px; max-height:none !important; overflow:visible !important; }
 #customerActionModal .cp-update .row { margin:0; --bs-gutter-x:0; --bs-gutter-y:0; }
 #customerActionModal .cp-update .row > [class*="col-"] { flex:0 0 100%; max-width:100%; width:100%; padding:0; margin:0 0 10px; display:flex; align-items:center; gap:14px; }
 #customerActionModal .cp-update .cm-lbl { flex:0 0 38%; text-align:right; margin:0; font-size:12.5px; color:#666; display:block; }

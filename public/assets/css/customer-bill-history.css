@@ -534,3 +534,19 @@ body.cbh-modal-open {
 #customerBillHistoryModal .cbh-act { display: block; background: transparent; border: 0; padding: 0; color: #212529; font-size: 14px; line-height: 1.7; cursor: pointer; text-align: left; }
 #customerBillHistoryModal .cbh-act:hover { text-decoration: underline; }
 #customerBillHistoryModal .cbh-delete { background: transparent; border: 0; color: #212529; padding: 0; }
+
+/* No left/right scrolling: the table always fits the popup and text wraps */
+#customerBillHistoryModal .cbh-table-wrap { overflow: visible !important; }
+#customerBillHistoryModal .cbh-table.cbh-ref { width: 100% !important; min-width: 0 !important; max-width: 100%; table-layout: fixed; }
+#customerBillHistoryModal .cbh-table.cbh-ref thead th,
+#customerBillHistoryModal .cbh-table.cbh-ref tbody td { white-space: normal !important; overflow-wrap: anywhere; word-break: break-word; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(1) { width: 17%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(2) { width: 15%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(3) { width: 15%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(4) { width: 16%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(5) { width: 15%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(6) { width: 7%; }
+#customerBillHistoryModal .cbh-table.cbh-ref th:nth-child(7) { width: 15%; }
+#customerBillHistoryModal .cbh-table.cbh-ref .cbh-note { min-width: 0; max-width: none; }
+#customerBillHistoryModal .cbh-table.cbh-ref .cbh-act { white-space: nowrap !important; }
+@media (max-width: 600px) { #customerBillHistoryModal .cbh-table.cbh-ref { min-width: 0 !important; } }

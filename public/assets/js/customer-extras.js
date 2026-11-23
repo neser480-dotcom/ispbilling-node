@@ -798,6 +798,32 @@
 
         if (!root) return;
 
+        const sortTh = event.target.closest(".nf-act .nf-sort");
+
+        if (sortTh) {
+            const table = sortTh.closest("table");
+            const idx = Array.prototype.indexOf.call(sortTh.parentNode.children, sortTh);
+            const dir = sortTh.dataset.dir === "asc" ? "desc" : "asc";
+
+            table.querySelectorAll(".nf-sort").forEach((h) => { delete h.dataset.dir; });
+            sortTh.dataset.dir = dir;
+
+            const body = table.tBodies[0];
+            const rows = Array.from(body.rows);
+            const val = (tr) => {
+                const td = tr.cells[idx];
+                const raw = td.dataset.sort !== undefined ? td.dataset.sort : td.textContent.trim().toLowerCase();
+                return /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw;
+            };
+
+            rows.sort((a, b) => {
+                const x = val(a), y = val(b);
+                return (x > y ? 1 : x < y ? -1 : 0) * (dir === "asc" ? 1 : -1);
+            });
+            rows.forEach((tr) => body.appendChild(tr));
+            return;
+        }
+
         if (event.target.closest(".nf-act-toggle")) {
             root.querySelector(".nf-act-filter").classList.toggle("open");
             return;

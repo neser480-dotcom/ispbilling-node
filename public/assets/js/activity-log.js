@@ -86,7 +86,27 @@ document.addEventListener("DOMContentLoaded", () => {
                  a.includes("recharge") || a.includes("payment") || a.includes("paid")) cls = "al-b-green";
         else if (t === "warning" || a.includes("update") || a.includes("edit")) cls = "al-b-orange";
 
-        return `<span class="al-badge ${cls}">${escapeHtml(safeValue(action, "UNKNOWN").toUpperCase())}</span>`;
+        const label = String(safeValue(action, "UNKNOWN"))
+            .replace(/^(customer|payment|staff|report)_/i, "")
+            .replace(/_/g, " ")
+            .toUpperCase();
+
+        return `<span class="al-badge ${cls}">${escapeHtml(label)}</span>`;
+    }
+
+    /* Short, clean text for the table; the full text stays in the View popup */
+    function shortDescription(value) {
+        const full = String(safeValue(value, "")).replace(/\s+/g, " ").trim();
+
+        if (!full) return "N/A";
+
+        let text = full.split(" | ")[0].trim();
+
+        text = text.replace(/\.\s.*$/, ".");
+
+        if (text.length > 110) text = text.slice(0, 107).trim() + "...";
+
+        return text;
     }
 
     /* ---------- states ---------- */
@@ -169,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <tr>
                 <td class="fw-bold">${escapeHtml(safeValue(row.serial, row.id || "-"))}</td>
 
-                <td class="activity-description">${escapeHtml(safeValue(row.description))}</td>
+                <td class="activity-description" title="${escapeHtml(safeValue(row.description, ""))}">${escapeHtml(shortDescription(row.description))}</td>
 
                 <td class="activity-module">${moduleBadge(row.module)}</td>
 

@@ -252,3 +252,45 @@
         font-size: 11px;
     }
 }
+
+/* Popups that are not the Add/Edit page (message, reseller, bulk actions,
+   profile, ...) must keep normal padding; customer-add.css removes it only
+   for the .cm-wrap pages and for the self-padded .nf-pad popups. */
+#customerActionModal .modal-body:not(:has(.cm-wrap)):not(:has(.nf-pad)) {
+    padding: 16px !important;
+    background: #fff;
+}
+
+/* Full-page scroll like the reference: the popup never gets its own inner
+   scrollbar, the whole page/modal layer scrolls instead. Add/Edit pages
+   (.cm-wrap) keep their fixed header + inner body. */
+#customerActionModal.modal,
+#rechargeModal.modal {
+    overflow-y: auto !important;
+}
+
+#customerActionModal .modal-dialog:not(:has(.cm-wrap)),
+#rechargeModal .modal-dialog {
+    max-height: none !important;
+    margin-top: 1.75rem !important;
+    margin-bottom: 1.75rem !important;
+}
+
+#customerActionModal .modal-dialog:not(:has(.cm-wrap)) .modal-content,
+#rechargeModal .modal-content {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+#customerActionModal .modal-body:not(:has(.cm-wrap)),
+#rechargeModal .modal-body {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* top-aligned like the reference (not vertically centered) */
+#customerActionModal .modal-dialog.modal-dialog-centered:not(:has(.cm-wrap)),
+#rechargeModal .modal-dialog.modal-dialog-centered {
+    align-items: flex-start;
+    min-height: 0;
+}
