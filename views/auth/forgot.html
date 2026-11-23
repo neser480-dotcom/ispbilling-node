@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Forgot Password - AmaderBill</title>
+
+    <!-- Login Page Design -->
+    <link rel="stylesheet" href="/assets/css/login.css?v=20261117">
+
+    <!-- Forgot Password Design -->
+    <link rel="stylesheet" href="/assets/css/forgot-password.css?v=20261124">
+
+</head>
+
+<body>
+
+    <main class="forgot-container">
+
+        <!-- Heading -->
+        <h2>Forgot Password?</h2>
+
+        <p class="forgot-description">
+            Reset your AmaderBill account password securely.
+        </p>
+
+        <!-- Message -->
+        <div id="forgotMessage" class="forgot-message"></div>
+
+
+        <!-- STEP 1: EMAIL -->
+        <section id="stepEmail" class="forgot-step active">
+
+            <label for="forgotEmail">
+                Registered Gmail Address
+            </label>
+
+            <input
+                type="email"
+                id="forgotEmail"
+                placeholder="Enter your registered Gmail"
+                autocomplete="email"
+                required
+            >
+
+            <button type="button" id="sendOtpBtn">
+                Send OTP
+            </button>
+
+        </section>
+
+
+        <!-- STEP 2: OTP -->
+        <section id="stepOtp" class="forgot-step">
+
+            <label for="forgotOtp">
+                Email Verification OTP
+            </label>
+
+            <input
+                type="text"
+                id="forgotOtp"
+                placeholder="Enter 6-digit OTP"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+                required
+            >
+
+            <button type="button" id="verifyOtpBtn">
+                Verify OTP
+            </button>
+
+            <button type="button" id="resendOtpBtn">
+                Resend OTP
+            </button>
+
+        </section>
+
+
+        <!-- STEP 3: NEW PASSWORD -->
+        <section id="stepPassword" class="forgot-step">
+
+            <label for="newPassword">
+                New Password
+            </label>
+
+            <input
+                type="password"
+                id="newPassword"
+                placeholder="Enter new password"
+                autocomplete="new-password"
+                required
+            >
+
+            <label for="confirmPassword">
+                Confirm New Password
+            </label>
+
+            <input
+                type="password"
+                id="confirmPassword"
+                placeholder="Confirm new password"
+                autocomplete="new-password"
+                required
+            >
+
+            <button type="button" id="resetPasswordBtn">
+                Reset Password
+            </button>
+
+        </section>
+
+
+        <!-- STEP 4: SUCCESS -->
+        <section id="stepSuccess" class="forgot-step">
+
+            <h3>
+                Password Reset Successful!
+            </h3>
+
+            <p>
+                Your password has been changed successfully.
+            </p>
+
+            <button type="button" id="loginBtn">
+                Back to Login
+            </button>
+
+        </section>
+
+
+        <!-- Footer -->
+        <div class="forgot-footer">
+            <a href="/">
+                Back to Login
+            </a>
+        </div>
+
+
+        <!-- RIGHT SIDE: 3D CUBE -->
+        <div class="visual" aria-hidden="true">
+
+            <div class="shadow"></div>
+
+            <div class="cube-wrap">
+
+                <div class="cube">
+
+                    <div class="face f"></div>
+                    <div class="face b"></div>
+                    <div class="face r"></div>
+                    <div class="face l"></div>
+                    <div class="face t"></div>
+                    <div class="face d"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- Forgot Password JavaScript -->
+    <script src="/assets/js/forgot-password.js"></script>
+
+</body>
+</html>

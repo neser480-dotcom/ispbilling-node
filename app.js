@@ -227,7 +227,7 @@ const sessionStore =
 
         host:
             process.env.DB_HOST ||
-            "localhost",
+            "127.0.0.1",
 
         port:
             Number(
@@ -851,7 +851,27 @@ app.get(
     }
 );
 
+/*
+|--------------------------------------------------------------------------
+| FORGOT PASSWORD PAGE
+|--------------------------------------------------------------------------
+*/
 
+app.get(
+    "/forgot",
+    (req, res) => {
+
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "auth",
+                "forgot.html"
+            )
+        );
+
+    }
+);
 /*
 |--------------------------------------------------------------------------
 | SOFTWARE BILLING PAGE

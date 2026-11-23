@@ -123,10 +123,22 @@ function verifyCsrf(req) {
         req.headers["x-csrf-token"] ||
         "";
 
-    return safeTimingEqual(
-        sessionToken,
-        requestToken
-    );
+const isValid = safeTimingEqual(
+    sessionToken,
+    requestToken
+);
+
+console.log("[CSRF DEBUG]", {
+    sessionId: req.sessionID,
+    hasSession: !!req.session,
+    hasSessionToken: !!sessionToken,
+    sessionTokenLength: sessionToken.length,
+    hasRequestToken: !!requestToken,
+    requestTokenLength: requestToken.length,
+    isValid
+});
+
+return isValid;
 
 }
 
@@ -1218,36 +1230,41 @@ router.post("/login", async (req, res) => {
 |--------------------------------------------------------------------------
 */
 
+
 router.get("/csrf", (req, res) => {
-
     try {
+        const token = ensureCsrfToken(req);
 
-        const token =
-            ensureCsrfToken(req);
+        req.session.save((error) => {
+            if (error) {
+                console.error("CSRF session save error:", error);
 
+                return res.status(500).json({
+                    success: false,
+                    message: "Unable to save security token."
+                });
+            }
 
-        return res.json({
-            success: true,
-            csrf_token: token
+            console.log("[CSRF SAVE DEBUG]", {
+                sessionId: req.sessionID,
+                tokenSaved: !!req.session.csrf_token
+            });
+
+            return res.json({
+                success: true,
+                csrf_token: token
+            });
         });
-
     } catch (error) {
-
-        console.error(
-            "CSRF error:",
-            error
-        );
-
+        console.error("CSRF token error:", error);
 
         return res.status(500).json({
             success: false,
-            message:
-                "Unable to generate security token."
+            message: "Unable to generate security token."
         });
-
     }
-
 });
+
 
 
 /*
@@ -1524,5 +1541,382 @@ router.get("/remembered", (req, res) => {
     });
 });
 
+/*
+|--------------------------------------------------------------------------
+| FORGOT PASSWORD - GMAIL OTP
+|--------------------------------------------------------------------------
+*/
 
+const nodemailer = require("nodemailer");
+
+const OTP_EXPIRY_MINUTES = 5;
+const PASSWORD_RESET_SESSION_MINUTES = 10;
+
+function hashResetOtp(userId, otp) {
+    const secret = process.env.SESSION_SECRET;
+
+    if (!secret) {
+        throw new Error("SESSION_SECRET is not configured.");
+    }
+
+    return crypto
+        .createHmac("sha256", secret)
+        .update(`${userId}:${otp}`)
+        .digest("hex");
+}
+
+function safeHashEqual(a, b) {
+    const aa = Buffer.from(String(a || ""), "hex");
+    const bb = Buffer.from(String(b || ""), "hex");
+
+    if (aa.length !== bb.length || aa.length === 0) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(aa, bb);
+}
+
+function createMailTransport() {
+    if (
+        !process.env.SMTP_HOST ||
+        !process.env.SMTP_USER ||
+        !process.env.SMTP_PASS
+    ) {
+        throw new Error("Gmail SMTP configuration is missing.");
+    }
+
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SEND OTP
+|--------------------------------------------------------------------------
+*/
+
+router.post("/forgot-password/send-otp", async (req, res) => {
+    try {
+        if (!verifyCsrf(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid security token. Please refresh the page."
+            });
+        }
+
+        const email = String(req.body.email || "")
+            .trim()
+            .toLowerCase();
+
+        if (
+            !email ||
+            email.length > 254 ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address."
+            });
+        }
+
+        // Session-based resend protection
+        const lastRequest = Number(
+            req.session.forgot_otp_last_request || 0
+        );
+
+        if (Date.now() - lastRequest < 60 * 1000) {
+            return res.status(429).json({
+                success: false,
+                message: "Please wait 60 seconds before requesting another OTP."
+            });
+        }
+
+        const [users] = await db.execute(
+            `
+            SELECT id, email, status
+            FROM users
+            WHERE LOWER(email) = ?
+            LIMIT 2
+            `,
+            [email]
+        );
+
+        // Do not reveal whether an email is registered.
+        const genericResponse = {
+            success: true,
+            message: "If this email is registered, an OTP will be sent."
+        };
+
+        if (
+            users.length !== 1 ||
+            users[0].status !== "active"
+        ) {
+            req.session.forgot_otp_last_request = Date.now();
+
+            return res.json(genericResponse);
+        }
+
+        const user = users[0];
+
+        const otp = crypto
+            .randomInt(100000, 1000000)
+            .toString();
+
+        const otpHash = hashResetOtp(user.id, otp);
+
+        const expiresAt = new Date(
+            Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000
+        );
+
+        await db.execute(
+            `
+            UPDATE users
+            SET
+                reset_token_hash = ?,
+                reset_token_expires = ?
+            WHERE id = ?
+            `,
+            [otpHash, expiresAt, user.id]
+        );
+
+        try {
+            const transporter = createMailTransport();
+
+            await transporter.sendMail({
+                from: process.env.MAIL_FROM || process.env.SMTP_USER,
+                to: user.email,
+                subject: "AmaderBill Password Reset OTP",
+                text:
+                    `Your AmaderBill password reset OTP is ${otp}.\n\n` +
+                    `This OTP expires in ${OTP_EXPIRY_MINUTES} minutes.\n` +
+                    `If you did not request this, please ignore this email.`,
+                html: `
+                    <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:25px;">
+                        <h2>AmaderBill Password Reset</h2>
+                        <p>Your verification OTP is:</p>
+                        <h1 style="letter-spacing:8px;color:#2563eb;">${otp}</h1>
+                        <p>This OTP expires in 5 minutes.</p>
+                        <p>If you did not request this, ignore this email.</p>
+                    </div>
+                `
+            });
+
+        } catch (mailError) {
+            await db.execute(
+                `
+                UPDATE users
+                SET reset_token_hash = NULL,
+                    reset_token_expires = NULL
+                WHERE id = ?
+                `,
+                [user.id]
+            );
+
+            throw mailError;
+        }
+
+        req.session.forgot_otp_last_request = Date.now();
+        req.session.password_reset_user_id = null;
+        req.session.password_reset_verified_until = null;
+
+        return res.json(genericResponse);
+
+    } catch (error) {
+        console.error("Forgot password OTP error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to send OTP. Please try again later."
+        });
+    }
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| VERIFY OTP
+|--------------------------------------------------------------------------
+*/
+
+router.post("/forgot-password/verify-otp", async (req, res) => {
+    try {
+        if (!verifyCsrf(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid security token."
+            });
+        }
+
+        const email = String(req.body.email || "")
+            .trim()
+            .toLowerCase();
+
+        const otp = String(req.body.otp || "").trim();
+
+        if (!email || !/^\d{6}$/.test(otp)) {
+            return res.status(400).json({
+                success: false,
+                message: "Enter your registered email and 6-digit OTP."
+            });
+        }
+
+        const [users] = await db.execute(
+            `
+            SELECT id, reset_token_hash, reset_token_expires
+            FROM users
+            WHERE LOWER(email) = ?
+            LIMIT 2
+            `,
+            [email]
+        );
+
+        if (users.length !== 1) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP."
+            });
+        }
+
+        const user = users[0];
+
+        if (
+            !user.reset_token_hash ||
+            !user.reset_token_expires ||
+            new Date(user.reset_token_expires).getTime() <= Date.now()
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP."
+            });
+        }
+
+        const submittedHash = hashResetOtp(user.id, otp);
+
+        if (!safeHashEqual(submittedHash, user.reset_token_hash)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid or expired OTP."
+            });
+        }
+
+        req.session.password_reset_user_id = user.id;
+        req.session.password_reset_verified_until =
+            Date.now() + PASSWORD_RESET_SESSION_MINUTES * 60 * 1000;
+
+        return res.json({
+            success: true,
+            message: "OTP verified successfully."
+        });
+
+    } catch (error) {
+        console.error("OTP verification error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to verify OTP."
+        });
+    }
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| RESET PASSWORD
+|--------------------------------------------------------------------------
+*/
+
+router.post("/forgot-password/reset", async (req, res) => {
+    try {
+        if (!verifyCsrf(req)) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid security token."
+            });
+        }
+
+        const userId = Number(
+            req.session.password_reset_user_id || 0
+        );
+
+        const verifiedUntil = Number(
+            req.session.password_reset_verified_until || 0
+        );
+
+        if (
+            !userId ||
+            !verifiedUntil ||
+            Date.now() > verifiedUntil
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: "OTP verification expired. Please verify again."
+            });
+        }
+
+        const password = String(req.body.password || "");
+        const confirmPassword = String(req.body.confirm_password || "");
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 8 characters."
+            });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Passwords do not match."
+            });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 12);
+
+        const [result] = await db.execute(
+            `
+            UPDATE users
+            SET
+                password = ?,
+                reset_token_hash = NULL,
+                reset_token_expires = NULL
+            WHERE id = ?
+              AND reset_token_hash IS NOT NULL
+              AND reset_token_expires > NOW()
+            `,
+            [passwordHash, userId]
+        );
+
+        if (result.affectedRows !== 1) {
+            return res.status(400).json({
+                success: false,
+                message: "Password reset expired. Please request a new OTP."
+            });
+        }
+
+        req.session.password_reset_user_id = null;
+        req.session.password_reset_verified_until = null;
+        req.session.forgot_otp_last_request = null;
+
+        return res.json({
+            success: true,
+            message: "Password reset successful. Please login."
+        });
+
+    } catch (error) {
+        console.error("Password reset error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to reset password."
+        });
+    }
+});
 module.exports = router;
