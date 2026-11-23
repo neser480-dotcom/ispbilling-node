@@ -444,7 +444,8 @@ async function rechargeCustomer({
      */
     dryRun = false,
     expectedAmount = null,
-    beforeCommit = null
+    beforeCommit = null,
+    isBulkRecharge = false
 }) {
     customerDbId = Number(customerDbId);
 
@@ -897,11 +898,22 @@ async function rechargeCustomer({
                 selectedDay
             );
         }
-        const next = opts.billingType === "Daily"
-            ? addDays(base, opts.selectedDays)
+        const next = isBulkRecharge
+            ? (
+                opts.billingType === "Daily"
+                    ? addDays(base, opts.selectedDays)
+                    : (
+                        selectedRunningMonthDate ||
+                        addMonthsClamped(base, 1)
+                    )
+            )
             : (
-                selectedRunningMonthDate ||
-                addMonthsClamped(base, 1)
+                opts.billingType === "Daily"
+                    ? addDays(todayDate, opts.selectedDays)
+                    : addMonthsClamped(
+                        selectedRunningMonthDate || base,
+                        selectedRunningMonthDate ? 1 : opts.rechargeMonth
+                    )
             );
 
         /* keep the time of day of the billing cycle (e.g. 12:19 PM) */
@@ -1192,7 +1204,8 @@ async function bulkRecharge({ user, ids, input }) {
                     user,
                     customerDbId: id,
                     input,
-                    session
+                    session,
+                    isBulkRecharge: true
                 });
 
                 results.push({
