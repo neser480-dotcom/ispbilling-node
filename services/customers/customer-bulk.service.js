@@ -2032,7 +2032,7 @@ actions.reseller = {
                 ) +
 
                 field(
-                    "Sub Area",
+                    "Select Sub-Area",
                     `
                     <select
                         name="sub_area_id"

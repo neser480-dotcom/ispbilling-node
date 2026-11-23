@@ -512,3 +512,25 @@ body.cbh-modal-open {
         padding: 10px 12px;
     }
 }
+/* =========================================================
+   Reference-style popup (NetFee "ID: n Name: x Report")
+========================================================= */
+#customerBillHistoryModal { align-items: flex-start; padding: 30px 12px; overflow-y: auto; background: rgba(0, 0, 0, 0.5); backdrop-filter: none; -webkit-backdrop-filter: none; }
+#customerBillHistoryModal .cbh-dialog { max-width: 1140px; max-height: none; margin: 0 auto; border-radius: 8px; border: 0; overflow: visible; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+#customerBillHistoryModal .cbh-header { background: #fff; color: #212529; padding: 20px 24px; border-bottom: 1px solid #dee2e6; border-radius: 8px 8px 0 0; }
+#customerBillHistoryModal .cbh-header h2 { color: #212529; font-size: 24px; font-weight: 500; }
+#customerBillHistoryModal #cbhCustomerInfo,
+#customerBillHistoryModal .cbh-summary,
+#customerBillHistoryModal .cbh-footer { display: none; }
+#customerBillHistoryModal .cbh-close { background: transparent; color: #6c757d; border: 0; font-size: 30px; }
+#customerBillHistoryModal .cbh-body { padding: 8px 16px 16px; max-height: none; overflow: visible; }
+#customerBillHistoryModal .cbh-ref { width: 100%; border-collapse: separate; border-spacing: 0 0; font-size: 14px; }
+#customerBillHistoryModal .cbh-ref thead th { background: #fff; font-size: 11px; font-weight: 700; color: #212529; padding: 12px 8px; border-bottom: 0; text-transform: none; white-space: nowrap; }
+#customerBillHistoryModal .cbh-ref tbody td { vertical-align: top; padding: 10px 8px; border-bottom: 1px solid #e5e5e5; color: #212529; line-height: 1.7; }
+#customerBillHistoryModal .cbh-ref tbody tr:nth-child(odd) td { background: #f1f1f1; }
+#customerBillHistoryModal .cbh-ref tbody tr:hover td { background: #ececec; }
+#customerBillHistoryModal .cbh-ref td b { color: #6c757d; font-weight: 700; margin-left: 1px; }
+#customerBillHistoryModal .cbh-actions { white-space: nowrap; }
+#customerBillHistoryModal .cbh-act { display: block; background: transparent; border: 0; padding: 0; color: #212529; font-size: 14px; line-height: 1.7; cursor: pointer; text-align: left; }
+#customerBillHistoryModal .cbh-act:hover { text-decoration: underline; }
+#customerBillHistoryModal .cbh-delete { background: transparent; border: 0; color: #212529; padding: 0; }

@@ -15,6 +15,8 @@
 
     let activeCustomerId = 0;
     let modal = null;
+    let lastRows = [];
+    let lastCustomer = {};
     let historyRequestId = 0;
 
     const $ = (selector, root = document) =>
@@ -144,6 +146,40 @@
     |--------------------------------------------------------------------------
     */
 
+    function printReceipt(paymentId, copies) {
+        const row = lastRows.find((r) => String(r.id) === String(paymentId));
+
+        if (!row) return;
+
+        const c = lastCustomer || {};
+        const one = (label) => `
+            <div class="r">
+                <h3>Payment Receipt${label ? " - " + label : ""}</h3>
+                <table>
+                    <tr><td>Receipt</td><td>#${escapeHtml(row.id)}</td></tr>
+                    <tr><td>Customer</td><td>${escapeHtml(c.name || "")} (${escapeHtml(c.customer_id || c.id || "")})</td></tr>
+                    <tr><td>PPPoE</td><td>${escapeHtml(c.pppoe_username || "")}</td></tr>
+                    <tr><td>Package</td><td>${escapeHtml(row.package_name || "")}</td></tr>
+                    <tr><td>Amount</td><td>${escapeHtml(row.amount)}</td></tr>
+                    <tr><td>Discount</td><td>${escapeHtml(row.discount ?? 0)}</td></tr>
+                    <tr><td>Medium</td><td>${escapeHtml(row.payment_method || "")}</td></tr>
+                    <tr><td>Collected By</td><td>${escapeHtml(row.collected_by || "")}</td></tr>
+                    <tr><td>Date</td><td>${formatDate(row.created_at || row.payment_date)}</td></tr>
+                </table>
+            </div>`;
+        const win = window.open("", "_blank", "width=480,height=700");
+
+        if (!win) return;
+
+        win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receipt</title>
+            <style>body{font-family:Arial,sans-serif;padding:16px}.r{border:1px dashed #555;padding:12px;margin-bottom:18px}
+            h3{margin:0 0 8px;font-size:16px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:3px 4px;border-bottom:1px solid #eee}
+            td:first-child{color:#555;width:38%}</style></head><body>
+            ${copies > 1 ? one("Office Copy") + one("Customer Copy") : one("")}
+            <script>window.onload=function(){window.print();}<\/script></body></html>`);
+        win.document.close();
+    }
+
     function ensureModal() {
         const existing = $("#customerBillHistoryModal");
 
@@ -251,6 +287,13 @@
                 return;
             }
 
+            const printBtn = target.closest(".cbh-print");
+
+            if (printBtn && modal.contains(printBtn)) {
+                printReceipt(printBtn.dataset.paymentId, Number(printBtn.dataset.copies) || 1);
+                return;
+            }
+
             const button = target.closest(".cbh-delete");
 
             if (!button || !modal.contains(button)) {
@@ -307,6 +350,8 @@
 
         $("#cbhCustomerInfo", modal).textContent =
             "Customer ID: " + id;
+
+        $("#cbhTitle", modal).textContent = "ID: " + id + " Report";
 
         $("#cbhCount", modal).textContent = "…";
         $("#cbhTotal", modal).textContent = "…";
@@ -402,6 +447,13 @@
                 (customerName ? customerName + " · " : "") +
                 "Customer ID: " + customerId;
 
+            $("#cbhTitle", modal).textContent =
+                "ID: " + (result.customer?.customer_id || customerId) +
+                " Name: " + (customerName || "") + " Report";
+
+            lastRows = rows;
+            lastCustomer = result.customer || {};
+
             $("#cbhCount", modal).textContent = String(rows.length);
 
             const total = rows.reduce((sum, row) => {
@@ -425,111 +477,56 @@
 
             body.innerHTML = `
                 <div class="cbh-table-wrap">
-                    <table class="cbh-table">
+                    <table class="cbh-table cbh-ref">
                         <thead>
                             <tr>
-                                <th>Payment</th>
-                                <th>Bill / Package</th>
-                                <th>Discount</th>
-                                <th>Previous Balance</th>
-                                <th>Current Balance</th>
-                                <th>Medium / Type</th>
-                                <th>Collected By</th>
-                                <th>Payment Date</th>
-                                <th>Bill Date</th>
-                                <th>Promise Date</th>
+                                <th>Package</th>
+                                <th>Collected</th>
+                                <th>Amount</th>
+                                <th>Previous State</th>
+                                <th>Current State</th>
                                 <th>Note</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             ${rows.map((row) => `
                                 <tr>
                                     <td>
-                                        <strong>
-                                            #${escapeHtml(row.id)}
-                                        </strong>
-
-                                        <div class="cbh-muted">
-                                            ${formatDate(
-                                                row.created_at ||
-                                                row.payment_date
-                                            )}
-                                        </div>
+                                        <div>Bandwith<b>${escapeHtml(row.package_name || "—")}</b></div>
+                                        <div>Amount<b>${escapeHtml(row.amount)}</b></div>
+                                        <div>Type<b>${escapeHtml(row.bill_type || "bill")}</b></div>
+                                        <div>Medium<b>${escapeHtml(row.payment_method || "—")}</b></div>
                                     </td>
-
                                     <td>
-                                        <strong>
-                                            ${money(row.amount)}
-                                        </strong>
-
-                                        <div class="cbh-muted">
-                                            ${escapeHtml(
-                                                row.package_name || "—"
-                                            )}
-                                        </div>
+                                        <div>Collected<b>${escapeHtml(row.collected_by || "—")}</b></div>
+                                        <div>Created At<b>${formatDate(row.created_at || row.payment_date)}</b></div>
                                     </td>
-
-                                    <td>${money(row.discount)}</td>
-
                                     <td>
-                                        ${money(row.balance_before)}
+                                        <div>Discount<b>${escapeHtml(row.discount ?? 0)}</b></div>
+                                        <div>Due<b>${escapeHtml(row.due ?? row.due_amount ?? 0)}</b></div>
+                                        <div>Previous Balance<b>${escapeHtml(row.balance_before ?? 0)}</b></div>
+                                        <div>Current Balance<b>${escapeHtml(row.balance_after ?? 0)}</b></div>
                                     </td>
-
                                     <td>
-                                        ${money(row.balance_after)}
+                                        <div>Bill Date<b>${escapeHtml(row.prev_bill_date || "—")}</b></div>
+                                        <div>Promise Date<b>${escapeHtml(row.promise_date || "—")}</b></div>
                                     </td>
-
                                     <td>
-                                        ${escapeHtml(
-                                            row.payment_method || "—"
-                                        )}
-
-                                        <div class="cbh-muted">
-                                            ${escapeHtml(
-                                                row.bill_type || "bill"
-                                            )}
-                                        </div>
+                                        <div>Bill Date<b>${escapeHtml(row.bill_date || "—")}</b></div>
                                     </td>
-
-                                    <td>
-                                        ${escapeHtml(
-                                            row.collected_by || "—"
-                                        )}
-                                    </td>
-
-                                    <td>
-                                        ${formatDate(row.payment_date)}
-                                    </td>
-
-                                    <td>
-                                        ${escapeHtml(row.bill_date || "—")}
-                                    </td>
-
-                                    <td>
-                                        ${escapeHtml(
-                                            row.promise_date || "—"
-                                        )}
-                                    </td>
-
                                     <td class="cbh-note">
-                                        ${escapeHtml(
-                                            row.comments ||
-                                            row.note ||
-                                            "—"
-                                        )}
+                                        ${escapeHtml(row.comments || row.note || "")}
                                     </td>
-
-                                    <td>
-                                        <button
-                                            type="button"
-                                            class="cbh-delete"
-                                            data-payment-id="${escapeHtml(
-                                                row.id
-                                            )}"
-                                        >
-                                            Delete
+                                    <td class="cbh-actions">
+                                        <button type="button" class="cbh-act cbh-print" data-payment-id="${escapeHtml(row.id)}" data-copies="2">
+                                            <i class="fa-solid fa-print" style="color:#198754"></i> Office&amp;Customer
+                                        </button>
+                                        <button type="button" class="cbh-act cbh-print" data-payment-id="${escapeHtml(row.id)}" data-copies="1">
+                                            <i class="fa-solid fa-print" style="color:#0d6efd"></i> Customers
+                                        </button>
+                                        <button type="button" class="cbh-act cbh-delete" data-payment-id="${escapeHtml(row.id)}">
+                                            <i class="fa-solid fa-trash" style="color:#dc3545"></i> Delete
                                         </button>
                                     </td>
                                 </tr>

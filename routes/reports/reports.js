@@ -566,6 +566,7 @@ router.get(
                     ? `${String(row.billing_year)}-${String(row.billing_month).padStart(2, "0")}`
                     : "—",
 
+                prev_bill_date: row.billing_cycle_before || "",
                 promise_date: row.promise_date_before || "—",
 
                 comments: row.comments || "",

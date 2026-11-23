@@ -32,7 +32,8 @@ const ACTION_PERMISSIONS = Object.freeze({
     promise_date: "bulk_promise_date_edit",
     payment_status: "bulk_payment_status_edit",
 
-    reseller: "bulk_transfer_to_reseller"
+    reseller: "bulk_transfer_to_reseller",
+    message: "sms_board"
 });
 
 /*

@@ -105,6 +105,23 @@
 
             if (dialog) {
                 dialog.classList.toggle("modal-xl", !!(root && root.dataset.wide));
+
+                /* exact popup width like the reference screens */
+                let width = root && root.dataset.width;
+
+                if (!width && /\/api\/customers\/bulk\/(message|reseller)\b/.test(url)) {
+                    width = "500";
+                }
+
+                parts.element.classList.toggle("nf-ex", !!width);
+
+                if (width) {
+                    dialog.style.setProperty("max-width", width + "px", "important");
+                    dialog.style.setProperty("width", "calc(100% - 24px)", "important");
+                } else {
+                    dialog.style.removeProperty("max-width");
+                    dialog.style.removeProperty("width");
+                }
             }
 
         } catch (error) {
@@ -134,12 +151,17 @@
 
     document.addEventListener("click", function (event) {
 
-        const note = event.target.closest(".customer-note-btn");
-        const activity = event.target.closest(".customer-activity-log-btn");
-        const transfer = event.target.closest(".customer-transfer-btn");
-        const reset = event.target.closest(".customer-reset-password-btn");
+        const t = event.target;
+        const note = t.closest(".customer-note-btn");
+        const activity = t.closest(".customer-activity-log-btn");
+        const transfer = t.closest(".customer-transfer-btn") || t.closest(".customer-reseller-btn");
+        const reset = t.closest(".customer-reset-password-btn");
+        const message = t.closest(".customer-message-btn");
+        const ticket = t.closest(".customer-ticket-btn");
+        const usage = t.closest(".customer-usage-btn");
+        const invoice = t.closest(".customer-invoice-btn");
 
-        const link = note || activity || transfer || reset;
+        const link = note || activity || transfer || reset || message || ticket || usage || invoice;
 
         if (!link) return;
 
@@ -149,17 +171,95 @@
 
         if (!id) return;
 
+        const q = encodeURIComponent(id);
+        const dl = link.closest("ul") && link.closest("ul").querySelector(".delete-customer-btn");
+        const cname = (dl && dl.dataset.name) || "";
+
         if (note) {
-            load("/api/customers/note?id=" + encodeURIComponent(id), "Note", true);
+            load("/api/customers/note?id=" + q, "Note", true);
         } else if (activity) {
-            load("/api/customers/activity?id=" + encodeURIComponent(id), "Activity Log", true);
+            load("/api/customers/activity?id=" + q, "Activity Log", true);
         } else if (reset) {
-            load("/api/customers/reset-password?id=" + encodeURIComponent(id),
-                "Reset Password", true);
+            load("/api/customers/reset-password?id=" + q, "Reset Password", true);
+        } else if (message) {
+            load("/api/customers/bulk/message?ids=" + q, (cname ? cname + " to send message" : "Send Message"), true);
+        } else if (ticket) {
+            load("/api/customers/ticket?id=" + q, "Create Support Ticket", true);
+        } else if (usage) {
+            load("/api/customers/data-usage?id=" + q, "Data Usage Report", true);
+        } else if (invoice) {
+            /* Create invoice = the existing single recharge popup of the same row */
+            const row = link.closest("tr") || document;
+            const btn = row.querySelector(".recharge-single-btn") ||
+                document.querySelector('.recharge-single-btn[data-id="' + id + '"]');
+            if (btn) btn.click();
         } else {
-            load("/api/customers/bulk/reseller?ids=" + encodeURIComponent(id),
-                "Transfer to Reseller", true);
+            load("/api/customers/bulk/reseller?ids=" + q, "Transfer to Reseller", true);
         }
+    });
+
+    /* ---------- ticket submit ---------- */
+
+    document.addEventListener("submit", async function (event) {
+
+        const form = event.target.closest("#customerActionModalBody form.nf-tk-form");
+
+        if (!form) return;
+
+        event.preventDefault();
+
+        const wrap = form.closest(".nf-tk-wrap");
+        const button = form.querySelector('[type="submit"]');
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch("/api/customers/ticket", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-CSRF-Token": csrfToken()
+                },
+                body: JSON.stringify({
+                    customer_id: wrap.dataset.customerId,
+                    message: form.elements.message.value,
+                    staff_id: form.elements.staff_id.value,
+                    ticket_type: form.elements.ticket_type.value,
+                    category: form.elements.category.value,
+                    csrf_token: csrfToken()
+                })
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok || result.success === false) {
+                throw new Error(result.message || "Failed to create ticket.");
+            }
+
+            const parts = modalParts();
+            if (parts) parts.modal.hide();
+            notify(result.message || "Support ticket created.", "success");
+
+        } catch (error) {
+            button.disabled = false;
+            notify(error.message || "Failed to create ticket.", "error");
+        }
+    });
+
+    /* ---------- data usage range ---------- */
+
+    document.addEventListener("change", function (event) {
+
+        const sel = event.target.closest(".nf-use-days");
+
+        if (!sel) return;
+
+        const root = sel.closest(".nf-use");
+
+        load("/api/customers/data-usage?id=" + encodeURIComponent(root.dataset.customerId) +
+            "&month=" + encodeURIComponent(sel.value), "", false);
     });
 
     /* ---------- note submit ---------- */
@@ -764,10 +864,15 @@
         if (!event.target || event.target.id !== MODAL_ID) return;
 
         event.target.classList.remove("nf-ex-nohead");
+        event.target.classList.remove("nf-ex");
 
         const dialog = event.target.querySelector(".modal-dialog");
 
-        if (dialog) dialog.classList.remove("modal-xl");
+        if (dialog) {
+            dialog.classList.remove("modal-xl");
+            dialog.style.removeProperty("max-width");
+            dialog.style.removeProperty("width");
+        }
     });
 
 })();
