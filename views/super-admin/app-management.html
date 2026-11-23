@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App &amp; Promotion Management - Super Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <style>
+        .am-page { padding: 20px; margin-top: 80px; }
+        .am-head h3 { margin: 0; font-weight: 700; }
+        .am-head p { margin: 4px 0 16px; color: #6c757d; }
+        .am-card { border: 0; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+        .am-table { min-width: 860px; margin: 0; }
+        .am-table th { white-space: nowrap; font-size: 13px; background: #f8f9fa; }
+        .am-table td { vertical-align: middle; }
+        .sha { font-family: monospace; font-size: 11px; color: #6c757d; word-break: break-all; max-width: 220px; }
+        .pb { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .pb-on { background: #d3f9d8; color: #2b8a3e; }
+        .pb-off { background: #e9ecef; color: #495057; }
+        .pb-sched { background: #fff3bf; color: #e67700; }
+        .pb-exp { background: #f8d7da; color: #c92a2a; }
+        .thumb { width: 90px; height: 50px; object-fit: cover; border-radius: 6px; background: #eef1f5; }
+        .prev-box { border: 1px solid #dee2e6; border-radius: 12px; overflow: hidden; }
+        .prev-box img { width: 100%; display: block; }
+        .prev-box .p { padding: 14px; }
+        @media (max-width: 768px) { .am-page { padding: 12px; } }
+    </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
+
+<div class="main-content">
+<main class="am-page">
+    <div class="am-head">
+        <h3><i class="fa fa-mobile-screen-button"></i> App &amp; Promotion Management</h3>
+        <p>Upload Admin / Customer APKs, publish versions and manage the promotions shown on the public download website.</p>
+    </div>
+
+    <div id="pageAlert" class="alert" style="display:none"></div>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabApps" type="button"><i class="fa fa-android"></i> App Management</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPromos" type="button"><i class="fa fa-bullhorn"></i> Promotion Management</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- APPS -->
+        <div class="tab-pane fade show active" id="tabApps">
+            <div class="card am-card mb-3">
+                <div class="card-body">
+                    <h6 class="mb-3">Upload new APK</h6>
+                    <form id="apkForm" autocomplete="off">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label" for="aType">App</label>
+                                <select id="aType" class="form-select">
+                                    <option value="admin">Admin App</option>
+                                    <option value="customer">Customer App</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="aName">Version number</label>
+                                <input id="aName" class="form-control" placeholder="1.0.0" maxlength="30" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="aCode">Version code</label>
+                                <input id="aCode" type="number" min="1" step="1" class="form-control" placeholder="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="aFile">APK file</label>
+                                <input id="aFile" type="file" class="form-control" accept=".apk,application/vnd.android.package-archive" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="aNotes">Release notes</label>
+                                <textarea id="aNotes" class="form-control" rows="3" maxlength="5000"></textarea>
+                            </div>
+                            <div class="col-12 d-flex flex-wrap gap-3 align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="aPublish" checked>
+                                    <label class="form-check-label" for="aPublish">Publish immediately</label>
+                                </div>
+                                <button class="btn btn-primary" id="apkBtn" type="submit"><i class="fa fa-upload"></i> Upload</button>
+                                <div class="progress flex-grow-1" style="height:10px;display:none" id="apkProg"><div class="progress-bar" id="apkBar" style="width:0"></div></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card am-card">
+                <div class="card-header bg-white fw-semibold">Version history</div>
+                <div class="table-responsive">
+                    <table class="table table-hover am-table">
+                        <thead><tr><th>App</th><th>Version</th><th>Code</th><th>Size</th><th>SHA-256</th><th>Published</th><th>Notes</th><th>Action</th></tr></thead>
+                        <tbody id="relBody"><tr><td colspan="8" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROMOS -->
+        <div class="tab-pane fade" id="tabPromos">
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-primary" id="newPromoBtn"><i class="fa fa-plus"></i> New Promotion</button>
+            </div>
+            <div class="card am-card">
+                <div class="table-responsive">
+                    <table class="table table-hover am-table">
+                        <thead><tr><th>Banner</th><th>Title</th><th>Start</th><th>End</th><th>Order</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody id="promoBody"><tr><td colspan="7" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</div>
+
+<!-- Promotion modal -->
+<div class="modal fade" id="promoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" id="promoForm" autocomplete="off">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promoTitleH">New Promotion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="formAlert" class="alert alert-danger" style="display:none"></div>
+                <input type="hidden" id="pId">
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label" for="pTitle">Title</label>
+                        <input id="pTitle" class="form-control" maxlength="190" required></div>
+                    <div class="col-12"><label class="form-label" for="pMsg">Message</label>
+                        <textarea id="pMsg" class="form-control" rows="3" maxlength="3000"></textarea></div>
+                    <div class="col-md-6"><label class="form-label" for="pBtnT">Button text</label>
+                        <input id="pBtnT" class="form-control" maxlength="60"></div>
+                    <div class="col-md-6"><label class="form-label" for="pBtnL">Button link (https://…)</label>
+                        <input id="pBtnL" class="form-control" maxlength="500"></div>
+                    <div class="col-md-6"><label class="form-label" for="pStart">Start date</label>
+                        <input id="pStart" type="datetime-local" class="form-control"></div>
+                    <div class="col-md-6"><label class="form-label" for="pEnd">End date</label>
+                        <input id="pEnd" type="datetime-local" class="form-control"></div>
+                    <div class="col-md-4"><label class="form-label" for="pOrder">Sort order</label>
+                        <input id="pOrder" type="number" class="form-control" value="0"></div>
+                    <div class="col-md-4"><label class="form-label" for="pActive">Status</label>
+                        <select id="pActive" class="form-select"><option value="1">Active</option><option value="0">Inactive</option></select></div>
+                    <div class="col-md-4"><label class="form-label" for="pBanner">Banner (PNG/JPG/WebP)</label>
+                        <input id="pBanner" type="file" class="form-control" accept="image/png,image/jpeg,image/webp"></div>
+                    <div class="col-12" id="rmWrap" style="display:none">
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="pRemove">
+                            <label class="form-check-label" for="pRemove">Remove current banner</label></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">Preview</div>
+                        <div class="prev-box"><img id="pvImg" alt="" style="display:none">
+                            <div class="p"><h6 id="pvTitle" class="mb-1"></h6><div id="pvMsg" class="text-muted small" style="white-space:pre-line"></div>
+                            <span id="pvBtn" class="btn btn-sm btn-primary mt-2" style="display:none"></span></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="promoSave">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    "use strict";
+    const API = "/api/app-download";
+    const $ = id => document.getElementById(id);
+    const modal = new bootstrap.Modal($("promoModal"));
+    let csrf = "", promos = [], currentBanner = "";
+
+    const esc = v => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+    function flash(msg, ok) {
+        const a = $("pageAlert");
+        a.className = "alert " + (ok ? "alert-success" : "alert-danger");
+        a.textContent = msg; a.style.display = "block";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        clearTimeout(flash.t); flash.t = setTimeout(() => a.style.display = "none", 6000);
+    }
+
+    async function token() {
+        if (!csrf) {
+            const r = await fetch("/api/csrf-token", { credentials: "same-origin" });
+            const d = await r.json().catch(() => ({}));
+            csrf = d.csrf_token || "";
+        }
+        return csrf;
+    }
+
+    async function api(method, url, body) {
+        const h = { Accept: "application/json" };
+        let payload;
+        if (body instanceof FormData) payload = body;
+        else if (body) { h["Content-Type"] = "application/json"; payload = JSON.stringify(body); }
+        if (method !== "GET") h["X-CSRF-Token"] = await token();
+        const r = await fetch(url, { method, headers: h, credentials: "same-origin", body: payload });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.success === false) throw new Error(d.message || "HTTP " + r.status);
+        return d;
+    }
+
+    const fmt = v => v ? new Date(v).toLocaleString() : "—";
+    const toLocal = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return "";
+        const p = n => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+    /* ---------- releases ---------- */
+    async function loadReleases() {
+        try {
+            const d = await api("GET", API + "/admin/releases");
+            const rows = d.releases || [];
+            $("relBody").innerHTML = rows.length ? rows.map(r => `
+                <tr>
+                    <td>${esc(r.app_name)}</td>
+                    <td><b>${esc(r.version_name)}</b></td>
+                    <td>${esc(r.version_code)}</td>
+                    <td>${esc(r.file_size_label)}</td>
+                    <td class="sha">${esc(r.sha256)}</td>
+                    <td><span class="pb ${r.is_published ? "pb-on" : "pb-off"}">${r.is_published ? "Published" : "Unpublished"}</span>
+                        <div class="small text-muted">${r.is_published ? esc(fmt(r.published_at)) : ""}</div></td>
+                    <td style="max-width:220px;white-space:pre-line">${esc(r.release_notes)}</td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm ${r.is_published ? "btn-outline-warning" : "btn-outline-success"}" data-pub="${r.id}" data-on="${r.is_published ? 0 : 1}">
+                            ${r.is_published ? "Unpublish" : "Publish"}</button>
+                        <a class="btn btn-sm btn-outline-secondary" href="${API}/download/release/${r.id}"><i class="fa fa-download"></i></a>
+                    </td>
+                </tr>`).join("") : `<tr><td colspan="8" class="text-center text-muted py-4">No APK uploaded yet.</td></tr>`;
+        } catch (e) { flash(e.message); }
+    }
+
+    $("relBody").addEventListener("click", async ev => {
+        const b = ev.target.closest("[data-pub]"); if (!b) return;
+        b.disabled = true;
+        try {
+            await api("PUT", `${API}/apk/${b.dataset.pub}`, { is_published: b.dataset.on === "1" ? 1 : 0 });
+            flash(b.dataset.on === "1" ? "Published." : "Unpublished.", true);
+        } catch (e) { flash(e.message); }
+        loadReleases();
+    });
+
+    $("apkForm").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const f = $("aFile").files[0];
+        if (!f) return flash("Please choose an APK file.");
+        if (!/\.apk$/i.test(f.name)) return flash("Only .apk files are allowed.");
+        const fd = new FormData();
+        fd.append("app_type", $("aType").value);
+        fd.append("version_name", $("aName").value.trim());
+        fd.append("version_code", $("aCode").value.trim());
+        fd.append("release_notes", $("aNotes").value.trim());
+        fd.append("publish", $("aPublish").checked ? "1" : "0");
+        fd.append("csrf_token", await token());
+        fd.append("apk", f);
+
+        $("apkBtn").disabled = true; $("apkProg").style.display = "flex"; $("apkBar").style.width = "0";
+        const x = new XMLHttpRequest();
+        x.open("POST", API + "/apk");
+        x.setRequestHeader("X-CSRF-Token", csrf);
+        x.setRequestHeader("Accept", "application/json");
+        x.upload.onprogress = e => { if (e.lengthComputable) $("apkBar").style.width = Math.round(e.loaded / e.total * 100) + "%"; };
+        x.onload = () => {
+            let d = {}; try { d = JSON.parse(x.responseText); } catch (_) {}
+            $("apkBtn").disabled = false; $("apkProg").style.display = "none";
+            if (x.status >= 200 && x.status < 300 && d.success !== false) {
+                flash(d.message || "Uploaded.", true);
+                $("apkForm").reset(); $("aPublish").checked = true; loadReleases();
+            } else flash(d.message || "Upload failed (HTTP " + x.status + ").");
+        };
+        x.onerror = () => { $("apkBtn").disabled = false; $("apkProg").style.display = "none"; flash("Network error during upload."); };
+        x.send(fd);
+    });
+
+    /* ---------- promotions ---------- */
+    function state(p) {
+        const now = Date.now();
+        if (!p.is_active) return ["pb-off", "Inactive"];
+        if (p.starts_at && new Date(p.starts_at) > now) return ["pb-sched", "Scheduled"];
+        if (p.ends_at && new Date(p.ends_at) < now) return ["pb-exp", "Expired"];
+        return ["pb-on", "Live"];
+    }
+
+    async function loadPromos() {
+        try {
+            const d = await api("GET", API + "/admin/promotions");
+            promos = d.promotions || [];
+            $("promoBody").innerHTML = promos.length ? promos.map(p => {
+                const [c, t] = state(p);
+                return `<tr>
+                    <td>${p.banner_url ? `<img class="thumb" src="${esc(p.banner_url)}" alt="">` : `<div class="thumb"></div>`}</td>
+                    <td><b>${esc(p.title)}</b><div class="small text-muted text-truncate" style="max-width:300px">${esc(p.message)}</div></td>
+                    <td>${esc(fmt(p.starts_at))}</td><td>${esc(fmt(p.ends_at))}</td>
+                    <td>${esc(p.sort_order)}</td>
+                    <td><span class="pb ${c}">${t}</span></td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm btn-outline-primary" data-edit="${p.id}"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" data-del="${p.id}"><i class="fa fa-trash"></i></button>
+                    </td></tr>`; }).join("")
+                : `<tr><td colspan="7" class="text-center text-muted py-4">No promotions yet.</td></tr>`;
+        } catch (e) { flash(e.message); }
+    }
+
+    function preview() {
+        $("pvTitle").textContent = $("pTitle").value;
+        $("pvMsg").textContent = $("pMsg").value;
+        const t = $("pBtnT").value.trim();
+        $("pvBtn").style.display = t ? "inline-block" : "none"; $("pvBtn").textContent = t;
+        const f = $("pBanner").files[0];
+        const img = $("pvImg");
+        if (f) { img.src = URL.createObjectURL(f); img.style.display = "block"; }
+        else if (currentBanner && !$("pRemove").checked) { img.src = currentBanner; img.style.display = "block"; }
+        else img.style.display = "none";
+    }
+    ["pTitle", "pMsg", "pBtnT", "pBanner", "pRemove"].forEach(i => $(i).addEventListener("input", preview));
+    $("pRemove").addEventListener("change", preview);
+
+    function openForm(p) {
+        $("formAlert").style.display = "none";
+        $("promoForm").reset();
+        currentBanner = p && p.banner_url || "";
+        $("pId").value = p ? p.id : "";
+        $("promoTitleH").textContent = p ? "Edit Promotion" : "New Promotion";
+        if (p) {
+            $("pTitle").value = p.title; $("pMsg").value = p.message; $("pBtnT").value = p.button_text;
+            $("pBtnL").value = p.button_link; $("pStart").value = toLocal(p.starts_at); $("pEnd").value = toLocal(p.ends_at);
+            $("pOrder").value = p.sort_order; $("pActive").value = p.is_active ? "1" : "0";
+        }
+        $("rmWrap").style.display = currentBanner ? "block" : "none";
+        preview(); modal.show();
+    }
+
+    $("newPromoBtn").addEventListener("click", () => openForm(null));
+    $("promoBody").addEventListener("click", async ev => {
+        const e = ev.target.closest("[data-edit]"), d = ev.target.closest("[data-del]");
+        if (e) return openForm(promos.find(p => String(p.id) === e.dataset.edit));
+        if (d && confirm("Delete this promotion?")) {
+            try { await api("DELETE", `${API}/promotions/${d.dataset.del}`); flash("Promotion deleted.", true); }
+            catch (x) { flash(x.message); }
+            loadPromos();
+        }
+    });
+
+    $("promoForm").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const fd = new FormData(), id = $("pId").value;
+        fd.append("title", $("pTitle").value.trim());
+        fd.append("message", $("pMsg").value.trim());
+        fd.append("button_text", $("pBtnT").value.trim());
+        fd.append("button_link", $("pBtnL").value.trim());
+        fd.append("starts_at", $("pStart").value);
+        fd.append("ends_at", $("pEnd").value);
+        fd.append("sort_order", $("pOrder").value || "0");
+        fd.append("is_active", $("pActive").value);
+        if ($("pRemove").checked) fd.append("remove_banner", "1");
+        fd.append("csrf_token", await token());
+        if ($("pBanner").files[0]) fd.append("banner", $("pBanner").files[0]);
+        $("promoSave").disabled = true;
+        try {
+            await api(id ? "PUT" : "POST", id ? `${API}/promotions/${id}` : `${API}/promotions`, fd);
+            modal.hide(); flash("Promotion saved.", true); loadPromos();
+        } catch (e) { const a = $("formAlert"); a.textContent = e.message; a.style.display = "block"; }
+        $("promoSave").disabled = false;
+    });
+
+    loadReleases(); loadPromos();
+});
+</script>
+</body>
+</html>
