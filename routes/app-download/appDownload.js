@@ -374,7 +374,7 @@ const apkUpload = fileUpload({
     tempFileDir: os.tmpdir(),
     createParentPath: false,
     safeFileNames: true,
-    preserveExtension: false,
+    preserveExtension: true,
     parseNested: false,
     abortOnLimit: true,
     limits: { fileSize: APK_MAX_BYTES, files: 1 },
