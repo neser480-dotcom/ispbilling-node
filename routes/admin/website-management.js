@@ -10,6 +10,9 @@ const { requireAuth } = require("../../middleware/auth");
 // Public website-এর জন্য কনটেন্ট পড়া যাবে
 router.get("/content", controller.getContent);
 
+// Public: registration packages for the price list
+router.get("/packages", controller.getPackages);
+
 // নিচের সব Route শুধু Super Admin-এর জন্য
 router.use(requireAuth);
 

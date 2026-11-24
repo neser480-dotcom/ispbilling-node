@@ -137,6 +137,8 @@
     }
 
     .nav-links a:hover { color: var(--primary); }
+    .nav-links a.nav-login { color: var(--primary); font-weight: 700; }
+
 
     .nav-actions {
       display: flex;
@@ -444,6 +446,11 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 22px;
     }
+
+    .pricing-grid.packages { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .pricing-grid.packages .price-card { padding: 24px 22px; text-align: center; }
+    .pricing-grid.packages .price-list { text-align: left; }
+    .app-meta { color: var(--muted); font-size: 13px; font-weight: 600; margin: -8px 0 14px; }
 
     .price-card {
       background: white;

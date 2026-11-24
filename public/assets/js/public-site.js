@@ -1,9 +1,21 @@
 "use strict";
 /* Public website renderer: builds the whole page from CMS JSON. All text is set via textContent (XSS-safe). */
 (function () {
-  var API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-    ? "/api/website-management/content"
-    : "https://app.amaderbill.com/api/website-management/content";
+  var BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "" : "https://app.amaderbill.com";
+  var API = BASE + "/api/website-management/content";
+  var bn = function (n) { return Number(n || 0).toLocaleString("bn-BD"); };
+
+  /* Latest published APKs (Admin / Customer) — one shared request */
+  var appsInfoPromise = null;
+  function appsInfo() {
+    if (!appsInfoPromise) {
+      appsInfoPromise = fetch(BASE + "/api/app-download", { headers: { Accept: "application/json" } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { return (j && j.success && j.apps) || {}; })
+        .catch(function () { return {}; });
+    }
+    return appsInfoPromise;
+  }
 
   var safeUrl = function (u) { u = String(u || "").trim(); return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(u) ? u : "#"; };
   function h(tag, attrs) {
@@ -61,8 +73,8 @@
       }));
     },
     pricing: function (s) {
-      var d = s.data;
-      return wrap(s, "", h("div", {}, grid("pricing-grid", d.items, function (i) {
+      var d = s.data, g = h("div", { "class": "pricing-grid" }), note = d.note && h("p", { "class": "price-note", text: d.note });
+      function card(i) {
         var ul = h("ul", { "class": "price-list" });
         list(i.features).forEach(function (f) {
           var k = String(f).indexOf(": "), li = h("li", {});
@@ -72,7 +84,36 @@
         return h("article", { "class": "price-card" + (i.popular ? " popular" : "") }, i.popular && h("span", { "class": "popular-tag", text: "জনপ্রিয়" }),
           h("h3", { text: i.name }), h("p", { "class": "price-limit", text: i.limit }),
           h("div", { "class": "price" }, i.price + " ", h("small", { text: i.period })), ul, btn(i.button_label, i.button_url, i.popular ? "primary" : "outline"));
-      }), d.note && h("p", { "class": "price-note", text: d.note })));
+      }
+      function manual() { g.replaceChildren(); list(d.items).forEach(function (i) { g.append(card(i)); }); }
+
+      if (d.source === "manual") { manual(); return wrap(s, "", h("div", {}, g, note)); }
+
+      /* default: registration packages (software_packages) — always the live prices */
+      g.classList.add("packages");
+      g.append(h("p", { "class": "price-note", text: "প্যাকেজ লোড হচ্ছে..." }));
+      fetch(BASE + "/api/website-management/packages", { headers: { Accept: "application/json" } })
+        .then(function (r) { if (!r.ok) throw new Error("packages " + r.status); return r.json(); })
+        .then(function (j) {
+          var pk = list(j && j.packages);
+          if (!pk.length) throw new Error("no packages");
+          var pop = String(d.popular_code || "").trim().toUpperCase();
+          g.replaceChildren();
+          pk.forEach(function (p) {
+            g.append(card({
+              name: p.package_code, limit: bn(p.customer_limit) + " গ্রাহক পর্যন্ত",
+              price: "৳ " + bn(p.monthly_fee), period: "/ মাস", popular: !!pop && String(p.package_code).toUpperCase() === pop,
+              features: ["রেজিস্ট্রেশন ফি: ৳ " + bn(p.signup_fee), "মাসিক ফি: ৳ " + bn(p.monthly_fee)],
+              button_label: d.button_label || "শুরু করুন", button_url: d.button_url || "#contact"
+            }));
+          });
+        })
+        .catch(function (e) {
+          console.error("[Website]", e);
+          if (list(d.items).length) { g.classList.remove("packages"); manual(); }
+          else g.replaceChildren(h("p", { "class": "price-note", text: "মূল্য তালিকা এখন দেখানো যাচ্ছে না।" }));
+        });
+      return wrap(s, "", h("div", {}, g, note));
     },
     team: function (s) {
       return wrap(s, "section-light", grid("team-grid", s.data.items, function (i) {
@@ -95,7 +136,24 @@
     },
     apps: function (s) {
       return wrap(s, "", grid("apps-grid", s.data.items, function (i) {
-        return h("article", { "class": "app-card" }, h("div", { "class": "app-icon", text: i.icon }), h("h3", { text: i.name }), h("p", { text: i.description }), btn(i.button_label || "ডাউনলোড", i.url));
+        var card = h("article", { "class": "app-card" }, h("div", { "class": "app-icon", text: i.icon }), h("h3", { text: i.name }), h("p", { text: i.description }));
+        if (i.release !== "admin" && i.release !== "customer") { card.append(btn(i.button_label || "ডাউনলোড", i.url)); return card; }
+
+        /* linked to the real APK release (Super Admin → APK management) */
+        var meta = h("p", { "class": "app-meta", text: "..." }), slot = h("div", {});
+        card.append(meta, slot);
+        appsInfo().then(function (apps) {
+          var rel = apps[i.release];
+          if (!rel) {
+            meta.textContent = "শীঘ্রই আসছে";
+            slot.append(h("span", { "class": "btn btn-outline", "aria-disabled": "true", style: "opacity:.55;pointer-events:none", text: i.button_label || "ডাউনলোড" }));
+            return;
+          }
+          var when = rel.published_at ? new Date(rel.published_at).toLocaleDateString("bn-BD", { day: "numeric", month: "long", year: "numeric" }) : "";
+          meta.textContent = "সংস্করণ v" + rel.version_name + " · " + rel.file_size_label + (when ? " · " + when : "");
+          slot.append(btn(i.button_label || "ডাউনলোড", rel.latest_download_url));
+        });
+        return card;
       }));
     },
     faq: function (s) {
@@ -128,12 +186,15 @@
 
     var logo = h("a", { href: "#home", "class": "logo" }, site.logo ? h("img", { src: site.logo, alt: site.name || "", style: "max-height:42px;max-width:180px;object-fit:contain" }) : h("span", { "class": "logo-icon", text: (site.name || "A").charAt(0) }), site.logo ? null : " " + (site.name || ""));
     var nav = h("ul", { "class": "nav-links", id: "navLinks" });
-    secs.filter(function (s) { return s.nav_label; }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
+    /* Customer / Admin login links take the place of "Home" in the header */
+    var logins = list(site.login_links).filter(function (l) { return l && l.label && l.url; });
+    logins.forEach(function (l) { nav.append(h("li", {}, h("a", { href: l.url, "class": "nav-login", text: l.label }))); });
+    secs.filter(function (s) { return s.nav_label && !(logins.length && s.type === "hero"); }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
     var toggle = h("button", { "class": "menu-toggle", "aria-label": "Menu", text: "☰" });
     toggle.onclick = function () { nav.classList.toggle("active"); };
     nav.onclick = function () { nav.classList.remove("active"); };
     var header = h("header", { "class": "header" }, h("div", { "class": "container navbar" }, logo, nav,
-      h("div", { "class": "nav-actions" }, btn(site.login_label || "লগইন", site.login_url || "#"), toggle)));
+      h("div", { "class": "nav-actions" }, logins.length ? null : btn(site.login_label || "লগইন", site.login_url || "#"), toggle)));
 
     var main = h("main", {}); secs.forEach(function (s) { main.append(R[s.type](s)); });
 
