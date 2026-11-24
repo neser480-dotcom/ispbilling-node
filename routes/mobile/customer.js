@@ -11,6 +11,11 @@ const db = require("../../config/database");
 const tokens = require("../../services/mobile/token.service");
 const { requireBearer } = require("../../middleware/mobileAuth");
 const live = require("../../services/mobile/customerLive.service");
+const security = require("../../middleware/security");
+const paymentService = require("../../services/payment/payment.service");
+const settlement = require("../../services/payment/paymentSettlement.service");
+const demo = require("../../services/payment/demoMode");
+const pg = require("../../controllers/billing/paymentGateway.controller")._mobile;
 
 const router = express.Router();
 router.use(requireBearer("customer"));
@@ -212,6 +217,117 @@ router.post("/packages/change", async (req, res, next) => {
 });
 
 /* Live speed MikroTik জড়িত — Phase 3 (বিদ্যমান driver পড়ে নিরাপদে) */
+/* ====================== অনলাইন পেমেন্ট (bKash / Nagad / SSLCommerz / ShurjoPay) ======================
+   টাকার পরিমাণ সবসময় সার্ভার হিসাব করে (Customer Recharge dry-run); অ্যাপ থেকে আসা amount কখনো ধরা হয় না।
+   ISP-র নিজস্ব merchant account (scope=customer) ব্যবহার হয়। Settlement ও ledger বিদ্যমান যাচাই-করা flow-ই করে। */
+const GATEWAY_LABELS = {
+    bkash: "bKash", nagad: "Nagad", sslcommerz: "SSLCommerz", shurjopay: "ShurjoPay",
+    rocket: "Rocket", dbbl: "DBBL Nexus / Card"
+};
+const payLimiter = security.authLimiter({
+    windowMs: 10 * 60 * 1000, max: 20,
+    message: { success: false, code: "TOO_MANY_REQUESTS", message: "অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করুন।" }
+});
+
+function payForm(body) {
+    const advance = Number(body.advance || 0);
+    const months = Math.floor(Number(body.recharge_month || 1));
+    return {
+        bill_type: body.bill_type === "Advance" ? "Advance" : "Bill",
+        recharge_month: months >= 1 && months <= 12 ? months : 1,
+        advance: Number.isFinite(advance) && advance > 0 && advance <= 100000 ? advance : 0
+    };
+}
+
+function payError(res, e, label) {
+    if (e instanceof pg.CheckoutError) return res.status(e.status).json({ success: false, message: e.message });
+    if (e && (e.name === "RechargeError" || e.name === "SoftwareBillingError"))
+        return res.status(400).json({ success: false, message: e.message });
+    console.error(label, e);
+    return res.status(500).json({ success: false, message: "পেমেন্ট শুরু করা যায়নি।" });
+}
+
+router.get("/pay/options", async (req, res) => {
+    try {
+        const c = await loadCustomer(req);
+        if (!c) return res.status(404).json({ success: false, code: "NOT_FOUND", message: "পাওয়া যায়নি।" });
+        const gateways = [];
+        for (const g of pg.CHECKOUT_GATEWAYS) {
+            const row = await paymentService.getGateway(req.auth.companyId, g, "customer");
+            if (demo.modeFor(g, row)) {
+                gateways.push({ key: g, label: GATEWAY_LABELS[g] });
+                if (g === "sslcommerz") {
+                    gateways.push({ key: "rocket", label: GATEWAY_LABELS.rocket }, { key: "dbbl", label: GATEWAY_LABELS.dbbl });
+                }
+            }
+        }
+        let amount = 0;
+        if (gateways.length) {
+            try {
+                const { quote } = await pg.quoteCustomerBill({
+                    companyId: req.auth.companyId, customerId: c.customer_id, form: payForm({}) });
+                amount = Number(quote.amount) || 0;
+            } catch (e) { if (!(e instanceof pg.CheckoutError)) throw e; }
+        }
+        const bal = money(c.balance);
+        res.json({ success: true, gateways, amount, due: bal < 0 ? -bal : 0, monthly_bill: money(c.monthly_bill) });
+    } catch (e) { payError(res, e, "MOBILE PAY OPTIONS:"); }
+});
+
+router.post("/pay/quote", payLimiter, async (req, res) => {
+    try {
+        const c = await loadCustomer(req);
+        if (!c) return res.status(404).json({ success: false, code: "NOT_FOUND", message: "পাওয়া যায়নি।" });
+        const { quote } = await pg.quoteCustomerBill({
+            companyId: req.auth.companyId, customerId: c.customer_id, form: payForm(req.body || {}) });
+        res.json({ success: true, amount: Number(quote.amount) || 0 });
+    } catch (e) { payError(res, e, "MOBILE PAY QUOTE:"); }
+});
+
+router.post("/pay/create", payLimiter, async (req, res) => {
+    try {
+        const c = await loadCustomer(req);
+        if (!c) return res.status(404).json({ success: false, code: "NOT_FOUND", message: "পাওয়া যায়নি।" });
+        const { gateway, method } = pg.resolveGateway(req.body?.gateway);
+        const gatewayRow = await pg.loadEnabledGateway(req.auth.companyId, gateway, "customer");
+        const { quote, request } = await pg.quoteCustomerBill({
+            companyId: req.auth.companyId, customerId: c.customer_id, form: payForm(req.body || {}) });
+        const out = await pg.startPayment({
+            req, companyId: req.auth.companyId, userId: null, gateway, gatewayRow,
+            scope: "customer", purpose: "customer_bill", amount: quote.amount,
+            request, customerName: quote.customer_name, method
+        });
+        const url = String(out.redirect_url || "");
+        res.json({
+            success: true, transaction_id: out.transaction_id, amount: Number(quote.amount) || 0,
+            redirect_url: url.startsWith("/") ? pg.baseUrl(req) + url : url
+        });
+    } catch (e) { payError(res, e, "MOBILE PAY CREATE:"); }
+});
+
+/* শুধু নিজের লেনদেন: company + customer দুটোই মিলতে হবে */
+router.get("/pay/status/:transactionId", async (req, res) => {
+    try {
+        const id = String(req.params.transactionId || "").trim();
+        if (!/^[A-Za-z0-9]{6,40}$/.test(id)) return res.status(404).json({ success: false, message: "পাওয়া যায়নি।" });
+        let t = await paymentService.getTransactionByTransactionId(id);
+        const meta = t ? paymentService.parseJson(t.metadata, {}) : {};
+        const mine = t && Number(t.company_id) === Number(req.auth.companyId)
+            && Number(meta?.request?.customer_db_id) === Number(req.auth.customerPk);
+        if (!mine) return res.status(404).json({ success: false, message: "পাওয়া যায়নি।" });
+        if (["pending", "verified"].includes(t.status)) {
+            try {
+                const outcome = await settlement.settle(t, { clientIp: pg.clientIpV4(req) });
+                t = outcome.transaction || t;
+            } catch (e) { console.error("MOBILE PAY SETTLE:", e.message); }
+        }
+        res.json({
+            success: true, status: t.status, paid: t.status === "paid",
+            final: ["paid", "failed", "needs_review"].includes(t.status), amount: Number(t.amount) || 0
+        });
+    } catch (e) { payError(res, e, "MOBILE PAY STATUS:"); }
+});
+
 router.get("/live-speed", async (req, res, next) => {
     try {
         const c = await loadCustomer(req);

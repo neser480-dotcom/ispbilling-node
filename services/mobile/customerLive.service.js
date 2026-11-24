@@ -36,12 +36,32 @@ function fmtMB(bytes) {
 }
 const rows = (r) => (Array.isArray(r) ? r : []);
 
-async function getRouter(customer) {
-    const [r] = await db.execute(
-        `SELECT id, name, ip, username, password, port, use_ssl, timeout
-         FROM mikrotik_servers WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1`,
-        [customer.mikrotik_id || 0, customer.company_id]);
-    return r[0] || null;
+const COLS = "id, name, ip, username, password, port, use_ssl, timeout";
+const routerOf = new Map();    // key -> router id (যে router-এ গ্রাহক পাওয়া গেছে, মনে রাখি)
+const warned = new Map();
+function warn(key, msg) {      // একই কারণে ৬০ সেকেন্ডে একবার log
+    const t = warned.get(key + msg) || 0;
+    if (Date.now() - t > 60000) { warned.set(key + msg, Date.now()); console.warn("[live]", key, msg); }
+}
+
+async function candidateRouters(customer, key) {
+    const ids = [];
+    if (routerOf.get(key)) ids.push(routerOf.get(key));
+    if (customer.mikrotik_id) ids.push(Number(customer.mikrotik_id));
+    const out = [];
+    for (const id of [...new Set(ids)]) {
+        const [r] = await db.execute(
+            `SELECT ${COLS} FROM mikrotik_servers WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1`,
+            [id, customer.company_id]);
+        if (r[0]) out.push(r[0]);
+    }
+    if (!out.length) {          // customers.mikrotik_id ফাঁকা/ভুল: কোম্পানির সব router থেকে খুঁজি
+        const [r] = await db.execute(
+            `SELECT ${COLS} FROM mikrotik_servers WHERE company_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 6`,
+            [customer.company_id]);
+        out.push(...r);
+    }
+    return out;
 }
 
 /* RouterOS-এর pppoe-in interface-এর নাম API-তে "pppoe-<username>" (<> ছাড়া) —
@@ -59,20 +79,14 @@ async function readIface(api, user) {
     return { t: Date.now(), rx: Number(r["rx-byte"]) || 0, tx: Number(r["tx-byte"]) || 0 };
 }
 
-async function fetchLive(customer) {
-    const user = String(customer.pppoe_username || "").trim();
-    if (!user || !customer.mikrotik_id) return null;
-    const router = await getRouter(customer);
-    if (!router) return null;
+async function probe(router, customer, user, key) {
     router.timeout = Math.min(Number(router.timeout) || 3, 5);
-    const key = `${customer.company_id}:${customer.id}`;
-
     return withRouter(router, async (api) => {
         const active = rows(await api.write(["/ppp/active/print", `?name=${user}`]))[0];
         if (!active) {
             lastSample.delete(key);
             const sec = rows(await api.write(["/ppp/secret/print", `?name=${user}`]))[0];
-            return { online: false, lastLoggedOut: sec ? sec["last-logged-out"] : "" };
+            return sec ? { online: false, lastLoggedOut: sec["last-logged-out"] || "" } : null;
         }
         let prev = lastSample.get(key);
         if (!prev || Date.now() - prev.t > 10000) {     // আগের sample নেই/পুরোনো: নিজেই ১ সেকেন্ডের ব্যবধানে নিই
@@ -91,10 +105,36 @@ async function fetchLive(customer) {
                 downBps = RX_IS_DOWNLOAD ? rxBps : txBps;
                 upBps = RX_IS_DOWNLOAD ? txBps : rxBps;
             }
+        } else {
+            warn(key, `interface pppoe-${user} পাওয়া যায়নি (active আছে কিন্তু interface নাম মেলেনি)`);
         }
         const dl = RX_IS_DOWNLOAD ? rxB : txB, ul = RX_IS_DOWNLOAD ? txB : rxB;
         return { online: true, uptimeSec: parseUptime(active.uptime), upBps, downBps, upB: ul, downB: dl };
     });
+}
+
+async function fetchLive(customer) {
+    const user = String(customer.pppoe_username || "").trim();
+    const key = `${customer.company_id}:${customer.id}`;
+    if (!user) { warn(key, "customers.pppoe_username ফাঁকা"); return null; }
+    const routers = await candidateRouters(customer, key);
+    if (!routers.length) { warn(key, "এই কোম্পানির কোনো mikrotik_servers router পাওয়া যায়নি"); return null; }
+
+    let offline = null, lastErr = null;
+    for (const router of routers) {
+        try {
+            const r = await probe(router, customer, user, key);
+            if (r && r.online) { routerOf.set(key, router.id); return r; }
+            if (r && !offline) { offline = r; routerOf.set(key, router.id); }
+        } catch (e) {
+            lastErr = e;
+            warn(key, `router #${router.id} (${router.ip}) সংযোগ ব্যর্থ: ${e.message}`);
+        }
+    }
+    if (offline) return offline;
+    if (lastErr) throw lastErr;
+    warn(key, `PPPoE user "${user}" কোনো router-এর /ppp/secret-এ পাওয়া যায়নি`);
+    return null;
 }
 
 function cached(customer) {
@@ -108,6 +148,7 @@ function cached(customer) {
     inflight.set(key, p);
     if (cache.size > 2000) cache.clear();
     if (lastSample.size > 5000) lastSample.clear();
+    if (routerOf.size > 5000) routerOf.clear();
     return p;
 }
 

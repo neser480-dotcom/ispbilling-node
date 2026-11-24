@@ -142,4 +142,31 @@ class ApiService {
         await ApiClient.dio.post('/customer/change-password',
             data: {'old_password': oldPass, 'new_password': newPass});
       });
+
+  /// GET /customer/pay/options -> {gateways:[{key,label}], amount, due, monthly_bill}
+  static Future<PayOptions> payOptions() => _run(() async {
+        final r = await ApiClient.dio.get('/customer/pay/options');
+        return PayOptions.fromJson(Map<String, dynamic>.from(r.data));
+      });
+
+  /// POST /customer/pay/quote {recharge_month} -> {amount}  (পরিমাণ সবসময় সার্ভার ঠিক করে)
+  static Future<double> payQuote({int months = 1}) => _run(() async {
+        final r = await ApiClient.dio
+            .post('/customer/pay/quote', data: {'recharge_month': months});
+        return double.tryParse('${r.data['amount']}') ?? 0;
+      });
+
+  /// POST /customer/pay/create {gateway, recharge_month} -> {transaction_id, redirect_url, amount}
+  static Future<PayStart> payCreate(String gateway, {int months = 1}) =>
+      _run(() async {
+        final r = await ApiClient.dio.post('/customer/pay/create',
+            data: {'gateway': gateway, 'recharge_month': months});
+        return PayStart.fromJson(Map<String, dynamic>.from(r.data));
+      });
+
+  /// GET /customer/pay/status/:id -> {status, paid, final}
+  static Future<PayStatus> payStatus(String transactionId) => _run(() async {
+        final r = await ApiClient.dio.get('/customer/pay/status/$transactionId');
+        return PayStatus.fromJson(Map<String, dynamic>.from(r.data));
+      });
 }

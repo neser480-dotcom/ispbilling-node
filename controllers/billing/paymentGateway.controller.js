@@ -1616,6 +1616,17 @@ async function ipn(req, res) {
 }
 
 module.exports = {
+    /* মোবাইল অ্যাপ একই যাচাই-করা checkout লজিক ব্যবহার করে (নতুন লজিক নয়) */
+    _mobile: {
+        CHECKOUT_GATEWAYS,
+        CheckoutError,
+        resolveGateway,
+        loadEnabledGateway,
+        quoteCustomerBill,
+        startPayment,
+        baseUrl,
+        clientIpV4
+    },
     page,
     save,
     list,

@@ -8,6 +8,7 @@ import '../widgets/page_scaffold.dart';
 import 'home_shell.dart';
 import 'login_screen.dart';
 import 'packages_screen.dart';
+import 'pay_screen.dart';
 import 'reports_screen.dart';
 import 'support_numbers_screen.dart';
 import 'tickets_screen.dart';
@@ -57,6 +58,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _reload() async {
     setState(() => _future = ApiService.dashboard());
     await _future;
+  }
+
+  bool _paying = false;
+
+  /// গেটওয়ে চালু থাকলে পেমেন্ট স্ক্রিন; না থাকলে শুধু ব্যানার "Contact Bill Man." (অন্য পেজে যায় না)
+  Future<void> _payBill() async {
+    if (_paying) return;
+    _paying = true;
+    try {
+      final o = await ApiService.payOptions();
+      if (!mounted) return;
+      if (o.gateways.isEmpty) {
+        _showBanner('Contact Bill Man.');
+        return;
+      }
+      final paid = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => PayScreen(options: o)),
+      );
+      if (paid == true && mounted) await _reload();
+    } catch (_) {
+      _showBanner('Contact Bill Man.');
+    } finally {
+      _paying = false;
+    }
   }
 
   void _open(Widget page) =>
@@ -200,14 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               shape: const StadiumBorder(),
               padding: const EdgeInsets.symmetric(horizontal: 18),
             ),
-            onPressed: () {
-              _showBanner('Contact Bill Man.');
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeShell(initialIndex: 2)),
-                (_) => false,
-              );
-            },
+            onPressed: _payBill,
             child: const Text('Pay Bill', style: TextStyle(fontSize: 16)),
           ),
         ),

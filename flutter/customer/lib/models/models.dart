@@ -181,3 +181,67 @@ class ProfileData {
         balance: _d(j['balance']),
       );
 }
+
+/// অনলাইন পেমেন্টের একটি গেটওয়ে (bkash, nagad, sslcommerz, shurjopay, rocket, dbbl)
+class PayGateway {
+  final String key, label;
+  const PayGateway({required this.key, required this.label});
+
+  factory PayGateway.fromJson(Map<String, dynamic> j) =>
+      PayGateway(key: _s(j['key']), label: _s(j['label']));
+}
+
+class PayOptions {
+  final List<PayGateway> gateways;
+  final double amount, due, monthlyBill;
+
+  const PayOptions({
+    required this.gateways,
+    required this.amount,
+    required this.due,
+    required this.monthlyBill,
+  });
+
+  factory PayOptions.fromJson(Map<String, dynamic> j) => PayOptions(
+        gateways: (j['gateways'] is List ? j['gateways'] as List : const [])
+            .map((e) => PayGateway.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        amount: _d(j['amount']),
+        due: _d(j['due']),
+        monthlyBill: _d(j['monthly_bill']),
+      );
+}
+
+class PayStart {
+  final String transactionId, redirectUrl;
+  final double amount;
+
+  const PayStart({
+    required this.transactionId,
+    required this.redirectUrl,
+    required this.amount,
+  });
+
+  factory PayStart.fromJson(Map<String, dynamic> j) => PayStart(
+        transactionId: _s(j['transaction_id']),
+        redirectUrl: _s(j['redirect_url']),
+        amount: _d(j['amount']),
+      );
+}
+
+class PayStatus {
+  final String status;
+  final bool paid, isFinal;
+
+  const PayStatus({
+    required this.status,
+    required this.paid,
+    required this.isFinal,
+  });
+
+  factory PayStatus.fromJson(Map<String, dynamic> j) => PayStatus(
+        status: _s(j['status']),
+        paid: j['paid'] == true,
+        isFinal: j['final'] == true,
+      );
+}
