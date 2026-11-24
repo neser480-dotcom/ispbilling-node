@@ -4,18 +4,180 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>APK Management - AmaderBill</title>
-<link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-<link rel="stylesheet" href="/assets/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
 <style>
-body{background:#f4f6fa;color:#263247;font-family:Arial,sans-serif}
-.wrap{max-width:1100px;margin:20px auto;padding:0 15px}
-.card-x{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:20px;margin-bottom:16px}
-.form-label{font-weight:600;font-size:13px;margin-bottom:3px}
-.hint{font-size:12px;color:#778195}
-.mono{font-family:monospace;font-size:12px;word-break:break-all}
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+}
+
+body {
+    background: #f4f6fa;
+    color: #263247;
+    font-family: Arial, sans-serif;
+}
+
+/* Topbar */
+#topbarContainer {
+    position: relative;
+    display: block;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Sidebar */
+#sidebarContainer {
+    position: relative;
+    z-index: 999;
+}
+
+/* Main Content */
+.main-content {
+    min-height: 100vh;
+    margin-top: 0;
+    padding: 0;
+    transition: margin-left 0.2s ease;
+}
+
+/* Page Wrapper */
+.wrap {
+    width: 100%;
+    max-width: 1100px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+/* Cards */
+.card-x {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .05);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+/* Form */
+.form-label {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+.form-control,
+.form-select {
+    border-radius: 7px;
+}
+
+.hint {
+    font-size: 12px;
+    color: #778195;
+}
+
+/* Monospace */
+.mono {
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+    line-height: 1.8;
+}
+
+/* Table */
+.table {
+    vertical-align: middle;
+}
+
+.table th {
+    white-space: nowrap;
+    font-size: 13px;
+    color: #596579;
+}
+
+.table td {
+    font-size: 13px;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 7px;
+}
+
+/* Upload Progress */
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width .2s ease;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .wrap {
+        margin: 12px auto;
+        padding: 0 10px;
+    }
+
+    .card-x {
+        padding: 14px;
+        border-radius: 10px;
+    }
+
+    .main-content {
+        padding: 0;
+    }
+
+    .table {
+        min-width: 650px;
+    }
+
+    .mono {
+        font-size: 11px;
+    }
+}
+/* Keep page content below topbar */
+.main-content {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-top: 0 !important;
+    padding-top: 20px;
+    min-height: calc(100vh - 60px);
+}
+
+/* Page header spacing */
+.main-content .wrap {
+    margin-top: 0;
+    padding-top: 80px;
+}
+
+/* Topbar stays above page content */
+#topbarContainer {
+    position: relative;
+    z-index: 1000;
+}
+
+/* Sidebar */
+#sidebarContainer {
+    position: relative;
+    z-index: 999;
+}
 </style>
+
 </head>
 <body>
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
+
+<main class="main-content">
 <div class="wrap">
   <h4 class="mb-1"><i class="fa fa-mobile-screen text-primary"></i> APK Management</h4>
   <p class="text-muted" style="font-size:13px">নতুন APK আপলোড করুন, তারপর Publish করলে ওয়েবসাইটের ডাউনলোড বাটন নিজে থেকে নতুন ভার্সন দেবে।</p>
@@ -184,5 +346,10 @@ $("upForm").onsubmit = async (ev) => {
 
 load();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
 </body>
 </html>

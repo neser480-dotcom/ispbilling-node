@@ -6,25 +6,211 @@
 <title>Website Builder - AmaderBill</title>
 <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
 <link rel="stylesheet" href="/assets/css/all.min.css">
+
 <style>
-body{background:#f4f6fa;color:#263247;font-family:Arial,sans-serif}
-.wrap{max-width:1300px;margin:20px auto;padding:0 15px}
-.card-x{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:18px}
-.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
-.sec-item{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #e5e9f0;border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
-.sec-item.active{border-color:#0d6efd;background:#eef4ff}
-.sec-item.off .nm{opacity:.45;text-decoration:line-through}
-.sec-item .nm{flex:1;font-weight:600;font-size:14px}
-.sec-item .badge-t{font-size:11px;color:#778195}
-.mini{border:0;background:none;color:#778195;padding:2px 5px}.mini:hover{color:#0d6efd}
-.form-label{font-weight:600;font-size:13px;margin-bottom:3px}
-.item-box{border:1px solid #e5e9f0;border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfd}
-.item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:600;font-size:13px}
-.save-bar{position:sticky;bottom:10px;margin-top:16px;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.hint{font-size:12px;color:#778195}
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+}
+
+body {
+    background: #f4f6fa;
+    color: #263247;
+    font-family: Arial, sans-serif;
+}
+
+/* Topbar */
+#topbarContainer {
+    position: relative;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Sidebar */
+#sidebarContainer {
+    position: relative;
+    z-index: 999;
+}
+
+/* Main Content */
+.main-content {
+    position: relative;
+    margin-top: 0;
+    padding-top: 0;
+    min-height: calc(100vh - 60px);
+}
+
+/* Page Wrapper */
+.wrap {
+    width: 100%;
+    max-width: 1300px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+/* Card */
+.card-x {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    padding: 18px;
+}
+
+/* Topbar section */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+/* Section Items */
+.sec-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid #e5e9f0;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    background: #fff;
+}
+
+.sec-item.active {
+    border-color: #0d6efd;
+    background: #eef4ff;
+}
+
+.sec-item.off .nm {
+    opacity: .45;
+    text-decoration: line-through;
+}
+
+.sec-item .nm {
+    flex: 1;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.sec-item .badge-t {
+    font-size: 11px;
+    color: #778195;
+}
+
+/* Mini Buttons */
+.mini {
+    border: 0;
+    background: none;
+    color: #778195;
+    padding: 2px 5px;
+}
+
+.mini:hover {
+    color: #0d6efd;
+}
+
+/* Forms */
+.form-label {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+/* Item Box */
+.item-box {
+    border: 1px solid #e5e9f0;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fafbfd;
+}
+
+.item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Save Bar */
+.save-bar {
+    position: sticky;
+    bottom: 10px;
+    margin-top: 16px;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Hint */
+.hint {
+    font-size: 12px;
+    color: #778195;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .wrap {
+        margin: 12px auto;
+        padding: 0 10px;
+    }
+
+    .card-x {
+        padding: 14px;
+    }
+
+    .topbar {
+        align-items: flex-start;
+    }
+}
+
+/* Keep page content below topbar */
+.main-content {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-top: 0 !important;
+    padding-top: 20px;
+    min-height: calc(100vh - 60px);
+}
+
+/* Page header spacing */
+.main-content .wrap {
+    margin-top: 0;
+    padding-top: 80px;
+}
+
+/* Topbar stays above page content */
+#topbarContainer {
+    position: relative;
+    z-index: 1000;
+}
+
+/* Sidebar */
+#sidebarContainer {
+    position: relative;
+    z-index: 999;
+}
 </style>
+
 </head>
 <body>
+<div id="sidebarContainer"></div>
+<div id="topbarContainer"></div>
+<main class="main-content">
 <div class="wrap">
   <div class="topbar">
     <div>
@@ -224,5 +410,10 @@ $("restoreBtn").onclick = async () => {
 window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 load();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/sidebar-loader.js"></script>
+<script src="/assets/js/topbar-loader.js"></script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../main.dart' show navKey;
-import '../core/api_client.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -62,8 +61,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _open(Widget page) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => page));
-
-  String _fmt(double v) => double.parse(v.toStringAsFixed(2)).toString();
 
   /// kbps -> "56.56 kbps" / "2.30 Mbps"
   String _speed(double kbps) => kbps >= 1000

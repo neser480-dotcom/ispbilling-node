@@ -51,20 +51,31 @@ class ApiService {
       (data as List).map((e) => Map<String, dynamic>.from(e)).toList();
 
   /// ফেরত: true হলে ISP Admin-এর দেওয়া অস্থায়ী Password — এখনই বদলাতে হবে
-  static Future<bool> login(String customerId, String password, {String ispCode = ''}) =>
-      _run(() async {
-        final code = ispCode.trim().isNotEmpty ? ispCode.trim() : ApiClient.defaultIspCode;
-        final r = await ApiClient.dio.post('/auth/customer/login', data: {
-          'customer_id': customerId,
+ static Future<bool> login(String customerId, String password, {String ispCode = ''}) =>
+    _run(() async {
+      final r = await ApiClient.dio.post(
+        '/auth/customer/login',
+        data: {
+          'customer_id': customerId.trim(),
           'password': password,
-          if (code.isNotEmpty) 'isp_code': code,
           'device_name': 'netfi_client',
-        });
-        final d = r.data;
-        await ApiClient.saveTokens('${d['access_token']}', '${d['refresh_token']}');
-        await ApiClient.saveUser('${d['user']?['name'] ?? ''}', '${d['user']?['id'] ?? customerId}');
-        return d['must_change_password'] == true;
-      });
+        },
+      );
+
+      final d = r.data;
+
+      await ApiClient.saveTokens(
+        '${d['access_token']}',
+        '${d['refresh_token']}',
+      );
+
+      await ApiClient.saveUser(
+        '${d['user']?['name'] ?? ''}',
+        '${d['user']?['id'] ?? customerId}',
+      );
+
+      return d['must_change_password'] == true;
+    });
 
   /// Server-এ Refresh Token বাতিল, তারপর লোকাল Token মোছা
   static Future<void> logout() async {

@@ -76,24 +76,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   // নীল অংশ: লোগো + টাইটেল + মোবাইল ফিল্ড (নীল/সাদার সীমানায়)
                   Container(
                     width: double.infinity,
-                    height: size.height * 0.52,
+                    height: size.height * 0.43,
                     color: AppColors.loginBlue,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        const CircleAvatar(
-                          radius: 32,
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.support_agent,
-                              size: 40, color: AppColors.loginBlue),
-                        ),
-                        const SizedBox(height: 10),
+                        Image.asset('assets/images/logo.png',
+                            width: 60, height: 60),
+                        const SizedBox(height: 16),
                         const Text('আমাদের বিল গ্রাহক',
                             style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: 24,
                                 fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 22),
                         if (_needIsp) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -134,7 +130,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: TextField(
                               controller: _phone,
                               keyboardType: TextInputType.text,
-                              style: const TextStyle(fontSize: 17),
+                              style: const TextStyle(
+                                  fontSize: 17, color: Color(0xFF555555)),
                               decoration: const InputDecoration(
                                 hintText: 'মোবাইল নম্বর / ইউজার',
                                 border: InputBorder.none,
@@ -156,9 +153,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextField(
                           controller: _pass,
                           obscureText: !_showPass,
-                          style: const TextStyle(fontSize: 17),
+                          style: const TextStyle(
+                              fontSize: 17, color: Color(0xFF555555)),
                           decoration: const InputDecoration(
                             hintText: 'পাসওয়ার্ড',
+                            border: UnderlineInputBorder(
+                                borderSide: BorderSide(color: AppColors.line)),
+                            enabledBorder: UnderlineInputBorder(
+                                borderSide: BorderSide(color: AppColors.grey)),
+                            focusedBorder: UnderlineInputBorder(
+                                borderSide:
+                                    BorderSide(color: AppColors.loginBlue)),
                             prefixIcon: Icon(Icons.lock_person_outlined,
                                 color: AppColors.loginBlue),
                           ),

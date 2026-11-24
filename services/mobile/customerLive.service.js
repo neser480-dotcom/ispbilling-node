@@ -44,63 +44,86 @@ async function getRouter(customer) {
     return r[0] || null;
 }
 
-async function fetchLive(customer, withTotals) {
+/* RouterOS-এর pppoe-in interface-এর নাম API-তে "pppoe-<username>" (<> ছাড়া) —
+   customerTrafficService-এর মতোই। RX/TX-ও সেখানকার নিয়মে: RX = Download, TX = Upload।
+   উল্টো দেখালে নিচের RX_IS_DOWNLOAD = false করুন। */
+const RX_IS_DOWNLOAD = true;
+const lastSample = new Map();   // key -> { t, rx, tx }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function readIface(api, user) {
+    const name = `pppoe-${user}`;
+    let r = rows(await api.write(["/interface/print", `?name=${name}`]))[0];
+    if (!r) r = rows(await api.write(["/interface/print", `?name=<${name}>`]))[0];
+    if (!r) return null;
+    return { t: Date.now(), rx: Number(r["rx-byte"]) || 0, tx: Number(r["tx-byte"]) || 0 };
+}
+
+async function fetchLive(customer) {
     const user = String(customer.pppoe_username || "").trim();
     if (!user || !customer.mikrotik_id) return null;
     const router = await getRouter(customer);
     if (!router) return null;
     router.timeout = Math.min(Number(router.timeout) || 3, 5);
+    const key = `${customer.company_id}:${customer.id}`;
 
     return withRouter(router, async (api) => {
-        const active = rows(await api.write(["/ppp/active/print", `?name=${user}`, "=.proplist=name,uptime,address"]))[0];
+        const active = rows(await api.write(["/ppp/active/print", `?name=${user}`]))[0];
         if (!active) {
-            const sec = rows(await api.write(["/ppp/secret/print", `?name=${user}`, "=.proplist=name,last-logged-out"]))[0];
+            lastSample.delete(key);
+            const sec = rows(await api.write(["/ppp/secret/print", `?name=${user}`]))[0];
             return { online: false, lastLoggedOut: sec ? sec["last-logged-out"] : "" };
         }
-        const ifName = `<pppoe-${user}>`;
-        let up = 0, down = 0;
-        try {
-            const t = rows(await api.write(["/interface/monitor-traffic", `=interface=${ifName}`, "=once="]))[0] || {};
-            up = Number(t["rx-bits-per-second"]) || 0;     // router rx = customer upload
-            down = Number(t["tx-bits-per-second"]) || 0;   // router tx = customer download
-        } catch (_) { /* interface নাম না মিললে 0 */ }
-        let rxB = 0, txB = 0;
-        if (withTotals) {
-            try {
-                const i = rows(await api.write(["/interface/print", "=stats=", `?name=${ifName}`, "=.proplist=name,rx-byte,tx-byte"]))[0] || {};
-                rxB = Number(i["rx-byte"]) || 0; txB = Number(i["tx-byte"]) || 0;
-            } catch (_) { /* ignore */ }
+        let prev = lastSample.get(key);
+        if (!prev || Date.now() - prev.t > 10000) {     // আগের sample নেই/পুরোনো: নিজেই ১ সেকেন্ডের ব্যবধানে নিই
+            prev = await readIface(api, user);
+            if (prev) await sleep(1000);
         }
-        return { online: true, uptimeSec: parseUptime(active.uptime), upBps: up, downBps: down, rxB, txB };
+        const cur = await readIface(api, user);
+        let upBps = 0, downBps = 0, rxB = 0, txB = 0;
+        if (cur) {
+            rxB = cur.rx; txB = cur.tx;
+            lastSample.set(key, cur);
+            if (prev && cur.t > prev.t) {
+                const sec = (cur.t - prev.t) / 1000;
+                const rxBps = (Math.max(0, cur.rx - prev.rx) * 8) / sec;
+                const txBps = (Math.max(0, cur.tx - prev.tx) * 8) / sec;
+                downBps = RX_IS_DOWNLOAD ? rxBps : txBps;
+                upBps = RX_IS_DOWNLOAD ? txBps : rxBps;
+            }
+        }
+        const dl = RX_IS_DOWNLOAD ? rxB : txB, ul = RX_IS_DOWNLOAD ? txB : rxB;
+        return { online: true, uptimeSec: parseUptime(active.uptime), upBps, downBps, upB: ul, downB: dl };
     });
 }
 
-function cached(customer, withTotals) {
-    const key = `${customer.company_id}:${customer.id}:${withTotals ? 1 : 0}`;
+function cached(customer) {
+    const key = `${customer.company_id}:${customer.id}`;
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < TTL_MS) return Promise.resolve(hit.value);
     if (inflight.has(key)) return inflight.get(key);
-    const p = fetchLive(customer, withTotals)
+    const p = fetchLive(customer)
         .then((v) => { cache.set(key, { at: Date.now(), value: v }); return v; })
         .finally(() => inflight.delete(key));
     inflight.set(key, p);
     if (cache.size > 2000) cache.clear();
+    if (lastSample.size > 5000) lastSample.clear();
     return p;
 }
 
 /* GET /live-speed -> { up_kbps, down_kbps } */
 async function liveSpeed(customer) {
     try {
-        const v = await cached(customer, false);
+        const v = await cached(customer);
         if (!v || !v.online) return { up_kbps: 0, down_kbps: 0 };
         return { up_kbps: v.upBps / 1000, down_kbps: v.downBps / 1000 };
-    } catch (_) { return { up_kbps: 0, down_kbps: 0 }; }
+    } catch (e) { console.error("[live-speed]", e.message); return { up_kbps: 0, down_kbps: 0 }; }
 }
 
 /* dashboard.stats — NetStats.fromJson-এর key অনুযায়ী */
 async function stats(customer) {
     try {
-        const v = await cached(customer, true);
+        const v = await cached(customer);
         if (!v) return {};
         if (!v.online) {
             return { last_link_label: "Last Logged Out:", last_link_uptime: v.lastLoggedOut || "-",
@@ -110,9 +133,9 @@ async function stats(customer) {
         return {
             last_link_label: "Last Link Uptime:", last_link_uptime: fmtDateTime(since),
             current_uptime: fmtUptime(v.uptimeSec),
-            upload: fmtMB(v.rxB), download: fmtMB(v.txB), uptime_alert: false,
+            upload: fmtMB(v.upB), download: fmtMB(v.downB), uptime_alert: false,
         };
-    } catch (_) { return {}; }
+    } catch (e) { console.error("[live-stats]", e.message); return {}; }
 }
 
 module.exports = { liveSpeed, stats, fmtDateTime };
