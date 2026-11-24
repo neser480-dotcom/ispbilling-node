@@ -1,0 +1,173 @@
+/* =========================================================
+   MOBILE PAGES  (phone layout = Active Customer reference)
+   Load LAST on: Mikrotik, OLT, OLT Users, Customers.
+   Only active at <= 850px (sidebar is hidden there).
+   Desktop is NOT touched.
+   Reference numbers (active-customer.css):
+     page padding 64px 3px 14px | header 58px, title 20px, buttons 34px
+     toolbar 1 row, search fills the rest | table scrolls sideways
+========================================================= */
+
+@media (max-width: 850px) {
+
+    /* ---------- common: no sidebar gap, no sideways page scroll ---------- */
+    body.mp-mikrotik, body.mp-olt, body.mp-olt-users, body.mp-customers {
+        overflow-x: hidden;
+        background: #f1f4f8;
+    }
+
+    /* =====================================================
+       MIKROTIK  (.router-*)
+    ===================================================== */
+    body.mp-mikrotik .main-content {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 64px 3px 14px !important;
+        background: transparent;
+    }
+    body.mp-mikrotik .router-wrap { max-width: 100%; }
+    body.mp-mikrotik .router-page-header {
+        min-height: 58px; height: 58px; padding: 0 10px; gap: 6px;
+        border-radius: 4px; flex-wrap: nowrap; margin-bottom: 0;
+    }
+    body.mp-mikrotik .router-page-title { font-size: 20px; font-weight: 600; white-space: nowrap; }
+    body.mp-mikrotik .router-header-actions { gap: 6px; flex-shrink: 0; }
+    body.mp-mikrotik .header-icon-btn { width: 34px; height: 34px; font-size: 15px; }
+    body.mp-mikrotik .router-card { padding: 12px 8px 16px; border-top: 3px solid #eef1f5; }
+    body.mp-mikrotik .router-toolbar {
+        height: auto; min-height: 50px; padding: 8px 10px; margin-bottom: 14px;
+        gap: 8px; flex-wrap: nowrap; border-radius: 6px;
+    }
+    body.mp-mikrotik .router-toolbar-left { font-size: 15px; gap: 6px; flex-shrink: 0; }
+    body.mp-mikrotik .router-toolbar-icon { display: none; }
+    body.mp-mikrotik .router-total-label { white-space: nowrap; }
+    body.mp-mikrotik .router-company { display: none; }
+    body.mp-mikrotik .router-search {
+        flex: 1 1 auto; width: auto; min-width: 0; height: 36px; font-size: 14px;
+    }
+    body.mp-mikrotik .router-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    body.mp-mikrotik #routerTable { min-width: 760px; }
+    body.mp-mikrotik #routerTable thead th { font-size: 14px; padding: 10px 8px; white-space: nowrap; }
+    body.mp-mikrotik #routerTable tbody td { font-size: 14px; padding: 0 8px; height: 50px; }
+    body.mp-mikrotik .router-footer { margin-top: 24px; font-size: 14px; }
+
+    /* =====================================================
+       OLT list  (.olt-heading / .olt-card / .olt-summary)
+    ===================================================== */
+    body.mp-olt .main-content {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 64px 3px 14px !important;
+        background: transparent;
+    }
+    body.mp-olt .olt-list-page { padding: 0; }
+    body.mp-olt .olt-heading {
+        height: 58px; padding: 0 10px; gap: 6px; flex-wrap: nowrap;
+        border-radius: 4px; margin-bottom: 0;
+    }
+    body.mp-olt .olt-heading h2 { font-size: 20px; font-weight: 600; white-space: nowrap; }
+    body.mp-olt .olt-heading > div,
+    body.mp-olt .olt-heading .olt-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    body.mp-olt .olt-btn { width: 34px; height: 34px; font-size: 15px; }
+    body.mp-olt .olt-card { padding: 12px 8px 16px; border-top: 3px solid #eef1f5; }
+    body.mp-olt .olt-summary {
+        flex-wrap: nowrap; gap: 8px; padding: 8px 10px; margin-bottom: 14px; border-radius: 6px;
+    }
+    body.mp-olt .olt-summary-left { font-size: 15px; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+    body.mp-olt .olt-summary-left > i:first-child { display: none; }
+    body.mp-olt .olt-search { flex: 1 1 auto; width: auto; min-width: 0; margin-left: 0; }
+    body.mp-olt .olt-table-wrap { -webkit-overflow-scrolling: touch; }
+    body.mp-olt .olt-table { min-width: 980px; }
+
+    /* =====================================================
+       OLT USERS  (.olt-header / .olt-content / .olt-summary)
+    ===================================================== */
+    body.mp-olt-users .main-content {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 64px 3px 14px !important;
+    }
+    body.mp-olt-users .olt-page { padding: 0; }
+    body.mp-olt-users .olt-header {
+        height: 58px; padding: 0 10px; gap: 6px; flex-wrap: nowrap; border-radius: 4px;
+    }
+    body.mp-olt-users .olt-header h1 { font-size: 20px; font-weight: 600; white-space: nowrap; }
+    body.mp-olt-users .olt-header-btn-group { gap: 6px; flex-shrink: 0; }
+    body.mp-olt-users .olt-header-circle-btn { width: 34px; height: 34px; }
+    body.mp-olt-users .olt-content { margin-top: 0; padding: 12px 8px 16px; border-radius: 0; border-top: 3px solid #eef1f5; }
+    body.mp-olt-users .olt-summary { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; border-radius: 6px; }
+    body.mp-olt-users .olt-summary-title { font-size: 15px; flex-shrink: 0; }
+    body.mp-olt-users .olt-summary-title > i { display: none; }
+    body.mp-olt-users .olt-controls { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+    body.mp-olt-users .olt-search { width: 100%; min-width: 0; flex: 1 1 auto; }
+    body.mp-olt-users .olt-table-scroll { margin-top: 14px; -webkit-overflow-scrolling: touch; }
+    body.mp-olt-users .olt-table { min-width: 1000px; }
+    body.mp-olt-users .olt-table th,
+    body.mp-olt-users .olt-table td { font-size: 14px; padding: 12px 8px; white-space: nowrap; }
+    body.mp-olt-users .olt-pagination { justify-content: center; }
+    body.mp-olt-users .olt-pagination-info { width: 100%; text-align: center; }
+
+    /* =====================================================
+       CUSTOMERS  (.cl-header / .cl-toolbar / .cm-table)
+    ===================================================== */
+    body.mp-customers #mainContent {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 64px 3px 14px !important;
+        background: transparent;
+    }
+    body.mp-customers .customer-page { padding: 0 !important; }
+    body.mp-customers .customer-page .cl-header {
+        height: 58px; min-height: 58px; padding: 0 10px; gap: 6px;
+        flex-wrap: nowrap; border-radius: 4px;
+    }
+    body.mp-customers .customer-page .cl-header.cm-list-header {
+        flex-direction: row !important; align-items: center !important;
+        justify-content: space-between !important; flex-wrap: nowrap !important;
+    }
+    body.mp-customers .cl-header .cm-list-actions { width: auto !important; justify-content: flex-end; }
+    body.mp-customers .customer-page .cl-title { text-align: left; margin: 0; font-size: 20px; font-weight: 600; white-space: nowrap; }
+    body.mp-customers .cl-header-actions { flex-wrap: nowrap; gap: 6px; flex-shrink: 0; }
+    body.mp-customers .customer-page .cl-header .cm-ibtn {
+        width: 34px; height: 34px; min-width: 34px; font-size: 15px; flex-shrink: 0;
+    }
+    /* the extra tools row opens as its own line under the header buttons */
+    body.mp-customers .cl-extra { flex-wrap: nowrap; gap: 6px; }
+    body.mp-customers .cl-extra:not([hidden]) {
+        position: absolute; right: 6px; top: 64px; z-index: 30;
+        padding: 6px; background: #2a81d7; border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
+    body.mp-customers .cl-header { position: relative; }
+    body.mp-customers .customer-page .cl-card { padding: 12px 8px 16px; border-top: 3px solid #eef1f5; }
+    body.mp-customers .customer-page .cl-toolbar {
+        flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px; margin-bottom: 14px; border-radius: 6px;
+    }
+    body.mp-customers .cl-toolbar-ico { display: none; }
+    body.mp-customers .cl-tb-text { font-size: 15px; white-space: nowrap; }
+    body.mp-customers .cl-tb-strong { font-size: 14px; white-space: nowrap; margin-left: 0; }
+    body.mp-customers .customer-page .cl-search { order: 10; flex: 1 0 100%; width: 100%; margin-left: 0; }
+    body.mp-customers .cl-search input { height: 36px; font-size: 14px; }
+    body.mp-customers .customer-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    body.mp-customers .customer-page .cm-table { min-width: 980px; }
+    body.mp-customers .customer-page .cm-table thead th { font-size: 14px; }
+    body.mp-customers .customer-page .cm-table tbody td { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+    body.mp-mikrotik .router-page-title,
+    body.mp-olt .olt-heading h2,
+    body.mp-olt-users .olt-header h1,
+    body.mp-customers .customer-page .cl-title { font-size: 19px; }
+
+    body.mp-mikrotik .header-icon-btn,
+    body.mp-olt .olt-btn,
+    body.mp-olt-users .olt-header-circle-btn,
+    body.mp-customers .customer-page .cl-header .cm-ibtn {
+        width: 32px; height: 32px; min-width: 32px; font-size: 14px;
+    }
+}
