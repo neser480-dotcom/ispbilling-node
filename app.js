@@ -387,6 +387,7 @@ app.get(
 
 app.use(
     "/api/app-download",
+    security.publicWebsiteCors(),
     appDownloadRoutes
 );
 app.use(

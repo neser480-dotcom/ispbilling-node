@@ -7,14 +7,24 @@
   "favicon": "",
   "description": "AmaderBill - বাংলাদেশের আধুনিক ISP Billing Software। গ্রাহক, বিলিং, MikroTik, OLT ও পেমেন্ট পরিচালনা করুন একটি প্ল্যাটফর্ম থেকে।",
   "login_label": "লগইন",
-  "login_url": "https://app.amaderbill.com"
+  "login_url": "https://app.amaderbill.com",
+  "login_links": [
+   {
+    "label": "কাস্টমার লগইন",
+    "url": "https://customer.amaderbill.com"
+   },
+   {
+    "label": "অ্যাডমিন লগইন",
+    "url": "https://app.amaderbill.com"
+   }
+  ]
  },
  "sections": [
   {
    "id": "home",
    "type": "hero",
    "enabled": true,
-   "nav_label": "হোম",
+   "nav_label": "",
    "data": {
     "label": "স্মার্ট আইএসপি সল্যুশন",
     "title": "আপনার আইএসপি ব্যবসার",
@@ -193,7 +203,11 @@
     "label": "মূল্য তালিকা",
     "title": "আপনার ব্যবসার জন্য সঠিক প্ল্যান",
     "subtitle": "আপনার গ্রাহক সংখ্যা অনুযায়ী প্যাকেজ নির্বাচন করুন।",
-    "note": "* প্রদর্শিত মূল্য উদাহরণ হিসেবে রাখা হয়েছে। চূড়ান্ত মূল্য Admin Panel থেকে নির্ধারণ করতে হবে।",
+    "note": "* সব মূল্য বাংলাদেশি টাকায় (৳)। রেজিস্ট্রেশন ফি এককালীন।",
+    "source": "packages",
+    "popular_code": "",
+    "button_label": "শুরু করুন",
+    "button_url": "https://app.amaderbill.com/register",
     "items": [
      {
       "name": "Starter",
@@ -348,6 +362,7 @@
       "icon": "📊",
       "name": "AmaderBill Admin App",
       "description": "অ্যাডমিন অ্যাপ থেকে গ্রাহক, বিলিং ও ব্যবসার কার্যক্রম পরিচালনা করুন।",
+      "release": "admin",
       "url": "/apps/admin.apk",
       "button_label": "ডাউনলোড"
      },
@@ -355,6 +370,7 @@
       "icon": "👤",
       "name": "AmaderBill Customer App",
       "description": "গ্রাহকরা বিল দেখতে, পেমেন্ট করতে ও নোটিফিকেশন পেতে পারবেন।",
+      "release": "customer",
       "url": "/apps/customer.apk",
       "button_label": "ডাউনলোড"
      },

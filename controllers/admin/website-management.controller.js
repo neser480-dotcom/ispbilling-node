@@ -43,9 +43,33 @@ function migrate(old) {
     return c;
 }
 
+// Content saved before these options existed gets the defaults (header login links,
+// live registration-package pricing, APK-linked app cards) without a re-publish.
+function addNewDefaults(c) {
+    c.site = c.site || {};
+    if (!Array.isArray(c.site.login_links)) c.site.login_links = clone(DEFAULT_CONTENT.site.login_links);
+    (c.sections || []).forEach((s) => {
+        s.data = s.data || {};
+        if (s.type === "pricing" && s.data.source === undefined) {
+            s.data.source = "packages";
+            if (s.data.button_url === undefined) s.data.button_url = "https://app.amaderbill.com/register";
+            if (s.data.button_label === undefined) s.data.button_label = "শুরু করুন";
+        }
+        if (s.type === "apps" && Array.isArray(s.data.items)) {
+            s.data.items.forEach((i) => {
+                if (i && i.release === undefined) {
+                    if (i.url === "/apps/admin.apk") i.release = "admin";
+                    else if (i.url === "/apps/customer.apk") i.release = "customer";
+                }
+            });
+        }
+    });
+    return c;
+}
+
 function normalize(raw) {
     if (!raw) return clone(DEFAULT_CONTENT);
-    if (raw.version === 2 && Array.isArray(raw.sections)) return raw;
+    if (raw.version === 2 && Array.isArray(raw.sections)) return addNewDefaults(raw);
     return migrate(raw);
 }
 
@@ -87,6 +111,32 @@ exports.getContent = async (req, res) => {
     } catch (e) {
         console.error("[Website Management] Load:", e);
         return res.status(500).json({ success: false, message: "Unable to load website content." });
+    }
+};
+
+// PUBLIC: registration packages (same table the registration page uses) for the price list
+exports.getPackages = async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT package_code, package_name, customer_limit, signup_fee, monthly_fee
+               FROM software_packages
+              WHERE status = 'active'
+              ORDER BY id ASC`
+        );
+        res.set("Cache-Control", "public, max-age=60");
+        return res.json({
+            success: true,
+            packages: rows.map((p) => ({
+                package_code: p.package_code,
+                package_name: p.package_name,
+                customer_limit: Number(p.customer_limit || 0),
+                signup_fee: Number(p.signup_fee || 0),
+                monthly_fee: Number(p.monthly_fee || 0)
+            }))
+        });
+    } catch (e) {
+        console.error("[Website Management] Packages:", e);
+        return res.status(500).json({ success: false, message: "Unable to load packages." });
     }
 };
 
