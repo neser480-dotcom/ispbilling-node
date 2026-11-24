@@ -1,0 +1,398 @@
+{
+ "version": 2,
+ "site": {
+  "name": "AmaderBill",
+  "tagline": "Smart ISP Billing Solution",
+  "logo": "",
+  "favicon": "",
+  "description": "AmaderBill - বাংলাদেশের আধুনিক ISP Billing Software। গ্রাহক, বিলিং, MikroTik, OLT ও পেমেন্ট পরিচালনা করুন একটি প্ল্যাটফর্ম থেকে।",
+  "login_label": "লগইন",
+  "login_url": "https://app.amaderbill.com"
+ },
+ "sections": [
+  {
+   "id": "home",
+   "type": "hero",
+   "enabled": true,
+   "nav_label": "হোম",
+   "data": {
+    "label": "স্মার্ট আইএসপি সল্যুশন",
+    "title": "আপনার আইএসপি ব্যবসার",
+    "highlight": "স্মার্ট সমাধান",
+    "description": "AmaderBill-এ স্বাগতম। বাংলা ও ইংরেজিতে আধুনিক ISP Billing Solution।\n            একটি শক্তিশালী প্ল্যাটফর্ম থেকে গ্রাহক, বিলিং, MikroTik, OLT ও\n            পুরো ব্যবসা পরিচালনা করুন।",
+    "buttons": [
+     {
+      "label": "অ্যাডমিন লগইন",
+      "url": "https://app.amaderbill.com",
+      "style": "primary"
+     },
+     {
+      "label": "কাস্টমার লগইন",
+      "url": "https://app.amaderbill.com/customer/login",
+      "style": "outline"
+     },
+     {
+      "label": "ফ্রি ট্রায়াল",
+      "url": "https://app.amaderbill.com/register",
+      "style": "outline"
+     }
+    ],
+    "image": ""
+   }
+  },
+  {
+   "id": "about",
+   "type": "about",
+   "enabled": true,
+   "nav_label": "আমাদের সম্পর্কে",
+   "data": {
+    "label": "AmaderBill সম্পর্কে",
+    "title": "বাংলাদেশের ISP ব্যবসার জন্য আধুনিক বিলিং সফটওয়্যার",
+    "paragraphs": [
+     "AmaderBill আপনাকে গ্রাহক, বিলিং, পেমেন্ট ও নেটওয়ার্ক অপারেশন\n            সহজে পরিচালনার সুবিধা দেয়। বাংলা ও ইংরেজি উভয় ভাষায় ব্যবহারযোগ্য\n            এই প্ল্যাটফর্ম আপনার ISP ব্যবসাকে আরও কার্যকর করতে সাহায্য করে।",
+     "একটি ড্যাশবোর্ড থেকেই গ্রাহক ব্যবস্থাপনা, বিল কালেকশন, MikroTik\n            রাউটার, ONU ও OLT এবং বিভিন্ন রিপোর্ট পরিচালনা করুন।"
+    ],
+    "points": [
+     "সহজ গ্রাহক ও বিলিং ব্যবস্থাপনা",
+     "MikroTik ও OLT ইন্টিগ্রেশন",
+     "বাংলা ও ইংরেজি ইন্টারফেস",
+     "নিরাপদ মাল্টি-ইউজার সিস্টেম"
+    ],
+    "button_label": "ফিচারস দেখুন",
+    "button_url": "#features"
+   }
+  },
+  {
+   "id": "features",
+   "type": "features",
+   "enabled": true,
+   "nav_label": "ফিচারস",
+   "data": {
+    "label": "আমাদের ফিচারস",
+    "title": "ISP Business Management Tools",
+    "subtitle": "আপনার ISP ব্যবসা আরও সহজ, দ্রুত ও কার্যকর করার জন্য প্রয়োজনীয় সব টুলস।",
+    "items": [
+     {
+      "icon": "👥",
+      "title": "গ্রাহক ম্যানেজমেন্ট",
+      "description": "গ্রাহকের তথ্য, সংযোগ ও অ্যাকাউন্ট পরিচালনা করুন।"
+     },
+     {
+      "icon": "💳",
+      "title": "বিলিং ম্যানেজমেন্ট",
+      "description": "মাসিক বিল, রিচার্জ ও পেমেন্ট হিসাব রাখুন।"
+     },
+     {
+      "icon": "📡",
+      "title": "একাধিক MikroTik",
+      "description": "একাধিক রাউটার একই ড্যাশবোর্ড থেকে পরিচালনা করুন।"
+     },
+     {
+      "icon": "🌐",
+      "title": "PPPoE ও Static IP",
+      "description": "PPPoE এবং Static IP গ্রাহক নিয়ন্ত্রণ করুন।"
+     },
+     {
+      "icon": "📶",
+      "title": "লাইভ ব্যান্ডউইথ",
+      "description": "গ্রাহকের লাইভ ব্যান্ডউইথ ও সেশন দেখুন।"
+     },
+     {
+      "icon": "🔌",
+      "title": "OLT ইন্টিগ্রেশন",
+      "description": "ONU তথ্য ও অপটিক্যাল নেটওয়ার্ক পরিচালনা করুন।"
+     },
+     {
+      "icon": "📱",
+      "title": "মোবাইল অ্যাপ",
+      "description": "মোবাইল থেকেই গুরুত্বপূর্ণ কার্যক্রম পরিচালনা করুন।"
+     },
+     {
+      "icon": "💰",
+      "title": "পেমেন্ট গেটওয়ে",
+      "description": "অনলাইন পেমেন্ট ও পেমেন্ট হিসাব পরিচালনা করুন।"
+     },
+     {
+      "icon": "✉️",
+      "title": "এসএমএস মডিউল",
+      "description": "বিল ও পেমেন্ট সংক্রান্ত নোটিফিকেশন পাঠান।"
+     },
+     {
+      "icon": "📊",
+      "title": "রিপোর্ট ও অ্যানালিটিক্স",
+      "description": "আয়, ব্যয়, বিল ও কালেকশন রিপোর্ট দেখুন।"
+     },
+     {
+      "icon": "🎫",
+      "title": "সাপোর্ট ও টিকেটিং",
+      "description": "গ্রাহকের অভিযোগ ও সাপোর্ট অনুরোধ পরিচালনা করুন।"
+     },
+     {
+      "icon": "🔐",
+      "title": "ইউজার পারমিশন",
+      "description": "কর্মীদের ভূমিকা ও অ্যাক্সেস নিয়ন্ত্রণ করুন।"
+     },
+     {
+      "icon": "🏢",
+      "title": "রিসেলার প্যানেল",
+      "description": "রিসেলার ও সাব-অ্যাকাউন্ট পরিচালনা করুন।"
+     },
+     {
+      "icon": "🔔",
+      "title": "নোটিফিকেশন",
+      "description": "গুরুত্বপূর্ণ আপডেট ও কার্যক্রমের নোটিফিকেশন।"
+     },
+     {
+      "icon": "🗺️",
+      "title": "নেটওয়ার্ক ডায়াগ্রাম",
+      "description": "নেটওয়ার্কের সংযোগ ও অবস্থা পর্যবেক্ষণ করুন।"
+     },
+     {
+      "icon": "🌍",
+      "title": "বাংলা ও ইংরেজি",
+      "description": "নিজের পছন্দের ভাষায় সফটওয়্যার ব্যবহার করুন।"
+     }
+    ]
+   }
+  },
+  {
+   "id": "stats",
+   "type": "stats",
+   "enabled": true,
+   "nav_label": "",
+   "data": {
+    "label": "আমাদের লক্ষ্য",
+    "title": "আপনার ISP ব্যবসার ডিজিটাল সহযোগী",
+    "subtitle": "একটি প্ল্যাটফর্মে বিলিং, গ্রাহক ও নেটওয়ার্ক পরিচালনা।",
+    "items": [
+     {
+      "value": "24/7",
+      "label": "সাপোর্ট সুবিধা"
+     },
+     {
+      "value": "99.9%",
+      "label": "সিস্টেম নির্ভরযোগ্যতা লক্ষ্য"
+     },
+     {
+      "value": "বাংলা",
+      "label": "স্থানীয় ভাষায় ব্যবহার"
+     },
+     {
+      "value": "এক",
+      "label": "সমন্বিত ম্যানেজমেন্ট প্ল্যাটফর্ম"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pricing",
+   "type": "pricing",
+   "enabled": true,
+   "nav_label": "মূল্য তালিকা",
+   "data": {
+    "label": "মূল্য তালিকা",
+    "title": "আপনার ব্যবসার জন্য সঠিক প্ল্যান",
+    "subtitle": "আপনার গ্রাহক সংখ্যা অনুযায়ী প্যাকেজ নির্বাচন করুন।",
+    "note": "* প্রদর্শিত মূল্য উদাহরণ হিসেবে রাখা হয়েছে। চূড়ান্ত মূল্য Admin Panel থেকে নির্ধারণ করতে হবে।",
+    "items": [
+     {
+      "name": "Starter",
+      "limit": "১০০ গ্রাহক পর্যন্ত",
+      "price": "৳ ৬০০",
+      "period": "/ মাস",
+      "popular": false,
+      "features": [
+       "কাস্টমার লিমিট: ১০০",
+       "OTC চার্জ: ৳ ৪,০০০",
+       "মাসিক ফি: ৳ ৬০০",
+       "OLT লিমিট: ১"
+      ],
+      "button_label": "শুরু করুন",
+      "button_url": "https://app.amaderbill.com/register"
+     },
+     {
+      "name": "Business",
+      "limit": "৫০০ গ্রাহক পর্যন্ত",
+      "price": "৳ ২,০০০",
+      "period": "/ মাস",
+      "popular": true,
+      "features": [
+       "কাস্টমার লিমিট: ৫০০",
+       "OTC চার্জ: ৳ ৬,০০০",
+       "মাসিক ফি: ৳ ২,০০০",
+       "OLT লিমিট: ৩"
+      ],
+      "button_label": "শুরু করুন",
+      "button_url": "https://app.amaderbill.com/register"
+     },
+     {
+      "name": "Enterprise",
+      "limit": "১,০০০ গ্রাহক পর্যন্ত",
+      "price": "৳ ৩,৫০০",
+      "period": "/ মাস",
+      "popular": false,
+      "features": [
+       "কাস্টমার লিমিট: ১,০০০",
+       "OTC চার্জ: ৳ ৬,০০০",
+       "মাসিক ফি: ৳ ৩,৫০০",
+       "OLT লিমিট: ৬"
+      ],
+      "button_label": "যোগাযোগ করুন",
+      "button_url": "#contact"
+     }
+    ]
+   }
+  },
+  {
+   "id": "team",
+   "type": "team",
+   "enabled": true,
+   "nav_label": "সাপোর্ট টিম",
+   "data": {
+    "label": "সাপোর্ট টিম",
+    "title": "AmaderBill Support Team",
+    "subtitle": "আপনার যেকোনো প্রশ্ন ও সমস্যায় আমাদের সাপোর্ট টিম পাশে রয়েছে।",
+    "items": [
+     {
+      "avatar": "S",
+      "name": "সাপোর্ট টিম",
+      "role": "Support Executive",
+      "description": "সফটওয়্যার ব্যবহার ও সাধারণ সমস্যায় সহযোগিতা।"
+     },
+     {
+      "avatar": "T",
+      "name": "টেকনিক্যাল টিম",
+      "role": "Technical Support",
+      "description": "সার্ভার, MikroTik ও নেটওয়ার্ক সংক্রান্ত সহযোগিতা।"
+     },
+     {
+      "avatar": "C",
+      "name": "কাস্টমার কেয়ার",
+      "role": "Customer Care",
+      "description": "অ্যাকাউন্ট, প্যাকেজ ও অন্যান্য তথ্যের সহযোগিতা।"
+     }
+    ]
+   }
+  },
+  {
+   "id": "gallery",
+   "type": "gallery",
+   "enabled": true,
+   "nav_label": "",
+   "data": {
+    "label": "Gallery",
+    "title": "আমাদের সফটওয়্যার গ্যালারি",
+    "subtitle": "AmaderBill-এর বিভিন্ন পেজ ও ফিচারের ছবি এখানে দেখুন।",
+    "items": [
+     {
+      "image": "/assets/images/gallery/dashboard.jpg",
+      "alt": "AmaderBill Dashboard"
+     },
+     {
+      "image": "/assets/images/gallery/customers.jpg",
+      "alt": "Customer Management"
+     },
+     {
+      "image": "/assets/images/gallery/billing.jpg",
+      "alt": "Billing Management"
+     },
+     {
+      "image": "/assets/images/gallery/payments.jpg",
+      "alt": "Payment Management"
+     },
+     {
+      "image": "/assets/images/gallery/mikrotik.jpg",
+      "alt": "MikroTik Integration"
+     },
+     {
+      "image": "/assets/images/gallery/olt.jpg",
+      "alt": "OLT Management"
+     },
+     {
+      "image": "/assets/images/gallery/reports.jpg",
+      "alt": "Reports"
+     },
+     {
+      "image": "/assets/images/gallery/mobile.jpg",
+      "alt": "Mobile App"
+     }
+    ]
+   }
+  },
+  {
+   "id": "contact",
+   "type": "contact",
+   "enabled": true,
+   "nav_label": "যোগাযোগ",
+   "data": {
+    "label": "যোগাযোগ",
+    "title": "যেকোনো সময় আমাদের সাথে যোগাযোগ করুন",
+    "subtitle": "AmaderBill সম্পর্কে জানতে বা সেবা নিতে আমাদের সাথে কথা বলুন।",
+    "email": "support@amaderbill.com",
+    "phone": "",
+    "whatsapp": "",
+    "address": ""
+   }
+  },
+  {
+   "id": "apps",
+   "type": "apps",
+   "enabled": true,
+   "nav_label": "অ্যাপ স্টোর",
+   "data": {
+    "label": "অ্যাপ স্টোর",
+    "title": "AmaderBill অ্যাপ ডাউনলোড করুন",
+    "subtitle": "মোবাইল থেকেই আপনার ISP ব্যবসা ও গ্রাহক অ্যাকাউন্ট পরিচালনা করুন।",
+    "items": [
+     {
+      "icon": "📊",
+      "name": "AmaderBill Admin App",
+      "description": "অ্যাডমিন অ্যাপ থেকে গ্রাহক, বিলিং ও ব্যবসার কার্যক্রম পরিচালনা করুন।",
+      "url": "/apps/admin.apk",
+      "button_label": "ডাউনলোড"
+     },
+     {
+      "icon": "👤",
+      "name": "AmaderBill Customer App",
+      "description": "গ্রাহকরা বিল দেখতে, পেমেন্ট করতে ও নোটিফিকেশন পেতে পারবেন।",
+      "url": "/apps/customer.apk",
+      "button_label": "ডাউনলোড"
+     },
+     {
+      "icon": "✉️",
+      "name": "AmaderBill SMS Responder",
+      "description": "SMS অটোমেশনের মাধ্যমে গ্রাহক যোগাযোগ সহজ করুন।",
+      "url": "/apps/sms-responder.apk",
+      "button_label": "ডাউনলোড"
+     }
+    ]
+   }
+  }
+ ],
+ "footer": {
+  "description": "বাংলাদেশের ISP ব্যবসার জন্য আধুনিক বিলিং ও ম্যানেজমেন্ট সফটওয়্যার।\n            গ্রাহক, বিলিং, পেমেন্ট ও নেটওয়ার্ক পরিচালনা করুন একটি প্ল্যাটফর্ম থেকে।",
+  "copyright": "Copyright © AmaderBill - 2026. All Rights Reserved.",
+  "links": [
+   {
+    "label": "প্রাইভেসি পলিসি",
+    "url": "/privacy-policy"
+   },
+   {
+    "label": "শর্তাবলী",
+    "url": "/terms"
+   },
+   {
+    "label": "রিটার্ন ও রিফান্ড পলিসি",
+    "url": "/refund-policy"
+   },
+   {
+    "label": "টিউটোরিয়াল",
+    "url": "/tutorials"
+   },
+   {
+    "label": "যোগাযোগ",
+    "url": "#contact"
+   }
+  ]
+ }
+}

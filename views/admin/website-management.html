@@ -1,512 +1,228 @@
-
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website Management - AmaderBill</title>
-
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/assets/css/all.min.css">
-
-    <style>
-        body {
-            background: #f4f6fa;
-            font-family: Arial, sans-serif;
-            color: #263247;
-        }
-
-        .website-container {
-            max-width: 1200px;
-            margin: 25px auto;
-            padding: 15px;
-        }
-
-        .page-header {
-            background: #fff;
-            padding: 22px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .page-header h2 {
-            font-size: 22px;
-            margin: 0;
-            font-weight: 700;
-        }
-
-        .section-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 22px;
-            margin-bottom: 18px;
-            box-shadow: 0 2px 10px rgba(0,0,0,.04);
-        }
-
-        .section-title {
-            font-size: 17px;
-            font-weight: 700;
-            padding-bottom: 13px;
-            margin-bottom: 18px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .form-label {
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .form-control {
-            min-height: 42px;
-        }
-
-        textarea.form-control {
-            min-height: 95px;
-        }
-
-        .save-bar {
-            position: sticky;
-            bottom: 10px;
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 15px rgba(0,0,0,.12);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            z-index: 10;
-        }
-
-        .status-message {
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .image-preview {
-            max-width: 180px;
-            max-height: 100px;
-            object-fit: contain;
-            display: block;
-            margin-top: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 5px;
-        }
-
-        .help-text {
-            color: #778195;
-            font-size: 12px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Builder - AmaderBill</title>
+<link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+<link rel="stylesheet" href="/assets/css/all.min.css">
+<style>
+body{background:#f4f6fa;color:#263247;font-family:Arial,sans-serif}
+.wrap{max-width:1300px;margin:20px auto;padding:0 15px}
+.card-x{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:18px}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.sec-item{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #e5e9f0;border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff}
+.sec-item.active{border-color:#0d6efd;background:#eef4ff}
+.sec-item.off .nm{opacity:.45;text-decoration:line-through}
+.sec-item .nm{flex:1;font-weight:600;font-size:14px}
+.sec-item .badge-t{font-size:11px;color:#778195}
+.mini{border:0;background:none;color:#778195;padding:2px 5px}.mini:hover{color:#0d6efd}
+.form-label{font-weight:600;font-size:13px;margin-bottom:3px}
+.item-box{border:1px solid #e5e9f0;border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfd}
+.item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:600;font-size:13px}
+.save-bar{position:sticky;bottom:10px;margin-top:16px;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.hint{font-size:12px;color:#778195}
+</style>
 </head>
-
 <body>
-
-<div class="website-container">
-
-    <div class="page-header">
-        <div>
-            <h2><i class="fa fa-globe text-primary"></i> Website Management</h2>
-            <small class="text-muted">
-                AmaderBill Public Website Content Management
-            </small>
-        </div>
-
-        <a href="https://amaderbill.com" target="_blank"
-           class="btn btn-outline-primary">
-            <i class="fa fa-external-link-alt"></i>
-            View Website
-        </a>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h4 class="mb-0"><i class="fa fa-globe text-primary"></i> Website Builder</h4>
+      <small class="text-muted">সেকশন যোগ/মুছুন, ক্রম বদলান, লুকান এবং কনটেন্ট এডিট করুন — HTML ফাইল বদলাতে হবে না।</small>
     </div>
+    <a href="https://amaderbill.com" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fa fa-external-link-alt"></i> View Website</a>
+  </div>
 
-    <form id="websiteForm">
-
-        <!-- GENERAL SETTINGS -->
-        <div class="section-card">
-            <div class="section-title">Website Settings & Branding</div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Website Name</label>
-                    <input class="form-control" name="site_name"
-                           placeholder="AmaderBill">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Website Tagline</label>
-                    <input class="form-control" name="tagline">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Logo URL</label>
-                    <input class="form-control" name="logo"
-                           placeholder="/uploads/website/logo.png">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Favicon URL</label>
-                    <input class="form-control" name="favicon">
-                </div>
-            </div>
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card-x">
+        <div class="sec-item" data-pick="site"><i class="fa fa-cog"></i><span class="nm">Site Settings & Branding</span></div>
+        <div class="sec-item" data-pick="footer"><i class="fa fa-grip-lines"></i><span class="nm">Footer & Links</span></div>
+        <hr>
+        <div class="hint mb-2">Page Sections (উপর থেকে নিচে)</div>
+        <div id="secList"></div>
+        <div class="input-group input-group-sm mt-3">
+          <select id="addType" class="form-select"></select>
+          <button class="btn btn-outline-primary" id="addBtn"><i class="fa fa-plus"></i> Add Section</button>
         </div>
+      </div>
+    </div>
+    <div class="col-lg-8"><div class="card-x" id="editor">Loading...</div></div>
+  </div>
 
-        <!-- HERO -->
-        <div class="section-card">
-            <div class="section-title">Hero Banner</div>
-
-            <div class="mb-3">
-                <label class="form-label">Main Heading</label>
-                <input class="form-control" name="hero_heading">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea class="form-control"
-                          name="hero_description"></textarea>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Admin Login Link</label>
-                    <input class="form-control" name="admin_login_url"
-                           value="https://app.amaderbill.com">
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Customer Login Link</label>
-                    <input class="form-control" name="customer_login_url"
-                           value="https://app.amaderbill.com/customer/login">
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Free Trial Link</label>
-                    <input class="form-control" name="trial_url"
-                           value="https://app.amaderbill.com/register">
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Hero Image URL</label>
-                <input class="form-control" name="hero_image">
-            </div>
-        </div>
-
-        <!-- ABOUT -->
-        <div class="section-card">
-            <div class="section-title">About Us</div>
-
-            <div class="mb-3">
-                <label class="form-label">About Heading</label>
-                <input class="form-control" name="about_heading">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">About Description</label>
-                <textarea class="form-control"
-                          name="about_description"></textarea>
-            </div>
-        </div>
-
-        <!-- FEATURES -->
-        <div class="section-card">
-            <div class="section-title">Features</div>
-
-            <label class="form-label">Features JSON</label>
-            <textarea class="form-control" rows="8"
-                      name="features_json"
-                      placeholder='[{"title":"Customer Management","description":"Manage customers","icon":"fa-users"}]'></textarea>
-
-            <small class="help-text">
-                প্রতিটি Feature-এর title, description ও icon এখানে JSON আকারে থাকবে।
-            </small>
-        </div>
-
-        <!-- STATISTICS -->
-        <div class="section-card">
-            <div class="section-title">Website Statistics</div>
-
-            <label class="form-label">Statistics JSON</label>
-            <textarea class="form-control" rows="5"
-                      name="statistics_json"
-                      placeholder='[{"number":"24/7","label":"Support"}]'></textarea>
-        </div>
-
-        <!-- PRICING -->
-        <div class="section-card">
-            <div class="section-title">Pricing Plans</div>
-
-            <label class="form-label">Pricing Plans JSON</label>
-            <textarea class="form-control" rows="10"
-                      name="pricing_json"
-                      placeholder='[{"name":"Starter","price":"500","features":["Feature 1","Feature 2"]}]'></textarea>
-
-            <small class="help-text">
-                এখানে Public Website-এর প্রদর্শিত মূল্য ও প্যাকেজ তথ্য পরিবর্তন করা যাবে।
-            </small>
-        </div>
-
-        <!-- SUPPORT TEAM -->
-        <div class="section-card">
-            <div class="section-title">Support Team</div>
-
-            <label class="form-label">Support Team JSON</label>
-            <textarea class="form-control" rows="7"
-                      name="support_team_json"
-                      placeholder='[{"name":"Support Executive","designation":"Customer Support","image":"/assets/images/support.jpg"}]'></textarea>
-        </div>
-
-        <!-- GALLERY -->
-        <div class="section-card">
-            <div class="section-title">Gallery</div>
-
-            <label class="form-label">Gallery Images JSON</label>
-            <textarea class="form-control" rows="7"
-                      name="gallery_json"
-                      placeholder='[{"image":"/assets/images/gallery/image1.jpg","title":"Office"}]'></textarea>
-        </div>
-
-        <!-- CONTACT -->
-        <div class="section-card">
-            <div class="section-title">Contact Information</div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Phone</label>
-                    <input class="form-control" name="phone">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">WhatsApp</label>
-                    <input class="form-control" name="whatsapp">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Email</label>
-                    <input class="form-control" name="email">
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Address</label>
-                    <input class="form-control" name="address">
-                </div>
-            </div>
-        </div>
-
-        <!-- APPS -->
-        <div class="section-card">
-            <div class="section-title">Application Downloads</div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Admin App Download URL</label>
-                    <input class="form-control" name="admin_app_url">
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Customer App Download URL</label>
-                    <input class="form-control" name="customer_app_url">
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">SMS Responder Download URL</label>
-                    <input class="form-control" name="sms_app_url">
-                </div>
-            </div>
-        </div>
-
-        <!-- PROMOTIONS -->
-        <div class="section-card">
-            <div class="section-title">Promotions</div>
-
-            <label class="form-label">Promotions JSON</label>
-            <textarea class="form-control" rows="7"
-                      name="promotions_json"
-                      placeholder='[{"title":"Special Offer","description":"Offer details","image":"/uploads/offer.jpg","url":"https://app.amaderbill.com"}]'></textarea>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="section-card">
-            <div class="section-title">Footer & Social Links</div>
-
-            <div class="mb-3">
-                <label class="form-label">Footer Description</label>
-                <textarea class="form-control"
-                          name="footer_description"></textarea>
-            </div>
-
-            <label class="form-label">Social Links JSON</label>
-            <textarea class="form-control" rows="5"
-                      name="social_links_json"
-                      placeholder='[{"name":"Facebook","url":"https://facebook.com/"}]'></textarea>
-        </div>
-
-        <div class="save-bar">
-            <span id="saveStatus" class="status-message text-muted">
-                Website content loading...
-            </span>
-
-            <button type="submit" class="btn btn-primary"
-                    id="saveButton">
-                <i class="fa fa-save"></i>
-                Save Website Changes
-            </button>
-        </div>
-
-    </form>
+  <div class="card-x save-bar">
+    <span id="status" class="text-muted" style="font-size:13px;font-weight:600">Loading...</span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" id="restoreBtn" title="আগের Published ভার্সন Draft-এ আনুন">Restore Previous</button>
+      <button class="btn btn-outline-primary" id="saveBtn"><i class="fa fa-save"></i> Save Draft</button>
+      <button class="btn btn-success" id="pubBtn"><i class="fa fa-rocket"></i> Publish</button>
+    </div>
+  </div>
 </div>
 
 <script>
 "use strict";
+const API = "/api/website-management";
+const $ = (id) => document.getElementById(id);
+let content = null, sel = "site", dirty = false;
 
-const form = document.getElementById("websiteForm");
-const saveButton = document.getElementById("saveButton");
-const saveStatus = document.getElementById("saveStatus");
+/* ---------- field schema: [key, label, type, (sub-fields | hint)] ---------- */
+const HEAD = [["label", "Small label", "text"], ["title", "Heading", "text"], ["subtitle", "Sub heading", "text"]];
+const SCHEMA = {
+  hero: { name: "Hero Banner", fields: [["label", "Label", "text"], ["title", "Heading", "text"], ["highlight", "Highlighted words", "text"], ["description", "Description", "area"], ["image", "Image URL (খালি রাখলে লেখা-ভিত্তিক)", "url"],
+    ["buttons", "Buttons", "list", [["label", "Text", "text"], ["url", "Link", "url"], ["style", "Style", "select:primary,outline"]], "label"]] },
+  about: { name: "About Us", fields: [["label", "Label", "text"], ["title", "Heading", "text"], ["paragraphs", "Paragraphs (প্রতি লাইনে একটি)", "lines"], ["points", "Check points (প্রতি লাইনে একটি)", "lines"], ["image", "Image URL", "url"], ["button_label", "Button text", "text"], ["button_url", "Button link", "url"]] },
+  features: { name: "Features", fields: [...HEAD, ["items", "Features", "list", [["icon", "Icon (emoji)", "text"], ["title", "Title", "text"], ["description", "Description", "area"]], "title"]] },
+  stats: { name: "Statistics", fields: [...HEAD, ["items", "Numbers", "list", [["value", "Number", "text"], ["label", "Label", "text"]], "value"]] },
+  pricing: { name: "Pricing Plans", fields: [...HEAD, ["note", "Note below plans", "text"], ["items", "Plans", "list", [["name", "Plan name", "text"], ["limit", "Short text (e.g. ১০০ গ্রাহক পর্যন্ত)", "text"], ["price", "Price", "text"], ["period", "Period", "text"], ["popular", "Mark as popular", "bool"], ["features", "Features (প্রতি লাইনে 'নাম: মান')", "lines"], ["button_label", "Button text", "text"], ["button_url", "Button link", "url"]], "name"]] },
+  team: { name: "Support Team", fields: [...HEAD, ["items", "Members", "list", [["name", "Name", "text"], ["role", "Role", "text"], ["description", "Description", "area"], ["image", "Photo URL", "url"], ["avatar", "Avatar letter", "text"]], "name"]] },
+  gallery: { name: "Gallery", fields: [...HEAD, ["items", "Images", "list", [["image", "Image URL", "url"], ["alt", "Caption", "text"]], "alt"]] },
+  contact: { name: "Contact", fields: [...HEAD, ["email", "Email", "text"], ["phone", "Phone", "text"], ["whatsapp", "WhatsApp", "text"], ["address", "Address", "text"]] },
+  apps: { name: "App Downloads", fields: [...HEAD, ["items", "Apps", "list", [["icon", "Icon (emoji)", "text"], ["name", "Name", "text"], ["description", "Description", "area"], ["url", "Download link", "url"], ["button_label", "Button text", "text"]], "name"]] },
+  faq: { name: "FAQ (প্রশ্ন-উত্তর)", fields: [...HEAD, ["items", "Questions", "list", [["question", "Question", "text"], ["answer", "Answer", "area"]], "question"]] },
+  testimonials: { name: "Testimonials (গ্রাহকের মতামত)", fields: [...HEAD, ["items", "Reviews", "list", [["quote", "Review text", "area"], ["name", "Name", "text"], ["role", "Company / Role", "text"]], "name"]] },
+  cta: { name: "Call-to-Action Banner", fields: [["title", "Heading", "text"], ["text", "Text", "area"], ["button_label", "Button text", "text"], ["button_url", "Button link", "url"]] },
+  custom: { name: "Custom Section", fields: [["title", "Heading", "text"], ["body", "Text (প্যারাগ্রাফ আলাদা লাইনে)", "area"], ["image", "Image URL", "url"], ["button_label", "Button text", "text"], ["button_url", "Button link", "url"]] }
+};
+const SITE_FIELDS = [["name", "Website name", "text"], ["tagline", "Tagline", "text"], ["description", "SEO description", "area"], ["logo", "Logo URL", "url"], ["favicon", "Favicon URL", "url"], ["login_label", "Login button text", "text"], ["login_url", "Login button link", "url"]];
+const FOOTER_FIELDS = [["description", "Footer description", "area"], ["copyright", "Copyright text", "text"], ["links", "Important links", "list", [["label", "Text", "text"], ["url", "Link", "url"]], "label"]];
 
-const jsonFields = [
-    "features_json",
-    "statistics_json",
-    "pricing_json",
-    "support_team_json",
-    "gallery_json",
-    "promotions_json",
-    "social_links_json"
-];
-
-async function getCsrfToken() {
-    const response = await fetch("/api/csrf-token", {
-        credentials: "same-origin"
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.csrf_token) {
-        throw new Error("CSRF token পাওয়া যায়নি। আবার লগইন করুন।");
-    }
-
-    return result.csrf_token;
+/* ---------- tiny DOM helper ---------- */
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (k === "text") e.textContent = v; else if (k.startsWith("on")) e[k] = v; else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  kids.forEach((c) => c && e.append(c));
+  return e;
 }
+const touch = () => { dirty = true; setStatus("Unsaved changes", "text-warning"); };
+function setStatus(t, c) { const s = $("status"); s.textContent = t; s.className = c || "text-muted"; }
 
-function setFormValues(data) {
-    for (const element of form.elements) {
-        if (!element.name) continue;
-
-        const value = data[element.name];
-
-        if (value === undefined || value === null) continue;
-
-        if (jsonFields.includes(element.name)) {
-            element.value = typeof value === "string"
-                ? value
-                : JSON.stringify(value, null, 2);
-        } else {
-            element.value = value;
-        }
-    }
+/* ---------- generic field renderer ---------- */
+function fieldEl(def, obj) {
+  const [key, label, type, sub, titleKey] = def;
+  const wrap = h("div", { class: "mb-3" });
+  if (type === "bool") {
+    const cb = h("input", { type: "checkbox", class: "form-check-input", id: "c" + Math.random() });
+    cb.checked = !!obj[key]; cb.onchange = () => { obj[key] = cb.checked; touch(); };
+    return h("div", { class: "form-check mb-3" }, cb, h("label", { class: "form-check-label", for: cb.id, text: label }));
+  }
+  wrap.append(h("label", { class: "form-label", text: label }));
+  if (type === "list") {
+    obj[key] = Array.isArray(obj[key]) ? obj[key] : [];
+    const box = h("div");
+    const draw = () => {
+      box.replaceChildren();
+      obj[key].forEach((it, i) => {
+        const head = h("div", { class: "item-head" }, h("span", { text: "#" + (i + 1) + " " + (it[titleKey] || "") }),
+          h("span", {}, mini("fa-arrow-up", () => move(obj[key], i, -1, draw)), mini("fa-arrow-down", () => move(obj[key], i, 1, draw)),
+            mini("fa-trash text-danger", () => { obj[key].splice(i, 1); touch(); draw(); })));
+        box.append(h("div", { class: "item-box" }, head, ...sub.map((d) => fieldEl(d, it))));
+      });
+    };
+    draw();
+    wrap.append(box, h("button", { type: "button", class: "btn btn-sm btn-outline-primary", onclick: () => { obj[key].push({}); touch(); draw(); }, text: "+ Add item" }));
+    return wrap;
+  }
+  let inp;
+  if (type === "area" || type === "lines") {
+    inp = h("textarea", { class: "form-control", rows: type === "lines" ? 4 : 3 });
+    inp.value = type === "lines" ? (obj[key] || []).join("\n") : obj[key] || "";
+    inp.oninput = () => { obj[key] = type === "lines" ? inp.value.split("\n").map((x) => x.trim()).filter(Boolean) : inp.value; touch(); };
+  } else if (type.startsWith("select:")) {
+    inp = h("select", { class: "form-select" }, ...type.slice(7).split(",").map((o) => h("option", { value: o, text: o })));
+    inp.value = obj[key] || type.slice(7).split(",")[0]; obj[key] = inp.value; inp.onchange = () => { obj[key] = inp.value; touch(); };
+  } else {
+    inp = h("input", { class: "form-control", type: "text" }); inp.value = obj[key] || "";
+    inp.oninput = () => { obj[key] = inp.value; touch(); };
+  }
+  wrap.append(inp);
+  if (type === "url") wrap.append(h("div", { class: "hint", text: "https://..., /path, #section, mailto:, tel: — অন্য ধরনের লিংক সেভ হবে না।" }));
+  return wrap;
 }
+const mini = (ic, fn) => h("button", { type: "button", class: "mini", onclick: fn }, h("i", { class: "fa " + ic }));
+function move(arr, i, d, cb) { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; touch(); cb(); }
 
-function getFormValues() {
-    const data = {};
-
-    for (const element of form.elements) {
-        if (!element.name) continue;
-
-        let value = element.value.trim();
-
-        if (jsonFields.includes(element.name)) {
-            if (!value) {
-                data[element.name] = [];
-                continue;
-            }
-
-            try {
-                data[element.name] = JSON.parse(value);
-            } catch {
-                throw new Error(element.name + " JSON সঠিক নয়।");
-            }
-        } else {
-            data[element.name] = value;
-        }
-    }
-
-    return data;
+/* ---------- sections list & editor ---------- */
+function drawList() {
+  const L = $("secList"); L.replaceChildren();
+  content.sections.forEach((s, i) => {
+    const row = h("div", { class: "sec-item" + (sel === s.id ? " active" : "") + (s.enabled === false ? " off" : "") },
+      h("span", { class: "nm", text: SCHEMA[s.type].name }), h("span", { class: "badge-t", text: s.type }),
+      mini(s.enabled === false ? "fa-eye-slash" : "fa-eye", (e) => { e.stopPropagation(); s.enabled = s.enabled === false; touch(); drawList(); }),
+      mini("fa-arrow-up", (e) => { e.stopPropagation(); move(content.sections, i, -1, drawList); }),
+      mini("fa-arrow-down", (e) => { e.stopPropagation(); move(content.sections, i, 1, drawList); }),
+      mini("fa-trash text-danger", (e) => { e.stopPropagation(); if (!confirm("এই সেকশন মুছবেন?")) return; content.sections.splice(i, 1); sel = "site"; touch(); drawAll(); }));
+    row.onclick = () => { sel = s.id; drawAll(); };
+    L.append(row);
+  });
+  document.querySelectorAll("[data-pick]").forEach((e) => e.classList.toggle("active", sel === e.dataset.pick));
 }
-
-async function loadWebsiteContent() {
-    saveStatus.textContent = "Website content loading...";
-
-    try {
-        const response = await fetch(
-            "/api/website-management/content",
-            { credentials: "same-origin" }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || "Content load failed.");
-        }
-
-        setFormValues(result.data || {});
-
-        saveStatus.textContent = "Website content loaded.";
-        saveStatus.className = "status-message text-success";
-
-    } catch (error) {
-        saveStatus.textContent = error.message;
-        saveStatus.className = "status-message text-danger";
-    }
+function drawEditor() {
+  const E = $("editor"); E.replaceChildren();
+  if (sel === "site") { E.append(h("h5", { text: "Site Settings & Branding" }), ...SITE_FIELDS.map((d) => fieldEl(d, content.site))); return; }
+  if (sel === "footer") { E.append(h("h5", { text: "Footer & Links" }), ...FOOTER_FIELDS.map((d) => fieldEl(d, content.footer))); return; }
+  const s = content.sections.find((x) => x.id === sel);
+  if (!s) { sel = "site"; return drawEditor(); }
+  s.data = s.data || {};
+  E.append(h("h5", { text: SCHEMA[s.type].name }));
+  const nav = h("input", { class: "form-control", type: "text" }); nav.value = s.nav_label || "";
+  nav.oninput = () => { s.nav_label = nav.value; touch(); };
+  E.append(h("div", { class: "mb-3" }, h("label", { class: "form-label", text: "Menu label (খালি রাখলে মেনুতে দেখাবে না)" }), nav,
+    h("div", { class: "hint", text: "Section ID (লিংক): #" + s.id })));
+  SCHEMA[s.type].fields.forEach((d) => E.append(fieldEl(d, s.data)));
 }
+function drawAll() { drawList(); drawEditor(); }
 
-form.addEventListener("submit", async function (event) {
-    event.preventDefault();
+/* ---------- add section ---------- */
+Object.keys(SCHEMA).forEach((t) => $("addType").append(h("option", { value: t, text: SCHEMA[t].name })));
+$("addBtn").onclick = () => {
+  const type = $("addType").value; let n = 1, id;
+  do { id = type + (n++ > 1 ? "-" + (n - 1) : ""); } while (content.sections.some((s) => s.id === id));
+  content.sections.push({ id, type, enabled: true, nav_label: "", data: {} });
+  sel = id; touch(); drawAll();
+};
+document.querySelectorAll("[data-pick]").forEach((e) => e.onclick = () => { sel = e.dataset.pick; drawAll(); });
 
-    saveButton.disabled = true;
-    saveStatus.textContent = "Saving...";
-    saveStatus.className = "status-message text-muted";
+/* ---------- API ---------- */
+async function csrf() {
+  const r = await fetch("/api/csrf-token", { credentials: "same-origin" }), j = await r.json();
+  if (!r.ok || !j.csrf_token) throw new Error("CSRF token পাওয়া যায়নি। আবার লগইন করুন।");
+  return j.csrf_token;
+}
+async function call(method, path, body) {
+  const r = await fetch(API + path, { method, credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrf() }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json();
+  if (!r.ok || !j.success) throw new Error(j.message || "Request failed.");
+  return j;
+}
+async function load() {
+  try {
+    const r = await fetch(API + "/draft", { credentials: "same-origin" }), j = await r.json();
+    if (!r.ok || !j.success) throw new Error(j.message || "Load failed.");
+    content = j.content; dirty = false; drawAll(); setStatus("Draft loaded.", "text-success");
+  } catch (e) { $("editor").textContent = e.message; setStatus(e.message, "text-danger"); }
+}
+async function saveDraft() { await call("PUT", "/draft", { content }); dirty = false; }
+function busy(b) { ["saveBtn", "pubBtn", "restoreBtn"].forEach((id) => $(id).disabled = b); }
 
-    try {
-        const csrfToken = await getCsrfToken();
-        const data = getFormValues();
-
-        const response = await fetch(
-            "/api/website-management/content",
-            {
-                method: "PUT",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-Token": csrfToken
-                },
-                body: JSON.stringify(data)
-            }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || "Save failed.");
-        }
-
-        saveStatus.textContent = "Website content saved successfully.";
-        saveStatus.className = "status-message text-success";
-
-    } catch (error) {
-        saveStatus.textContent = error.message;
-        saveStatus.className = "status-message text-danger";
-    } finally {
-        saveButton.disabled = false;
-    }
-});
-
-loadWebsiteContent();
+$("saveBtn").onclick = async () => { busy(true); setStatus("Saving..."); try { await saveDraft(); setStatus("Draft saved.", "text-success"); } catch (e) { setStatus(e.message, "text-danger"); } busy(false); };
+$("pubBtn").onclick = async () => {
+  if (!confirm("Website-এ এখনই Publish করবেন?")) return;
+  busy(true); setStatus("Publishing...");
+  try { await saveDraft(); await call("POST", "/publish"); setStatus("Published! Website-এ কয়েক সেকেন্ডের মধ্যে দেখা যাবে।", "text-success"); }
+  catch (e) { setStatus(e.message, "text-danger"); } busy(false);
+};
+$("restoreBtn").onclick = async () => {
+  if (!confirm("আগের Published ভার্সন Draft-এ লোড হবে। আপনার বর্তমান Draft হারাবে। চালিয়ে যাবেন?")) return;
+  busy(true); try { await call("POST", "/restore-backup"); await load(); } catch (e) { setStatus(e.message, "text-danger"); } busy(false);
+};
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+load();
 </script>
-
 </body>
 </html>

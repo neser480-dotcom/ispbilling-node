@@ -185,7 +185,7 @@ if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PRO
 */
 
 app.use(
-    express.json()
+    express.json({ limit: "600kb" })
 );
 
 app.use(
@@ -851,6 +851,27 @@ app.get("/", (req, res) => {
         path.join(__dirname, "views", "auth", "login.html")
     );
 });
+/* PUBLIC WEBSITE PREVIEW (for localhost / XAMPP testing) */
+app.get("/site-preview", (req, res) =>
+    res.sendFile(path.join(__dirname, "views", "app-download", "index.html"))
+);
+
+/* APK MANAGEMENT PAGE (Super Admin) */
+app.get(
+    "/super-admin/apk-management",
+    requireSoftwareBilling,
+    (req, res, next) => {
+        const role = String((req.session && req.session.role) || "")
+            .trim().toLowerCase().replace(/[\s_-]+/g, "");
+        if (role !== "superadmin") {
+            return res.status(403).send("Super Admin access required.");
+        }
+        next();
+    },
+    (req, res) => res.sendFile(
+        path.join(__dirname, "views", "admin", "apk-management.html")
+    )
+);
 /*
 |--------------------------------------------------------------------------
 | REGISTER PAGE

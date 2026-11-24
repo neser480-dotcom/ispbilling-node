@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APK Management - AmaderBill</title>
+<link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+<link rel="stylesheet" href="/assets/css/all.min.css">
+<style>
+body{background:#f4f6fa;color:#263247;font-family:Arial,sans-serif}
+.wrap{max-width:1100px;margin:20px auto;padding:0 15px}
+.card-x{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:20px;margin-bottom:16px}
+.form-label{font-weight:600;font-size:13px;margin-bottom:3px}
+.hint{font-size:12px;color:#778195}
+.mono{font-family:monospace;font-size:12px;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h4 class="mb-1"><i class="fa fa-mobile-screen text-primary"></i> APK Management</h4>
+  <p class="text-muted" style="font-size:13px">নতুন APK আপলোড করুন, তারপর Publish করলে ওয়েবসাইটের ডাউনলোড বাটন নিজে থেকে নতুন ভার্সন দেবে।</p>
+
+  <div class="card-x">
+    <h6 class="mb-3">Upload New Release</h6>
+    <form id="upForm">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">App</label>
+          <select class="form-select" id="appType">
+            <option value="admin">Amader Bill Admin</option>
+            <option value="customer">Amader Bill Customer</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Version name</label>
+          <input class="form-control" id="vName" placeholder="1.0.3" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Version code</label>
+          <input class="form-control" id="vCode" type="number" min="1" placeholder="3" required>
+          <div class="hint" id="codeHint">আগের চেয়ে বড় সংখ্যা হতে হবে।</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">APK file</label>
+          <input class="form-control" id="apkFile" type="file" accept=".apk" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Release notes (ঐচ্ছিক)</label>
+          <textarea class="form-control" id="notes" rows="3" maxlength="5000"></textarea>
+        </div>
+        <div class="col-12 d-flex align-items-center gap-3 flex-wrap">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="pubNow">
+            <label class="form-check-label" for="pubNow">আপলোডের সাথেই Publish করুন</label>
+          </div>
+          <button class="btn btn-primary ms-auto" id="upBtn" type="submit"><i class="fa fa-upload"></i> Upload APK</button>
+        </div>
+        <div class="col-12" id="progWrap" style="display:none">
+          <div class="progress" style="height:18px"><div class="progress-bar" id="prog" style="width:0">0%</div></div>
+        </div>
+        <div class="col-12"><span id="upMsg" style="font-size:13px;font-weight:600"></span></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card-x">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h6 class="mb-0">Releases</h6>
+      <select class="form-select form-select-sm" id="filter" style="width:auto">
+        <option value="">সব অ্যাপ</option><option value="admin">Admin</option><option value="customer">Customer</option>
+      </select>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle" style="font-size:14px">
+        <thead><tr><th>App</th><th>Version</th><th>Size</th><th>Status</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="hint mt-2">ওয়েবসাইটে ব্যবহারের লিংক (সবসময় সর্বশেষ published APK দেয়):</div>
+    <div class="mono" id="links"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const API = "/api/app-download";
+const $ = (id) => document.getElementById(id);
+let releases = [];
+
+function td(text, cls) { const c = document.createElement("td"); c.textContent = text; if (cls) c.className = cls; return c; }
+function msg(t, cls) { const m = $("upMsg"); m.textContent = t; m.className = cls || ""; }
+
+async function csrf() {
+  const r = await fetch("/api/csrf-token", { credentials: "same-origin" }), j = await r.json();
+  if (!r.ok || !j.csrf_token) throw new Error("CSRF token পাওয়া যায়নি। আবার লগইন করুন।");
+  return j.csrf_token;
+}
+
+async function load() {
+  const body = $("rows");
+  try {
+    const q = $("filter").value ? "?app_type=" + encodeURIComponent($("filter").value) : "";
+    const r = await fetch(API + "/admin/releases" + q, { credentials: "same-origin" }), j = await r.json();
+    if (!r.ok || !j.success) throw new Error(j.message || "Load failed.");
+    releases = j.releases; draw(); hintCode();
+  } catch (e) {
+    body.replaceChildren(); const tr = document.createElement("tr"), c = td(e.message, "text-center text-danger py-4"); c.colSpan = 6; tr.append(c); body.append(tr);
+  }
+}
+
+function draw() {
+  const body = $("rows"); body.replaceChildren();
+  if (!releases.length) { const tr = document.createElement("tr"), c = td("কোনো রিলিজ নেই।", "text-center text-muted py-4"); c.colSpan = 6; tr.append(c); body.append(tr); }
+  releases.forEach((r) => {
+    const tr = document.createElement("tr");
+    const st = document.createElement("td"), b = document.createElement("span");
+    b.className = "badge " + (r.is_published ? "bg-success" : "bg-secondary"); b.textContent = r.is_published ? "Published" : "Unpublished"; st.append(b);
+    const act = document.createElement("td"); act.className = "text-end";
+    const tg = document.createElement("button"); tg.className = "btn btn-sm " + (r.is_published ? "btn-outline-secondary" : "btn-success");
+    tg.textContent = r.is_published ? "Unpublish" : "Publish";
+    tg.onclick = () => setPublished(r, !r.is_published, tg);
+    act.append(tg);
+    const ver = td(r.version_name + " (" + r.version_code + ")");
+    ver.title = "SHA-256: " + r.sha256;
+    tr.append(td(r.app_name), ver, td(r.file_size_label), st, td(String(r.created_at || "").slice(0, 16).replace("T", " ")), act);
+    body.append(tr);
+  });
+  const base = location.origin + API + "/download/";
+  $("links").textContent = "Admin: " + base + "admin   |   Customer: " + base + "customer";
+}
+
+async function setPublished(r, on, btn) {
+  if (!confirm((on ? "Publish" : "Unpublish") + " করবেন? " + r.app_name + " " + r.version_name)) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(API + "/apk/" + r.id, { method: "PUT", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": await csrf() }, body: JSON.stringify({ is_published: on ? 1 : 0 }) });
+    const j = await res.json();
+    if (!res.ok || !j.success) throw new Error(j.message || "Update failed.");
+    await load();
+  } catch (e) { alert(e.message); btn.disabled = false; }
+}
+
+function hintCode() {
+  const t = $("appType").value, max = Math.max(0, ...releases.filter((r) => r.app_type === t).map((r) => r.version_code));
+  $("codeHint").textContent = max ? "বর্তমান সর্বোচ্চ: " + max + " — এর চেয়ে বড় দিন।" : "আগের চেয়ে বড় সংখ্যা হতে হবে।";
+  if (!$("vCode").value) $("vCode").value = max + 1;
+}
+
+$("appType").onchange = () => { $("vCode").value = ""; hintCode(); };
+$("filter").onchange = load;
+
+$("upForm").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const file = $("apkFile").files[0];
+  if (!file) return;
+  if (!/\.apk$/i.test(file.name)) { msg("শুধু .apk ফাইল দিন।", "text-danger"); return; }
+  const fd = new FormData();
+  fd.append("app_type", $("appType").value);
+  fd.append("version_name", $("vName").value.trim());
+  fd.append("version_code", $("vCode").value.trim());
+  fd.append("release_notes", $("notes").value);
+  fd.append("publish", $("pubNow").checked ? "1" : "0");
+  fd.append("apk", file); // file must come last
+
+  $("upBtn").disabled = true; msg("Uploading...", "text-muted");
+  $("progWrap").style.display = "block";
+  try {
+    const token = await csrf();
+    const j = await new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open("POST", API + "/apk"); x.withCredentials = true; x.setRequestHeader("X-CSRF-Token", token);
+      x.upload.onprogress = (e) => { if (e.lengthComputable) { const p = Math.round(e.loaded / e.total * 100); $("prog").style.width = p + "%"; $("prog").textContent = p + "%"; } };
+      x.onerror = () => reject(new Error("Network error."));
+      x.onload = () => { let d = {}; try { d = JSON.parse(x.responseText); } catch (_) {} (x.status < 300 && d.success) ? resolve(d) : reject(new Error(d.message || "Upload failed (" + x.status + ")")); };
+      x.send(fd);
+    });
+    msg(j.message, "text-success");
+    $("upForm").reset(); $("vCode").value = "";
+    await load();
+  } catch (e) { msg(e.message, "text-danger"); }
+  $("upBtn").disabled = false; $("progWrap").style.display = "none"; $("prog").style.width = "0";
+};
+
+load();
+</script>
+</body>
+</html>

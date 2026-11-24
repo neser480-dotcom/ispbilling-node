@@ -60,6 +60,9 @@ const requireSuperAdmin = async (req, res, next) => {
 router.use(requireSuperAdmin);
 
 router.get("/", controller.page);
-router.put("/content", controller.saveContent);
+router.get("/draft", controller.getDraft);
+router.put("/draft", controller.saveDraft);
+router.post("/publish", controller.publish);
+router.post("/restore-backup", controller.restoreBackup);
 
 module.exports = router;
