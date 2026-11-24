@@ -150,36 +150,55 @@ router.get("/admin/permissions", requireBearer("admin"), async (req, res, next) 
 /* =========================== CUSTOMER =========================== */
 router.post("/customer/login", loginLimiter, async (req, res, next) => {
     try {
+        /* isp_code এখন ঐচ্ছিক: না দিলে শুধু Customer ID + Password দিয়ে খোঁজা হয়।
+           একই ID + একই Password একাধিক ISP-তে মিলে গেলে NEED_ISP_CODE ফেরত যায়। */
         const ispCode = String(req.body?.isp_code || "").trim().toUpperCase();
         const customerId = String(req.body?.customer_id || "").trim();
         const password = String(req.body?.password || "");
-        if (!ispCode || !customerId || !password
+        if (!customerId || !password
             || ispCode.length > 30 || customerId.length > 50 || password.length > 200) {
-            return bad(res, 400, "ISP Code, Customer ID ও Password দিন।");
+            return bad(res, 400, "ইউজার আইডি ও পাসওয়ার্ড দিন।");
         }
-        const key = `m:c:${ispCode}:${customerId}`.slice(0, 100);
+        const key = `m:c:${ispCode || "-"}:${customerId}`.slice(0, 100);
         const wait = await lockRemaining(key);
         if (wait > 0) return tooMany(res, wait);
 
         const generic = () => bad(res, 401, "তথ্য সঠিক নয়।", "INVALID_CREDENTIALS");
+        const SELECT = `SELECT c.id, c.company_id, c.customer_id, c.name,
+                               a.password_hash, a.status AS acct_status, a.must_change_password
+                        FROM customers c
+                        JOIN customer_mobile_accounts a
+                          ON a.customer_pk = c.id AND a.company_id = c.company_id
+                        WHERE (c.customer_id = ? OR c.phone = ?) AND c.deleted_at IS NULL`;
 
-        const [isp] = await db.execute(
-            `SELECT company_id FROM users
-             WHERE customer_id = ? AND role = 'admin' AND status = 'active' LIMIT 1`, [ispCode]);
-        let acct = null;
-        if (isp.length && Number(isp[0].company_id) > 0) {
-            const [rows] = await db.execute(
-                `SELECT c.id, c.company_id, c.customer_id, c.name,
-                        a.password_hash, a.status AS acct_status, a.must_change_password
-                 FROM customers c
-                 JOIN customer_mobile_accounts a
-                   ON a.customer_pk = c.id AND a.company_id = c.company_id
-                 WHERE c.company_id = ? AND c.customer_id = ? AND c.deleted_at IS NULL LIMIT 1`,
-                [Number(isp[0].company_id), customerId]);
-            acct = rows[0] || null;
+        let candidates = [];
+        if (ispCode) {
+            const [isp] = await db.execute(
+                `SELECT company_id FROM users
+                 WHERE customer_id = ? AND role = 'admin' AND status = 'active' LIMIT 1`, [ispCode]);
+            if (isp.length && Number(isp[0].company_id) > 0) {
+                const [rows] = await db.execute(`${SELECT} AND c.company_id = ? LIMIT 5`,
+                    [customerId, customerId, Number(isp[0].company_id)]);
+                candidates = rows;
+            }
+        } else {
+            const [rows] = await db.execute(`${SELECT} LIMIT 10`, [customerId, customerId]);
+            candidates = rows;
         }
-        const ok = await bcrypt.compare(password, acct ? String(acct.password_hash) : DUMMY_HASH);
-        if (!acct || !ok || acct.acct_status !== "active") {
+
+        /* প্রতিটি candidate-এ bcrypt চালানো হয় (সময় প্রায় সমান রাখতে অন্তত একবার) */
+        const matched = [];
+        if (!candidates.length) await bcrypt.compare(password, DUMMY_HASH);
+        for (const c of candidates) {
+            const ok = await bcrypt.compare(password, String(c.password_hash));
+            if (ok && c.acct_status === "active") matched.push(c);
+        }
+
+        if (matched.length > 1) {
+            return bad(res, 409, "একাধিক ISP-তে মিলেছে। ISP কোড দিন।", "NEED_ISP_CODE");
+        }
+        const acct = matched[0];
+        if (!acct) {
             await recordFail(key, clientIp(req));
             return generic();
         }

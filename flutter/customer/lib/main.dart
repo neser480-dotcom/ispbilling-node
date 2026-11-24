@@ -26,7 +26,7 @@ class NetfiApp extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
     return MaterialApp(
       navigatorKey: navKey,
-      title: 'নেটফি গ্রাহক',
+      title: 'আমাদের বিল গ্রাহক',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       home: loggedIn ? const HomeShell() : const LoginScreen(),

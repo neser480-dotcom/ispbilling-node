@@ -211,43 +211,46 @@ async function resetFragmentFor(user, id) {
 
 async function resetPassword(user, req) {
     bulk.checkCsrf(req.session, req.body);
+
     const c = await getCustomer(user, req.body.customer_id);
     const type = String(req.body.type || "default");
+
     let pass;
+
     if (type === "mobile") {
         pass = String(c.phone || "").trim();
         if (!pass) throw new BulkError("Customer has no mobile number.");
     } else if (type === "manual") {
         pass = String(req.body.password || "").trim();
-        if (pass.length < 4) throw new BulkError("Password must be at least 4 characters.");
+        if (pass.length < 4) {
+            throw new BulkError("Password must be at least 4 characters.");
+        }
     } else {
         pass = DEFAULT_PASSWORD;
     }
-    if (/[\s"']/.test(pass) || pass.length > 64) throw new BulkError("Password has invalid characters or is too long.");
 
-    const pppoe = String(c.pppoe_username || "").trim();
-    let routerNote = "";
-    if (pppoe) {
-        const session = ppp.createSession({ companyId: await companyIdOf(user), isSuper: isSuperAdmin(user) });
-        try {
-            const routerId = await ppp.resolveRouter(session, { customerId: c.id, mikrotikId: Number(c.mikrotik_id || 0), pppoe });
-            if (routerId > 0) {
-                const api = await session.api(routerId);
-                const secret = await ppp.findSecret(api, pppoe);
-                if (!secret) throw new Error("PPPoE secret not found on MikroTik.");
-                await api.write("/ppp/secret/set", [`=.id=${secret[".id"]}`, `=password=${pass}`]);
-            } else {
-                routerNote = " (no MikroTik linked, database only)";
-            }
-        } catch (e) {
-            throw new BulkError("MikroTik not updated: " + e.message);
-        } finally {
-            await session.closeAll();
-        }
+    if (/[\s"']/.test(pass) || pass.length > 64) {
+        throw new BulkError("Password has invalid characters or is too long.");
     }
-    await db.query("UPDATE customers SET pppoe_password = ? WHERE id = ?", [pass, c.id]);
-    await log(user, c, "customer_reset_password", `Password reset (${type}) for ${c.name}`, req);
-    return { success: true, message: "Password reset successfully" + routerNote + "." };
+
+    // Customer App password: Database only. No MikroTik connection.
+    await db.query(
+        "UPDATE customers SET pppoe_password = ? WHERE id = ?",
+        [pass, c.id]
+    );
+
+    await log(
+        user,
+        c,
+        "customer_reset_password",
+        `Customer App password reset (${type}) for ${c.name}`,
+        req
+    );
+
+    return {
+        success: true,
+        message: "Customer App password reset successfully."
+    };
 }
 
 /* ---------------- DATA USAGE ---------------- */

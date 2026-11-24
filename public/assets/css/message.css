@@ -1,0 +1,222 @@
+
+.main-content {
+    margin-left: 250px;
+    margin-top: 60px;
+    padding: 12px 15px;
+    padding-bottom: 140px;
+    transition: .3s;
+}
+
+@media (max-width: 992px) {
+    .main-content {
+        margin-left: 0;
+        margin-top: 60px;
+        padding: 8px;
+    }
+}
+
+.sms-card {
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    max-width: 100%;
+    margin: 0 0 16px;
+}
+
+.sms-head {
+    background: #2f86e3;
+    color: #fff;
+    padding: 14px 18px;
+    font-size: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sms-body {
+    padding: 18px;
+}
+
+.sms-bal {
+    display: flex;
+    gap: 22px;
+    background: #f6f6f6;
+    padding: 10px 12px;
+    border-radius: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sms-bal b span {
+    color: #198754;
+    margin-left: 6px;
+}
+
+.sms-areas {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    margin: 8px 0 14px;
+}
+
+.sms-areas label {
+    display: block;
+    white-space: nowrap;
+}
+
+.sms-areas .p {
+    font-weight: 700;
+}
+
+.sms-vars label {
+    display: block;
+    font-size: 13px;
+}
+
+.sms-cnt {
+    text-align: right;
+    font-weight: 700;
+    font-size: 12px;
+    margin: 4px 0 12px;
+}
+
+.sms-bar {
+    background: #2f86e3;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.sms-bar input {
+    width: 220px;
+    background: #2b79c9;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+.sms-bar input::placeholder {
+    color: #dbeafe;
+}
+
+.sms-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 14px;
+}
+
+.sms-tabs button {
+    border: 1px solid transparent;
+    border-bottom: 0;
+    background: none;
+    padding: 8px 12px;
+    color: #2f86e3;
+    cursor: pointer;
+}
+
+.sms-tabs button.on {
+    color: #333;
+    border-color: #dee2e6;
+    background: #fff;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: -1px;
+}
+
+.sms-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sms-table th,
+.sms-table td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+.sms-table tbody tr:nth-child(odd) td {
+    background: #f4f4f4;
+}
+
+.sms-tag {
+    padding: 1px 7px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 11px;
+}
+
+.sms-tag.sent {
+    background: #198754;
+}
+
+.sms-tag.failed {
+    background: #dc3545;
+}
+
+.sms-tag.pending {
+    background: #888;
+}
+
+.sms-tag.bulk {
+    background: #0d6efd;
+}
+
+.sms-tag.other {
+    background: #17a2b8;
+}
+
+.sms-modal {
+    position: fixed;
+    inset: 0;
+    background: #0006;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 80px;
+    z-index: 2000;
+}
+
+.sms-modal.on {
+    display: flex;
+}
+
+.sms-modal .box {
+    background: #fff;
+    border-radius: 6px;
+    width: min(420px, 94vw);
+}
+
+.sms-modal .box > div {
+    padding: 14px 18px;
+}
+
+.sms-price {
+    text-align: center;
+    font-weight: 700;
+    background: #f6f6f6;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.sms-price span {
+    color: #198754;
+}
+
+[data-bs-theme=dark] .sms-card,
+body.dark .sms-card,
+body.dark-mode .sms-card {
+    background: #1f2430;
+    color: #ddd;
+}

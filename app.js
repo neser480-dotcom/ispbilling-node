@@ -58,6 +58,7 @@ const mobileRoutes = require("./routes/mobile");
 const registerRoutes =
     require("./routes/auth/register");
 const noticeRoutes = require("./routes/notices/notices");
+const messageRoutes = require("./routes/message/message");
 
 /*
 |--------------------------------------------------------------------------
@@ -1501,13 +1502,23 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
+app.use(
+    "/api/message",
+    requireSoftwareBilling,
+    messageRoutes
+);
+
 app.get(
     "/message/send",
     requireSoftwareBilling,
     (req, res) => {
 
-        return res.status(501).send(
-            "Bulk Message module is not implemented yet."
+        if (!req.session || !req.session.user_id) {
+            return res.redirect("/");
+        }
+
+        return res.sendFile(
+            path.join(__dirname, "views", "message", "send.html")
         );
 
     }
@@ -1518,8 +1529,12 @@ app.get(
     requireSoftwareBilling,
     (req, res) => {
 
-        return res.status(501).send(
-            "SMS Template module is not implemented yet."
+        if (!req.session || !req.session.user_id) {
+            return res.redirect("/");
+        }
+
+        return res.sendFile(
+            path.join(__dirname, "views", "message", "template.html")
         );
 
     }
@@ -1530,8 +1545,12 @@ app.get(
     requireSoftwareBilling,
     (req, res) => {
 
-        return res.status(501).send(
-            "Message Log module is not implemented yet."
+        if (!req.session || !req.session.user_id) {
+            return res.redirect("/");
+        }
+
+        return res.sendFile(
+            path.join(__dirname, "views", "message", "log.html")
         );
 
     }

@@ -697,6 +697,7 @@
 
     window.addEventListener("resize", closeRowMenu);
 
+
     /* ---------- reset password ---------- */
 
     document.addEventListener("change", function (event) {
@@ -707,8 +708,42 @@
 
         const box = radio.closest(".nf-rp-form").querySelector(".nf-rp-manual");
 
-        box.classList.toggle("open", radio.value === "manual" && radio.checked);
+        if (box) {
+            box.classList.toggle("open", radio.value === "manual" && radio.checked);
+        }
     });
+
+    async function getFreshCsrfToken() {
+
+        const response = await fetch("/api/csrf-token", {
+            method: "GET",
+            credentials: "same-origin",
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        const token = String(result.csrf_token || "").trim();
+
+        if (!response.ok || !token) {
+            throw new Error(
+                result.message || "Unable to load CSRF token. Please refresh the page."
+            );
+        }
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) meta.content = token;
+
+        const input = document.getElementById("csrfTokenInput");
+        if (input) input.value = token;
+
+        window.CSRF_TOKEN = token;
+
+        return token;
+    }
 
     document.addEventListener("submit", async function (event) {
 
@@ -720,25 +755,36 @@
 
         const wrap = form.closest(".nf-rp-wrap");
         const button = form.querySelector('[type="submit"]');
-        const type = form.querySelector("input[name='type']:checked").value;
-        const password = String(form.elements.password.value || "").trim();
+        const selectedType = form.querySelector("input[name='type']:checked");
+
+        if (!wrap || !selectedType) {
+            notify("Invalid password form.", "error");
+            return;
+        }
+
+        const type = selectedType.value;
+        const password = String(form.elements.password?.value || "").trim();
 
         button.disabled = true;
 
         try {
+
+            const token = await getFreshCsrfToken();
+
             const response = await fetch("/api/customers/reset-password", {
                 method: "POST",
                 credentials: "same-origin",
                 headers: {
                     "Content-Type": "application/json",
-                    Accept: "application/json",
-                    "X-CSRF-Token": csrfToken()
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-Token": token
                 },
                 body: JSON.stringify({
                     customer_id: wrap.dataset.customerId,
                     type: type,
                     password: password,
-                    csrf_token: csrfToken()
+                    csrf_token: token
                 })
             });
 
@@ -755,8 +801,12 @@
             notify(result.message || "Password reset successfully.", "success");
 
         } catch (error) {
-            button.disabled = false;
+
             notify(error.message || "Failed to reset password.", "error");
+
+        } finally {
+
+            button.disabled = false;
         }
     });
 

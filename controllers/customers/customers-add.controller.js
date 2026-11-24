@@ -1260,13 +1260,21 @@ async function save(
             )
         );
 
-    const autoConnection =
-        postValue(
-            body,
-            'auto_connection'
-        ) || 'Will continue';
+const autoConnectionInput =
+    postValue(
+        body,
+        'auto_connection'
+    );
 
-
+const autoConnection =
+    autoConnectionInput == null || autoConnectionInput === '' ||
+    autoConnectionInput === 'Will continue'
+        ? 1
+        : autoConnectionInput === 'Next Month'
+            ? 0
+            : Number(autoConnectionInput) === 0
+                ? 0
+                : 1;
     /*
     |--------------------------------------------------------------------------
     | OPTIONAL BANGLADESH LOCATION

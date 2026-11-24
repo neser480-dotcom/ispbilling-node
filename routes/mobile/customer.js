@@ -10,6 +10,7 @@ const bcrypt = require("bcrypt");
 const db = require("../../config/database");
 const tokens = require("../../services/mobile/token.service");
 const { requireBearer } = require("../../middleware/mobileAuth");
+const live = require("../../services/mobile/customerLive.service");
 
 const router = express.Router();
 router.use(requireBearer("customer"));
@@ -21,7 +22,7 @@ async function loadCustomer(req) {
     const [rows] = await db.execute(
         `SELECT id, customer_id, name, phone, address, package_id, package_name, monthly_bill,
                 balance, status, payment_status, promise_date, connection_date, billing_cycle,
-                created_at, mikrotik_id
+                created_at, mikrotik_id, pppoe_username
          FROM customers WHERE id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1`,
         [req.auth.customerPk, req.auth.companyId]);
     return rows[0] || null;
@@ -58,9 +59,11 @@ router.get("/dashboard", async (req, res, next) => {
             isp_name: (s && s.company_name) || "", name: c.name,
             monthly_bill: money(c.monthly_bill), balance: balance > 0 ? balance : 0,
             due: balance < 0 ? -balance : 0, status: c.status,
-            last_payment_date: iso(pay[0]?.last_date),
-            deadline_day: c.promise_date ? new Date(c.promise_date).getDate() : 0,
-            stats: {}      // Live uptime/speed MikroTik থেকে আসে; Phase 2-তে নিরাপদ backend service দিয়ে
+            // "Last Date" = সংযোগের শেষ তারিখ (promise_date); বৃত্তের সংখ্যা = আর কত দিন বাকি
+            last_payment_date: c.promise_date ? live.fmtDateTime(new Date(c.promise_date)) : iso(pay[0]?.last_date),
+            deadline_day: c.promise_date
+                ? Math.max(0, Math.ceil((new Date(c.promise_date).getTime() - Date.now()) / 86400000)) : 0,
+            stats: await live.stats({ ...c, company_id: req.auth.companyId })
         });
     } catch (e) { next(e); }
 });
@@ -73,11 +76,15 @@ router.get("/reports", async (req, res, next) => {
              WHERE customer_id = ? AND company_id = ? AND deleted_at IS NULL AND payment_cancelled_at IS NULL
              ORDER BY payment_date DESC, id DESC LIMIT 36`,
             [req.auth.customerPk, req.auth.companyId]);
-        res.json(rows.map((r) => ({
-            month: r.billing_year && r.billing_month
-                ? `${r.billing_year}-${String(r.billing_month).padStart(2, "0")}` : iso(r.payment_date),
-            amount: money(r.amount), status: "PAID"
-        })));
+        const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December"];
+        res.json(rows.map((r) => {
+            const pd = r.payment_date ? new Date(r.payment_date) : null;
+            const m = Number(r.billing_month) >= 1 && Number(r.billing_month) <= 12
+                ? Number(r.billing_month) : (pd ? pd.getMonth() + 1 : 0);   // মাস ফাঁকা হলে পেমেন্টের মাস
+            const y = Number(r.billing_year) || (pd ? pd.getFullYear() : "");
+            return { month: m ? `${MONTHS[m - 1]} ${y}` : String(y), amount: money(r.amount), status: "PAID" };
+        }));
     } catch (e) { next(e); }
 });
 
@@ -205,7 +212,12 @@ router.post("/packages/change", async (req, res, next) => {
 });
 
 /* Live speed MikroTik জড়িত — Phase 3 (বিদ্যমান driver পড়ে নিরাপদে) */
-router.get("/live-speed", (req, res) => res.status(501).json({
-    success: false, code: "NOT_IMPLEMENTED", message: "এই ফিচার এখনো চালু হয়নি।" }));
+router.get("/live-speed", async (req, res, next) => {
+    try {
+        const c = await loadCustomer(req);
+        if (!c) return res.status(404).json({ success: false, code: "NOT_FOUND", message: "পাওয়া যায়নি।" });
+        res.json(await live.liveSpeed({ ...c, company_id: req.auth.companyId }));
+    } catch (e) { next(e); }
+});
 
 module.exports = router;

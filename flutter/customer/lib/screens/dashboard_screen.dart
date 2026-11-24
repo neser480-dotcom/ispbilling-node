@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../main.dart' show navKey;
 import '../core/api_client.dart';
 import '../core/theme.dart';
 import '../models/models.dart';
@@ -63,6 +64,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
   String _fmt(double v) => double.parse(v.toStringAsFixed(2)).toString();
+
+  /// kbps -> "56.56 kbps" / "2.30 Mbps"
+  String _speed(double kbps) => kbps >= 1000
+      ? '${(kbps / 1000).toStringAsFixed(2)} Mbps'
+      : '${kbps.toStringAsFixed(2)} kbps';
+
+  /// উপরে নীল ব্যানার ("Contact Bill Man.") — ৩ সেকেন্ডে নিজে সরে যায়, ✕ দিয়ে বন্ধ করা যায়
+  void _showBanner(String msg) {
+    final overlay = navKey.currentState?.overlay;
+    if (overlay == null) return;
+    late OverlayEntry entry;
+    entry = OverlayEntry(builder: (_) => _TopBanner(msg, onClose: () => entry.remove()));
+    overlay.insert(entry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,11 +203,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               shape: const StadiumBorder(),
               padding: const EdgeInsets.symmetric(horizontal: 18),
             ),
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeShell(initialIndex: 2)),
-              (_) => false,
-            ),
+            onPressed: () {
+              _showBanner('Contact Bill Man.');
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeShell(initialIndex: 2)),
+                (_) => false,
+              );
+            },
             child: const Text('Pay Bill', style: TextStyle(fontSize: 16)),
           ),
         ),
@@ -244,11 +262,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
             children: [
-              _legend(AppColors.tileBlue, 'Upload: ${_fmt(_up)} kbps'),
+              _legend(AppColors.tileBlue, 'Upload: ${_speed(_up)}'),
               const SizedBox(width: 12),
               Flexible(
                   child: _legend(
-                      AppColors.tilePink, 'Download: ${_fmt(_down)} kbps')),
+                      AppColors.tilePink, 'Download: ${_speed(_down)}')),
             ],
           ),
         ),
@@ -376,4 +394,75 @@ class _SpeedPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SpeedPainter old) => true;
+}
+
+class _TopBanner extends StatefulWidget {
+  final String message;
+  final VoidCallback onClose;
+  const _TopBanner(this.message, {required this.onClose});
+
+  @override
+  State<_TopBanner> createState() => _TopBannerState();
+}
+
+class _TopBannerState extends State<_TopBanner> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(seconds: 3))
+        ..forward().whenComplete(() {
+          if (mounted) widget.onClose();
+        });
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Material(
+        elevation: 6,
+        color: const Color(0xFF3498DB),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(widget.message,
+                          style: const TextStyle(color: Colors.white, fontSize: 20)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: widget.onClose,
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _c,
+                builder: (_, __) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 - _c.value,
+                    child: Container(height: 4, color: Colors.white54),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

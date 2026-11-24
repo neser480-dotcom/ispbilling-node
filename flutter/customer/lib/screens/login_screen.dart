@@ -13,7 +13,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _isp = TextEditingController();
-  final _phone = TextEditingController(); // Customer ID
+  final _phone = TextEditingController(); // ইউজার (Customer ID)
+  bool _needIsp = false; // সার্ভার চাইলে তবেই ISP কোড ঘর দেখাবে
   final _pass = TextEditingController();
   bool _showPass = false;
   bool _loading = false;
@@ -27,14 +28,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_isp.text.trim().isEmpty || _phone.text.trim().isEmpty || _pass.text.isEmpty) {
-      _toast('ISP কোড, গ্রাহক আইডি ও পাসওয়ার্ড দিন');
+    if (_phone.text.trim().isEmpty || _pass.text.isEmpty) {
+      _toast('ইউজার ও পাসওয়ার্ড দিন');
+      return;
+    }
+    if (_needIsp && _isp.text.trim().isEmpty) {
+      _toast('ISP কোড দিন');
       return;
     }
     setState(() => _loading = true);
     try {
       final mustChange =
-          await ApiService.login(_isp.text.trim(), _phone.text.trim(), _pass.text);
+          await ApiService.login(_phone.text.trim(), _pass.text, ispCode: _isp.text);
       if (!mounted) return;
       if (mustChange) {
         _toast('নিরাপত্তার জন্য প্রোফাইল থেকে পাসওয়ার্ড পরিবর্তন করুন');
@@ -43,6 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (_) => const HomeShell()),
       );
+    } on NeedIspCodeException {
+      if (mounted) setState(() => _needIsp = true);
+      _toast('আপনার ISP কোড দিন (যেমন ISP-10033)');
     } catch (e) {
       _toast(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -80,12 +88,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               size: 40, color: AppColors.loginBlue),
                         ),
                         const SizedBox(height: 10),
-                        const Text('নেটফি গ্রাহক',
+                        const Text('আমাদের বিল গ্রাহক',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 26),
+                        if (_needIsp) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Container(
@@ -112,6 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        ],
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Container(
@@ -126,9 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               keyboardType: TextInputType.text,
                               style: const TextStyle(fontSize: 17),
                               decoration: const InputDecoration(
-                                hintText: 'গ্রাহক আইডি',
+                                hintText: 'মোবাইল নম্বর / ইউজার',
                                 border: InputBorder.none,
-                                prefixIcon: Icon(Icons.badge_outlined,
+                                prefixIcon: Icon(Icons.smartphone,
                                     color: AppColors.loginBlue),
                                 contentPadding:
                                     EdgeInsets.symmetric(vertical: 16),

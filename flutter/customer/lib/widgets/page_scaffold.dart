@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../screens/home_shell.dart';
 
-/// উপরের গাঢ় নীল টাইটেল বার: "নেটফি গ্রাহক / 2.1"
+/// উপরের গাঢ় নীল টাইটেল বার: "আমাদের বিল গ্রাহক / 2.1"
 class AppTitleBar extends StatelessWidget {
   const AppTitleBar({super.key});
 
@@ -15,7 +15,7 @@ class AppTitleBar extends StatelessWidget {
         child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('নেটফি গ্রাহক',
+            Text('আমাদের বিল গ্রাহক',
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,

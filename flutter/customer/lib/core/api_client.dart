@@ -5,8 +5,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Customer Bearer-token client (Access + rotating Refresh Token)।
 /// Token Keystore/Keychain-এ; Password কোথাও সংরক্ষণ হয় না।
 class ApiClient {
-  // TODO: নিজের সার্ভার। Emulator: http://10.0.2.2:5500/api/mobile  (Production এ অবশ্যই https)
-  static const String baseUrl = 'https://amaderbill.com/api/mobile';
+
+ static const String baseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://127.0.0.1:5500/api/mobile',
+);
+  /// ঐচ্ছিক: শুধু একটি ISP-র অ্যাপ বানালে  flutter build apk --dart-define=ISP_CODE=ISP-10033
+  static const String defaultIspCode = String.fromEnvironment('ISP_CODE');
 
   static const _accessKey = 'c_access';
   static const _refreshKey = 'c_refresh';

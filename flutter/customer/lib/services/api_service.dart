@@ -6,7 +6,8 @@ import '../models/models.dart';
 /// তৈরি: dashboard, profile, reports, packages, change-password, support-numbers, tickets,
 ///   packages/change (এটি *অনুরোধ* জমা দেয়; ISP অনুমোদন করলে Web থেকে Package বদলায়)।
 /// এখনো নয়: live-speed (MikroTik জড়িত, 501)।
-/// POST /auth/customer/login {isp_code, customer_id, password} -> {access_token, refresh_token, user}
+/// POST /auth/customer/login {customer_id, password, isp_code?} -> {access_token, refresh_token, user}
+///   isp_code ঐচ্ছিক; একই ID+Password একাধিক ISP-তে মিললে সার্ভার 409 NEED_ISP_CODE দেয়
 /// GET  /dashboard        -> {isp_name, name, monthly_bill, balance, due, status,
 ///                            last_payment_date, deadline_day,
 ///                            stats:{last_link_label?, last_link_uptime, current_uptime,
@@ -23,6 +24,12 @@ import '../models/models.dart';
 ///                            payment_status, address, billing_date, promise_date,
 ///                            connection_date, create_date, photo}
 /// POST /change-password  {old_password, new_password}
+/// একই ইউজার আইডি+পাসওয়ার্ড একাধিক ISP-তে মিললে — তখন ISP কোড চাইতে হয়
+class NeedIspCodeException implements Exception {
+  @override
+  String toString() => 'Exception: আপনার ISP কোড দিন';
+}
+
 class ApiService {
   static String _msg(DioException e) {
     final data = e.response?.data;
@@ -34,6 +41,8 @@ class ApiService {
     try {
       return await fn();
     } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['code'] == 'NEED_ISP_CODE') throw NeedIspCodeException();
       throw Exception(_msg(e));
     }
   }
@@ -42,12 +51,13 @@ class ApiService {
       (data as List).map((e) => Map<String, dynamic>.from(e)).toList();
 
   /// ফেরত: true হলে ISP Admin-এর দেওয়া অস্থায়ী Password — এখনই বদলাতে হবে
-  static Future<bool> login(String ispCode, String customerId, String password) =>
+  static Future<bool> login(String customerId, String password, {String ispCode = ''}) =>
       _run(() async {
+        final code = ispCode.trim().isNotEmpty ? ispCode.trim() : ApiClient.defaultIspCode;
         final r = await ApiClient.dio.post('/auth/customer/login', data: {
-          'isp_code': ispCode,
           'customer_id': customerId,
           'password': password,
+          if (code.isNotEmpty) 'isp_code': code,
           'device_name': 'netfi_client',
         });
         final d = r.data;

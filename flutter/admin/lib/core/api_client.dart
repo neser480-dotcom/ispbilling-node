@@ -9,7 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
  static const String baseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://amaderbill.com/api/mobile',
+  defaultValue: 'https://app.amaderbill.com/api/mobile',
 );
 
   static const _accessKey = 'm_access';
