@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require("../../config/database");
+const bcrypt = require("bcrypt");
 const ppp = require("../ppp.service");
 const bulk = require("./customer-bulk.service");
 
@@ -219,9 +220,13 @@ async function resetPassword(user, req) {
 
     if (type === "mobile") {
         pass = String(c.phone || "").trim();
-        if (!pass) throw new BulkError("Customer has no mobile number.");
+
+        if (!pass) {
+            throw new BulkError("Customer has no mobile number.");
+        }
     } else if (type === "manual") {
         pass = String(req.body.password || "").trim();
+
         if (pass.length < 4) {
             throw new BulkError("Password must be at least 4 characters.");
         }
@@ -233,11 +238,31 @@ async function resetPassword(user, req) {
         throw new BulkError("Password has invalid characters or is too long.");
     }
 
-    // Customer App password: Database only. No MikroTik connection.
-    await db.query(
-        "UPDATE customers SET pppoe_password = ? WHERE id = ?",
-        [pass, c.id]
+    // Customer App requires bcrypt password hash.
+    const passwordHash = await bcrypt.hash(pass, 12);
+
+    const [accounts] = await db.query(
+        `SELECT id FROM customer_mobile_accounts
+         WHERE customer_pk = ? AND company_id = ?
+         LIMIT 1`,
+        [c.id, c.company_id]
     );
+
+    if (accounts.length) {
+        await db.query(
+            `UPDATE customer_mobile_accounts
+             SET password_hash = ?
+             WHERE customer_pk = ? AND company_id = ?`,
+            [passwordHash, c.id, c.company_id]
+        );
+    } else {
+        await db.query(
+            `INSERT INTO customer_mobile_accounts
+             (company_id, customer_pk, password_hash, status, must_change_password)
+             VALUES (?, ?, ?, 'active', 1)`,
+            [c.company_id, c.id, passwordHash]
+        );
+    }
 
     await log(
         user,
