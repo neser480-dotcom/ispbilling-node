@@ -121,9 +121,34 @@ function authLimiter(opts = {}) {
     });
 }
 
+/* ---------- 5. Public Website API CORS ---------- */
+function publicWebsiteCors() {
+    return (req, res, next) => {
+        const allowedOrigins = (
+            process.env.ALLOWED_ORIGINS || ""
+        ).split(",").map(origin => origin.trim()).filter(Boolean);
+
+        const origin = req.get("Origin");
+
+        if (origin && allowedOrigins.includes(origin)) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+            res.setHeader("Vary", "Origin");
+        }
+
+        if (req.method === "OPTIONS") {
+            res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+            return res.sendStatus(204);
+        }
+
+        next();
+    };
+}
+
 module.exports = {
     headers,
     sameOriginGuard,
     csrfTokenCheck,
-    authLimiter
+    authLimiter,
+    publicWebsiteCors
 };

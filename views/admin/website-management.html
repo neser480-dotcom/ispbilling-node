@@ -1,0 +1,512 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Management - AmaderBill</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/all.min.css">
+
+    <style>
+        body {
+            background: #f4f6fa;
+            font-family: Arial, sans-serif;
+            color: #263247;
+        }
+
+        .website-container {
+            max-width: 1200px;
+            margin: 25px auto;
+            padding: 15px;
+        }
+
+        .page-header {
+            background: #fff;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-header h2 {
+            font-size: 22px;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .section-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.04);
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 700;
+            padding-bottom: 13px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .form-control {
+            min-height: 42px;
+        }
+
+        textarea.form-control {
+            min-height: 95px;
+        }
+
+        .save-bar {
+            position: sticky;
+            bottom: 10px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,.12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            z-index: 10;
+        }
+
+        .status-message {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .image-preview {
+            max-width: 180px;
+            max-height: 100px;
+            object-fit: contain;
+            display: block;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 5px;
+        }
+
+        .help-text {
+            color: #778195;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="website-container">
+
+    <div class="page-header">
+        <div>
+            <h2><i class="fa fa-globe text-primary"></i> Website Management</h2>
+            <small class="text-muted">
+                AmaderBill Public Website Content Management
+            </small>
+        </div>
+
+        <a href="https://amaderbill.com" target="_blank"
+           class="btn btn-outline-primary">
+            <i class="fa fa-external-link-alt"></i>
+            View Website
+        </a>
+    </div>
+
+    <form id="websiteForm">
+
+        <!-- GENERAL SETTINGS -->
+        <div class="section-card">
+            <div class="section-title">Website Settings & Branding</div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Website Name</label>
+                    <input class="form-control" name="site_name"
+                           placeholder="AmaderBill">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Website Tagline</label>
+                    <input class="form-control" name="tagline">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Logo URL</label>
+                    <input class="form-control" name="logo"
+                           placeholder="/uploads/website/logo.png">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Favicon URL</label>
+                    <input class="form-control" name="favicon">
+                </div>
+            </div>
+        </div>
+
+        <!-- HERO -->
+        <div class="section-card">
+            <div class="section-title">Hero Banner</div>
+
+            <div class="mb-3">
+                <label class="form-label">Main Heading</label>
+                <input class="form-control" name="hero_heading">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control"
+                          name="hero_description"></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Admin Login Link</label>
+                    <input class="form-control" name="admin_login_url"
+                           value="https://app.amaderbill.com">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Customer Login Link</label>
+                    <input class="form-control" name="customer_login_url"
+                           value="https://app.amaderbill.com/customer/login">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Free Trial Link</label>
+                    <input class="form-control" name="trial_url"
+                           value="https://app.amaderbill.com/register">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hero Image URL</label>
+                <input class="form-control" name="hero_image">
+            </div>
+        </div>
+
+        <!-- ABOUT -->
+        <div class="section-card">
+            <div class="section-title">About Us</div>
+
+            <div class="mb-3">
+                <label class="form-label">About Heading</label>
+                <input class="form-control" name="about_heading">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">About Description</label>
+                <textarea class="form-control"
+                          name="about_description"></textarea>
+            </div>
+        </div>
+
+        <!-- FEATURES -->
+        <div class="section-card">
+            <div class="section-title">Features</div>
+
+            <label class="form-label">Features JSON</label>
+            <textarea class="form-control" rows="8"
+                      name="features_json"
+                      placeholder='[{"title":"Customer Management","description":"Manage customers","icon":"fa-users"}]'></textarea>
+
+            <small class="help-text">
+                প্রতিটি Feature-এর title, description ও icon এখানে JSON আকারে থাকবে।
+            </small>
+        </div>
+
+        <!-- STATISTICS -->
+        <div class="section-card">
+            <div class="section-title">Website Statistics</div>
+
+            <label class="form-label">Statistics JSON</label>
+            <textarea class="form-control" rows="5"
+                      name="statistics_json"
+                      placeholder='[{"number":"24/7","label":"Support"}]'></textarea>
+        </div>
+
+        <!-- PRICING -->
+        <div class="section-card">
+            <div class="section-title">Pricing Plans</div>
+
+            <label class="form-label">Pricing Plans JSON</label>
+            <textarea class="form-control" rows="10"
+                      name="pricing_json"
+                      placeholder='[{"name":"Starter","price":"500","features":["Feature 1","Feature 2"]}]'></textarea>
+
+            <small class="help-text">
+                এখানে Public Website-এর প্রদর্শিত মূল্য ও প্যাকেজ তথ্য পরিবর্তন করা যাবে।
+            </small>
+        </div>
+
+        <!-- SUPPORT TEAM -->
+        <div class="section-card">
+            <div class="section-title">Support Team</div>
+
+            <label class="form-label">Support Team JSON</label>
+            <textarea class="form-control" rows="7"
+                      name="support_team_json"
+                      placeholder='[{"name":"Support Executive","designation":"Customer Support","image":"/assets/images/support.jpg"}]'></textarea>
+        </div>
+
+        <!-- GALLERY -->
+        <div class="section-card">
+            <div class="section-title">Gallery</div>
+
+            <label class="form-label">Gallery Images JSON</label>
+            <textarea class="form-control" rows="7"
+                      name="gallery_json"
+                      placeholder='[{"image":"/assets/images/gallery/image1.jpg","title":"Office"}]'></textarea>
+        </div>
+
+        <!-- CONTACT -->
+        <div class="section-card">
+            <div class="section-title">Contact Information</div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" name="phone">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">WhatsApp</label>
+                    <input class="form-control" name="whatsapp">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email</label>
+                    <input class="form-control" name="email">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Address</label>
+                    <input class="form-control" name="address">
+                </div>
+            </div>
+        </div>
+
+        <!-- APPS -->
+        <div class="section-card">
+            <div class="section-title">Application Downloads</div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Admin App Download URL</label>
+                    <input class="form-control" name="admin_app_url">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Customer App Download URL</label>
+                    <input class="form-control" name="customer_app_url">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">SMS Responder Download URL</label>
+                    <input class="form-control" name="sms_app_url">
+                </div>
+            </div>
+        </div>
+
+        <!-- PROMOTIONS -->
+        <div class="section-card">
+            <div class="section-title">Promotions</div>
+
+            <label class="form-label">Promotions JSON</label>
+            <textarea class="form-control" rows="7"
+                      name="promotions_json"
+                      placeholder='[{"title":"Special Offer","description":"Offer details","image":"/uploads/offer.jpg","url":"https://app.amaderbill.com"}]'></textarea>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="section-card">
+            <div class="section-title">Footer & Social Links</div>
+
+            <div class="mb-3">
+                <label class="form-label">Footer Description</label>
+                <textarea class="form-control"
+                          name="footer_description"></textarea>
+            </div>
+
+            <label class="form-label">Social Links JSON</label>
+            <textarea class="form-control" rows="5"
+                      name="social_links_json"
+                      placeholder='[{"name":"Facebook","url":"https://facebook.com/"}]'></textarea>
+        </div>
+
+        <div class="save-bar">
+            <span id="saveStatus" class="status-message text-muted">
+                Website content loading...
+            </span>
+
+            <button type="submit" class="btn btn-primary"
+                    id="saveButton">
+                <i class="fa fa-save"></i>
+                Save Website Changes
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+"use strict";
+
+const form = document.getElementById("websiteForm");
+const saveButton = document.getElementById("saveButton");
+const saveStatus = document.getElementById("saveStatus");
+
+const jsonFields = [
+    "features_json",
+    "statistics_json",
+    "pricing_json",
+    "support_team_json",
+    "gallery_json",
+    "promotions_json",
+    "social_links_json"
+];
+
+async function getCsrfToken() {
+    const response = await fetch("/api/csrf-token", {
+        credentials: "same-origin"
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.csrf_token) {
+        throw new Error("CSRF token পাওয়া যায়নি। আবার লগইন করুন।");
+    }
+
+    return result.csrf_token;
+}
+
+function setFormValues(data) {
+    for (const element of form.elements) {
+        if (!element.name) continue;
+
+        const value = data[element.name];
+
+        if (value === undefined || value === null) continue;
+
+        if (jsonFields.includes(element.name)) {
+            element.value = typeof value === "string"
+                ? value
+                : JSON.stringify(value, null, 2);
+        } else {
+            element.value = value;
+        }
+    }
+}
+
+function getFormValues() {
+    const data = {};
+
+    for (const element of form.elements) {
+        if (!element.name) continue;
+
+        let value = element.value.trim();
+
+        if (jsonFields.includes(element.name)) {
+            if (!value) {
+                data[element.name] = [];
+                continue;
+            }
+
+            try {
+                data[element.name] = JSON.parse(value);
+            } catch {
+                throw new Error(element.name + " JSON সঠিক নয়।");
+            }
+        } else {
+            data[element.name] = value;
+        }
+    }
+
+    return data;
+}
+
+async function loadWebsiteContent() {
+    saveStatus.textContent = "Website content loading...";
+
+    try {
+        const response = await fetch(
+            "/api/website-management/content",
+            { credentials: "same-origin" }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Content load failed.");
+        }
+
+        setFormValues(result.data || {});
+
+        saveStatus.textContent = "Website content loaded.";
+        saveStatus.className = "status-message text-success";
+
+    } catch (error) {
+        saveStatus.textContent = error.message;
+        saveStatus.className = "status-message text-danger";
+    }
+}
+
+form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    saveButton.disabled = true;
+    saveStatus.textContent = "Saving...";
+    saveStatus.className = "status-message text-muted";
+
+    try {
+        const csrfToken = await getCsrfToken();
+        const data = getFormValues();
+
+        const response = await fetch(
+            "/api/website-management/content",
+            {
+                method: "PUT",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken
+                },
+                body: JSON.stringify(data)
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || "Save failed.");
+        }
+
+        saveStatus.textContent = "Website content saved successfully.";
+        saveStatus.className = "status-message text-success";
+
+    } catch (error) {
+        saveStatus.textContent = error.message;
+        saveStatus.className = "status-message text-danger";
+    } finally {
+        saveButton.disabled = false;
+    }
+});
+
+loadWebsiteContent();
+</script>
+
+</body>
+</html>

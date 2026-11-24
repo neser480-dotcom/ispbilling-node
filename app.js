@@ -33,8 +33,9 @@ const billingManualRoutes =
 
 const billingRoutes =
     require("./routes/billing/billing");
-
-
+const websiteManagementRoutes = require("./routes/admin/website-management");
+const appDownloadRoutes =
+    require("./routes/app-download/appDownload");
 /*
 |--------------------------------------------------------------------------
 | staff routes|--------------------------------------------------------------------------
@@ -376,8 +377,28 @@ app.get(
 
     }
 );
+/*
+|--------------------------------------------------------------------------
+| APP DOWNLOAD & PROMOTION API
+|--------------------------------------------------------------------------
+| Public download + Super Admin management
+*/
 
+app.use(
+    "/api/app-download",
+    appDownloadRoutes
+);
+app.use(
+    "/api/website-management",
+    security.publicWebsiteCors(),
+    websiteManagementRoutes
+);
 
+app.use(
+    "/super-admin/website-management",
+    requireSoftwareBilling,
+    websiteManagementRoutes
+);
 /*
 |--------------------------------------------------------------------------
 | STATIC FILES
@@ -808,28 +829,28 @@ app.use(
     requireSoftwareBilling,
     managerRoutes
 );
+
 /*
 |--------------------------------------------------------------------------
-| LOGIN PAGE
+| PUBLIC WEBSITE & LOGIN PAGE
 |--------------------------------------------------------------------------
 */
 
-app.get(
-    "/",
-    (req, res) => {
+app.get("/", (req, res) => {
+    const hostname = (req.hostname || "")
+        .toLowerCase()
+        .replace(/^www\./, "");
 
+    if (hostname === "amaderbill.com") {
         return res.sendFile(
-            path.join(
-                __dirname,
-                "views",
-                "auth", "login.html"
-            )
+            path.join(__dirname, "views", "app-download", "index.html")
         );
-
     }
-);
 
-
+    return res.sendFile(
+        path.join(__dirname, "views", "auth", "login.html")
+    );
+});
 /*
 |--------------------------------------------------------------------------
 | REGISTER PAGE
@@ -1124,7 +1145,6 @@ app.get(
 
     }
 );
-
 
 /*
 |--------------------------------------------------------------------------
