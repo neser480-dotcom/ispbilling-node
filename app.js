@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 const express = require("express");
 const session = require("express-session");
@@ -37,6 +37,7 @@ const websiteManagementRoutes = require("./routes/admin/website-management");
 const appDownloadRoutes =
     require("./routes/app-download/appDownload");
 const websiteSupportRoutes = require("./routes/public/website-support.routes");
+const supportNumbersRoutes = require("./routes/super-admin/support-numbers.routes");
 const bandwidthRoutes = require("./routes/bandwidth/bandwidth.routes");
 const resellerPortalRoutes = require("./routes/reseller/reseller-portal.routes");
 /*
@@ -403,6 +404,7 @@ app.use(
     security.publicWebsiteCors(),
     websiteSupportRoutes
 );
+app.use("/api/super-admin/support-numbers", supportNumbersRoutes);
 
 app.use(
     "/super-admin/website-management",
@@ -414,6 +416,7 @@ app.use(
     security.publicWebsiteCors(),
     websiteSupportRoutes
 );
+app.use("/api/super-admin/support-numbers", supportNumbersRoutes);
 /*
 |--------------------------------------------------------------------------
 | STATIC FILES
@@ -883,6 +886,21 @@ app.get("/site-preview", (req, res) =>
 );
 
 /* APK MANAGEMENT PAGE (Super Admin) */
+app.get(
+    "/super-admin/support-numbers",
+    requireSoftwareBilling,
+    (req, res, next) => {
+        const role = String((req.session && req.session.role) || "")
+            .trim().toLowerCase().replace(/[\s_-]+/g, "");
+        if (role !== "superadmin" || Number(req.session.company_id) !== 8) {
+            return res.status(403).send("Super Admin access required.");
+        }
+        next();
+    },
+    (req, res) => res.sendFile(
+        path.join(__dirname, "views", "admin", "super-admin-support-numbers.html")
+    )
+);
 app.get(
     "/super-admin/apk-management",
     requireSoftwareBilling,

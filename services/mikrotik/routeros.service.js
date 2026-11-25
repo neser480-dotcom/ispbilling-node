@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const { MikrotikAPI } = require('@fibercom/routeros-api');
 
@@ -59,9 +59,9 @@ async function findSecret(router, username) {
 |--------------------------------------------------------------------------
 | ADD PPPoE SECRET
 |--------------------------------------------------------------------------
-| Package profile এখন সরাসরি MikroTik-এ পাঠানো হবে।
+| Package profile à¦à¦–à¦¨ à¦¸à¦°à¦¾à¦¸à¦°à¦¿ MikroTik-à¦ à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à¦¬à§‡à¥¤
 |
-| Controller থেকে:
+| Controller à¦¥à§‡à¦•à§‡:
 |
 | profile: selectedPackage.profile_id
 |
@@ -99,9 +99,9 @@ async function addPppoeSecret(
         |--------------------------------------------------------------------------
         | PACKAGE PROFILE
         |--------------------------------------------------------------------------
-        | Profile থাকলে সেটাই ব্যবহার হবে।
-        | Profile না থাকলে profile parameter পাঠানো হবে না,
-        | ফলে MikroTik-এর default profile ব্যবহার হতে পারে।
+        | Profile à¦¥à¦¾à¦•à¦²à§‡ à¦¸à§‡à¦Ÿà¦¾à¦‡ à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦¹à¦¬à§‡à¥¤
+        | Profile à¦¨à¦¾ à¦¥à¦¾à¦•à¦²à§‡ profile parameter à¦ªà¦¾à¦ à¦¾à¦¨à§‹ à¦¹à¦¬à§‡ à¦¨à¦¾,
+        | à¦«à¦²à§‡ MikroTik-à¦à¦° default profile à¦¬à§à¦¯à¦¬à¦¹à¦¾à¦° à¦¹à¦¤à§‡ à¦ªà¦¾à¦°à§‡à¥¤
         */
 
         const selectedProfile =
@@ -130,5 +130,6 @@ async function addPppoeSecret(
 
 module.exports = {
     findSecret,
-    addPppoeSecret
+    addPppoeSecret,
+	withRouter
 };
