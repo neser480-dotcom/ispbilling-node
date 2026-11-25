@@ -1465,7 +1465,8 @@ requestAnimationFrame(() => {
                                         "POST",
 
                                     body: JSON.stringify({
-                                        usernames: choice.usernames
+                                        usernames: choice.usernames,
+                                        include_inactive: step1.includeInactive
                                     })
                                 }
                             );

@@ -166,6 +166,11 @@ router.post(
     controller.customerSync
 );
 
+router.post(
+    "/:id/customers/sync-selected",
+    controller.customerSync
+);
+
 
 /*
 |--------------------------------------------------------------------------

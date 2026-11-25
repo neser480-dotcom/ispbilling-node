@@ -2131,6 +2131,33 @@ async function customerSync(
 
         /*
         |--------------------------------------------------------------------------
+        | SELECTED CUSTOMER FILTER
+        |--------------------------------------------------------------------------
+        */
+
+        const requestedUsernames =
+            Array.isArray(req.body?.usernames)
+                ? [...new Set(
+                    req.body.usernames
+                        .map(username => String(username || "").trim())
+                        .filter(Boolean)
+                )]
+                : null;
+
+        if (
+            req.path.endsWith("/sync-selected") &&
+            (!requestedUsernames || !requestedUsernames.length)
+        ) {
+            return res.status(400).json({
+                status: false,
+                success: false,
+                message: "Select at least one PPPoE customer."
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
         | READ CUSTOMERS TABLE
         |--------------------------------------------------------------------------
         */
@@ -2201,8 +2228,17 @@ async function customerSync(
             );
 
 
+        const syncSecrets =
+            requestedUsernames
+                ? secrets.filter(secret =>
+                    requestedUsernames.includes(
+                        String(secret?.name || "").trim()
+                    )
+                )
+                : secrets;
+
         const total =
-            secrets.length;
+            syncSecrets.length;
 
 
         let inserted = 0;
@@ -2223,7 +2259,7 @@ async function customerSync(
         */
 
         for (
-            const secret of secrets
+            const secret of syncSecrets
         ) {
 
             try {
