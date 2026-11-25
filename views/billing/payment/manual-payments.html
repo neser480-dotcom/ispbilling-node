@@ -152,7 +152,7 @@ function cell(text) {
 
 async function act(item, action, button) {
     if (action === "approve" &&
-        !confirm(`Approve ৳${item.amount.toFixed(2)} from ${item.customer_id} (TrxID ${item.trx_id})?\nCheck it in your wallet app first.`)) {
+        !confirm(`Approve ৳${(n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(item.amount))} from ${item.customer_id} (TrxID ${item.trx_id})?\nCheck it in your wallet app first.`)) {
         return;
     }
 
@@ -205,7 +205,7 @@ async function loadList() {
         tr.appendChild(cell(String(item.method).toUpperCase()));
         tr.appendChild(cell(item.trx_id));
         tr.appendChild(cell(item.sender_number));
-        tr.appendChild(cell(`৳ ${item.amount.toFixed(2)}`));
+        tr.appendChild(cell(`৳ ${(n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(item.amount))}`));
 
         const status = document.createElement("td");
         const tag = document.createElement("span");

@@ -141,7 +141,7 @@ $("checkBtn").addEventListener("click", async () => {
     }
 
     $("custName").textContent = data.customer_name || "";
-    $("amountText").textContent = Number(data.amount).toFixed(2);
+    $("amountText").textContent = (n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(data.amount));
     $("quoteBox").hidden = false;
     $("checkBtn").hidden = true;
 

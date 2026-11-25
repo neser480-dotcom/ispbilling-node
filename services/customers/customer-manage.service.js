@@ -68,7 +68,7 @@ function scope(user, alias = "") {
 
 function money(value) {
     return "৳" + Number(value || 0).toLocaleString("en-BD", {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2
     });
 }

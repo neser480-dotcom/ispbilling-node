@@ -21,7 +21,7 @@
         }[char]));
 
     const money = value => new Intl.NumberFormat("en-BD", {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2
     }).format(Number(value) || 0);
 

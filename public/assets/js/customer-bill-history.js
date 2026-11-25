@@ -229,7 +229,7 @@
 
                         <div>
                             <span>Total Collected</span>
-                            <strong id="cbhTotal">৳0.00</strong>
+                            <strong id="cbhTotal">৳0</strong>
                         </div>
                     </div>
 

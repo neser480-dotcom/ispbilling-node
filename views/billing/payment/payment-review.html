@@ -105,7 +105,7 @@ async function load() {
             <td>${t.scope === "central" ? "Software (central)" : "ISP " + esc(t.company_id)}</td>
             <td>${esc(t.gateway)}${t.demo ? " <b>(DEMO)</b>" : ""}</td>
             <td>${esc(t.purpose)}</td>
-            <td>৳ ${Number(t.amount).toFixed(2)}</td>
+            <td>৳ ${(n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(t.amount))}</td>
             <td><span class="tag ${esc(t.status)}">${esc(t.status)}</span>${t.review_done ? "<br><span class='muted'>handled</span>" : ""}</td>
             <td>${esc(t.review_note || t.reason || "")}</td>
             <td class="muted">${esc(String(t.created_at).replace("T"," ").slice(0,19))}</td>

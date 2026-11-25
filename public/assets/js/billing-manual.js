@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return amount.toLocaleString(
             "en-BD",
             {
-                minimumFractionDigits: 2,
+                minimumFractionDigits: 0,
                 maximumFractionDigits: 2
             }
         );

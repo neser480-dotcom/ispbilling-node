@@ -119,7 +119,7 @@
             (row) => row.id,
             (row) => {
                 const name = row.alias_name || row.package_name;
-                return `${name} - ${Number(row.price || 0).toFixed(2)}`;
+                return `${name} - ${(n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(row.price || 0))}`;
             }
         );
 
