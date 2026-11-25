@@ -2,11 +2,11 @@
 "use strict";
 
 const {
-    EcomDriver,
+    CDataTelnetBase,
     cleanMac
-} = require("./ecom");
+} = require("./cdata-telnet");
 
-class CDataDriver extends EcomDriver {
+class CDataDriver extends CDataTelnetBase {
     constructor(config = {}) {
         super(config);
 

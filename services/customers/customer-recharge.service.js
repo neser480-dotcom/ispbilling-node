@@ -214,7 +214,9 @@ function addDays(date, days) {
 function money(value) {
     const number = Number(value);
 
-    return (Number.isFinite(number) ? number : 0).toFixed(2);
+    const safe = Number.isFinite(number) ? number : 0;
+
+    return Number.isInteger(safe) ? String(safe) : safe.toFixed(2);
 }
 
 function roundMoney(value) {
@@ -1653,7 +1655,7 @@ async function rechargeFragment({ user, id }) {
     <!-- values the page script updates; kept for compatibility -->
     <div class="d-none">
         <span data-recharge-subtotal>৳${money(monthlyBill)}</span>
-        <span data-recharge-discount-label>৳0.00</span>
+        <span data-recharge-discount-label>৳0</span>
     </div>
 
     <div class="nf-rc-pay">

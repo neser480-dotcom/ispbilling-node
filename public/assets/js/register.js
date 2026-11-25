@@ -444,7 +444,7 @@ document.addEventListener(
                     if (discountValue) {
 
                         discountValue.value =
-                            signup.toFixed(2);
+                            ((n=>Number.isInteger(n)?String(n):n.toFixed(2))(signup));
                     }
                 }
 
@@ -562,7 +562,7 @@ document.addEventListener(
                     } else {
 
                         discountSummary.innerHTML =
-                            "Discount: ৳0.00 | " +
+                            "Discount: ৳0 | " +
 
                             "Payable: " +
 

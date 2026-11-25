@@ -103,7 +103,7 @@ async function load() {
     info = data;
 
     $("title").textContent = data.billing_type === "registration" ? "Registration Fee" : "Monthly Software Bill";
-    $("amount").textContent = Number(data.amount).toFixed(2);
+    $("amount").textContent = (n=>Number.isInteger(n)?String(n):n.toFixed(2))(Number(data.amount));
     $("content").hidden = false;
 
     const list = data.all_gateways ||

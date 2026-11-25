@@ -450,7 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (amountInput) {
 
             amountInput.value =
-                amount.toFixed(2);
+                (n=>Number.isInteger(n)?String(n):n.toFixed(2))(amount);
         }
 
 

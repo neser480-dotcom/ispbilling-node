@@ -3,6 +3,9 @@
 
 const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
+const { HiosoDriver } = require('../hardware/hioso');
+const { HsgqDriver } = require('../hardware/hsgq');
+const { ZteEponDriver } = require('../hardware/zte-epon');
 const { autoMapOnus } = require('./onu-auto-mapping.service');
 const { collectPppSessions, loadMikrotikService } = require('./ppp-sessions');
 
@@ -18,20 +21,43 @@ function driverFor(olt) {
         .toLowerCase()
         .replace(/[_\s]+/g, '-');
 
+    // "CData EPon", "ECom-EPON", "Hioso" ... -> letters and digits only
+    const key = vendor.replace(/[^a-z0-9]/g, '');
+
     const config = {
         ip: olt.ip,
         port: Number(olt.port || 23),
         username: olt.username,
         password: olt.password,
-        timeout: Number(olt.timeout || 12)
+        timeout: Number(olt.timeout || 12),
+        // SNMP vendors (hioso, hsgq, zte-epon)
+        // The OLT form saves `community` and `snmp_version`; for SNMP vendors
+        // the form's Port field is the SNMP port (23 = old telnet default).
+        community: olt.community || olt.snmp_community || olt.snmp_read_community || '',
+        snmpPort: Number(olt.snmp_port || olt.port) && Number(olt.snmp_port || olt.port) !== 23
+            ? Number(olt.snmp_port || olt.port)
+            : 161,
+        snmpVersion: olt.snmp_version || '2c'
     };
 
-    if (['ecom', 'e-com', 'ecom-epon'].includes(vendor)) {
+    if (['ecom', 'e-com', 'ecom-epon'].includes(vendor) || ['ecom', 'ecomepon'].includes(key)) {
         return new EcomDriver(config);
     }
 
-    if (['cdata', 'c-data', 'c-data-epon'].includes(vendor)) {
+    if (['cdata', 'c-data', 'c-data-epon'].includes(vendor) || ['cdata', 'cdataepon'].includes(key)) {
         return new CDataDriver(config);
+    }
+
+    if (['hioso', 'hiosoepon'].includes(key)) {
+        return new HiosoDriver(config);
+    }
+
+    if (['hsgq', 'hsgqepon', 'hsgqgpon'].includes(key)) {
+        return new HsgqDriver(config);
+    }
+
+    if (['zte', 'zteepon'].includes(key)) {
+        return new ZteEponDriver(config);
     }
 
     throw new Error(`Unsupported OLT vendor: ${olt.vendor}`);

@@ -506,6 +506,8 @@
                 <option value="">Select OLT Vendor</option>
                 <option value="CData EPon">CData</option>
                 <option value="ECom EPon">ECom</option>
+                <option value="Hioso">Hioso</option>
+                <option value="HSGQ">HSGQ</option>
                 <option value="V-SOL">V-SOL</option>
                 <option value="BDCOM">BDCOM</option>
                 <option value="Huawei">Huawei</option>
@@ -561,12 +563,27 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="oltPort">OLT Port <span class="text-danger">*</span></label>
+              <label class="form-label fw-semibold" for="oltPort"><span id="oltPortLabelText">OLT Port</span> <span class="text-danger">*</span></label>
               <input class="form-control" id="oltPort" type="number" min="1" max="65535" required>
             </div>
 
-            <input type="hidden" id="oltSnmpVersion" value="v2c">
-            <input type="hidden" id="oltCommunity" value="public">
+            <div id="oltSnmpFields" class="d-none">
+              <div class="mb-3">
+                <label class="form-label fw-semibold" for="oltCommunity">
+                  SNMP Community <span class="text-danger">*</span>
+                </label>
+                <input class="form-control" id="oltCommunity" maxlength="100" placeholder="e.g. public" autocomplete="off">
+                <small class="text-muted">OLT-তে সেট করা SNMP read community। <span id="oltCommunityHint"></span></small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold" for="oltSnmpVersion">SNMP Version</label>
+                <select class="form-select" id="oltSnmpVersion">
+                  <option value="v2c" selected>v2c</option>
+                  <option value="v1">v1</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div class="modal-footer">
@@ -620,6 +637,34 @@
     snmpVersion: document.getElementById("oltSnmpVersion"),
     community: document.getElementById("oltCommunity")
   };
+
+  /* Vendors read over SNMP (Hioso, HSGQ, ZTE EPON): the Port field is the
+     SNMP port, and a community is needed instead of a telnet login. */
+  const SNMP_VENDORS = new Set(["Hioso", "HSGQ", "ZTE"]);
+  const snmpFields = document.getElementById("oltSnmpFields");
+  const portLabelText = document.getElementById("oltPortLabelText");
+
+  function isSnmpVendor(value) {
+    return SNMP_VENDORS.has(String(value ?? ""));
+  }
+
+  function syncVendorFields() {
+    const snmp = isSnmpVendor(field.vendor.value);
+
+    snmpFields.classList.toggle("d-none", !snmp);
+    portLabelText.textContent = snmp ? "SNMP Port" : "OLT Port";
+
+    field.username.required = !snmp;
+    field.password.required = !snmp && editingOltId === null;
+
+    if (snmp && (!field.port.value || field.port.value === "23")) {
+      field.port.value = "161";
+    }
+
+    if (!snmp && field.port.value === "161") {
+      field.port.value = "23";
+    }
+  }
 
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, function (char) {
@@ -745,6 +790,10 @@
       bdcom: "BDCOM",
       huawei: "Huawei",
       zte: "ZTE",
+      zteepon: "ZTE",
+      hioso: "Hioso",
+      hiosoepon: "Hioso",
+      hsgq: "HSGQ",
       fiberhome: "FiberHome",
       raisecom: "Raisecom",
       nokia: "Nokia",
@@ -1053,12 +1102,14 @@
     field.password.required = true;
 
     document.getElementById("oltPasswordHint").textContent = "";
+    document.getElementById("oltCommunityHint").textContent = "";
 
     field.port.value = "23";
 
     document.getElementById("oltModalTitle").textContent = "Create OLT";
     oltForm.querySelector('[type="submit"]').textContent = "Submit";
 
+    syncVendorFields();
     oltModal.show();
   }
 
@@ -1081,6 +1132,12 @@
     field.username.value = olt.username;
     field.host.value = olt.host;
     field.port.value = olt.port;
+    field.community.value = "";
+    document.getElementById("oltCommunityHint").textContent =
+      "Edit করার সময় ফাঁকা রাখলে বর্তমান community অপরিবর্তিত থাকবে।";
+    field.snmpVersion.value = ["v1", "v2c"].includes(olt.snmp_version)
+      ? olt.snmp_version
+      : "v2c";
 
     field.password.value = "";
     field.password.required = false;
@@ -1091,6 +1148,7 @@
     document.getElementById("oltModalTitle").textContent = "Edit OLT";
     oltForm.querySelector('[type="submit"]').textContent = "Update";
 
+    syncVendorFields();
     oltModal.show();
   }
 
@@ -1109,6 +1167,21 @@
     event.preventDefault();
 
     if (saving || !oltForm.reportValidity()) return;
+
+    if (isSnmpVendor(field.vendor.value)) {
+      const current = editingOltId === null
+        ? null
+        : oltRecords.find(item => item.id === editingOltId);
+
+      /* Blank is fine when editing an OLT that already uses SNMP
+         (the stored community is kept). */
+      const needsCommunity = !current || !isSnmpVendor(current.vendor);
+
+      if (needsCommunity && !field.community.value.trim()) {
+        showMessage("SNMP community দিন।", "warning");
+        return;
+      }
+    }
 
     saving = true;
 
@@ -1285,6 +1358,7 @@
 
   searchInput.addEventListener("input", renderTable);
   oltForm.addEventListener("submit", saveOlt);
+  field.vendor.addEventListener("change", syncVendorFields);
 
   tableBody.addEventListener("click", function (event) {
     const button = event.target.closest("button[data-action]");

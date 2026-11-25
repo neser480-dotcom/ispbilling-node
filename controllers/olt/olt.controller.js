@@ -98,6 +98,9 @@ function validId(value) {
     return id;
 }
 
+/* Vendors read over SNMP: a community instead of a telnet login. */
+const SNMP_VENDORS = new Set(["hioso", "hsgq", "zte"]);
+
 function clean(value, max = 255) {
     return String(value ?? "").trim().slice(0, max);
 }
@@ -115,6 +118,13 @@ function normalizeVendor(value) {
         cdataepon: "cdata",
         cdataolt: "cdata",
         cdataeponolt: "cdata",
+        hioso: "hioso",
+        hiosoepon: "hioso",
+        hiosoolt: "hioso",
+        hsgq: "hsgq",
+        hsgqepon: "hsgq",
+        hsgqgpon: "hsgq",
+        hsgqolt: "hsgq",
         vsol: "vsol",
         vsololt: "vsol",
         bdcom: "bdcom",
@@ -123,6 +133,8 @@ function normalizeVendor(value) {
         huaweiolt: "huawei",
         zte: "zte",
         zteolt: "zte",
+        zteepon: "zte",
+        zteeponolt: "zte",
         fiberhome: "fiberhome",
         raisecom: "raisecom",
         nokia: "nokia",
@@ -149,7 +161,8 @@ function validateInput(body, editing = false) {
     const ip = clean(body.ip || body.host, 255);
     const username = clean(body.username, 150);
     const password = String(body.password ?? "");
-    const port = Number(body.port || 23);
+    const snmpVendor = SNMP_VENDORS.has(vendor);
+    const port = Number(body.port || (snmpVendor ? 161 : 23));
     const ponPorts = Number(body.pon_ports || 4);
 const mikrotikId = body.mikrotik_id
     ? Number(body.mikrotik_id)
@@ -167,7 +180,9 @@ if (
         10
     ).toLowerCase();
 
-    const community = clean(body.community || "public", 100);
+    const communityInput = clean(body.community, 100);
+    /* Edit: blank = keep the stored community (see update). */
+    const community = communityInput || (editing ? "" : "public");
     const remarks = clean(body.remarks, 1000);
 
     if (!name) {
@@ -196,11 +211,21 @@ if (
         throw new OltError("Invalid SNMP version.");
     }
 
-    if (!editing && !username) {
+    if (snmpVendor && snmpVersion === "v3") {
+        throw new OltError(
+            "SNMP v3 is not supported for this vendor yet. Use v1 or v2c."
+        );
+    }
+
+    if (snmpVendor && !editing && !communityInput) {
+        throw new OltError("SNMP community is required.");
+    }
+
+    if (!editing && !snmpVendor && !username) {
         throw new OltError("OLT username is required.");
     }
 
-    if (!editing && !password) {
+    if (!editing && !snmpVendor && !password) {
         throw new OltError("OLT password is required.");
     }
 
@@ -320,6 +345,7 @@ exports.list = async (req, res) => {
                 ol.port,
                 ol.username,
                 ol.pon_ports,
+                ol.snmp_version,
                 ol.status,
                 ol.created_at,
                 ol.last_check,
@@ -520,6 +546,8 @@ exports.update = async (req, res) => {
         const data = validateInput(req.body || {}, true);
         const password =
             String(req.body?.password ?? "") || old.password;
+        const community =
+            data.community || old.community || "public";
 
         const scope = scopeSql(req, "ol");
 
@@ -547,7 +575,7 @@ exports.update = async (req, res) => {
                 data.username,
                 password,
                 data.snmp_version,
-                data.community,
+                community,
                 data.pon_ports,
                 data.remarks,
                 id,
@@ -649,7 +677,16 @@ exports.check = async (req, res) => {
         const id = validId(req.params.id);
         olt = await findOlt(req, id);
 
-        if (
+        const vendor = normalizeVendor(olt.vendor);
+        const snmpVendor = SNMP_VENDORS.has(vendor);
+
+        if (snmpVendor) {
+            if (!olt.ip || !olt.community) {
+                throw new OltError(
+                    "OLT IP এবং SNMP community যাচাই করুন।"
+                );
+            }
+        } else if (
             !olt.ip ||
             !olt.port ||
             !olt.username ||
@@ -659,8 +696,6 @@ exports.check = async (req, res) => {
                 "OLT IP, Port, Username এবং Password যাচাই করুন।"
             );
         }
-
-        const vendor = normalizeVendor(olt.vendor);
 
         const config = {
             id: olt.id,
@@ -685,6 +720,10 @@ exports.check = async (req, res) => {
         } else if (vendor === "ecom") {
             const { EcomDriver } = require("../../drivers/hardware/ecom");
             driver = new EcomDriver(config);
+        } else if (snmpVendor) {
+            /* Hioso / HSGQ / ZTE EPON: SNMP drivers, built from the OLT row. */
+            const { driverFor } = require("../../drivers/services/olt-sync.service");
+            driver = driverFor(olt);
         } else {
             throw new OltError(
                 `এই Vendor-এর connection test সেট করা নেই: ${vendor}`
