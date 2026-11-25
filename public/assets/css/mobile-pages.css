@@ -284,3 +284,26 @@
     .main-content .billing-page > .row { --bs-gutter-x: 0; }
     html, body { max-width: 100%; }
 }
+
+/* ---------- Mikrotik Configuration + Cross Customer ---------- */
+@media (max-width: 850px) {
+    .mk-config-page { padding: 64px 3px 14px !important; margin: 0 !important; max-width: 100%; overflow-x: hidden; }
+    .mk-config-page .mk-header {
+        min-height: 58px !important; padding: 8px 10px !important; gap: 6px 8px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
+        align-items: center !important; justify-content: space-between !important; border-radius: 4px !important;
+    }
+    .mk-config-page .mk-title { font-size: 19px !important; font-weight: 600 !important; margin: 0 !important; text-align: left !important; flex: 1 1 auto; min-width: 0; }
+    .mk-config-page .mk-back { font-size: 13px !important; white-space: nowrap; flex-shrink: 0; }
+    .mk-config-page .mk-header-actions { display: flex !important; gap: 6px !important; flex-wrap: nowrap; width: auto !important; }
+    .mk-config-page .mk-btn-white { font-size: 13px !important; padding: 6px 10px !important; white-space: nowrap; }
+    .mk-config-page .mk-card { padding: 10px 8px 16px !important; overflow-x: auto; }
+    .mk-config-page .mk-strip { display: flex !important; flex-wrap: nowrap !important; align-items: center; gap: 8px; padding: 8px 10px; }
+    .mk-config-page .mk-total { white-space: nowrap; flex-shrink: 0; font-size: 15px; }
+    .mk-config-page .mk-search-wrap { flex: 1 1 auto; min-width: 0; width: auto; }
+    .mk-config-page .mk-search-wrap input { width: 100%; height: 36px; font-size: 14px; }
+}
+@media (max-width: 850px) {
+    .mk-config-page .mk-strip { justify-content: flex-start !important; flex-direction: row !important; }
+    .mk-config-page .mk-search-wrap, .mk-config-page .mk-search-wrap input { position: static !important; margin: 0 !important; transform: none !important; }
+}
