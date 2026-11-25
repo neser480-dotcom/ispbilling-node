@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Portal - amaderBill IRFANIT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background: #f5f5f2;
+            margin: 0;
+            color: #2c2e33;
+            overflow-x: hidden;
+        }
+
+        .portal-topbar {
+            background: #ffffff;
+            border-bottom: 1px solid #eceef2;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .portal-brand {
+            font-weight: 700;
+            font-size: 24px;
+            color: #111827;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .portal-brand span {
+            color: #9c27b0;
+        }
+
+        .portal-nav a {
+            color: #374151;
+            text-decoration: none;
+            font-size: 14.5px;
+            font-weight: 500;
+            margin-right: 18px;
+            transition: color 0.2s ease;
+        }
+
+        .portal-nav a.active,
+        .portal-nav a:hover {
+            color: #1e88e5;
+        }
+
+        .portal-container {
+            max-width: 1180px;
+            margin: 24px auto 32px;
+            padding: 0 16px;
+        }
+
+        .portal-card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            padding: 28px 32px;
+        }
+
+        .portal-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 500;
+            color: #2d3139;
+            padding-bottom: 18px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #eef0f3;
+        }
+
+        .section-heading-line {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2d3139;
+            padding-bottom: 14px;
+            margin-bottom: 22px;
+            border-bottom: 1px solid #eef0f3;
+        }
+
+        .form-label {
+            font-weight: 500;
+            font-size: 14px;
+            color: #2d3139;
+            margin-bottom: 7px;
+        }
+
+        .form-control,
+        .form-select {
+            padding: 10px 14px;
+            border-color: #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-control::placeholder {
+            color: #b0b5bd;
+        }
+
+        .editor-wrapper {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .editor-toolbar {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 12px;
+            background: #ffffff;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .editor-toolbar .btn {
+            border: none;
+            color: #4b5563;
+            background: transparent;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .editor-toolbar .btn:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .editor-area {
+            min-height: 175px;
+            padding: 12px 14px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .editor-area:empty::before {
+            content: attr(data-placeholder);
+            color: #b0b5bd;
+        }
+
+        .editor-footer {
+            border-top: 1px solid #f0f1f4;
+            padding: 6px 12px;
+            text-align: right;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            letter-spacing: 0.4px;
+            background: #fcfcfd;
+        }
+
+        .btn-portal-green {
+            background: #19a974;
+            border-color: #19a974;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: 0.5px;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+
+        .btn-portal-green:hover {
+            background: #159365;
+            border-color: #159365;
+            color: #ffffff;
+        }
+
+        .no-data-text {
+            color: #4b5563;
+            font-size: 15px;
+            padding: 8px 0 18px;
+        }
+
+        .page-footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 24px;
+        }
+
+        @media (max-width: 767.98px) {
+            .portal-topbar {
+                padding: 12px 16px;
+            }
+            .portal-card {
+                padding: 20px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Portal Bar -->
+    <header class="portal-topbar">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <a href="#" class="portal-brand" onclick="switchView('create'); return false;">
+                amader<span>Bill</span> <small class="text-muted fw-semibold ms-1" style="font-size: 13px; letter-spacing: 0.5px;">IRFANIT</small>
+            </a>
+            <nav class="portal-nav d-flex flex-wrap align-items-center">
+                <a href="#" id="navCreate" class="active" onclick="switchView('create'); return false;">Create Ticket</a>
+                <a href="#" id="navSearch" onclick="switchView('search'); return false;">Search Ticket</a>
+                <a href="#" id="navList" onclick="switchView('list'); return false;">Ticket List</a>
+            </nav>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-sm btn-light border" id="langToggleBtn" onclick="toggleLang()">
+                <i class="fa fa-flag-usa text-danger me-1"></i><span id="langLabel">ENGLISH</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-light border" onclick="toggleFullscreen()" title="Fullscreen">
+                <i class="fa fa-expand"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="portal-container">
+        <!-- 1. CREATE TICKET VIEW -->
+        <div class="portal-card" id="viewCreate">
+            <h1 class="portal-title" id="formHeading">Create Ticket</h1>
+
+            <form id="createTicketForm">
+                <div class="row g-4 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" id="lblName">Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="inputName" class="form-control" placeholder="Name" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" id="lblMobile">Mobile <span class="text-danger">*</span></label>
+                        <input type="text" name="mobile" id="inputMobile" class="form-control" placeholder="Mobile" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" id="lblSubject">Subject <span class="text-danger">*</span></label>
+                        <input type="text" name="subject" id="inputSubject" class="form-control" placeholder="Subject of the support" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" id="lblDept">Department <span class="text-danger">*</span></label>
+                        <select name="department" id="selectDept" class="form-select" required>
+                            <option value="">Choose department</option>
+                            <option value="Technical">Technical</option>
+                            <option value="Billing">Billing</option>
+                            <option value="Mikrotik & OLT">Mikrotik &amp; OLT</option>
+                            <option value="Sales">Sales</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label" id="lblDesc">Description <span class="text-danger">*</span></label>
+                    <div class="editor-wrapper">
+                        <div class="editor-toolbar">
+                            <button type="button" class="btn btn-sm" onclick="execCmd('formatBlock', 'PRE')" title="Code"><i class="fa fa-code"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('bold')" title="Bold"><i class="fa fa-bold"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('strikeThrough')" title="Strike"><i class="fa fa-strikethrough"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('underline')" title="Underline"><i class="fa fa-underline"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('italic')" title="Italic"><i class="fa fa-italic"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('insertUnorderedList')" title="Bullet List"><i class="fa fa-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fa fa-list-ol"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('justifyLeft')" title="Align Left"><i class="fa fa-align-left"></i></button>
+                            <button type="button" class="btn btn-sm" onclick="execCmd('justifyCenter')" title="Align Center"><i class="fa fa-align-center"></i></button>
+                        </div>
+                        <div
+                            id="ticketEditor"
+                            class="editor-area"
+                            contenteditable="true"
+                            data-placeholder="Start writing..."
+                            oninput="updateEditorCount()"
+                        ></div>
+                        <div class="editor-footer" id="editorCounter">CHARS: 0 WORDS: 0</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-portal-green mt-3" id="btnSubmitTicket">CREATE TICKET</button>
+            </form>
+        </div>
+
+        <!-- 2. SEARCH TICKET VIEW -->
+        <div class="portal-card d-none" id="viewSearch">
+            <h2 class="section-heading-line">Search your ticket</h2>
+
+            <form id="searchTicketForm">
+                <div class="mb-4">
+                    <label class="form-label" for="searchTicketIdInput">Ticket ID <span class="text-danger">*</span></label>
+                    <input
+                        type="text"
+                        id="searchTicketIdInput"
+                        class="form-control"
+                        placeholder="Ticket ID"
+                        required
+                    />
+                </div>
+                <button type="submit" class="btn btn-portal-green">SEARCH TICKET</button>
+            </form>
+
+            <div id="searchResultBox" class="mt-4 d-none">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Name</th>
+                                <th>Mobile</th>
+                                <th>Subject</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchResultBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TICKET LIST VIEW ("My tickets") -->
+        <div class="portal-card d-none" id="viewList">
+            <div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom gap-2 flex-wrap">
+                <h2 class="m-0 fw-bold" style="font-size: 20px; color: #2d3139;">My tickets</h2>
+                <button type="button" class="btn btn-portal-green" onclick="switchView('create')">
+                    CREATE TICKET
+                </button>
+            </div>
+
+            <div id="noTicketsBox" class="no-data-text">No Data Found</div>
+
+            <div class="table-responsive d-none" id="ticketListTableWrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Ticket ID</th>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Subject</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="page-footer">© amaderBill IRFANIT - 2026</div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const shunnoId = urlParams.get("shunnoID") || "";
+        const clientApp = urlParams.get("clientApp") || "";
+        let isBangla = false;
+
+        function execCmd(cmd, value = null) {
+            document.execCommand(cmd, false, value);
+            document.getElementById("ticketEditor").focus();
+            updateEditorCount();
+        }
+
+        function updateEditorCount() {
+            const text = (document.getElementById("ticketEditor").innerText || "").replace(/\u00A0/g, " ").trim();
+            const chars = text.length;
+            const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+            document.getElementById("editorCounter").textContent = `CHARS: ${chars} WORDS: ${words}`;
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen?.().catch(() => {});
+            } else {
+                document.exitFullscreen?.().catch(() => {});
+            }
+        }
+
+        function toggleLang() {
+            isBangla = !isBangla;
+            document.getElementById("langLabel").textContent = isBangla ? "বাংলা" : "ENGLISH";
+            document.getElementById("formHeading").textContent = isBangla ? "নতুন টিকেট তৈরি করুন" : "Create Ticket";
+            document.getElementById("inputName").placeholder = isBangla ? "আপনার নাম" : "Name";
+            document.getElementById("inputMobile").placeholder = isBangla ? "মোবাইল নাম্বার" : "Mobile";
+            document.getElementById("inputSubject").placeholder = isBangla ? "সাপোর্টের বিষয়" : "Subject of the support";
+            document.getElementById("ticketEditor").setAttribute("data-placeholder", isBangla ? "বিস্তারিত লিখুন..." : "Start writing...");
+            document.getElementById("btnSubmitTicket").textContent = isBangla ? "টিকেট জমা দিন" : "CREATE TICKET";
+        }
+
+        function switchView(mode) {
+            const createEl = document.getElementById("viewCreate");
+            const searchEl = document.getElementById("viewSearch");
+            const listEl = document.getElementById("viewList");
+
+            document.getElementById("navCreate").classList.toggle("active", mode === "create");
+            document.getElementById("navSearch").classList.toggle("active", mode === "search");
+            document.getElementById("navList").classList.toggle("active", mode === "list");
+
+            createEl.classList.add("d-none");
+            searchEl.classList.add("d-none");
+            listEl.classList.add("d-none");
+
+            if (mode === "create") {
+                createEl.classList.remove("d-none");
+            } else if (mode === "search") {
+                searchEl.classList.remove("d-none");
+                document.getElementById("searchTicketIdInput").focus();
+            } else if (mode === "list") {
+                listEl.classList.remove("d-none");
+                loadTickets();
+            }
+        }
+
+        async function loadTickets() {
+            const noDataBox = document.getElementById("noTicketsBox");
+            const tableWrap = document.getElementById("ticketListTableWrap");
+            const tbody = document.getElementById("ticketTableBody");
+
+            try {
+                const params = new URLSearchParams();
+                if (shunnoId) params.set("shunnoID", shunnoId);
+                if (clientApp) params.set("clientApp", clientApp);
+
+                const res = await fetch(`/api/support/tickets?${params.toString()}`, { credentials: "same-origin" });
+                const json = await res.json();
+                const rows = Array.isArray(json.data) ? json.data : [];
+
+                if (!rows.length) {
+                    tableWrap.classList.add("d-none");
+                    noDataBox.classList.remove("d-none");
+                    return;
+                }
+
+                noDataBox.classList.add("d-none");
+                tableWrap.classList.remove("d-none");
+                tbody.innerHTML = rows.map((t, idx) => `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${t.ticket_code || t.id || "-"}</td>
+                        <td>${t.name || "-"}</td>
+                        <td>${t.mobile || "-"}</td>
+                        <td>${t.subject || "-"}</td>
+                        <td>${t.department || "-"}</td>
+                        <td><span class="badge bg-primary">${t.status || "open"}</span></td>
+                    </tr>
+                `).join("");
+            } catch (_) {
+                tableWrap.classList.add("d-none");
+                noDataBox.classList.remove("d-none");
+            }
+        }
+
+        document.getElementById("searchTicketForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const ticketId = document.getElementById("searchTicketIdInput").value.trim();
+            if (!ticketId) return;
+
+            const resultBox = document.getElementById("searchResultBox");
+            const tbody = document.getElementById("searchResultBody");
+
+            try {
+                const res = await fetch(`/api/support/tickets?ticket_id=${encodeURIComponent(ticketId)}`, {
+                    credentials: "same-origin"
+                });
+                const json = await res.json();
+                const rows = Array.isArray(json.data) ? json.data : (json.data ? [json.data] : []);
+
+                resultBox.classList.remove("d-none");
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">No Data Found</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = rows.map((t) => `
+                    <tr>
+                        <td>${t.ticket_code || t.id || ticketId}</td>
+                        <td>${t.name || "-"}</td>
+                        <td>${t.mobile || "-"}</td>
+                        <td>${t.subject || "-"}</td>
+                        <td>${t.department || "-"}</td>
+                        <td><span class="badge bg-primary">${t.status || "open"}</span></td>
+                    </tr>
+                `).join("");
+            } catch (_) {
+                resultBox.classList.remove("d-none");
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">No Data Found</td></tr>`;
+            }
+        });
+
+        document.getElementById("createTicketForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const editor = document.getElementById("ticketEditor");
+            const plainText = (editor.innerText || "").trim();
+            const desc = editor.innerHTML.trim();
+
+            if (!plainText) {
+                Swal.fire({ icon: "warning", title: "Required", text: "Please write a description." });
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/support/tickets", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: fd.get("name"),
+                        mobile: fd.get("mobile"),
+                        subject: fd.get("subject"),
+                        department: fd.get("department"),
+                        description: desc,
+                        shunnoID: shunnoId || null,
+                        clientApp: clientApp || null
+                    })
+                });
+                const json = await res.json();
+                if (!res.ok || !json.success) throw new Error(json.message || "Failed to create ticket.");
+
+                e.target.reset();
+                editor.innerHTML = "";
+                updateEditorCount();
+                Swal.fire({ icon: "success", title: "Submitted", text: "Support ticket created.", timer: 1400, showConfirmButton: false });
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "Error", text: err.message });
+            }
+        });
+
+        updateEditorCount();
+    </script>
+</body>
+</html>

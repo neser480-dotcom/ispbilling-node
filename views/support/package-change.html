@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Package Change</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --topbar-height: 70px;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f4f6f9;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--topbar-height) + 16px);
+            padding-right: 18px;
+            padding-bottom: 24px;
+            padding-left: 18px;
+            min-height: 100vh;
+            transition: margin-left 0.25s ease;
+        }
+
+        .page-banner {
+            background: #1e88e5;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-toolbar {
+            background: #1e88e5;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .data-toolbar .search-input {
+            max-width: 340px;
+            width: 100%;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #333;
+        }
+
+        .badge-accepted,
+        .badge-rejected {
+            background: #f5b014;
+            color: #fff;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            font-size: 13px;
+        }
+
+        .sort-hint {
+            font-size: 11px;
+            color: #8c96a5;
+            margin-left: 3px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 991.98px) {
+            .main-content {
+                margin-left: 0;
+                padding-top: calc(var(--topbar-height) + 14px);
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="page-banner mb-3">
+            <h4 class="m-0 fw-normal">Package Change</h4>
+            <button class="btn btn-light text-primary" onclick="loadPkgRequests()" title="Refresh">
+                <i class="fa fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3">
+            <div class="data-toolbar mb-3">
+                <div>
+                    <i class="fa fa-cog"></i> Total Data:
+                    <span class="badge bg-primary border border-light" id="pkgCount">0</span>
+                </div>
+                <input type="text" id="pkgSearch" class="search-input" placeholder="Search" />
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID <span class="sort-hint">↓↑</span></th>
+                            <th>Name <span class="sort-hint">↓↑</span></th>
+                            <th>Mobile <span class="sort-hint">↓↑</span></th>
+                            <th>Created At <span class="sort-hint">↓↑</span></th>
+                            <th>Previous Package <span class="sort-hint">↓↑</span></th>
+                            <th>Requested Package <span class="sort-hint">↓↑</span></th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pkgTableBody">
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No Data Found !</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+        let csrfToken = "";
+        async function getCsrf() {
+            if (csrfToken) return csrfToken;
+            const res = await fetch("/api/csrf-token");
+            const data = await res.json();
+            csrfToken = data.csrf_token || "";
+            return csrfToken;
+        }
+
+        function formatCreatedAt(dateVal) {
+            const dt = new Date(dateVal);
+            if (Number.isNaN(dt.getTime())) return dateVal || "";
+            const yyyy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, "0");
+            const dd = String(dt.getDate()).padStart(2, "0");
+            let hours = dt.getHours();
+            const ampm = hours >= 12 ? "pm" : "am";
+            hours = hours % 12;
+            if (hours === 0) hours = 12;
+            const hh = String(hours).padStart(2, "0");
+            const min = String(dt.getMinutes()).padStart(2, "0");
+            return `${yyyy}/${mm}/${dd} ${hh}:${min} ${ampm}`;
+        }
+
+        async function loadPkgRequests() {
+            const search = document.getElementById("pkgSearch").value.trim();
+            const res = await fetch(`/api/support/package-changes?search=${encodeURIComponent(search)}`);
+            const json = await res.json();
+            const rows = json.data || [];
+
+            document.getElementById("pkgCount").textContent = rows.length;
+            const tbody = document.getElementById("pkgTableBody");
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No Data Found !</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => {
+                let actionCell = "";
+                if (r.status === "accepted") {
+                    actionCell = `<span class="badge-accepted">accepted</span>`;
+                } else if (r.status === "rejected") {
+                    actionCell = `<span class="badge-rejected">rejected</span>`;
+                } else {
+                    actionCell = `
+                        <button class="btn btn-sm btn-success" onclick="decidePkg(${r.id}, 'accepted')">Accept</button>
+                        <button class="btn btn-sm btn-danger" onclick="decidePkg(${r.id}, 'rejected')">Reject</button>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>${r.customer_id}</td>
+                        <td>${r.customer_name}</td>
+                        <td>${r.mobile}</td>
+                        <td>${formatCreatedAt(r.created_at)}</td>
+                        <td>${r.previous_package || ""}</td>
+                        <td>${r.requested_package || ""}</td>
+                        <td>${actionCell}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function decidePkg(id, action) {
+            const token = await getCsrf();
+            const res = await fetch(`/api/support/package-changes/${id}/action`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            alert(data.message || (res.ok ? "আপডেট সম্পন্ন হয়েছে।" : "সমস্যা হয়েছে।"));
+            loadPkgRequests();
+        }
+
+        document.getElementById("pkgSearch").addEventListener("input", loadPkgRequests);
+        loadPkgRequests();
+    </script>
+</body>
+</html>
