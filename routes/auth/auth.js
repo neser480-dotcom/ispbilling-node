@@ -1592,7 +1592,11 @@ function createMailTransport() {
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
-        }
+        },
+        // Fail fast (instead of hanging ~2 minutes) when the VPS blocks SMTP.
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000
     });
 }
 
@@ -1730,7 +1734,12 @@ router.post("/forgot-password/send-otp", async (req, res) => {
         return res.json(genericResponse);
 
     } catch (error) {
-        console.error("Forgot password OTP error:", error);
+        console.error(
+            "Forgot password OTP error:",
+            error.code || "",
+            error.responseCode || "",
+            error.message
+        );
 
         return res.status(500).json({
             success: false,
