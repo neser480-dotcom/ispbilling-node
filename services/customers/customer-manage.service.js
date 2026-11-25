@@ -271,6 +271,42 @@ async function editFragment({ user, id }) {
         router = await getRouter(user, routerId);
     }
 
+    // Comment: the database copy first. When it is empty (customer imported /
+    // synced, or the comment was written on the router) read it from the
+    // MikroTik PPPoE secret, so saving the form never wipes it.
+    let commentValue = String(c.comments || "").trim();
+
+    if (!commentValue && routerId > 0 && String(c.pppoe_username || "").trim()) {
+        const session = ppp.createSession({ companyId, isSuper: true });
+
+        try {
+            const api = await Promise.race([
+                session.api(routerId),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("timeout")), 5000))
+            ]);
+
+            const secret = await ppp.findSecret(
+                api,
+                String(c.pppoe_username).trim()
+            );
+
+            commentValue = String(secret?.comment || "").trim();
+
+            if (commentValue) {
+                await db.query(
+                    `UPDATE customers SET comments = ?
+                     WHERE id = ? AND (comments IS NULL OR comments = '')`,
+                    [commentValue, Number(c.id)]
+                ).catch(() => {});
+            }
+        } catch (error) {
+            console.error("EDIT MIKROTIK COMMENT:", error.message);
+        } finally {
+            try { await session.closeAll(); } catch (_) {}
+        }
+    }
+
     // Load packages assigned to this router and company.
     let packages = [];
 
@@ -465,7 +501,7 @@ async function editFragment({ user, id }) {
         DIVISION: e(c.division || ""),
         DISTRICT: e(c.district || ""),
         UPAZILA: e(c.upazila || c.thana || ""),
-        COMMENT: e(c.comments || ""),
+        COMMENT: e(commentValue),
         STATUS_OPTIONS: statusOptions,
 
         AUTO_CONNECTION:
@@ -544,7 +580,7 @@ async function updateCustomer({ user, body }) {
     const newName = String(body.pppoe_name || "").trim();
     const newPassword = String(body.password || "").trim();
     const newPackageId = parseInt(body.package_id, 10) || 0;
-    const newComment = String(body.comment || "").trim();
+    let newComment = String(body.comment || "").trim();
 
     let newStatus = String(body.status || "Active").trim();
 
@@ -838,6 +874,17 @@ for (const field of ["reference_name", "reference_mobile"]) {
                 throw new ManageError(
                     `MikroTik PPPoE secret not found. Old PPPoE username: ${oldName}`
                 );
+            }
+
+            // Nothing typed and nothing saved in the database: keep the comment
+            // that already exists on the MikroTik secret instead of erasing it.
+            if (!newComment &&
+                !String(customer.comments || "").trim() &&
+                String(secret.comment || "").trim()) {
+                newComment = String(secret.comment).trim();
+
+                const commentPair = pairs.find(p => p[0] === "comments");
+                if (commentPair) commentPair[1] = newComment;
             }
 
             try {
