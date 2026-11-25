@@ -171,3 +171,116 @@
         width: 32px; height: 32px; min-width: 32px; font-size: 14px;
     }
 }
+
+/* =========================================================
+   MORE PAGES  (same phone look as Active Customer)
+   Activity Log, Area, Expenditure, Invoices, Other Customer,
+   Reports + Staff (collector / employee / manager).
+   Matched by their own unique classes (no body class needed).
+========================================================= */
+@media (max-width: 850px) {
+
+    /* ---------- page wrapper: no sidebar gap, small side padding ---------- */
+    .main-content:has(.al-page),
+    .main-content:has(.area-header-card),
+    .main-content.ex-page,
+    main.main-content:has(.inv-header-bar),
+    #mainContent:has(.oc-page),
+    .main-content:has(.staff-header-card) {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 64px 3px 14px !important;
+        overflow-x: hidden;
+    }
+    .al-page, .oc-page { padding-left: 0 !important; padding-right: 0 !important; }
+
+    /* ---------- header bars ---------- */
+    .al-header, .area-header-card, .blue-bar, .inv-header-bar, .oc-header, .staff-header-card {
+        height: 58px !important; min-height: 58px !important; padding: 0 10px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+        align-items: center !important; justify-content: space-between !important;
+        gap: 6px !important; border-radius: 4px !important; margin-bottom: 0 !important;
+    }
+    .al-title, .area-header-card h1, .blue-bar h2, .inv-header-bar h4, .oc-title, .staff-header-card h1 {
+        font-size: 20px !important; font-weight: 600 !important; margin: 0 !important;
+        text-align: left !important; white-space: nowrap; line-height: 1.2;
+    }
+    .al-header-actions, .area-header-actions, .blue-actions, .inv-header-actions,
+    .oc-header-actions, .staff-header-actions {
+        display: flex !important; flex-wrap: nowrap !important; align-items: center;
+        gap: 5px !important; flex-shrink: 0; width: auto !important; margin: 0 !important;
+    }
+    .al-icon-btn, .area-icon-btn, .blue-btn, .inv-header-actions .btn-icon,
+    .oc-hbtn, .staff-icon-btn {
+        width: 32px !important; height: 32px !important; min-width: 32px !important;
+        padding: 0 !important; font-size: 14px !important; flex-shrink: 0;
+        display: inline-flex !important; align-items: center; justify-content: center;
+    }
+    .inv-header-actions .btn-icon { border-radius: 5px; }
+
+    /* ---------- body cards ---------- */
+    .al-card, .area-body-card, .section-card, .oc-card, .staff-body-card { padding: 12px 8px 16px !important; }
+
+    /* ---------- toolbar strips: Total + Search in one row ---------- */
+    .al-total-bar, .area-data-strip, .summary-strip, .summary-sub-bar, .oc-toolbar, .staff-strip {
+        display: flex !important; flex-wrap: nowrap !important; align-items: center !important;
+        gap: 8px !important; padding: 8px 10px !important; margin: 0 0 14px !important;
+        min-height: 50px; border-radius: 6px !important;
+    }
+    .al-total, .area-total, .summary-left, .staff-total, .summary-sub-bar > div:first-child {
+        font-size: 15px !important; flex-shrink: 0; white-space: nowrap;
+        display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+    }
+    .al-total .fa-gear, .area-total .fa-gear, .summary-left .fa-gear, .staff-total .fa-gear,
+    .staff-total .fa-database, .summary-sub-bar .fa-gear, .oc-tb-ico, .oc-toolbar .fa-gear,
+    .al-company { display: none !important; }
+    .al-search, .area-search-wrap, .summary-search, .search-box, .oc-search, .staff-search-wrap {
+        flex: 1 1 auto !important; width: auto !important; min-width: 0 !important;
+        max-width: none !important; margin: 0 !important;
+    }
+    .al-search, .area-search-wrap input, .summary-search, .search-box input,
+    .oc-search input, .staff-search-wrap input { width: 100% !important; height: 36px !important; font-size: 14px !important; }
+    /* extra totals (Total Bill, Total Expenditure...) go on a second line */
+    .summary-strip, .oc-toolbar, .staff-strip:has(.staff-total .ms-3) { flex-wrap: wrap !important; }
+    .summary-search, .oc-search, .staff-strip:has(.staff-total .ms-3) .staff-search-wrap { flex: 1 0 100% !important; }
+    .area-data-strip, .summary-sub-bar, .al-total-bar { flex-direction: row !important; }
+    .summary-sub-bar .search-box, .area-search-wrap { display: block !important; }
+    .summary-left { flex-wrap: wrap; row-gap: 4px; }
+
+    /* ---------- tables scroll sideways, page does not ---------- */
+    .activity-table-wrapper, .area-body-card .table-responsive, .table-container,
+    .section-card, .oc-scroll, .staff-body-card .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .al-table { min-width: 860px; }
+    .area-table { min-width: 640px; }
+    .custom-table { min-width: 900px; }
+    .oc-table { min-width: 980px; }
+    .staff-table { min-width: 780px; }
+}
+
+@media (max-width: 480px) {
+    .al-title, .area-header-card h1, .blue-bar h2, .inv-header-bar h4, .oc-title, .staff-header-card h1 {
+        font-size: 19px !important;
+    }
+}
+
+@media (max-width: 850px) {
+    .staff-strip { flex-direction: row !important; }
+    .staff-strip:not(:has(.staff-total .ms-3)) .staff-search-wrap { flex: 1 1 auto !important; }
+    .staff-total { width: auto !important; flex: 0 0 auto !important; justify-content: flex-start !important; }
+    .summary-sub-bar .search-box {
+        background: transparent !important; box-shadow: none !important; border: 0 !important;
+        padding: 0 !important; height: auto !important; min-width: 0; width: auto !important;
+    }
+    .summary-sub-bar .search-box input { background: rgba(26,95,181,.55) !important; color: #fff !important; border: 0 !important; border-radius: 4px; }
+    .summary-sub-bar .search-box input::placeholder { color: #dbeafe; }
+}
+
+/* Bootstrap .row without a .container inside the page: its negative side
+   margins pushed the page 12px wider than the phone screen. */
+@media (max-width: 850px) {
+    .main-content > .row,
+    .main-content > div > .row:first-child,
+    .main-content .billing-page > .row { --bs-gutter-x: 0; }
+    html, body { max-width: 100%; }
+}
