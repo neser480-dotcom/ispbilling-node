@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -40,72 +40,65 @@
             <div class="card-header bg-white text-center py-3">
                 <h5 class="m-0 text-success fw-semibold">Amader Bill Support Team's</h5>
             </div>
-            <div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Hotline Number</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896192222</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">10:00 AM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">10:00 PM</span>
-                    </div>
-                </div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Abu Hasan</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896192225</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">2:00 PM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">10:00 PM</span>
-                    </div>
-                </div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Sohel Rana</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896192229</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">10:00 AM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">6:00 PM</span>
-                    </div>
-                </div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Rashed</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896192227</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">10:00 AM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">6:00 PM</span>
-                    </div>
-                </div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Songeet</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896192221</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">2:00 PM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">10:00 PM</span>
-                    </div>
-                </div>
-                <div class="team-row">
-                    <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>Ibnul Zarrah</div>
-                    <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>01896488494</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success px-3 py-2">10:00 AM</span>
-                        <span class="text-muted small">to</span>
-                        <span class="badge bg-danger px-3 py-2">6:00 PM</span>
-                    </div>
-                </div>
+            <div id="supportNumbersList">
+                <div class="text-center text-muted py-4">Loading support numbers...</div>
             </div>
             <div class="card-footer bg-white text-center text-muted small py-3">
                 The Support Team is always dedicated to providing the highest level of customer service. Contact Support - Thank You.
             </div>
         </div>
 
-        <div class="page-footer">© Shunna IT - 2026</div>
+        <div class="page-footer">Â© Shunna IT - 2026</div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/sidebar-loader.js"></script>
     <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+    (async function () {
+        const container = document.getElementById("supportNumbersList");
+
+        try {
+            const response = await fetch("https://app.amaderbill.com/api/website-support/numbers", {
+                credentials: "same-origin"
+            });
+
+            if (!response.ok) throw new Error("Failed to load support numbers");
+
+            const result = await response.json();
+            const numbers = Array.isArray(result.data) ? result.data : [];
+
+            if (!numbers.length) {
+                container.innerHTML = '<div class="text-center text-muted py-4">No support numbers available.</div>';
+                return;
+            }
+
+            container.innerHTML = numbers.map(item => {
+                const name = String(item.name || "").replace(/[&<>"']/g, c => ({
+                    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+                }[c]));
+                const mobile = String(item.mobile || "").replace(/[&<>"']/g, c => ({
+                    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+                }[c]));
+                const start = String(item.start_time || "").slice(0, 5);
+                const end = String(item.end_time || "").slice(0, 5);
+
+                return `
+                    <div class="team-row">
+                        <div class="fw-semibold"><i class="fa fa-user text-primary me-2"></i>${name}</div>
+                        <div class="text-info fw-semibold"><i class="fa fa-phone me-1"></i>${mobile}</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success px-3 py-2">${start}</span>
+                            <span class="text-muted small">to</span>
+                            <span class="badge bg-danger px-3 py-2">${end}</span>
+                        </div>
+                    </div>`;
+            }).join("");
+        } catch (error) {
+            container.innerHTML = '<div class="text-center text-danger py-4">Unable to load support numbers.</div>';
+            console.error("Support numbers:", error);
+        }
+    })();
+    </script>
 </body>
 </html>

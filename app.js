@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 
 const express = require("express");
 const session = require("express-session");
@@ -36,6 +36,7 @@ const billingRoutes =
 const websiteManagementRoutes = require("./routes/admin/website-management");
 const appDownloadRoutes =
     require("./routes/app-download/appDownload");
+const websiteSupportRoutes = require("./routes/public/website-support.routes");
 const bandwidthRoutes = require("./routes/bandwidth/bandwidth.routes");
 const resellerPortalRoutes = require("./routes/reseller/reseller-portal.routes");
 /*
@@ -397,11 +398,21 @@ app.use(
     security.publicWebsiteCors(),
     websiteManagementRoutes
 );
+app.use(
+    "/api/website-support",
+    security.publicWebsiteCors(),
+    websiteSupportRoutes
+);
 
 app.use(
     "/super-admin/website-management",
     requireSoftwareBilling,
     websiteManagementRoutes
+);
+app.use(
+    "/api/website-support",
+    security.publicWebsiteCors(),
+    websiteSupportRoutes
 );
 /*
 |--------------------------------------------------------------------------
@@ -438,7 +449,7 @@ app.use(
 
 /*
 |--------------------------------------------------------------------------
-| MOBILE API (Bearer token; Web session/CSRF থেকে আলাদা)
+| MOBILE API (Bearer token; Web session/CSRF à¦¥à§‡à¦•à§‡ à¦†à¦²à¦¾à¦¦à¦¾)
 |--------------------------------------------------------------------------
 */
 
@@ -1560,7 +1571,7 @@ app.get(
 |--------------------------------------------------------------------------
 | AMADERBILL SUPPORT PAGES
 |--------------------------------------------------------------------------
-| Support Portal এবং Support Numbers-এর আলাদা URL
+| Support Portal à¦à¦¬à¦‚ Support Numbers-à¦à¦° à¦†à¦²à¦¾à¦¦à¦¾ URL
 */
 
 // Support Portal Page
@@ -1684,18 +1695,18 @@ app.use((err, req, res, next) => {
 
     let status = Number(err.status || err.statusCode) || 500;
     let code = "INTERNAL_SERVER_ERROR";
-    let message = "সার্ভারে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
+    let message = "à¦¸à¦¾à¦°à§à¦­à¦¾à¦°à§‡ à¦¸à¦®à¦¸à§à¦¯à¦¾ à¦¹à¦¯à¦¼à§‡à¦›à§‡à¥¤ à¦†à¦¬à¦¾à¦° à¦šà§‡à¦·à§à¦Ÿà¦¾ à¦•à¦°à§à¦¨à¥¤";
     if (err.code === "ER_DUP_ENTRY") {
         status = 409;
         code = "DUPLICATE_ENTRY";
-        message = "এই তথ্যটি আগেই রয়েছে।";
+        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à¦Ÿà¦¿ à¦†à¦—à§‡à¦‡ à¦°à¦¯à¦¼à§‡à¦›à§‡à¥¤";
     } else if (
         err.code === "ER_NO_REFERENCED_ROW_2" ||
         err.code === "ER_ROW_IS_REFERENCED_2"
     ) {
         status = 409;
         code = "DATABASE_RELATION_ERROR";
-        message = "এই তথ্যের সঙ্গে সম্পর্কিত অন্য রেকর্ড আছে।";
+        message = "à¦à¦‡ à¦¤à¦¥à§à¦¯à§‡à¦° à¦¸à¦™à§à¦—à§‡ à¦¸à¦®à§à¦ªà¦°à§à¦•à¦¿à¦¤ à¦…à¦¨à§à¦¯ à¦°à§‡à¦•à¦°à§à¦¡ à¦†à¦›à§‡à¥¤";
     } else if (
         err.code === "ECONNREFUSED" ||
         err.code === "PROTOCOL_CONNECTION_LOST" ||
@@ -1703,13 +1714,13 @@ app.use((err, req, res, next) => {
     ) {
         status = 503;
         code = "DATABASE_CONNECTION_ERROR";
-        message = "ডাটাবেজে সংযোগ করা যাচ্ছে না।";
+        message = "à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œà§‡ à¦¸à¦‚à¦¯à§‹à¦— à¦•à¦°à¦¾ à¦¯à¦¾à¦šà§à¦›à§‡ à¦¨à¦¾à¥¤";
     } else if (status === 401) {
-        message = "আবার লগইন করুন।";
+        message = "à¦†à¦¬à¦¾à¦° à¦²à¦—à¦‡à¦¨ à¦•à¦°à§à¦¨à¥¤";
     } else if (status === 403) {
-        message = "এই কাজ করার অনুমতি নেই।";
+        message = "à¦à¦‡ à¦•à¦¾à¦œ à¦•à¦°à¦¾à¦° à¦…à¦¨à§à¦®à¦¤à¦¿ à¦¨à§‡à¦‡à¥¤";
     } else if (status === 400) {
-        message = "আপনার দেওয়া তথ্য যাচাই করুন।";
+        message = "à¦†à¦ªà¦¨à¦¾à¦° à¦¦à§‡à¦“à¦¯à¦¼à¦¾ à¦¤à¦¥à§à¦¯ à¦¯à¦¾à¦šà¦¾à¦‡ à¦•à¦°à§à¦¨à¥¤";
     }
 
     if (status < 400 || status > 599) status = 500;
@@ -1732,11 +1743,11 @@ app.use((req, res) => {
         return res.status(404).json({
             success: false,
             code: "API_ROUTE_NOT_FOUND",
-            message: "API endpoint পাওয়া যায়নি।"
+            message: "API endpoint à¦ªà¦¾à¦“à¦¯à¦¼à¦¾ à¦¯à¦¾à¦¯à¦¼à¦¨à¦¿à¥¤"
         });
     }
 
-    return res.status(404).send("এই পেজটি পাওয়া যায়নি।");
+    return res.status(404).send("à¦à¦‡ à¦ªà§‡à¦œà¦Ÿà¦¿ à¦ªà¦¾à¦“à¦¯à¦¼à¦¾ à¦¯à¦¾à¦¯à¦¼à¦¨à¦¿à¥¤");
 });
 
 /*
@@ -1751,7 +1762,7 @@ const PORT =
 
 
 monthlyBilling.start();
-customerAutoExpireJob.start();     // <-- এই লাইনটা নতুন
+customerAutoExpireJob.start();     // <-- à¦à¦‡ à¦²à¦¾à¦‡à¦¨à¦Ÿà¦¾ à¦¨à¦¤à§à¦¨
 
 
 app.listen(
@@ -1785,4 +1796,5 @@ app.listen(
 
     }
 );
+
 
