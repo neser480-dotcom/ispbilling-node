@@ -307,3 +307,28 @@
     .mk-config-page .mk-strip { justify-content: flex-start !important; flex-direction: row !important; }
     .mk-config-page .mk-search-wrap, .mk-config-page .mk-search-wrap input { position: static !important; margin: 0 !important; transform: none !important; }
 }
+
+/* ---------- Interface Monitor ---------- */
+@media (max-width: 850px) {
+    .main-content:has(.interface-header) {
+        margin: 0 !important; width: 100% !important; max-width: 100% !important;
+        padding: 64px 3px 14px !important; overflow-x: hidden;
+    }
+    .main-content:has(.interface-header) > .container-fluid { padding: 0 !important; }
+    .card.interface-header {
+        flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;
+        height: 58px; min-height: 58px; padding: 0 10px !important; gap: 6px !important;
+        margin-bottom: 8px !important; border-radius: 4px; border: 0;
+    }
+    .interface-header h4 { font-size: 18px !important; font-weight: 600; white-space: nowrap; margin: 0; }
+    .interface-header h4 i { display: none; }
+    .interface-header > .d-flex { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+    .interface-header .router-select { flex: 1 1 auto; width: auto !important; min-width: 0; max-width: 190px; height: 34px; font-size: 14px; }
+    .interface-header .btn { width: 34px; height: 34px; padding: 0; flex-shrink: 0; }
+    #interfaceTab { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; margin-bottom: 8px !important; }
+    #interfaceTab .nav-link { font-size: 14px; padding: 8px 10px; }
+    .main-content:has(.interface-header) .card.p-3 { padding: 8px !important; }
+    .main-content:has(.interface-header) .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .main-content:has(.interface-header) .table { min-width: 560px; font-size: 14px; }
+    .main-content:has(.interface-header) .table th { white-space: nowrap; }
+}
