@@ -49,6 +49,9 @@ router.post("/:id/auto-map", controller.autoMap);
 // OLT Users / ONU list
 router.get("/:id/onus", controller.listOnus);
 
+// Sync one existing ONU without changing its customer mapping.
+router.post("/:id/onus/:onuId/sync", controller.syncOneOnu);
+
 // ONU customer mapping
 router.get("/:id/customers/search", controller.searchCustomers);
 router.post("/:id/onus/:onuId/customer", controller.linkOnuCustomer);
