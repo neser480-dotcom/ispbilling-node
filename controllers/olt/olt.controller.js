@@ -987,14 +987,10 @@ exports.listOnus = async (req, res) => {
                         COALESCE(
                             NULLIF(TRIM(c.name), ''),
                             NULLIF(TRIM(c.comment), ''),
-                            NULLIF(TRIM(o.ip_address), ''),
+                            NULLIF(TRIM(c.pppoe_username), ''),
                             'Customer name unavailable'
                         )
-                    ELSE
-                        COALESCE(
-                            NULLIF(TRIM(o.ip_address), ''),
-                            'Customer not linked'
-                        )
+                    ELSE 'Customer not linked'
                 END AS name,
 
                 COALESCE(
