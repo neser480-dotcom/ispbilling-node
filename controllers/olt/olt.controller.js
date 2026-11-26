@@ -842,7 +842,7 @@ exports.syncCustomers = async (req, res) => {
 
         return res.json({
             success: true,
-            message: 'ONU/User and PPPoE customer mapping sync completed.',
+            message: 'PPPoE customer session and mapping sync completed. ONU hardware records were not synced.',
             data: { customerSync, mappingSync }
         });
     } catch (error) {
