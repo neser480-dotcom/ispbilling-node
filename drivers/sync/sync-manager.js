@@ -48,6 +48,7 @@ function vendorKey(olt) {
     if (key.startsWith("hsgq")) return "hsgq";
     if (key.startsWith("zte")) return "zteepon";
     if (key.startsWith("bdcom")) return "bdcom";
+    if (key.startsWith("vsol")) return "vsol";
 
     return key;
 }
