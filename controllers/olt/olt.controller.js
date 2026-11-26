@@ -834,22 +834,11 @@ exports.syncCustomers = async (req, res) => {
         const id = validId(req.params.id);
         const olt = await findOlt(req, id);
 
-        const dryRun =
-            req.body?.dry_run === true ||
-            req.body?.dry_run === "true" ||
-            req.query?.dry_run === "1";
-
-        const result = await syncManager.syncCustomers(
-            getPool(),
-            olt,
-            { dryRun }
-        );
+        const result = await syncManager.syncCustomerMapping(getPool(), olt);
 
         return res.json({
             success: true,
-            message: dryRun
-                ? "Customer & mapping sync preview completed."
-                : "Customer & mapping sync completed.",
+            message: 'ONU and PPPoE customer mapping sync completed.',
             data: result
         });
     } catch (error) {
@@ -876,65 +865,12 @@ exports.syncOnuHardware = async (req, res) => {
 };
 
 // Old endpoint (POST /:id/sync) keeps working as ONU hardware sync.
-/* One ONU: POST /api/olt/:id/onus/:onuId/sync (OLT Users row button). */
-exports.syncOneOnu = async (req, res) => {
-    try {
-        verifyMappingCsrf(req);
-
-        const id = validId(req.params.id);
-        const onuId = validId(req.params.onuId);
-        const olt = await findOlt(req, id);
-        const result = await syncManager.syncOnu(getPool(), olt, onuId);
-
-        return res.json({
-            success: true,
-            message: "ONU synchronization completed.",
-            data: result
-        });
-    } catch (error) {
-        return jsonError(res, error);
-    }
-};
-
 /*
 |--------------------------------------------------------------------------
-| OLT LIST BULK SYNC
-|--------------------------------------------------------------------------
-| Run PPPoE/customer session sync first, then ONU hardware sync.
-| The hardware service performs per-ONU customer mapping using each ONU's
-| own learned-MAC evidence and the collected PPP caller-ID sessions.
+| Legacy POST /api/olt/:id/sync alias: ONU hardware sync only.
 |--------------------------------------------------------------------------
 */
-exports.sync = async (req, res) => {
-    try {
-        verifyMappingCsrf(req);
-
-        const id = validId(req.params.id);
-        const olt = await findOlt(req, id);
-
-        const customerSync = await syncManager.syncCustomers(
-            getPool(),
-            olt
-        );
-
-        const hardwareSync = await syncManager.syncOnuHardware(
-            getPool(),
-            olt
-        );
-
-        return res.json({
-            success: true,
-            message: "OLT hardware and customer mapping sync completed.",
-            data: {
-                customerSync,
-                hardwareSync
-            }
-        });
-    } catch (error) {
-        return jsonError(res, error);
-    }
-};
-
+exports.sync = exports.syncOnuHardware;
 /*
 |--------------------------------------------------------------------------
 | POST /api/olt/:id/auto-map   (body: { dry_run: true } to preview)
