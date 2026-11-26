@@ -607,7 +607,7 @@ async function syncCustomerMapping(pool, olt) {
         rows = await driver.getONUList();
         if (!Array.isArray(rows) || rows.length === 0) throw new Error('No ONU rows returned. Customer mapping was not changed.');
         if (typeof driver.getLearnedMacs === 'function') {
-            try { learned = await driver.getLearnedMacs(rows); }
+            try { learned = (await driver.getLearnedMacs(rows)) || { supported: false, entries: [], errors: [] }; }
             catch (error) { learned = { supported: false, entries: [], errors: [error.message] }; }
         }
     } finally { await disconnectDriver(driver); }
