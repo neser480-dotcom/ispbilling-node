@@ -76,10 +76,51 @@ function sanitizeSource(source) {
         .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "[inline style omitted from page markup]");
 }
 
+const QUERY_SYNONYMS = {
+    "গ্রাহক": "customer", "গ্রাহকরা": "customer", "grahok": "customer", "customer": "customer", "customers": "customer",
+    "বিলিং": "billing", "bill": "billing", "billing": "billing",
+    "রিচার্জ": "recharge", "recharge": "recharge",
+    "পেমেন্ট": "payment", "payment": "payment", "পেমেন্টস": "payment",
+    "মাইক্রোটিক": "mikrotik", "মাইক্রোটিকের": "mikrotik", "mikrotik": "mikrotik",
+    "রাউটার": "router", "router": "router", "routers": "router",
+    "ওএলটি": "olt", "olt": "olt", "ওএনইউ": "onu", "onu": "onu",
+    "এলাকা": "area", "এরিয়া": "area", "area": "area",
+    "কর্মচারী": "staff", "স্টাফ": "staff", "staff": "staff", "employee": "staff",
+    "রিসেলার": "reseller", "reseller": "reseller",
+    "রিপোর্ট": "report", "report": "report", "reports": "report",
+    "এসএমএস": "sms", "sms": "sms",
+    "ড্যাশবোর্ড": "dashboard", "dashboard": "dashboard",
+    "সাপোর্ট": "support", "support": "support", "টিকিট": "ticket", "ticket": "ticket",
+    "অনুমতি": "permission", "পারমিশন": "permission", "permission": "permission",
+    "ইনভয়েস": "invoice", "ইনভয়েস": "invoice", "invoice": "invoice",
+    "প্যাকেজ": "package", "package": "package", "packages": "package",
+    "ব্যান্ডউইথ": "bandwidth", "bandwidth": "bandwidth",
+    "মনিটরিং": "monitoring", "monitoring": "monitoring",
+    "ওয়েবসাইট": "website", "ওয়েবসাইট": "website", "website": "website",
+    "অ্যাপ": "app", "app": "app", "application": "app",
+    "প্রোফাইল": "profile", "profile": "profile",
+    "বেতন": "salary", "salary": "salary",
+    "কালেক্টর": "collector", "collector": "collector",
+    "লগইন": "login", "login": "login",
+    "সেটিংস": "settings", "সেটিং": "settings", "settings": "settings",
+    "ইমপোর্ট": "import", "import": "import", "এক্সপোর্ট": "export", "export": "export"
+};
+
 function tokenize(value) {
     return String(value || "")
         .toLowerCase()
         .match(/[\p{L}\p{N}_-]{2,}/gu) || [];
+}
+
+function expandQueryTokens(value) {
+    const expanded = new Set();
+    for (const token of tokenize(value)) {
+        expanded.add(token);
+        if (QUERY_SYNONYMS[token]) expanded.add(QUERY_SYNONYMS[token]);
+        if (token.endsWith("ies") && token.length > 4) expanded.add(token.slice(0, -3) + "y");
+        else if (token.endsWith("s") && token.length > 3) expanded.add(token.slice(0, -1));
+    }
+    return expanded;
 }
 
 function makeChunks(relativePath, source) {
@@ -148,7 +189,7 @@ async function getSoftwareKnowledge(question) {
             ? cached
             : await buildIndex();
 
-        const queryTokens = new Set(tokenize(question));
+        const queryTokens = expandQueryTokens(question);
         if (!queryTokens.size || !index.chunks.length) {
             return { text: "", indexedFiles: index.indexedFiles };
         }
