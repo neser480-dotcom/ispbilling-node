@@ -1258,3 +1258,16 @@ body.dark-mode .ai-voice-controls .ai-voice-output.is-enabled {
     .ai-voice-orb span,
     .ai-voice-controls .ai-voice-mic { animation: none !important; }
 }
+
+/* Multi-provider AI settings */
+.ai-provider-warning{padding:12px 14px;border:1px solid var(--ai-border,#d7deea);border-radius:12px;background:var(--ai-surface,#f7f9fc);font-size:.92rem}
+.ai-provider-summary{font-weight:700;margin:12px 0}.ai-provider-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.ai-provider-card{min-width:0;padding:16px;border:1px solid var(--ai-border,#d7deea);border-radius:14px;background:var(--ai-card,var(--ai-surface,#fff))}
+.ai-provider-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.ai-provider-heading h3{font-size:1rem;margin:0;font-weight:750}
+.ai-provider-key-status{font-size:.75rem;border-radius:30px;padding:5px 9px;background:#fff3df;color:#895400}.ai-provider-key-status.is-configured{background:#e7f7ee;color:#176b3a}
+.ai-provider-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ai-provider-fields label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:650;min-width:0}
+.ai-provider-fields input:not([type=checkbox]){width:100%;min-width:0;padding:10px;border:1px solid var(--ai-border,#cfd7e4);border-radius:9px;background:var(--ai-input-bg,#fff);color:var(--ai-text,inherit)}
+.ai-provider-enable{grid-column:1/-1;flex-direction:row!important;align-items:center}.ai-provider-enable input{width:17px;height:17px}
+@media(max-width:760px){.ai-provider-list,.ai-provider-fields{grid-template-columns:1fr}.ai-provider-heading{align-items:flex-start;flex-direction:column}}
+.dark-mode .ai-provider-card,.dark-mode .ai-provider-warning{background:var(--ai-surface,#202938);border-color:var(--ai-border,#3b4658);color:var(--ai-text,#eef2f7)}
+.dark-mode .ai-provider-fields input:not([type=checkbox]){background:var(--ai-input-bg,#151d29);border-color:var(--ai-border,#3b4658);color:var(--ai-text,#eef2f7)}
