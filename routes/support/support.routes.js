@@ -4,7 +4,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../config/database");
 const { syncPppoeProfile } = require("../../services/mikrotik/pppoeProfileSync");
-const { hasPermission } = require("../../middleware/permission");
+const { hasPermission, isAdmin, isSuperAdmin } = require("../../middleware/permission");
 
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.user_id) {
@@ -30,12 +30,12 @@ async function getTicketScope(req) {
  return { sql: ' AND 1 = 0', params: [] };
 }
 
-async function ticketPermission(req, res, key) {
- if (!getCompanyId(req)) { res.status(403).json({success:false,message:'কোম্পানি অ্যাক্সেস পাওয়া যায়নি।'}); return false; }
- const role = String(req.session.role || '').trim().toLowerCase();
- if (['super_admin','superadmin','admin','companyadmin','owner','manager'].includes(role)) return true;
- const ok = await hasPermission(req, key);
- if (!ok) { res.status(403).json({success:false,message:'এই Support Ticket কাজের অনুমতি নেই।',permission:key}); return false; }
+async function ticketPermission(req, res, key, legacyKey = null) {
+ if (!getCompanyId(req)) { res.status(403).json({ success: false, message: 'কোম্পানি অ্যাক্সেস পাওয়া যায়নি।' }); return false; }
+ if (isAdmin(req) || isSuperAdmin(req)) return true;
+ let allowed = await hasPermission(req, key);
+ if (!allowed && legacyKey) allowed = await hasPermission(req, legacyKey);
+ if (!allowed) { res.status(403).json({ success: false, message: 'এই কাজের অনুমতি নেই।', permission: key }); return false; }
  return true;
 }
 
@@ -48,7 +48,7 @@ router.use(requireAuth);
 */
 router.get("/categories", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, "support_ticket_view")) return;
+        if (!await ticketPermission(req, res, "support_category_view", "support_ticket_view")) return;
         const companyId = getCompanyId(req);
         const search = String(req.query.search || "").trim();
 
@@ -75,7 +75,7 @@ router.get("/categories", async (req, res, next) => {
 
 router.post("/categories", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, "support_ticket_manage")) return;
+        if (!await ticketPermission(req, res, "support_category_manage", "support_ticket_manage")) return;
         const companyId = getCompanyId(req);
         const name = String(req.body.name || "").trim();
 
@@ -189,7 +189,7 @@ router.get("/tickets", async (req, res, next) => {
 
 router.post("/tickets", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
+        if (!await ticketPermission(req, res, 'support_ticket_create', 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
         const {
             customer_id,
@@ -253,7 +253,7 @@ router.post("/tickets", async (req, res, next) => {
 
 router.patch("/tickets/:id/status", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
+        if (!await ticketPermission(req, res, 'support_ticket_status_update', 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
         const scope = await getTicketScope(req);
         const id = Number(req.params.id);
@@ -278,7 +278,7 @@ router.patch("/tickets/:id/status", async (req, res, next) => {
 
 router.delete("/tickets/:id", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
+        if (!await ticketPermission(req, res, 'support_ticket_delete', 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
         const scope = await getTicketScope(req);
         const id = Number(req.params.id);
@@ -302,6 +302,7 @@ router.delete("/tickets/:id", async (req, res, next) => {
 */
 router.get("/numbers", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_number_view")) return;
         const companyId = getCompanyId(req);
         const search = String(req.query.search || "").trim();
 
@@ -328,6 +329,7 @@ router.get("/numbers", async (req, res, next) => {
 
 router.post("/numbers", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_number_manage")) return;
         const companyId = getCompanyId(req);
         const { name, mobile, start_time, end_time } = req.body;
 
@@ -367,6 +369,7 @@ router.post("/numbers", async (req, res, next) => {
 
 router.delete("/numbers/:id", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_number_manage")) return;
         const companyId = getCompanyId(req);
         const id = Number(req.params.id);
 
@@ -388,6 +391,7 @@ router.delete("/numbers/:id", async (req, res, next) => {
 */
 router.get("/package-changes", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_package_change_view")) return;
         const companyId = getCompanyId(req);
         const search = String(req.query.search || "").trim();
 
@@ -430,6 +434,7 @@ router.get("/package-changes", async (req, res, next) => {
 router.patch("/package-changes/:id/action", async (req, res, next) => {
     const conn = await db.getConnection();
     try {
+        if (!await ticketPermission(req, res, "support_package_change_manage")) { conn.release(); return; }
         const companyId = getCompanyId(req);
         const id = Number(req.params.id);
         const action = String(req.body.action || "").trim().toLowerCase();
