@@ -651,12 +651,21 @@ class VsolDriver {
 
         await this.connect();
 
-        const statusOutput = await this.command("show onu status all", 40000);
+        // V-SOL EPON firmware accepts the global ONU status command in
+        // configuration mode (epon-olt(config)#), not privileged mode (#).
+        await this.command("configure terminal", 10000);
+        let statusOutput;
+        try {
+            statusOutput = await this.command("show onu status all", 40000);
+        } finally {
+            await this.command("end", 10000).catch(() => {});
+        }
+
         const statusRows = parseOnuStatus(statusOutput);
 
         if (!statusRows.length && /invalid|unknown|incomplete|error|ambiguous/i.test(statusOutput)) {
             throw new Error(
-                "V-SOL OLT did not accept 'show onu status all': " +
+                "V-SOL OLT did not accept 'show onu status all' in configuration mode: " +
                 stripAnsi(statusOutput).trim().slice(0, 200)
             );
         }
