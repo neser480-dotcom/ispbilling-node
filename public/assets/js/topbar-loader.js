@@ -99,6 +99,102 @@
             lastUserActionAt = Date.now();
         }, true);
 
+        // Handle plain same-origin POST forms centrally. Forms already handled
+        // by page JavaScript (event.preventDefault), GET searches, downloads,
+        // targeted forms and authentication endpoints retain their own behavior.
+        document.addEventListener("submit", function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
+
+            const submitter = event.submitter || null;
+            const method = String(
+                (submitter && submitter.formMethod) || form.method || "GET"
+            ).toUpperCase();
+            const action = (submitter && submitter.formAction) || form.action || window.location.href;
+
+            if (
+                method !== "POST" ||
+                form.target ||
+                form.hasAttribute("data-native-submit") ||
+                form.hasAttribute("data-no-ajax") ||
+                form.hasAttribute("data-download")
+            ) return;
+
+            let url;
+            try {
+                url = new URL(action, window.location.href);
+            } catch (_) {
+                return;
+            }
+
+            if (
+                url.origin !== window.location.origin ||
+                /^\\/(?:login|logout|auth)(?:\\/|$)/i.test(url.pathname)
+            ) return;
+
+            // A page-level submit handler that already called preventDefault()
+            // is left untouched. This branch is only for native form navigation.
+            event.preventDefault();
+
+            const previousDisabled = submitter ? submitter.disabled : false;
+            if (submitter) submitter.disabled = true;
+
+            (async function () {
+                try {
+                    let body;
+                    try {
+                        body = submitter
+                            ? new FormData(form, submitter)
+                            : new FormData(form);
+                    } catch (_) {
+                        body = new FormData(form);
+                    }
+
+                    const response = await fetch(url.href, {
+                        method: "POST",
+                        body,
+                        credentials: "same-origin",
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+
+                    const contentType = response.headers.get("content-type") || "";
+                    let data = {};
+                    if (contentType.includes("application/json")) {
+                        try {
+                            data = await response.clone().json();
+                        } catch (_) {
+                            data = {};
+                        }
+                    }
+
+                    if (!response.ok || data.success === false) {
+                        if (window.AppToast && !url.pathname.startsWith("/api/")) {
+                            window.AppToast.error(
+                                data.message || "ফর্ম জমা দেওয়া যায়নি। তথ্য যাচাই করে আবার চেষ্টা করুন।"
+                            );
+                        }
+                        return;
+                    }
+
+                    // API requests are confirmed by the central fetch handler.
+                    // For regular HTML form endpoints, confirm here without leaving
+                    // the current page or clearing the entered values.
+                    if (window.AppToast && !url.pathname.startsWith("/api/")) {
+                        window.AppToast.success(
+                            data.message || "তথ্য সফলভাবে জমা হয়েছে।"
+                        );
+                    }
+                } catch (error) {
+                    console.error("Central form submission error:", error);
+                    if (window.AppToast) {
+                        window.AppToast.error("সার্ভারের সাথে যোগাযোগ করা যায়নি। আবার চেষ্টা করুন।");
+                    }
+                } finally {
+                    if (submitter) submitter.disabled = previousDisabled;
+                }
+            })();
+        }, false);
+
         window.fetch = async function (...args) {
             const response = await originalFetch(...args);
 
