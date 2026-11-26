@@ -4,6 +4,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../../config/database");
 const { syncPppoeProfile } = require("../../services/mikrotik/pppoeProfileSync");
+const { hasPermission } = require("../../middleware/permission");
 
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.user_id) {
@@ -15,8 +16,27 @@ function requireAuth(req, res, next) {
     next();
 }
 
-function getCompanyId(req) {
-    return Number(req.session.company_id || req.session.user_id || 0);
+function getCompanyId(req) { return Number(req.session.company_id || 0); }
+
+async function getTicketScope(req) {
+ const role = String(req.session.role || '').trim().toLowerCase().replace(/[\\s_-]+/g, '');
+ if (['superadmin','admin','companyadmin','owner','manager'].includes(role)) return { sql: '', params: [] };
+ if (['staff','employee','collector'].includes(role)) return { sql: ' AND t.staff_id = ?', params: [Number(req.session.user_id)] };
+ if (role === 'reseller') {
+  const [rows] = await db.query('SELECT r.id FROM resellers r INNER JOIN users u ON u.mobile = r.mobile AND u.company_id = r.company_id WHERE u.id = ? AND r.company_id = ? LIMIT 1', [Number(req.session.user_id), getCompanyId(req)]);
+  if (!rows.length) return { sql: ' AND 1 = 0', params: [] };
+  return { sql: ' AND t.customer_id IN (SELECT c.id FROM customers c WHERE c.reseller_id = ? AND c.company_id = ?)', params: [Number(rows[0].id), getCompanyId(req)] };
+ }
+ return { sql: ' AND 1 = 0', params: [] };
+}
+
+async function ticketPermission(req, res, key) {
+ if (!getCompanyId(req)) { res.status(403).json({success:false,message:'কোম্পানি অ্যাক্সেস পাওয়া যায়নি।'}); return false; }
+ const role = String(req.session.role || '').trim().toLowerCase();
+ if (['super_admin','superadmin','admin','companyadmin','owner','manager'].includes(role)) return true;
+ const ok = await hasPermission(req, key);
+ if (!ok) { res.status(403).json({success:false,message:'এই Support Ticket কাজের অনুমতি নেই।',permission:key}); return false; }
+ return true;
 }
 
 router.use(requireAuth);
@@ -102,7 +122,9 @@ router.delete("/categories/:id", async (req, res, next) => {
 */
 router.get("/tickets", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, 'support_ticket_view')) return;
         const companyId = getCompanyId(req);
+        const scope = await getTicketScope(req);
         const { category_id, staff_name, ticket_type, status, search } = req.query;
 
         let sql = `
@@ -122,9 +144,9 @@ router.get("/tickets", async (req, res, next) => {
             FROM support_tickets t
             LEFT JOIN support_ticket_categories c
                 ON t.category_id = c.id AND c.company_id = t.company_id
-            WHERE t.company_id = ?
+            WHERE t.company_id = ? ${scope.sql}
         `;
-        const params = [companyId];
+        const params = [companyId, ...scope.params];
 
         if (category_id) {
             sql += " AND t.category_id = ?";
@@ -164,6 +186,7 @@ router.get("/tickets", async (req, res, next) => {
 
 router.post("/tickets", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
         const {
             customer_id,
@@ -227,7 +250,9 @@ router.post("/tickets", async (req, res, next) => {
 
 router.patch("/tickets/:id/status", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
+        const scope = await getTicketScope(req);
         const id = Number(req.params.id);
         const allowed = ["Pending", "Process", "Completed"];
         const status = String(req.body.status || "").trim();
@@ -236,10 +261,11 @@ router.patch("/tickets/:id/status", async (req, res, next) => {
             return res.status(400).json({ success: false, message: "ভুল স্ট্যাটাস।" });
         }
 
-        await db.query(
-            "UPDATE support_tickets SET status = ? WHERE id = ? AND company_id = ?",
-            [status, id, companyId]
+        const [result] = await db.query(
+            "UPDATE support_tickets t SET t.status = ? WHERE t.id = ? AND t.company_id = ?" + scope.sql,
+            [status, id, companyId, ...scope.params]
         );
+        if (!result.affectedRows) return res.status(404).json({ success: false, message: "টিকিট পাওয়া যায়নি বা অনুমতি নেই।" });
 
         return res.json({ success: true, message: "টিকিট স্ট্যাটাস আপডেট হয়েছে।" });
     } catch (err) {
@@ -249,13 +275,16 @@ router.patch("/tickets/:id/status", async (req, res, next) => {
 
 router.delete("/tickets/:id", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, 'support_ticket_manage')) return;
         const companyId = getCompanyId(req);
+        const scope = await getTicketScope(req);
         const id = Number(req.params.id);
 
-        await db.query(
-            "DELETE FROM support_tickets WHERE id = ? AND company_id = ?",
-            [id, companyId]
+        const [result] = await db.query(
+            "DELETE t FROM support_tickets t WHERE t.id = ? AND t.company_id = ?" + scope.sql,
+            [id, companyId, ...scope.params]
         );
+        if (!result.affectedRows) return res.status(404).json({ success: false, message: "টিকিট পাওয়া যায়নি বা অনুমতি নেই।" });
 
         return res.json({ success: true, message: "টিকিট ডিলিট করা হয়েছে।" });
     } catch (err) {
