@@ -39,6 +39,25 @@
                 <button type="button" data-question="OLT Customer Sync এবং ONU Sync-এর পার্থক্য কী?">OLT Sync</button>
             </div>
 
+            <section class="ai-voice-panel" aria-label="Voice assistant">
+                <div class="ai-voice-orb" id="aiVoiceOrb" aria-hidden="true"><span></span><span></span><span></span></div>
+                <div class="ai-voice-copy">
+                    <strong>Amader Bill Voice Assistant</strong>
+                    <p id="aiVoiceStatus" aria-live="polite">প্রস্তুত • কথা বলতে মাইক্রোফোন চাপুন</p>
+                </div>
+                <div class="ai-voice-controls">
+                    <label class="ai-voice-language-label" for="aiVoiceLanguage">ভাষা</label>
+                    <select id="aiVoiceLanguage" aria-label="Voice input language">
+                        <option value="bn-BD" selected>বাংলা</option>
+                        <option value="en-US">English</option>
+                    </select>
+                    <button type="button" id="aiVoiceMic" class="ai-voice-mic" aria-label="Start voice input" aria-pressed="false">🎙️ <span>Speak</span></button>
+                    <button type="button" id="aiVoiceOutput" class="ai-voice-output is-enabled" aria-pressed="true">🔊 Voice On</button>
+                    <button type="button" id="aiVoiceStop" class="ai-voice-stop" title="Stop speaking" aria-label="Stop speaking">⏹</button>
+                </div>
+                <small class="ai-voice-hint">মাইক্রোফোন চাপুন, কথা বলুন—আপনার প্রশ্ন স্বয়ংক্রিয়ভাবে পাঠানো হবে।</small>
+            </section>
+
             <section id="chatMessages" class="ai-chat-messages" aria-live="polite" aria-label="Chat messages"></section>
 
             <form id="aiChatForm" class="ai-chat-form">
