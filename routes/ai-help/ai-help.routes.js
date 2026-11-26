@@ -770,13 +770,13 @@ router.post("/chat", async (req, res) => {
 
         const knowledge = [
             ...kb.map(item =>
-                "[Category: " + item.category + "]\\n[Article: " +
-                item.title + "]\\n" + item.content
+                "[Category: " + item.category + "]\n[Article: " +
+                item.title + "]\n" + item.content
             ),
             !kb.length && legacyKb[0]?.knowledge
-                ? "[Legacy Knowledge Base]\\n" + legacyKb[0].knowledge
+                ? "[Legacy Knowledge Base]\n" + legacyKb[0].knowledge
                 : ""
-        ].filter(Boolean).join("\\n\\n---\\n\\n").slice(0, 50000);
+        ].filter(Boolean).join("\n\n---\n\n").slice(0, 50000);
 
         const messages = [{
             role: "system",
