@@ -9,6 +9,33 @@
 |--------------------------------------------------------------------------
 */
 
+function describeError(error) {
+    if (typeof error === 'string' && error.trim()) return error.trim();
+
+    const candidates = [
+        error && error.message,
+        error && error.description,
+        error && error.code,
+        error && error.errno,
+        error && error.name,
+        error && error.toString && error.toString()
+    ];
+
+    for (const value of candidates) {
+        const text = String(value || '').trim();
+        if (text && text !== '[object Object]') return text;
+    }
+
+    try {
+        const serialized = JSON.stringify(error);
+        if (serialized && serialized !== '{}') return serialized;
+    } catch (_) {
+        // Ignore circular/non-serializable error objects.
+    }
+
+    return 'Unknown MikroTik API error (the driver returned no error details).';
+}
+
 async function collectPppSessions(
     pool,
     companyId,
@@ -91,7 +118,7 @@ async function collectPppSessions(
             }
         } catch (error) {
             result.errors.push(
-                `router ${routerId}: ${error.message}`
+                `router ${routerId}: ${describeError(error)}`
             );
         }
     }
@@ -122,5 +149,6 @@ function loadMikrotikService() {
 
 module.exports = {
     collectPppSessions,
-    loadMikrotikService
+    loadMikrotikService,
+    describeError
 };
