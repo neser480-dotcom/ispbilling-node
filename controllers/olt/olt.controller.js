@@ -974,6 +974,10 @@ ppp = await collectPppSessions(
                 } else {
                     learned.errors.push("OLT returned no ONU rows for learned-MAC mapping.");
                 }
+            } else {
+                learned.errors.push(
+                    "This vendor has no learned-MAC collector; only direct ONU-MAC evidence can be matched."
+                );
             }
         } catch (mappingError) {
             learned.errors = [
