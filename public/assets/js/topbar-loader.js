@@ -88,11 +88,18 @@
         let lastUserActionAt = 0;
         let lastActionModal = null;
 
+        const ACTION_MODAL_SELECTOR =
+            ".modal.show, [role='dialog'][aria-modal='true'], dialog[open], " +
+            ".offcanvas.show, [data-modal-root].is-open, .custom-modal.is-open";
+
+        function findActionModal(target) {
+            if (!target || typeof target.closest !== "function") return null;
+            return target.closest(ACTION_MODAL_SELECTOR);
+        }
+
         function rememberUserAction(target) {
             lastUserActionAt = Date.now();
-            const modal = target && target.closest
-                ? target.closest(".modal.show, [role='dialog'][aria-modal='true'], dialog[open]")
-                : null;
+            const modal = findActionModal(target);
 
             if (modal) {
                 lastActionModal = modal;
@@ -112,19 +119,33 @@
                 return;
             }
 
-            if (window.bootstrap && window.bootstrap.Modal) {
+            if (modal.classList.contains("offcanvas") &&
+                window.bootstrap && window.bootstrap.Offcanvas) {
+                const instance = window.bootstrap.Offcanvas.getInstance(modal) ||
+                    window.bootstrap.Offcanvas.getOrCreateInstance(modal);
+                instance.hide();
+                return;
+            }
+
+            if (window.bootstrap && window.bootstrap.Modal &&
+                modal.classList.contains("modal")) {
                 const instance = window.bootstrap.Modal.getInstance(modal) ||
                     window.bootstrap.Modal.getOrCreateInstance(modal);
                 instance.hide();
                 return;
             }
 
-            // Fallback for custom modal markup when Bootstrap is not present.
-            modal.classList.remove("show");
+            if (window.jQuery && modal.classList.contains("modal") &&
+                typeof window.jQuery(modal).modal === "function") {
+                window.jQuery(modal).modal("hide");
+                return;
+            }
+
+            modal.classList.remove("show", "is-open", "open");
             modal.style.display = "none";
             modal.setAttribute("aria-hidden", "true");
             modal.removeAttribute("aria-modal");
-            document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+            document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach(function (backdrop) {
                 backdrop.remove();
             });
             document.body.classList.remove("modal-open");
@@ -135,7 +156,7 @@
         // Only show action confirmations for requests that follow a real
         // user interaction; background polling and page-load requests stay silent.
         document.addEventListener("click", function (event) {
-            if (event.target.closest("button, [role='button'], input[type='submit'], a[data-action]")) {
+            if (event.target.closest("button, [role='button'], input[type='submit'], [data-action], a[data-method]")) {
                 rememberUserAction(event.target);
             }
         }, true);
