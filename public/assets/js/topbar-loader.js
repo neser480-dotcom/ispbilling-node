@@ -203,7 +203,6 @@
             // Retain the element for page scripts that update it later,
             // but remove the persistent inline alert presentation.
             element.classList.add("d-none");
-            element.setAttribute("aria-hidden", "true");
         }
 
         let scanQueued = false;
