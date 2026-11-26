@@ -846,8 +846,8 @@ exports.syncCustomers = async (req, res) => {
         return res.json({
             success: true,
             message: dryRun
-                ? "PPPoE customer session and mapping sync preview completed. ONU hardware records were not synced."
-                : "PPPoE customer session and mapping sync completed. ONU hardware records were not synced.",
+                ? "Customer & mapping sync preview completed."
+                : "Customer & mapping sync completed.",
             data: result
         });
     } catch (error) {
