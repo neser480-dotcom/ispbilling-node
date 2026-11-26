@@ -85,6 +85,19 @@
         window.__ispFetchErrorHandlerInstalled = true;
 
         const originalFetch = window.fetch.bind(window);
+        let lastUserActionAt = 0;
+
+        // Only show action confirmations for requests that follow a real
+        // user interaction; background polling and page-load requests stay silent.
+        document.addEventListener("click", function (event) {
+            if (event.target.closest("button, [role='button'], input[type='submit'], a[data-action]")) {
+                lastUserActionAt = Date.now();
+            }
+        }, true);
+
+        document.addEventListener("submit", function () {
+            lastUserActionAt = Date.now();
+        }, true);
 
         window.fetch = async function (...args) {
             const response = await originalFetch(...args);
@@ -95,52 +108,65 @@
                         ? args[0]
                         : args[0]?.url || "";
 
-                const url = new URL(
-                    requestUrl,
-                    window.location.origin
-                );
+                const options = args[1] || {};
+                const method = String(
+                    options.method ||
+                    (args[0] && args[0].method) ||
+                    "GET"
+                ).toUpperCase();
 
-                // Handle same-origin failed API responses.
-                if (
+                const url = new URL(requestUrl, window.location.origin);
+                const isSameOriginApi =
                     url.origin === window.location.origin &&
-                    url.pathname.startsWith("/api/") &&
-                    !response.ok
-                ) {
+                    url.pathname.startsWith("/api/");
+                const isUserAction =
+                    lastUserActionAt > 0 &&
+                    Date.now() - lastUserActionAt < 10000;
+                const isMutation =
+                    ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+
+                if (isSameOriginApi && isMutation) {
                     const contentType =
                         response.headers.get("content-type") || "";
-
                     let data = {};
 
-                    if (
-                        contentType.includes("application/json")
-                    ) {
-                        data = await response.clone().json();
+                    if (contentType.includes("application/json")) {
+                        try {
+                            data = await response.clone().json();
+                        } catch (_) {
+                            data = {};
+                        }
                     }
 
-                    if (window.AppToast) {
-                        const message =
-                            data.message ||
-                            (response.status === 401
-                                ? "সেশন শেষ হয়েছে। আবার লগইন করুন।"
-                                : response.status === 403
-                                ? "অনুরোধটি অনুমোদিত নয় অথবা CSRF Token ভুল।"
-                                : response.status === 404
-                                ? "চাওয়া API বা তথ্য পাওয়া যায়নি।"
-                                : response.status >= 500
-                                ? "সার্ভারে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।"
-                                : "অনুরোধটি সম্পন্ন হয়নি।");
+                    const failed =
+                        !response.ok || data.success === false;
 
-                        window.AppToast.error(message);
+                    if (failed) {
+                        if (window.AppToast) {
+                            const message =
+                                data.message ||
+                                (response.status === 401
+                                    ? "সেশন শেষ হয়েছে। আবার লগইন করুন।"
+                                    : response.status === 403
+                                    ? "অনুরোধটি অনুমোদিত নয় অথবা CSRF Token ভুল।"
+                                    : response.status === 404
+                                    ? "চাওয়া API বা তথ্য পাওয়া যায়নি।"
+                                    : response.status >= 500
+                                    ? "সার্ভারে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।"
+                                    : "অনুরোধটি সম্পন্ন হয়নি।");
+                            window.AppToast.error(message);
+                        }
+                    } else if (isUserAction && window.AppToast) {
+                        window.AppToast.success(
+                            data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।"
+                        );
                     }
                 }
             } catch (error) {
-                console.error(
-                    "Central API error handler:",
-                    error
-                );
+                console.error("Central API action toast error:", error);
             }
 
-            // Return the original response unchanged.
+            // Return the original response unchanged for existing page logic.
             return response;
         };
     }
