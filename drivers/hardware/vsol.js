@@ -651,22 +651,19 @@ class VsolDriver {
 
         await this.connect();
 
-        // V-SOL EPON firmware accepts the global ONU status command in
-        // configuration mode (epon-olt(config)#), not privileged mode (#).
-        await this.command("configure terminal", 10000);
-        let statusOutput;
-        try {
-            statusOutput = await this.command("show onu status all", 40000);
-        } finally {
-            await this.command("end", 10000).catch(() => {});
-        }
-
+        // The tested EPON CLI accepts these read-only show commands from
+        // privileged mode (epon-olt#). Do not enter configure terminal here.
+        // Customer mapping and hardware sync both use this same read-only ONU
+        // inventory; this method never changes mappings or OLT configuration.
+        const statusOutput = await this.command("show onu status all", 40000);
         const statusRows = parseOnuStatus(statusOutput);
 
-        if (!statusRows.length && /invalid|unknown|incomplete|error|ambiguous/i.test(statusOutput)) {
+        if (!statusRows.length) {
+            const excerpt = stripAnsi(statusOutput).trim().slice(0, 300);
             throw new Error(
-                "V-SOL OLT did not accept 'show onu status all' in configuration mode: " +
-                stripAnsi(statusOutput).trim().slice(0, 200)
+                "V-SOL/EPON OLT returned no ONU rows for 'show onu status all' " +
+                "in privileged mode (epon-olt#)." +
+                (excerpt ? " CLI output: " + excerpt : "")
             );
         }
 
