@@ -139,7 +139,103 @@
 
     /*
     |--------------------------------------------------------------------------
-    | 3. CENTRAL API ERROR TOAST
+    | 3. CONVERT PAGE ALERT BANNERS TO TOASTS
+    |--------------------------------------------------------------------------
+    */
+
+    function installInlineAlertToasts() {
+        if (window.__ispInlineAlertToastsInstalled || !document.body) return;
+        window.__ispInlineAlertToastsInstalled = true;
+
+        if (!window.MutationObserver || !window.AppToast) return;
+
+        function getAlertMessage(element) {
+            const copy = element.cloneNode(true);
+            copy.querySelectorAll(
+                "button, .btn-close, [data-bs-dismiss='alert'], svg, i, script, style"
+            ).forEach(node => node.remove());
+
+            return String(copy.innerText || copy.textContent || "")
+                .replace(/\\s+/g, " ")
+                .trim();
+        }
+
+        function isVisible(element) {
+            if (!element.isConnected || element.closest("#appToastContainer")) return false;
+            if (element.closest("[hidden], [aria-hidden='true']")) return false;
+
+            const style = window.getComputedStyle(element);
+            return style.display !== "none" &&
+                style.visibility !== "hidden" &&
+                element.getClientRects().length > 0;
+        }
+
+        function convertAlert(element) {
+            if (!element || !element.matches || !element.matches(".alert")) return;
+
+            if (!isVisible(element)) {
+                // Allow the same reusable alert placeholder to notify again
+                // when a later action makes it visible.
+                if (element.dataset.ispToastMessage) {
+                    delete element.dataset.ispToastMessage;
+                }
+                return;
+            }
+
+            // Keep actionable banners intact rather than stripping their controls.
+            if (element.querySelector("form, input, select, textarea, a[href], [role='button']")) {
+                return;
+            }
+
+            const message = getAlertMessage(element);
+            if (!message || element.dataset.ispToastMessage === message) return;
+
+            element.dataset.ispToastMessage = message;
+
+            const classes = element.className || "";
+            const type = /\\balert-success\\b/.test(classes) ? "success"
+                : /\\balert-warning\\b/.test(classes) ? "warning"
+                : /\\balert-info\\b/.test(classes) ? "info"
+                : "error";
+
+            window.AppToast[type](message);
+
+            // Retain the element for page scripts that update it later,
+            // but remove the persistent inline alert presentation.
+            element.classList.add("d-none");
+            element.setAttribute("aria-hidden", "true");
+        }
+
+        let scanQueued = false;
+        function scanAlerts() {
+            scanQueued = false;
+            document.querySelectorAll(".alert").forEach(convertAlert);
+        }
+
+        function queueScan() {
+            if (scanQueued) return;
+            scanQueued = true;
+            window.requestAnimationFrame(scanAlerts);
+        }
+
+        // Convert alerts already rendered by the page.
+        queueScan();
+
+        // Catch alerts inserted or updated by any page/module script,
+        // including Monitoring, Customer, Area, OLT and Settings pages.
+        const observer = new MutationObserver(queueScan);
+        observer.observe(document.body, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ["class", "style", "hidden", "aria-hidden"]
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 4. CENTRAL API ERROR TOAST
     |--------------------------------------------------------------------------
     */
 
@@ -571,6 +667,7 @@
         await loadAppToast();
 
         installToastOnlyNotifications();
+        installInlineAlertToasts();
         installFetchErrorHandler();
 
         loadThemeColors();
