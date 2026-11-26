@@ -823,7 +823,7 @@ exports.check = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| POST /api/olt/:id/sync
+| POST /api/olt/:id/sync/customers
 |--------------------------------------------------------------------------
 */
 
@@ -834,12 +834,13 @@ exports.syncCustomers = async (req, res) => {
         const id = validId(req.params.id);
         const olt = await findOlt(req, id);
 
-        const result = await syncManager.syncCustomerMapping(getPool(), olt);
+        const customerSync = await syncManager.syncCustomers(getPool(), olt);
+        const mappingSync = await syncManager.syncCustomerMapping(getPool(), olt);
 
         return res.json({
             success: true,
-            message: 'ONU and PPPoE customer mapping sync completed.',
-            data: result
+            message: 'ONU/User and PPPoE customer mapping sync completed.',
+            data: { customerSync, mappingSync }
         });
     } catch (error) {
         return jsonError(res, error);
