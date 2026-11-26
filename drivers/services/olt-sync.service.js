@@ -586,48 +586,8 @@ async function syncOnus(pool, olt) {
 
         await conn.commit();
 
-        /*
-         * Customer auto-mapping runs AFTER the ONU data is committed and in
-         * its own transaction. Any failure is reported, never thrown.
-         */
-        let mapping = null;
-
-        if (String(process.env.ONU_AUTO_MAP || 'on').toLowerCase() !== 'off') {
-            try {
-                let ppp = { sessions: [], errors: [] };
-
-                try {
-ppp = await collectPppSessions(
-    pool,
-    olt.company_id,
-    loadMikrotikService(),
-    olt.mikrotik_id
-);
-                } catch (error) {
-                    ppp.errors.push(error.message);
-                }
-
-                mapping = await autoMapOnus(pool, {
-                    companyId: olt.company_id,
-                    oltId: olt.id,
-                    entries: learned.entries,
-                    sessions: ppp.sessions
-                });
-
-                mapping.learnedMacSupported = !!learned.supported;
-                mapping.learnedMacErrors = (learned.errors || []).slice(0, 10);
-                mapping.pppSessions = ppp.sessions.length;
-                mapping.pppErrors = (ppp.errors || []).slice(0, 10);
-console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
-            } catch (error) {
-                console.error('[ONU AUTO MAP]', error);
-                mapping = { error: error.message };
-            }
-        }
-
         return {
             success: true,
-            mapping,
             opticalErrors,
             found: normalized.length,
             inserted,
@@ -650,6 +610,44 @@ console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER MAPPING ONLY (OLT List page)
+|--------------------------------------------------------------------------
+| Read live ONU learned-MAC evidence and PPPoE sessions, then map against
+| ONU rows already stored for this OLT. Do not update ONU hardware fields.
+|--------------------------------------------------------------------------
+*/
+async function syncCustomerMapping(pool, olt) {
+    if (!olt || !olt.id || !olt.company_id) throw new Error('Invalid OLT context.');
+    const driver = driverFor(olt);
+    let rows = [];
+    let learned = { supported: false, entries: [], errors: [] };
+    try {
+        await driver.connect();
+        if (typeof driver.detectModel === 'function') await driver.detectModel();
+        if (typeof driver.getONUList !== 'function') throw new Error('OLT driver does not implement getONUList().');
+        rows = await driver.getONUList();
+        if (!Array.isArray(rows) || rows.length === 0) throw new Error('No ONU rows returned. Customer mapping was not changed.');
+        if (typeof driver.getLearnedMacs === 'function') {
+            try { learned = await driver.getLearnedMacs(rows); }
+            catch (error) { learned = { supported: false, entries: [], errors: [error.message] }; }
+        }
+    } finally { await disconnectDriver(driver); }
+    let ppp = { sessions: [], errors: [] };
+    try { ppp = await collectPppSessions(pool, olt.company_id, loadMikrotikService(), olt.mikrotik_id); }
+    catch (error) { ppp.errors = [error.message]; }
+    const mapping = await autoMapOnus(pool, {
+        companyId: olt.company_id, oltId: olt.id,
+        entries: Array.isArray(learned.entries) ? learned.entries : [],
+        sessions: Array.isArray(ppp.sessions) ? ppp.sessions : []
+    });
+    mapping.learnedMacSupported = !!learned.supported;
+    mapping.learnedMacErrors = (learned.errors || []).slice(0, 10);
+    mapping.pppSessions = (ppp.sessions || []).length;
+    mapping.pppErrors = (ppp.errors || []).slice(0, 10);
+    return { success: true, mapping };
+}
 /*
 |--------------------------------------------------------------------------
 | SYNC ONE ONU (OLT Users page, row button)
@@ -876,6 +874,7 @@ module.exports = {
     driverFor,
     testConnection,
     syncOnus,
+    syncCustomerMapping,
     syncOneOnu,
     disconnectDriver
 };
