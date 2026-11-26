@@ -1289,16 +1289,32 @@ function getCell(user, key) {
         case "lastUpdate":
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
 
-        case "action":
+            // A PPPoE-session row has no ONU record yet (id is "session-N"):
+            // there is no ONU to read, so say so instead of sending a bad ID.
+            if (user.customerOnly || !/^\d+$/.test(String(user.id))) {
+                return `
+                    <button
+                        type="button"
+                        class="olt-action-icon-btn"
+                        style="opacity:.45;"
+                        data-no-onu="1"
+                        title="এই কাস্টমারের ONU এখনো পাওয়া যায়নি"
+                        aria-label="ONU not found for this customer">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                `;
+            }
+
             return `
                 <button
                     type="button"
                     class="olt-action-icon-btn"
-                    data-sync-olt="${escapeHTML(user.oltId)}"
-                    title="Sync ONU hardware (RX/TX, distance, voltage, temp)"
-                    aria-label="Sync OLT ${escapeHTML(user.oltId)}"
+                    data-sync-onu="${escapeHTML(user.id)}"
+                    data-olt-id="${escapeHTML(user.oltId)}"
+                    title="এই ONU সিংক করুন (RX/TX, distance, voltage, temp)"
+                    aria-label="Sync ONU ${escapeHTML(user.id)}"
                     ${syncing ? "disabled" : ""}>
-                    <i class="fa-solid fa-network-wired"></i>
+                    <i class="fa-solid fa-rotate"></i>
                 </button>
             `;
 
@@ -1716,7 +1732,74 @@ async function syncSelectedOlt(button, targetOltId) {
 
         const syncMessage =
             `${result.message || "ONU synchronization completed."} ` +
-            `Inserted: ${details.inserted ?? 0}, ` +
+   
+
+async function syncOneOnuRow(button, targetOltId, onuId) {
+    if (
+        !targetOltId ||
+        !onuId ||
+        syncing ||
+        loading
+    ) {
+        return;
+    }
+
+    if (!/^\d+$/.test(String(onuId))) {
+        showMessage(
+            "এই সারির ONU এখনো পাওয়া যায়নি, তাই সিংক করা যাচ্ছে না।",
+            "info"
+        );
+        return;
+    }
+
+    syncing = true;
+    clearMessage();
+
+    const originalHtml = button ? button.innerHTML : "";
+
+    if (button) {
+        button.disabled = true;
+        button.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
+
+    refreshButton.disabled = true;
+
+    try {
+        const result = await apiPost(
+            `/api/olt/${encodeURIComponent(targetOltId)}` +
+            `/onus/${encodeURIComponent(onuId)}/sync`
+        );
+
+        const onu = (result.data || {}).onu || {};
+        const show = value =>
+            value === null || value === undefined ? "-" : value;
+
+        await loadOnus(true);
+
+        // loadOnus clears messages when it finishes, so show this afterwards.
+        showMessage(
+            `ONU সিংক হয়েছে। Status: ${show(onu.status)}, ` +
+            `RX: ${show(onu.rx_power)}, TX: ${show(onu.tx_power)}, ` +
+            `Distance: ${show(onu.distance)}.`,
+            "success"
+        );
+    } catch (error) {
+        if (window.AppToast) {
+            window.AppToast.error(error.message || "ONU synchronization failed.");
+        } else {
+            showMessage(error.message || "ONU synchronization failed.", "error");
+        }
+
+        if (button) {
+            button.innerHTML = originalHtml;
+        }
+    } finally {
+        syncing = false;
+        refreshButton.disabled = false;
+        renderRows();
+    }
+}         `Inserted: ${details.inserted ?? 0}, ` +
             `Updated: ${details.updated ?? 0}, ` +
             `Skipped: ${details.skipped ?? 0}.` +
             mappingSummary(details.mapping);
@@ -1945,6 +2028,23 @@ refreshButton.addEventListener("click", async () => {
 -------------------------------------------------- */
 
 body.addEventListener("click", async event => {
+    const onuButton = event.target.closest("[data-sync-onu]");
+    if (onuButton) {
+        if (onuButton.disabled || syncing || mappingBusy || loading) return;
+        await syncOneOnuRow(onuButton, onuButton.dataset.oltId, onuButton.dataset.syncOnu);
+        return;
+    }
+
+    const noOnuButton = event.target.closest("[data-no-onu]");
+    if (noOnuButton) {
+        if (window.AppToast) {
+            window.AppToast.info("এই কাস্টমারের ONU এখনো পাওয়া যায়নি।");
+        } else {
+            showMessage("এই কাস্টমারের ONU এখনো পাওয়া যায়নি।", "info");
+        }
+        return;
+    }
+
     const syncButton = event.target.closest("[data-sync-olt]");
 
     if (
