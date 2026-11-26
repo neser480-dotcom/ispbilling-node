@@ -1665,34 +1665,36 @@ async function loadOnus(keepMessage = false) {
 
 async function syncSelectedOltHardware() {
     if (syncing || loading) return;
-
-    const olt = oltList.find(item => String(item.id) === String(selectedOltId));
-    if (!olt) {
-        showMessage("Hardware Sync করার জন্য একটি OLT নির্বাচন করুন।", "info");
+    const targets = selectedOltId === 'all'
+        ? [...oltList]
+        : oltList.filter(item => String(item.id) === String(selectedOltId));
+    if (!targets.length) {
+        showMessage('কোনো OLT নির্বাচন করা হয়নি।', 'info');
         return;
     }
-
     syncing = true;
     clearMessage();
     syncHardwareButton.disabled = true;
     refreshButton.disabled = true;
     syncHardwareButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
+    const totals = { found: 0, inserted: 0, updated: 0, online: 0 };
+    const errors = [];
     try {
-        const result = await apiPost(`/api/olt/${encodeURIComponent(olt.id)}/sync/onu`);
-        const data = result.data || {};
+        for (const olt of targets) {
+            try {
+                const result = await apiPost(`/api/olt/${encodeURIComponent(olt.id)}/sync/onu`);
+                const data = result.data || {};
+                for (const key of Object.keys(totals)) totals[key] += Number(data[key] || 0);
+            } catch (error) {
+                errors.push(`${olt.name || olt.id}: ${error.message || 'Sync failed'}`);
+            }
+        }
         await loadOnus(true);
-        showMessage(
-            `OLT ${olt.name || olt.id} Hardware Sync সম্পন্ন। ` +
-            `Found: ${data.found ?? 0}, Inserted: ${data.inserted ?? 0}, ` +
-            `Updated: ${data.updated ?? 0}, Online: ${data.online ?? 0}.`,
-            "success"
-        );
-    } catch (error) {
-        if (window.AppToast) {
-            window.AppToast.error(error.message || "ONU hardware synchronization failed.");
+        const summary = `Found: ${totals.found}, Inserted: ${totals.inserted}, Updated: ${totals.updated}, Online: ${totals.online}.`;
+        if (errors.length) {
+            showMessage(`Hardware Sync আংশিক সম্পন্ন। ${summary} ব্যর্থ: ${errors.join(' | ')}`, 'error');
         } else {
-            showMessage(error.message || "ONU hardware synchronization failed.", "error");
+            showMessage(`সব নির্বাচিত OLT-এর ONU Hardware Sync সম্পন্ন। ${summary}`, 'success');
         }
     } finally {
         syncing = false;
@@ -1702,7 +1704,6 @@ async function syncSelectedOltHardware() {
         renderRows();
     }
 }
-
 /* --------------------------------------------------
    MANUAL LINK / UNLINK AND AUTO MAP
 -------------------------------------------------- */
