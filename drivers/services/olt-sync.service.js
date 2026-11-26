@@ -336,7 +336,6 @@ async function syncOnus(pool, olt) {
 
     const driver = driverFor(olt);
     let rows;
-    let learned = { supported: false, entries: [], errors: [] };
     let opticalErrors = [];
 
     try {
@@ -347,35 +346,13 @@ async function syncOnus(pool, olt) {
         }
 
         if (typeof driver.getONUList !== 'function') {
-            throw new Error(
-                'OLT driver does not implement getONUList().'
-            );
+            throw new Error('OLT driver does not implement getONUList().');
         }
 
         rows = await driver.getONUList();
         opticalErrors = Array.isArray(driver.opticalErrors)
             ? driver.opticalErrors.slice(0, 10)
             : [];
-
-        /*
-         * Learned MACs are optional. A failure here must never affect the
-         * ONU list that was just read.
-         */
-        if (
-            Array.isArray(rows) &&
-            rows.length &&
-            typeof driver.getLearnedMacs === 'function'
-        ) {
-            try {
-                learned = await driver.getLearnedMacs(rows);
-            } catch (error) {
-                learned = {
-                    supported: false,
-                    entries: [],
-                    errors: [error.message]
-                };
-            }
-        }
     } finally {
         await disconnectDriver(driver);
     }
