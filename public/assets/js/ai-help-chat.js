@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const stopSpeakingButton = document.getElementById("aiVoiceStop");
     const voiceStatus = document.getElementById("aiVoiceStatus");
     const voiceOrb = document.getElementById("aiVoiceOrb");
+    const voiceLanguage = document.getElementById("aiVoiceLanguage");
 
     if (!chatMessages || !chatForm || !chatQuestion || !sendButton) return;
 
@@ -227,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         recognition = new SpeechRecognition();
-        recognition.lang = "bn-BD";
+        recognition.lang = voiceLanguage ? voiceLanguage.value : "bn-BD";
         recognition.continuous = false;
         recognition.interimResults = true;
         recognition.maxAlternatives = 1;
@@ -296,6 +297,12 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (error) {
                 setVoiceState("", "মাইক্রোফোন চালু করা যাচ্ছে না • আবার চেষ্টা করুন");
             }
+        });
+    }
+
+    if (voiceLanguage) {
+        voiceLanguage.addEventListener("change", () => {
+            if (recognition && !listening) recognition.lang = voiceLanguage.value;
         });
     }
 
