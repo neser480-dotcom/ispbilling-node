@@ -22,7 +22,8 @@ const { syncOneOnu } = require("../services/olt-sync.service");
 const VENDORS = {
     ecom: () => require("./vendors/ecom/sync"),
     cdata: () => require("./vendors/cdata/sync"),
-    bdcom: () => require("./vendors/bdcom/sync")
+    bdcom: () => require("./vendors/bdcom/sync"),
+    vsol: () => require("./vendors/vsol/sync")
 };
 
 const running = new Set();
