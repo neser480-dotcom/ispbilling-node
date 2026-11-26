@@ -214,7 +214,7 @@ function mergeOnuRows(statusRows, opticalRows = [], basicRows = []) {
             run_state: s.status,
             onu_sn: "",
             onu_name: "",
-            distance: online ? s.distance : null,
+            distance: s.distance,
             rtt: s.rtt,
             rx_power: o ? o.rx_power : null,
             tx_power: o ? o.tx_power : null,
@@ -621,71 +621,73 @@ class VsolDriver {
         };
     }
 
-    /* Read-only; falls back to per-PON "interface epon F/S" when the global
-       command is not accepted by this firmware. */
-    async _readTable(cmd, parser, fsList) {
-        const output = await this.command(cmd, 30000);
-        const rows = parser(output);
-
-        if (rows.length || !/invalid|unknown|incomplete|error|ambiguous/i.test(output)) {
-            return rows;
-        }
-
-        const all = [];
-
-        for (const fs of fsList) {
-            try {
-                await this.command("configure terminal", 8000);
-                await this.command(`interface epon ${fs}`, 8000);
-                all.push(...parser(await this.command(cmd, 30000)));
-            } finally {
-                await this.command("end", 8000).catch(() => {});
-            }
-        }
-
-        return all;
-    }
-
+    /* Read-only inventory. This firmware rejects the global status command.
+       Discover PONs from running-config, enter config mode once, then read
+       status/optical/basic tables from each PON interface. Do not issue "end":
+       this firmware's CLI does not reliably return to privileged mode. */
     async getONUs() {
         this.opticalErrors = [];
-
         await this.connect();
 
-        // The tested EPON CLI accepts these read-only show commands from
-        // privileged mode (epon-olt#). Do not enter configure terminal here.
-        // Customer mapping and hardware sync both use this same read-only ONU
-        // inventory; this method never changes mappings or OLT configuration.
-        const statusOutput = await this.command("show onu status all", 40000);
-        const statusRows = parseOnuStatus(statusOutput);
+        const configOutput = await this.command("show running-config", 30000);
+        const fsList = [...new Set(
+            [...stripAnsi(configOutput).matchAll(/^\\s*interface\\s+epon\\s+(\\d+\\/\\d+)\\s*$/gim)]
+                .map(match => match[1])
+        )];
 
-        if (!statusRows.length) {
-            const excerpt = stripAnsi(statusOutput).trim().slice(0, 300);
+        if (!fsList.length) {
             throw new Error(
-                "V-SOL/EPON OLT returned no ONU rows for 'show onu status all' " +
-                "in privileged mode (epon-olt#)." +
-                (excerpt ? " CLI output: " + excerpt : "")
+                "V-SOL OLT returned no EPON interfaces in 'show running-config'."
             );
         }
 
-        const fsList = [...new Set(statusRows.map(r => r.f_s))];
+        await this.command("configure terminal", 10000);
 
-        let optical = [];
-        let basic = [];
+        const statusRows = [];
+        const opticalRows = [];
+        const basicRows = [];
 
-        // Optical and basic info are extras: a failure is reported, never fatal.
-        try {
-            optical = await this._readTable("show onu opm-diag", parseOpmDiag, fsList);
-        } catch (error) {
-            this.opticalErrors.push(`opm-diag: ${error.message}`);
+        for (const fs of fsList) {
+            await this.command(`interface epon ${fs}`, 10000);
+
+            const statusOutput = await this.command("show onu status all", 40000);
+            if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(statusOutput)) {
+                throw new Error(
+                    `V-SOL OLT rejected 'show onu status all' on EPON ${fs}: ` +
+                    stripAnsi(statusOutput).trim().slice(0, 250)
+                );
+            }
+            statusRows.push(...parseOnuStatus(statusOutput));
+
+            try {
+                const output = await this.command("show onu opm-diag", 40000);
+                if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(output)) {
+                    throw new Error(stripAnsi(output).trim().slice(0, 200) || "command rejected");
+                }
+                opticalRows.push(...parseOpmDiag(output));
+            } catch (error) {
+                this.opticalErrors.push(`EPON ${fs} opm-diag: ${error.message}`);
+            }
+
+            try {
+                const output = await this.command("show onu baisc-info", 40000);
+                if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(output)) {
+                    throw new Error(stripAnsi(output).trim().slice(0, 200) || "command rejected");
+                }
+                basicRows.push(...parseBasicInfo(output));
+            } catch (error) {
+                this.opticalErrors.push(`EPON ${fs} baisc-info: ${error.message}`);
+            }
         }
 
-        try {
-            basic = await this._readTable("show onu baisc-info", parseBasicInfo, fsList);
-        } catch (error) {
-            this.opticalErrors.push(`baisc-info: ${error.message}`);
+        if (!statusRows.length) {
+            throw new Error(
+                "V-SOL OLT returned no ONU rows from any configured EPON interface. " +
+                "Checked: " + fsList.join(", ")
+            );
         }
 
-        return mergeOnuRows(statusRows, optical, basic);
+        return mergeOnuRows(statusRows, opticalRows, basicRows);
     }
 
     async getONUList() {
