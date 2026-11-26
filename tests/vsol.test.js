@@ -106,18 +106,18 @@ function fakeOlt({ failLogin = false } = {}) {
                 } else if (/^interface epon \d+\/\d+$/.test(line)) {
                     currentPon = line.replace("interface epon ", "");
                     state = "interface";
-                    socket.write(\`\${line}\r\nepon-olt(config-if)#\`);
+                    socket.write(line + "\r\nepon-olt(config-if)#");
                 } else if (line === "show onu status all") {
-                    const rows = STATUS.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
-                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                    const rows = STATUS.split("\n").filter((row, n) => n === 0 || row.startsWith("EPON" + currentPon + ":"));
+                    socket.write(line + "\r\n" + rows.join("\r\n") + "\r\nepon-olt(config-if)#");
                 } else if (line === "show onu opm-diag") {
-                    const rows = OPM.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
-                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                    const rows = OPM.split("\n").filter((row, n) => n === 0 || row.startsWith("EPON" + currentPon + ":"));
+                    socket.write(line + "\r\n" + rows.join("\r\n") + "\r\nepon-olt(config-if)#");
                 } else if (line === "show onu baisc-info") {
-                    const rows = BASIC.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
-                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                    const rows = BASIC.split("\n").filter((row, n) => n === 0 || row.startsWith("EPON" + currentPon + ":"));
+                    socket.write(line + "\r\n" + rows.join("\r\n") + "\r\nepon-olt(config-if)#");
                 } else {
-                    socket.write(\`\${line}\r\n% Unknown command\r\nepon-olt#\`);
+                    socket.write(line + "\r\n% Unknown command\r\nepon-olt#");
                 }
             }
         });
