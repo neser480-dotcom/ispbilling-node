@@ -321,7 +321,7 @@ exports.list = async (req, res) => {
         const search = clean(req.query.search, 150);
         const scope = scopeSql(req, "ol");
 
-        let where = `WHERE 1=1 ${scope.sql}`;
+        let where = `WHERE ol.deleted_at IS NULL ${scope.sql}`;
         const params = [...scope.params];
 
         if (search) {
@@ -619,20 +619,25 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        // Only the OLT row is deleted. ONU rows and customer mappings
-        // (onu_user_mapping, onu_ppp_info, onu_customer_links) are kept;
-        // an ONU is removed only by a manual ONU delete.
+        // Soft-delete the OLT configuration. A hard DELETE can trigger
+        // production database cascades and remove ONU rows plus their customer
+        // mappings. Keep all related ONU/customer records intact.
         const [[kept]] = await connection.execute(
             "SELECT COUNT(*) AS total FROM onu WHERE olt_id = ?",
             [id]
         );
 
-        await connection.execute(
-            `DELETE ol
-               FROM olts AS ol
-              WHERE ol.id = ? ${scope.sql}`,
+        const [deleted] = await connection.execute(
+            `UPDATE olts AS ol
+                SET ol.deleted_at = NOW()
+              WHERE ol.id = ?
+                AND ol.deleted_at IS NULL ${scope.sql}`,
             [id, ...scope.params]
         );
+
+        if (!deleted.affectedRows) {
+            throw new OltError("OLT is already deleted or unavailable.", 404);
+        }
 
         await connection.commit();
 
