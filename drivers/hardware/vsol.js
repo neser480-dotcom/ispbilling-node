@@ -647,17 +647,28 @@ class VsolDriver {
         const opticalRows = [];
         const basicRows = [];
 
-        for (const fs of fsList) {
-            await this.command(`interface epon ${fs}`, 10000);
+        // The probe confirms that this firmware returns the complete OLT
+        // status table (all PONs) even when the command is run in one PON
+        // interface. Read it once; repeating it per PON only duplicates the
+        // same 255-row inventory.
+        await this.command(`interface epon ${fsList[0]}`, 10000);
+        const statusOutput = await this.command("show onu status all", 40000);
 
-            const statusOutput = await this.command("show onu status all", 40000);
-            if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(statusOutput)) {
-                throw new Error(
-                    `V-SOL OLT rejected 'show onu status all' on EPON ${fs}: ` +
-                    stripAnsi(statusOutput).trim().slice(0, 250)
-                );
+        if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(statusOutput)) {
+            throw new Error(
+                `V-SOL OLT rejected 'show onu status all' on EPON ${fsList[0]}: ` +
+                stripAnsi(statusOutput).trim().slice(0, 250)
+            );
+        }
+
+        statusRows.push(...parseOnuStatus(statusOutput));
+
+        for (const fs of fsList) {
+            // The first PON is already selected above. The CLI accepts a
+            // direct interface switch for each remaining PON in config mode.
+            if (fs !== fsList[0]) {
+                await this.command(`interface epon ${fs}`, 10000);
             }
-            statusRows.push(...parseOnuStatus(statusOutput));
 
             try {
                 const output = await this.command("show onu opm-diag", 40000);
