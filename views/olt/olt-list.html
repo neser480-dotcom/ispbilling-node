@@ -1304,13 +1304,25 @@
           { ...syncOptions }
         );
 
-        result = await apiRequest(
+        const customerSync = await apiRequest(
           "/api/olt/" + id + "/sync/customers",
           { ...syncOptions }
         );
 
+        const mappingSync = await apiRequest(
+          "/api/olt/" + id + "/auto-map",
+          { ...syncOptions }
+        );
+
+        result = mappingSync;
+        const mappingData = mappingSync.data || {};
         result.message =
-          "ONU hardware sync and PPPoE customer mapping sync completed.";
+          "ONU hardware sync, PPPoE customer sync and ONU auto-mapping completed. " +
+          "Linked: " + Number(mappingData.linked || 0) +
+          ", already linked: " + Number(mappingData.alreadyLinked || 0) +
+          ", unmatched: " + Number(mappingData.unmatched || 0) +
+          ", ambiguous: " + Number(mappingData.ambiguous || 0) +
+          ", conflicts: " + Number(mappingData.conflicts || 0) + ".";
       } else {
         result = await apiRequest(
           "/api/olt/" + id + "/" + action,
