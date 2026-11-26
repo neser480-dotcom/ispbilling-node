@@ -133,6 +133,38 @@ async function ensureSchema() {
             `);
 
             await db.query(`
+                CREATE TABLE IF NOT EXISTS ai_help_knowledge_items (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    category VARCHAR(100) NOT NULL,
+                    title VARCHAR(180) NOT NULL,
+                    content LONGTEXT NOT NULL,
+                    sort_order INT NOT NULL DEFAULT 0,
+                    updated_by INT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        ON UPDATE CURRENT_TIMESTAMP,
+                    KEY idx_ai_knowledge_company (company_id, category, sort_order, id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            `);
+
+            // Preserve existing free-form Knowledge Base as a General article.
+            await db.query(`
+                INSERT INTO ai_help_knowledge_items
+                    (company_id, category, title, content, updated_by)
+                SELECT k.company_id, 'General', 'General Knowledge',
+                       k.knowledge, k.updated_by
+                FROM ai_help_knowledge k
+                WHERE k.knowledge IS NOT NULL
+                  AND TRIM(k.knowledge) <> ''
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM ai_help_knowledge_items i
+                      WHERE i.company_id = k.company_id
+                  )
+            `);
+
+            await db.query(`
                 CREATE TABLE IF NOT EXISTS ai_help_messages (
                     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     company_id INT NOT NULL,
@@ -474,6 +506,181 @@ router.put("/settings", async (req, res) => {
 });
 
 // --------------------------------------------------
+// KNOWLEDGE BASE ARTICLES
+// --------------------------------------------------
+
+router.get("/knowledge", async (req, res) => {
+    if (!canManage(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Admin permission required."
+        });
+    }
+
+    try {
+        const [rows] = await db.query(`
+            SELECT id, category, title, content, sort_order, updated_at
+            FROM ai_help_knowledge_items
+            WHERE company_id = ?
+            ORDER BY category ASC, sort_order ASC, title ASC, id ASC
+        `, [companyId(req)]);
+
+        return res.json({ success: true, items: rows });
+    } catch (error) {
+        console.error("[AI Help Knowledge List]", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to load Knowledge Base articles."
+        });
+    }
+});
+
+router.post("/knowledge", async (req, res) => {
+    if (!canManage(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Admin permission required."
+        });
+    }
+
+    try {
+        const category = String(req.body?.category || "").trim();
+        const title = String(req.body?.title || "").trim();
+        const content = String(req.body?.content || "").trim();
+
+        if (!category || category.length > 100 ||
+            !title || title.length > 180 || !content) {
+            return res.status(400).json({
+                success: false,
+                message: "Category, title and content are required. Check the field limits."
+            });
+        }
+        if (content.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: "Article content must be 20,000 characters or less."
+            });
+        }
+
+        const [result] = await db.query(`
+            INSERT INTO ai_help_knowledge_items
+                (company_id, category, title, content, updated_by)
+            VALUES (?, ?, ?, ?, ?)
+        `, [
+            companyId(req), category, title, content,
+            Number(req.session.user_id)
+        ]);
+
+        return res.status(201).json({
+            success: true,
+            message: "Knowledge article added.",
+            id: result.insertId
+        });
+    } catch (error) {
+        console.error("[AI Help Knowledge Create]", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to add Knowledge Base article."
+        });
+    }
+});
+
+router.put("/knowledge/:id", async (req, res) => {
+    if (!canManage(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Admin permission required."
+        });
+    }
+
+    try {
+        const articleId = Number.parseInt(req.params.id, 10);
+        const category = String(req.body?.category || "").trim();
+        const title = String(req.body?.title || "").trim();
+        const content = String(req.body?.content || "").trim();
+
+        if (!Number.isSafeInteger(articleId) || articleId <= 0 ||
+            !category || category.length > 100 ||
+            !title || title.length > 180 || !content ||
+            content.length > 20000) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid article details. Check required fields and limits."
+            });
+        }
+
+        const [result] = await db.query(`
+            UPDATE ai_help_knowledge_items
+            SET category = ?, title = ?, content = ?, updated_by = ?
+            WHERE id = ? AND company_id = ?
+        `, [
+            category, title, content, Number(req.session.user_id),
+            articleId, companyId(req)
+        ]);
+
+        if (!result.affectedRows) {
+            return res.status(404).json({
+                success: false,
+                message: "Knowledge article not found."
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Knowledge article updated."
+        });
+    } catch (error) {
+        console.error("[AI Help Knowledge Update]", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to update Knowledge Base article."
+        });
+    }
+});
+
+router.delete("/knowledge/:id", async (req, res) => {
+    if (!canManage(req)) {
+        return res.status(403).json({
+            success: false,
+            message: "Admin permission required."
+        });
+    }
+
+    try {
+        const articleId = Number.parseInt(req.params.id, 10);
+        if (!Number.isSafeInteger(articleId) || articleId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid article ID."
+            });
+        }
+
+        const [result] = await db.query(`
+            DELETE FROM ai_help_knowledge_items
+            WHERE id = ? AND company_id = ?
+        `, [articleId, companyId(req)]);
+
+        if (!result.affectedRows) {
+            return res.status(404).json({
+                success: false,
+                message: "Knowledge article not found."
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Knowledge article deleted."
+        });
+    } catch (error) {
+        console.error("[AI Help Knowledge Delete]", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to delete Knowledge Base article."
+        });
+    }
+});
+
+// --------------------------------------------------
 // AI CHAT - GROQ
 // --------------------------------------------------
 
@@ -546,6 +753,13 @@ router.post("/chat", async (req, res) => {
         ]);
 
         const [kb] = await db.query(`
+            SELECT category, title, content
+            FROM ai_help_knowledge_items
+            WHERE company_id = ?
+            ORDER BY category ASC, sort_order ASC, title ASC, id ASC
+        `, [id]);
+
+        const [legacyKb] = await db.query(`
             SELECT knowledge
             FROM ai_help_knowledge
             WHERE company_id = ?
@@ -554,9 +768,15 @@ router.post("/chat", async (req, res) => {
             LIMIT 1
         `, [id]);
 
-        const knowledge = String(
-            kb[0]?.knowledge || ""
-        ).slice(0, 30000);
+        const knowledge = [
+            ...kb.map(item =>
+                "[Category: " + item.category + "]\\n[Article: " +
+                item.title + "]\\n" + item.content
+            ),
+            legacyKb[0]?.knowledge
+                ? "[Legacy Knowledge Base]\\n" + legacyKb[0].knowledge
+                : ""
+        ].filter(Boolean).join("\\n\\n---\\n\\n").slice(0, 50000);
 
         const messages = [{
             role: "system",
