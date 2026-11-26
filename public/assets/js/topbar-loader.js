@@ -51,7 +51,7 @@
         return new Promise(function (resolve) {
             const script = document.createElement("script");
 
-            script.src = "/assets/js/app-toast.js";
+            script.src = "/assets/js/app-toast.js?v=20261126-bengali-encoding";
             script.dataset.appToast = "true";
             script.async = false;
 
