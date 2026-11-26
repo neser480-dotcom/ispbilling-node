@@ -86,6 +86,16 @@ router.post("/categories", async (req, res, next) => {
             });
         }
 
+        const [duplicates] = await db.query(
+            `SELECT id FROM support_ticket_categories
+             WHERE company_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?))
+             LIMIT 1`,
+            [companyId, name]
+        );
+        if (duplicates.length) {
+            return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই টিকেট ক্যাটাগরি আগে থেকেই আছে।" });
+        }
+
         const [result] = await db.query(
             "INSERT INTO support_ticket_categories (company_id, name) VALUES (?, ?)",
             [companyId, name]
