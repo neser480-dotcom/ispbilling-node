@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reseller</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root { --topbar-height: 70px; --sidebar-width: 250px; }
+        body { background: #f4f6f9; margin: 0; overflow-x: hidden; }
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: calc(var(--topbar-height) + 16px) 18px 24px;
+            min-height: 100vh;
+            transition: margin-left 0.25s ease;
+        }
+        .page-banner {
+            background: #1e88e5; color: #fff; padding: 14px 20px; border-radius: 6px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .page-banner .icon-btn {
+            width: 38px; height: 36px; border-radius: 5px; background: #fff; color: #1e88e5;
+            border: none; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+        }
+        .page-banner .icon-btn:hover { background: #eef6ff; }
+        .data-toolbar {
+            background: #1e88e5; color: #fff; padding: 10px 16px; border-radius: 6px;
+            display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .data-toolbar .search-input {
+            max-width: 360px; width: 100%; border: none; border-radius: 4px;
+            padding: 6px 12px; background: #fff; color: #333;
+        }
+        .sort-hint { font-size: 11px; color: #8c96a5; margin-left: 3px; white-space: nowrap; }
+        .nav-tabs .nav-link { color: #495057; padding: 8px 16px; }
+        .nav-tabs .nav-link.active {
+            color: #1e88e5; border-color: #dee2e6 #dee2e6 #fff; background: #fff; font-weight: 500;
+        }
+        .perm-card {
+            border: 1px solid #e6eef7; border-radius: 5px; padding: 8px 12px; background: #fafcff;
+        }
+        .perm-label { color: #1e88e5; font-size: 13.5px; cursor: pointer; }
+        .info-dot {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%; background: #1e88e5; color: #fff; font-size: 10px;
+        }
+        .page-footer { text-align: center; color: #6c757d; font-size: 13px; margin-top: 32px; }
+
+        .modal-backdrop { position: fixed !important; inset: 0 !important; z-index: 2147483640 !important; }
+        .modal { position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; }
+        .modal-dialog { position: relative !important; z-index: 2147483647 !important; }
+        .swal2-container { z-index: 2147483647 !important; }
+
+        @media (max-width: 991.98px) {
+            .main-content { margin-left: 0; padding: calc(var(--topbar-height) + 14px) 12px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="page-banner mb-3">
+            <h4 class="m-0 fw-normal">Reseller</h4>
+            <div class="d-flex gap-2">
+                <button class="icon-btn" type="button" onclick="loadResellers()" title="Refresh"><i class="fa fa-rotate-right"></i></button>
+                <button class="icon-btn" type="button" onclick="location.href='/customers?reseller=1'" title="Reseller Customers"><i class="fa fa-users"></i></button>
+                <button class="icon-btn" type="button" data-bs-toggle="modal" data-bs-target="#createResellerModal" title="Create Reseller"><i class="fa fa-user-plus"></i></button>
+                <button class="icon-btn" type="button" title="Guide"><i class="fab fa-youtube"></i></button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3">
+            <div class="data-toolbar mb-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span><i class="fa fa-gear"></i> Total Data: <span class="badge bg-primary border border-light" id="totalData">0</span></span>
+                    <span>Customers: <span id="totalCustomers">0</span></span>
+                    <span>Total Balance: ৳<span id="totalBalance">0</span></span>
+                </div>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search" />
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th># <span class="sort-hint">↓↑</span></th>
+                            <th>Name <span class="sort-hint">↓↑</span></th>
+                            <th>Mobile <span class="sort-hint">↓↑</span></th>
+                            <th>E-mail <span class="sort-hint">↓↑</span></th>
+                            <th>Address <span class="sort-hint">↓↑</span></th>
+                            <th>Status <span class="sort-hint">↓↑</span></th>
+                            <th>Customers <span class="sort-hint">↓↑</span></th>
+                            <th>Balance <span class="sort-hint">↓↑</span></th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="page-footer">© Irfan IT - 2026</div>
+    </main>
+
+    <!-- CREATE RESELLER MODAL -->
+    <div class="modal fade" id="createResellerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-normal">Create Reseller</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form id="createResellerForm">
+                    <div class="modal-body pt-2">
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabProfile" type="button">Profile</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabArea" type="button">Area</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPackage" type="button">Package</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPermissions" type="button">Permissions</button></li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- PROFILE TAB -->
+                            <div class="tab-pane fade show active" id="tabProfile">
+                                <div class="mb-3">
+                                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control" placeholder="e.g. Name" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mobile <span class="text-danger">*</span></label>
+                                    <input type="text" name="mobile" class="form-control" placeholder="e.g. 01XXXXXXXXX" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">NID No <span class="text-danger">*</span></label>
+                                    <input type="text" name="nid_no" class="form-control" placeholder="e.g. 10,13 or 17 digits" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Address <span class="text-danger">*</span></label>
+                                    <input type="text" name="address" class="form-control" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">E-mail <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" class="form-control" placeholder="***@mail.com" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Status <span class="text-danger">*</span></label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="status" id="resStatusActive" value="active" checked />
+                                        <label class="form-check-label" for="resStatusActive">Active</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="status" id="resStatusInactive" value="inactive" />
+                                        <label class="form-check-label" for="resStatusInactive">Inactive</label>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Website <span class="text-danger">*</span></label>
+                                    <input type="text" name="website" class="form-control" placeholder="e.g. reseller.amaderbill.com" required />
+                                </div>
+                            </div>
+
+                            <!-- AREA TAB -->
+                            <div class="tab-pane fade" id="tabArea">
+                                <div class="border rounded p-3 bg-white">
+                                    <div class="row g-3" id="areaGrid">
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="Azhar cable" id="area1" />
+                                                <label class="form-check-label" for="area1">Azhar cable</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="PPPoE" id="sub1" /><label class="form-check-label" for="sub1">PPPoE</label></div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="Static" id="sub2" /><label class="form-check-label" for="sub2">Static</label></div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি" id="sub3" /><label class="form-check-label" for="sub3">মধ্যকান্দি</label></div>
+                                        </div>
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="কারারকান্দি" id="area2" />
+                                                <label class="form-check-label" for="area2">কারারকান্দি</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="কারারকান্দি-sub" id="sub4" /><label class="form-check-label" for="sub4">কারারকান্দি</label></div>
+                                        </div>
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="মিরশীকারি" id="area3" />
+                                                <label class="form-check-label" for="area3">মিরশীকারি</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="উত্তর পাড়া" id="sub5" /><label class="form-check-label" for="sub5">উত্তর পাড়া</label></div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="দক্ষিণ পাড়া" id="sub6" /><label class="form-check-label" for="sub6">দক্ষিণ পাড়া</label></div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="পূর্বকান্দি" id="sub7" /><label class="form-check-label" for="sub7">পূর্বকান্দি</label></div>
+                                        </div>
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="ভবানীপুর" id="area4" />
+                                                <label class="form-check-label" for="area4">ভবানীপুর</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="ভবানীপুর-sub" id="sub8" /><label class="form-check-label" for="sub8">ভবানীপুর</label></div>
+                                        </div>
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="কাচারিকান্দি" id="area5" />
+                                                <label class="form-check-label" for="area5">কাচারিকান্দি</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="কাচারিকান্দি-sub" id="sub9" /><label class="form-check-label" for="sub9">কাচারিকান্দি</label></div>
+                                        </div>
+                                        <div class="col-md-2 col-6">
+                                            <div class="form-check fw-semibold mb-2">
+                                                <input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি" id="area6" />
+                                                <label class="form-check-label" for="area6">মধ্যকান্দি</label>
+                                            </div>
+                                            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি-sub" id="sub10" /><label class="form-check-label" for="sub10">মধ্যকান্দি</label></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PACKAGE TAB -->
+                            <div class="tab-pane fade" id="tabPackage">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold text-success d-block">Commission Type</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="commission_type" id="commGlobal" value="global" checked />
+                                        <label class="form-check-label" for="commGlobal">Global Commission</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="commission_type" id="commPackage" value="package" />
+                                        <label class="form-check-label" for="commPackage">Package Based</label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2 fw-semibold">Select Mikrotik</div>
+                                <div class="border rounded p-3 bg-white">
+                                    <div class="form-check fw-semibold mb-2">
+                                        <input class="form-check-input pkg-check" type="checkbox" value="Azhar cable" id="mkRoot" />
+                                        <label class="form-check-label" for="mkRoot">Azhar cable</label>
+                                    </div>
+                                    <div class="ms-4 d-flex flex-column gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input pkg-check" type="checkbox" value="Block" id="pkg1" />
+                                            <label class="form-check-label" for="pkg1">Block <span class="text-muted">৳0</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 25 Mbps" id="pkg2" />
+                                            <label class="form-check-label" for="pkg2">PPPoE 25 Mbps <span class="text-muted">৳1000</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 40 Mbps" id="pkg3" />
+                                            <label class="form-check-label" for="pkg3">PPPoE 40 Mbps <span class="text-muted">৳1300</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 15 Mbps" id="pkg4" />
+                                            <label class="form-check-label" for="pkg4">PPPoE 15 Mbps <span class="text-muted">৳500</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PERMISSIONS TAB -->
+                            <div class="tab-pane fade" id="tabPermissions">
+                                <div class="row g-2" id="permissionsGrid"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+function renderDefaultAreas() {
+    const grid = document.getElementById("areaGrid");
+    if (!grid) return;
+    grid.innerHTML = `
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="Azhar cable" id="area1" />
+                <label class="form-check-label" for="area1">Azhar cable</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="PPPoE" id="sub1" /><label class="form-check-label" for="sub1">PPPoE</label></div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="Static" id="sub2" /><label class="form-check-label" for="sub2">Static</label></div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি" id="sub3" /><label class="form-check-label" for="sub3">মধ্যকান্দি</label></div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="কারারকান্দি" id="area2" />
+                <label class="form-check-label" for="area2">কারারকান্দি</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="কারারকান্দি-sub" id="sub4" /><label class="form-check-label" for="sub4">কারারকান্দি</label></div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="মিরশীকারি" id="area3" />
+                <label class="form-check-label" for="area3">মিরশীকারি</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="উত্তর পাড়া" id="sub5" /><label class="form-check-label" for="sub5">উত্তর পাড়া</label></div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="দক্ষিণ পাড়া" id="sub6" /><label class="form-check-label" for="sub6">দক্ষিণ পাড়া</label></div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="পূর্বকান্দি" id="sub7" /><label class="form-check-label" for="sub7">পূর্বকান্দি</label></div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="ভবানীপুর" id="area4" />
+                <label class="form-check-label" for="area4">ভবানীপুর</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="ভবানীপুর-sub" id="sub8" /><label class="form-check-label" for="sub8">ভবানীপুর</label></div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="কাচারিকান্দি" id="area5" />
+                <label class="form-check-label" for="area5">কাচারিকান্দি</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="কাচারিকান্দি-sub" id="sub9" /><label class="form-check-label" for="sub9">কাচারিকান্দি</label></div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="form-check fw-semibold mb-2">
+                <input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি" id="area6" />
+                <label class="form-check-label" for="area6">মধ্যকান্দি</label>
+            </div>
+            <div class="form-check ms-2"><input class="form-check-input area-check" type="checkbox" value="মধ্যকান্দি-sub" id="sub10" /><label class="form-check-label" for="sub10">মধ্যকান্দি</label></div>
+        </div>
+    `;
+}
+
+function renderDefaultPackages() {
+    const box = document.getElementById("packageBox");
+    if (!box) return;
+    box.innerHTML = `
+        <div class="form-check fw-semibold mb-2">
+            <input class="form-check-input pkg-check" type="checkbox" value="Azhar cable" id="mkRoot" />
+            <label class="form-check-label" for="mkRoot">Azhar cable</label>
+        </div>
+        <div class="ms-4 d-flex flex-column gap-2">
+            <div class="form-check">
+                <input class="form-check-input pkg-check" type="checkbox" value="Block" id="pkg1" />
+                <label class="form-check-label" for="pkg1">Block <span class="text-muted">৳0</span></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 25 Mbps" id="pkg2" />
+                <label class="form-check-label" for="pkg2">PPPoE 25 Mbps <span class="text-muted">৳1000</span></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 40 Mbps" id="pkg3" />
+                <label class="form-check-label" for="pkg3">PPPoE 40 Mbps <span class="text-muted">৳1300</span></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input pkg-check" type="checkbox" value="PPPoE 15 Mbps" id="pkg4" />
+                <label class="form-check-label" for="pkg4">PPPoE 15 Mbps <span class="text-muted">৳500</span></label>
+            </div>
+        </div>
+    `;
+}
+
+async function loadDynamicOptions() {
+    renderDefaultAreas();
+    renderDefaultPackages();
+
+    try {
+        const res = await fetch("/api/reseller-portal/options", { credentials: "same-origin" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success || !json.data) return;
+
+        const { areas = [], routers = [], packages = [] } = json.data;
+
+        if (Array.isArray(areas) && areas.length > 0) {
+            const areaGrid = document.getElementById("areaGrid");
+            const roots = areas.filter((a) => !a.parent_id);
+            const childrenMap = new Map();
+
+            areas.forEach((a) => {
+                if (a.parent_id) {
+                    const list = childrenMap.get(Number(a.parent_id)) || [];
+                    list.push(a);
+                    childrenMap.set(Number(a.parent_id), list);
+                }
+            });
+
+            const groups = roots.length ? roots : areas;
+            areaGrid.innerHTML = groups.map((grp, idx) => {
+                const subs = childrenMap.get(Number(grp.id)) || [];
+                const subsHtml = subs.map((s, sIdx) => `
+                    <div class="form-check ms-2">
+                        <input class="form-check-input area-check" type="checkbox" value="${escapeHtml(s.name)}" id="dyn_sub_${idx}_${sIdx}" />
+                        <label class="form-check-label" for="dyn_sub_${idx}_${sIdx}">${escapeHtml(s.name)}</label>
+                    </div>
+                `).join("");
+
+                return `
+                    <div class="col-md-2 col-6">
+                        <div class="form-check fw-semibold mb-2">
+                            <input class="form-check-input area-check" type="checkbox" value="${escapeHtml(grp.name)}" id="dyn_area_${idx}" />
+                            <label class="form-check-label" for="dyn_area_${idx}">${escapeHtml(grp.name)}</label>
+                        </div>
+                        ${subsHtml}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        if (Array.isArray(packages) && packages.length > 0) {
+            const box = document.getElementById("packageBox");
+            const routerTitle = routers[0]?.name || "Mikrotik Packages";
+            box.innerHTML = `
+                <div class="form-check fw-semibold mb-2">
+                    <input class="form-check-input pkg-check" type="checkbox" value="${escapeHtml(routerTitle)}" id="dynMkRoot" />
+                    <label class="form-check-label" for="dynMkRoot">${escapeHtml(routerTitle)}</label>
+                </div>
+                <div class="ms-4 d-flex flex-column gap-2">
+                    ${packages.map((p, idx) => `
+                        <div class="form-check">
+                            <input class="form-check-input pkg-check" type="checkbox" value="${escapeHtml(p.name)}" id="dynPkg_${idx}" />
+                            <label class="form-check-label" for="dynPkg_${idx}">
+                                ${escapeHtml(p.name)} <span class="text-muted">৳${Number(p.price || 0)}</span>
+                            </label>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
+        }
+    } catch (_) {}
+}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+        const PERMISSIONS_LIST = [
+            { key: "all_permission", label: "All Permission", isMaster: true },
+            { key: "customer_add", label: "Customer Add" },
+            { key: "customer_edit", label: "Customer Edit" },
+            { key: "add_customer_with_mobile", label: "Add Customer With Mobile Number" },
+            { key: "monthly_fee_edit", label: "Monthly Fee Edit" },
+            { key: "create_customer_with_balance", label: "Create Customer With Balance" },
+            { key: "update_customer_balance", label: "Update Customer Balance" },
+            { key: "package_edit", label: "Package Edit", info: true },
+            { key: "status_edit", label: "Status Edit" },
+            { key: "customer_active", label: "Customer Active", info: true },
+            { key: "customer_minus_balance_inactive", label: "Customer Minus Balance Inactive", info: true },
+            { key: "customer_auto_disable_edit", label: "Customer Auto Disable Edit" },
+            { key: "bulk_area_edit", label: "Bulk Area Edit" },
+            { key: "bulk_status_edit", label: "Bulk Status Edit" },
+            { key: "bulk_billing_cycle_edit", label: "Bulk BillingCycle Edit" },
+            { key: "bulk_customer_recharge", label: "Bulk Customer Recharge" },
+            { key: "billing_cycle_edit", label: "Billing Cycle Edit" },
+            { key: "single_customer_number_edit", label: "Single Customer Number Edit" },
+            { key: "daily_recharge_feature", label: "Daily Recharge Feature" },
+            { key: "customer_delete", label: "Customer Delete" },
+            { key: "daily_reseller_customer_auto_connection", label: "Daily Reseller Customer Auto Connection" },
+            { key: "customer_recharge", label: "Customer Recharge" },
+            { key: "bulk_customer_package_update", label: "Bulk Customer Package Update" },
+            { key: "promise_date", label: "Promise Date" },
+            { key: "olt_user_monitoring", label: "OLT User Monitoring" },
+            { key: "traffic_monitoring", label: "Traffic Monitoring" },
+            { key: "webhook_message_log", label: "Webhook Message Log" }
+        ];
+
+        function renderPermissions() {
+            const grid = document.getElementById("permissionsGrid");
+            grid.innerHTML = PERMISSIONS_LIST.map((p) => `
+                <div class="col-md-4 col-sm-6">
+                    <div class="perm-card d-flex align-items-center justify-content-between">
+                        <div class="form-check m-0">
+                            <input class="form-check-input perm-check ${p.isMaster ? "perm-master" : "perm-item"}"
+                                   type="checkbox" value="${p.key}" id="perm_${p.key}" />
+                            <label class="form-check-label perm-label ${p.isMaster ? "fw-semibold" : ""}" for="perm_${p.key}">
+                                ${p.label}
+                            </label>
+                        </div>
+                        ${p.info ? `<span class="info-dot" title="Reseller permission option">i</span>` : ""}
+                    </div>
+                </div>
+            `).join("");
+
+            const master = document.querySelector(".perm-master");
+            const items = Array.from(document.querySelectorAll(".perm-item"));
+            if (master) {
+                master.addEventListener("change", () => {
+                    items.forEach((chk) => { chk.checked = master.checked; });
+                });
+            }
+        }
+
+        let csrfToken = "";
+        let searchTimer = null;
+
+        async function getCsrf(forceRefresh = false) {
+            if (csrfToken && !forceRefresh) return csrfToken;
+            const res = await fetch("/api/csrf-token", { credentials: "same-origin" });
+            const data = await res.json();
+            csrfToken = data.csrf_token || "";
+            return csrfToken;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        async function loadResellers() {
+            const search = document.getElementById("searchInput").value.trim();
+            const tbody = document.getElementById("tableBody");
+
+            try {
+                const query = search ? `?search=${encodeURIComponent(search)}` : "";
+                const res = await fetch(`/api/reseller-portal/resellers${query}`, { credentials: "same-origin" });
+                const json = await res.json();
+                if (!res.ok || !json.success) throw new Error(json.message || "Failed to load resellers.");
+
+                const rows = Array.isArray(json.data) ? json.data : [];
+                document.getElementById("totalData").textContent = json.summary?.total_resellers ?? rows.length;
+                document.getElementById("totalCustomers").textContent = json.summary?.total_customers ?? 0;
+                document.getElementById("totalBalance").textContent = json.summary?.total_balance ?? 0;
+
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No Data Found !</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = rows.map((r, i) => {
+                    const isActive = String(r.status || "active").toLowerCase() === "active";
+                    return `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td class="fw-semibold">${escapeHtml(r.name)}</td>
+                            <td>${escapeHtml(r.mobile)}</td>
+                            <td>${escapeHtml(r.email)}</td>
+                            <td>${escapeHtml(r.address)}</td>
+                            <td><span class="badge ${isActive ? "bg-success" : "bg-secondary"}">${isActive ? "Active" : "Inactive"}</span></td>
+                            <td>0</td>
+                            <td>৳${Number(r.balance || 0).toFixed(2)}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteReseller(${Number(r.id)})" title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join("");
+            } catch (err) {
+                document.getElementById("totalData").textContent = "0";
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        document.getElementById("createResellerForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+
+            const areas = Array.from(document.querySelectorAll(".area-check:checked")).map((el) => el.value);
+            const packages = Array.from(document.querySelectorAll(".pkg-check:checked")).map((el) => el.value);
+            const permissions = Array.from(document.querySelectorAll(".perm-check:checked")).map((el) => el.value);
+
+            const payload = {
+                name: String(fd.get("name") || "").trim(),
+                mobile: String(fd.get("mobile") || "").trim(),
+                nid_no: String(fd.get("nid_no") || "").trim(),
+                address: String(fd.get("address") || "").trim(),
+                email: String(fd.get("email") || "").trim(),
+                status: fd.get("status") === "inactive" ? "inactive" : "active",
+                website: String(fd.get("website") || "").trim(),
+                commission_type: fd.get("commission_type") === "package" ? "package" : "global",
+                areas,
+                packages,
+                permissions
+            };
+
+            try {
+                let token = await getCsrf();
+                let res = await fetch("/api/reseller-portal/resellers", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                    body: JSON.stringify(payload)
+                });
+                if (res.status === 403) {
+                    token = await getCsrf(true);
+                    res = await fetch("/api/reseller-portal/resellers", {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                        body: JSON.stringify(payload)
+                    });
+                }
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Failed to create reseller.");
+
+                e.target.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById("createResellerModal"));
+                if (modal) modal.hide();
+
+                await loadResellers();
+                Swal.fire({ icon: "success", title: "Created", text: data.message, timer: 1400, showConfirmButton: false });
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "Error", text: err.message });
+            }
+        });
+
+        async function deleteReseller(id) {
+            const confirmRes = await Swal.fire({
+                title: "Delete reseller?",
+                text: "This action cannot be undone.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#dc3545",
+                confirmButtonText: "Yes, delete"
+            });
+            if (!confirmRes.isConfirmed) return;
+
+            try {
+                let token = await getCsrf();
+                let res = await fetch(`/api/reseller-portal/resellers/${id}`, {
+                    method: "DELETE",
+                    credentials: "same-origin",
+                    headers: { "X-CSRF-Token": token }
+                });
+                if (res.status === 403) {
+                    token = await getCsrf(true);
+                    res = await fetch(`/api/reseller-portal/resellers/${id}`, {
+                        method: "DELETE",
+                        credentials: "same-origin",
+                        headers: { "X-CSRF-Token": token }
+                    });
+                }
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Failed to delete reseller.");
+
+                await loadResellers();
+                Swal.fire({ icon: "success", title: "Deleted", text: data.message, timer: 1300, showConfirmButton: false });
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "Error", text: err.message });
+            }
+        }
+
+        document.getElementById("searchInput").addEventListener("input", () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(loadResellers, 200);
+        });
+
+        renderPermissions();
+        loadResellers();
+
+        document.addEventListener("show.bs.modal", function (event) {
+            const modal = event.target;
+            document.body.appendChild(modal);
+            modal.style.setProperty("z-index", "2147483647", "important");
+            document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+                document.body.appendChild(bd);
+                bd.style.setProperty("z-index", "2147483640", "important");
+            });
+        });
+
+        document.addEventListener("hidden.bs.modal", function () {
+            document.querySelectorAll(".modal-backdrop").forEach((bd) => bd.remove());
+            document.body.classList.remove("modal-open");
+            document.body.style.removeProperty("overflow");
+            document.body.style.removeProperty("padding-right");
+        });
+    </script>
+</body>
+</html>

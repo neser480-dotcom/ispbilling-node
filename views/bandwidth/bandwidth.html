@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bandwidth List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --topbar-height: 70px;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f4f6f9;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--topbar-height) + 16px);
+            padding-right: 18px;
+            padding-bottom: 24px;
+            padding-left: 18px;
+            min-height: 100vh;
+            transition: margin-left 0.25s ease;
+        }
+
+        .page-banner {
+            background: #1e88e5;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-toolbar {
+            background: #1e88e5;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .data-toolbar .search-input {
+            max-width: 340px;
+            width: 100%;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #333;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background: #eef3f8;
+        }
+
+        .sort-hint {
+            font-size: 11px;
+            color: #8c96a5;
+            margin-left: 3px;
+            white-space: nowrap;
+        }
+
+        .page-footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 28px;
+            padding-bottom: 10px;
+        }
+
+        /* Modal & Backdrop always on top */
+        .modal-backdrop {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 2147483640 !important;
+        }
+
+        .modal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 2147483647 !important;
+        }
+
+        .modal-dialog {
+            position: relative !important;
+            z-index: 2147483647 !important;
+        }
+
+        .swal2-container {
+            z-index: 2147483647 !important;
+        }
+
+        @media (max-width: 991.98px) {
+            .main-content {
+                margin-left: 0;
+                padding-top: calc(var(--topbar-height) + 14px);
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="page-banner mb-3">
+            <h4 class="m-0 fw-normal">Bandwidth</h4>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light text-primary" type="button" onclick="loadData()" title="Refresh">
+                    <i class="fa fa-rotate-right"></i>
+                </button>
+                <button class="btn btn-light text-primary" type="button" onclick="openAddModal()" title="Add New">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3">
+            <div class="data-toolbar mb-3">
+                <div>
+                    <i class="fa fa-gauge-high"></i> Total Bandwidth:
+                    <span class="badge bg-primary border border-light" id="totalCount">0</span>
+                </div>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search bandwidth..." />
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sortable" data-sort="id"># <span class="sort-hint">↓↑</span></th>
+                            <th class="sortable" data-sort="name">Name <span class="sort-hint">↓↑</span></th>
+                            <th class="sortable" data-sort="category">Category <span class="sort-hint">↓↑</span></th>
+                            <th class="sortable" data-sort="unit_rate">Rate <span class="sort-hint">↓↑</span></th>
+                            <th class="sortable" data-sort="status">Status <span class="sort-hint">↓↑</span></th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" class="text-center py-4 text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="page-footer">© Irfan IT - 2026</div>
+    </main>
+
+    <!-- ADD / EDIT BANDWIDTH MODAL -->
+    <div class="modal fade" id="bandwidthModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bandwidthModalTitle">Add New Bandwidth</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="bandwidthForm">
+                    <input type="hidden" name="id" id="bandwidthId" />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="bwName" class="form-control" placeholder="e.g. IIG, GGC, FNA, CDN" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <input type="text" name="category" id="bwCategory" class="form-control" value="General" placeholder="e.g. Upstream, Cache" />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-7">
+                                <label class="form-label">Unit Rate</label>
+                                <input type="number" step="0.01" min="0" name="unit_rate" id="bwUnitRate" class="form-control" value="0.00" />
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label">Unit</label>
+                                <select name="unit" id="bwUnit" class="form-select">
+                                    <option value="Mbps" selected>Mbps</option>
+                                    <option value="Gbps">Gbps</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label">Status</label>
+                            <select name="status" id="bwStatus" class="form-select">
+                                <option value="active" selected>Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" id="saveBandwidthBtn">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+        let csrfToken = "";
+        let searchTimer = null;
+        let currentRows = [];
+        let sortField = "id";
+        let sortAsc = false;
+        let bandwidthModalInstance = null;
+
+        function getModalInstance() {
+            const el = document.getElementById("bandwidthModal");
+            if (!bandwidthModalInstance) {
+                bandwidthModalInstance = bootstrap.Modal.getOrCreateInstance(el);
+            }
+            return bandwidthModalInstance;
+        }
+
+        async function getCsrf(forceRefresh = false) {
+            if (csrfToken && !forceRefresh) return csrfToken;
+            const res = await fetch("/api/csrf-token", { credentials: "same-origin" });
+            const data = await res.json();
+            csrfToken = data.csrf_token || "";
+            return csrfToken;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function openAddModal() {
+            const form = document.getElementById("bandwidthForm");
+            form.reset();
+            document.getElementById("bandwidthId").value = "";
+            document.getElementById("bwCategory").value = "General";
+            document.getElementById("bwUnitRate").value = "0.00";
+            document.getElementById("bwUnit").value = "Mbps";
+            document.getElementById("bwStatus").value = "active";
+            document.getElementById("bandwidthModalTitle").textContent = "Add New Bandwidth";
+            getModalInstance().show();
+        }
+
+        function openEditModal(id) {
+            const item = currentRows.find((r) => Number(r.id) === Number(id));
+            if (!item) return;
+
+            document.getElementById("bandwidthId").value = item.id;
+            document.getElementById("bwName").value = item.name || "";
+            document.getElementById("bwCategory").value = item.category || "General";
+            document.getElementById("bwUnitRate").value = Number(item.unit_rate || 0).toFixed(2);
+            document.getElementById("bwUnit").value = item.unit || "Mbps";
+            document.getElementById("bwStatus").value = item.status === "inactive" ? "inactive" : "active";
+            document.getElementById("bandwidthModalTitle").textContent = "Edit Bandwidth";
+            getModalInstance().show();
+        }
+
+        function getSortedRows(rows) {
+            const copy = [...rows];
+            copy.sort((a, b) => {
+                let valA = a[sortField];
+                let valB = b[sortField];
+
+                if (sortField === "id" || sortField === "unit_rate") {
+                    valA = Number(valA || 0);
+                    valB = Number(valB || 0);
+                    return sortAsc ? valA - valB : valB - valA;
+                }
+
+                valA = String(valA || "").toLowerCase();
+                valB = String(valB || "").toLowerCase();
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+            return copy;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("tableBody");
+            const countEl = document.getElementById("totalCount");
+            const sorted = getSortedRows(currentRows);
+
+            countEl.textContent = sorted.length;
+
+            if (!sorted.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No Data Found !</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = sorted.map((r, i) => {
+                const isActive = String(r.status || "active").toLowerCase() === "active";
+                const badgeClass = isActive ? "bg-success" : "bg-secondary";
+                const statusText = isActive ? "Active" : "Inactive";
+                const rateText = `${Number(r.unit_rate || 0).toFixed(2)} / ${escapeHtml(r.unit || "Mbps")}`;
+
+                return `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="fw-semibold">${escapeHtml(r.name)}</td>
+                        <td>${escapeHtml(r.category || "General")}</td>
+                        <td>${escapeHtml(rateText)}</td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold" type="button" data-bs-toggle="dropdown">
+                                    •••
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button class="dropdown-item" type="button" onclick="openEditModal(${Number(r.id)})">
+                                            <i class="fa fa-pen-to-square me-2 text-primary"></i>Edit
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" type="button" onclick="deleteItem(${Number(r.id)})">
+                                            <i class="fa fa-trash me-2"></i>Delete
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function loadData() {
+            const search = document.getElementById("searchInput").value.trim();
+            const tbody = document.getElementById("tableBody");
+            const countEl = document.getElementById("totalCount");
+
+            try {
+                const url = `/api/bandwidth/items?search=${encodeURIComponent(search)}`;
+                const res = await fetch(url, { credentials: "same-origin" });
+                const json = await res.json();
+
+                if (!res.ok || !json.success) {
+                    throw new Error(json.message || "Failed to load bandwidth data.");
+                }
+
+                currentRows = Array.isArray(json.data) ? json.data : [];
+                renderTable();
+            } catch (err) {
+                currentRows = [];
+                countEl.textContent = "0";
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function fetchWithCsrfRetry(url, options) {
+            let token = await getCsrf();
+            let res = await fetch(url, {
+                ...options,
+                credentials: "same-origin",
+                headers: {
+                    ...(options.headers || {}),
+                    "X-CSRF-Token": token
+                }
+            });
+
+            if (res.status === 403) {
+                token = await getCsrf(true);
+                res = await fetch(url, {
+                    ...options,
+                    credentials: "same-origin",
+                    headers: {
+                        ...(options.headers || {}),
+                        "X-CSRF-Token": token
+                    }
+                });
+            }
+            return res;
+        }
+
+        document.getElementById("bandwidthForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const raw = Object.fromEntries(new FormData(form).entries());
+            const id = String(raw.id || "").trim();
+            const isEdit = Boolean(id);
+
+            const payload = {
+                name: String(raw.name || "").trim(),
+                category: String(raw.category || "General").trim(),
+                unit_rate: Number(raw.unit_rate || 0),
+                unit: String(raw.unit || "Mbps").trim(),
+                status: raw.status === "inactive" ? "inactive" : "active"
+            };
+
+            try {
+                const url = isEdit ? `/api/bandwidth/items/${id}` : "/api/bandwidth/items";
+                const method = isEdit ? "PUT" : "POST";
+
+                const res = await fetchWithCsrfRetry(url, {
+                    method,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || "Failed to save bandwidth.");
+                }
+
+                getModalInstance().hide();
+                await loadData();
+
+                Swal.fire({
+                    icon: "success",
+                    title: isEdit ? "Updated" : "Saved",
+                    text: data.message || (isEdit ? "Bandwidth updated successfully." : "Bandwidth added successfully."),
+                    timer: 1400,
+                    showConfirmButton: false
+                });
+            } catch (err) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: err.message
+                });
+            }
+        });
+
+        async function deleteItem(id) {
+            const confirmResult = await Swal.fire({
+                title: "Delete bandwidth?",
+                text: "This action cannot be undone.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#dc3545",
+                confirmButtonText: "Yes, delete"
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            try {
+                const res = await fetchWithCsrfRetry(`/api/bandwidth/items/${id}`, {
+                    method: "DELETE"
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || "Failed to delete item.");
+                }
+
+                await loadData();
+                Swal.fire({
+                    icon: "success",
+                    title: "Deleted",
+                    text: data.message || "Bandwidth deleted.",
+                    timer: 1300,
+                    showConfirmButton: false
+                });
+            } catch (err) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: err.message
+                });
+            }
+        }
+
+        document.querySelectorAll("th.sortable").forEach((th) => {
+            th.addEventListener("click", () => {
+                const field = th.dataset.sort;
+                if (!field) return;
+                if (sortField === field) {
+                    sortAsc = !sortAsc;
+                } else {
+                    sortField = field;
+                    sortAsc = true;
+                }
+                renderTable();
+            });
+        });
+
+        document.getElementById("searchInput").addEventListener("input", () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(loadData, 200);
+        });
+
+        loadData();
+
+        // Keep modals above topbar and sidebar
+        document.addEventListener("show.bs.modal", function (event) {
+            const modal = event.target;
+            document.body.appendChild(modal);
+
+            modal.style.setProperty("z-index", "2147483647", "important");
+            document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+                document.body.appendChild(bd);
+                bd.style.setProperty("z-index", "2147483640", "important");
+            });
+
+            document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+                el.style.setProperty("z-index", "10", "important");
+                el.querySelectorAll("*").forEach((child) => {
+                    child.style.setProperty("z-index", "10", "important");
+                });
+            });
+        });
+
+        document.addEventListener("hidden.bs.modal", function () {
+            document.querySelectorAll(".modal-backdrop").forEach((bd) => bd.remove());
+            document.body.classList.remove("modal-open");
+            document.body.style.removeProperty("overflow");
+            document.body.style.removeProperty("padding-right");
+
+            document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+                el.style.removeProperty("z-index");
+                el.querySelectorAll("*").forEach((child) => child.style.removeProperty("z-index"));
+            });
+        });
+    </script>
+</body>
+</html>

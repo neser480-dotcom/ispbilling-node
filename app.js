@@ -36,6 +36,8 @@ const billingRoutes =
 const websiteManagementRoutes = require("./routes/admin/website-management");
 const appDownloadRoutes =
     require("./routes/app-download/appDownload");
+const bandwidthRoutes = require("./routes/bandwidth/bandwidth.routes");
+const resellerPortalRoutes = require("./routes/reseller/reseller-portal.routes");
 /*
 |--------------------------------------------------------------------------
 | staff routes|--------------------------------------------------------------------------
@@ -492,7 +494,6 @@ app.use(
     paymentGatewayRoutes
 );
 
-
 /*
 |--------------------------------------------------------------------------
 | SUPER ADMIN MANUAL PAYMENT
@@ -804,6 +805,18 @@ app.use(
     expenditureRoutes
 );
 
+
+/*
+|--------------------------------------------------------------------------
+| BANDWIDTH 
+|--------------------------------------------------------------------------
+*/
+app.use("/api/reseller-portal", requireSoftwareBilling, resellerPortalRoutes);
+app.use(
+"/api/bandwidth",
+ requireSoftwareBilling, 
+bandwidthRoutes
+);
 /*
 |--------------------------------------------------------------------------
 | staff page
@@ -1175,31 +1188,24 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
-app.get(
-    "/support",
-    requireSoftwareBilling,
-    (req, res) => {
+const supportRoutes = require("./routes/support/support.routes");
+app.use("/api/support", requireSoftwareBilling, supportRoutes);
 
-        return res.status(501).send(
-            "ISP Support module is not implemented yet."
-        );
+app.get("/support", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(path.join(__dirname, "views", "support", "tickets.html"));
+});
 
-    }
-);
+app.get("/support/tickets", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(path.join(__dirname, "views", "support", "tickets.html"));
+});
 
-app.get(
-    "/support/tickets",
-    requireSoftwareBilling,
-    (req, res) => {
+app.get("/support/numbers", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(path.join(__dirname, "views", "support", "support-numbers.html"));
+});
 
-        return res.status(501).send(
-            "Support Tickets module is not implemented yet."
-        );
-
-    }
-);
-
-
+app.get("/support/package-change", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(path.join(__dirname, "views", "support", "package-change.html"));
+});
 /*
 |--------------------------------------------------------------------------
 | OLT
@@ -1256,17 +1262,6 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
-app.get(
-    "/areas",
-    requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Area module page is not implemented yet."
-        );
-
-    }
-);
 
 
 /*
@@ -1408,51 +1403,27 @@ app.get(
 app.get(
     "/reseller",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Reseller module is not implemented yet."
-        );
-
-    }
+    (req, res) => res.sendFile(path.join(__dirname, "views", "reseller", "reseller.html"))
 );
 
 app.get(
     "/reseller/recharge",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Reseller Recharge module is not implemented yet."
-        );
-
-    }
+    (req, res) => res.sendFile(path.join(__dirname, "views", "reseller", "recharge.html"))
 );
 
 app.get(
     "/reseller/sms",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Reseller SMS module is not implemented yet."
-        );
-
-    }
+    (req, res) => res.sendFile(path.join(__dirname, "views", "reseller", "sms-request.html"))
 );
 
 app.get(
     "/reseller/withdrawal",
     requireSoftwareBilling,
-    (req, res) => {
-
-        return res.status(501).send(
-            "Reseller Withdrawal module is not implemented yet."
-        );
-
-    }
+    (req, res) => res.sendFile(path.join(__dirname, "views", "reseller", "withdrawal.html"))
 );
-
+/*
 
 /*
 |--------------------------------------------------------------------------
@@ -1461,14 +1432,12 @@ app.get(
 */
 
 app.get(
-    "/bandwidth",
+    ["/bandwidth", "/bandwidth/bandwidth"],
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Bandwidth module is not implemented yet."
+        return res.sendFile(
+            path.join(__dirname, "views", "bandwidth", "bandwidth.html")
         );
-
     }
 );
 
@@ -1476,11 +1445,9 @@ app.get(
     "/bandwidth/reseller",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Bandwidth Reseller module is not implemented yet."
+        return res.sendFile(
+            path.join(__dirname, "views", "bandwidth", "reseller.html")
         );
-
     }
 );
 
@@ -1488,15 +1455,11 @@ app.get(
     "/bandwidth/collection",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Bandwidth Collection module is not implemented yet."
+        return res.sendFile(
+            path.join(__dirname, "views", "bandwidth", "collection.html")
         );
-
     }
 );
-
-
 /*
 |--------------------------------------------------------------------------
 | MESSAGE
@@ -1557,17 +1520,85 @@ app.get(
     }
 );
 
-
 /*
 |--------------------------------------------------------------------------
 | ACCOUNTS
 |--------------------------------------------------------------------------
 */
 
+app.get(
+    "/pay",
+    (req, res) => {
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "billing",
+                "public-bill-pay.html"
+            )
+        );
+    }
+);
+
+app.get(
+    "/help/tutorials",
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "help",
+                "tutorials.html"
+            )
+        );
+    }
+);
 
 
 /*
 |--------------------------------------------------------------------------
+| AMADERBILL SUPPORT PAGES
+|--------------------------------------------------------------------------
+| Support Portal এবং Support Numbers-এর আলাদা URL
+*/
+
+// Support Portal Page
+app.get(
+    "/amaderbill-support/support-portal",
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "amaderbill-support",
+                "support-portal.html"
+            )
+        );
+    }
+);
+
+// Support Numbers Page
+app.get(
+    "/amaderbill-support/amaderbill-numbers",
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "amaderbill-support",
+                "amaderbill-numbers.html"
+            )
+        );
+    }
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| ACCOUNTS INVOICES
 |--------------------------------------------------------------------------
 */
 
@@ -1575,7 +1606,6 @@ app.get(
     "/accounts/invoices",
     requireSoftwareBilling,
     (req, res) => {
-
         return res.sendFile(
             path.join(
                 __dirname,
@@ -1585,10 +1615,8 @@ app.get(
                 "billing-invoices.html"
             )
         );
-
     }
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1603,21 +1631,42 @@ app.use(
 );
 
 
+
 /*
 |--------------------------------------------------------------------------
 | TUTORIAL
 |--------------------------------------------------------------------------
 */
 
+// Tutorial Page
 app.get(
     "/tutorial",
     requireSoftwareBilling,
     (req, res) => {
-
-        return res.status(501).send(
-            "Tutorial module is not implemented yet."
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "help",
+                "tutorials.html"
+            )
         );
+    }
+);
 
+// Legacy Tutorial URL
+app.get(
+    "/help/tutorials",
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(
+                __dirname,
+                "views",
+                "help",
+                "tutorials.html"
+            )
+        );
     }
 );
 

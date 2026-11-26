@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Open Support Ticket</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --topbar-height: 70px;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f4f6f9;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--topbar-height) + 16px);
+            padding-right: 18px;
+            padding-bottom: 24px;
+            padding-left: 18px;
+            min-height: 100vh;
+            transition: margin-left 0.25s ease;
+        }
+
+        .page-banner {
+            background: #1e88e5;
+            color: #fff;
+            padding: 16px 20px;
+            border-radius: 6px;
+            font-size: 22px;
+            font-weight: 500;
+        }
+
+        .data-toolbar {
+            background: #1e88e5;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .data-toolbar .search-input {
+            max-width: 340px;
+            width: 100%;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #333;
+        }
+
+        .nav-tabs .nav-link {
+            color: #333;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #1e88e5;
+            font-weight: 600;
+            border-bottom: 2px solid #1e88e5;
+        }
+
+        .sort-hint {
+            font-size: 11px;
+            color: #8c96a5;
+            margin-left: 3px;
+            white-space: nowrap;
+        }
+
+        .page-footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 28px;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 991.98px) {
+            .main-content {
+                margin-left: 0;
+                padding-top: calc(var(--topbar-height) + 14px);
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+.modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 2147483640 !important;
+}
+
+.modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 2147483647 !important;
+}
+
+.modal-dialog {
+    position: relative !important;
+    z-index: 2147483647 !important;
+}
+
+.swal2-container {
+    z-index: 2147483647 !important;
+}
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="page-banner mb-3">Open Support Ticket</div>
+
+        <div class="card border-0 shadow-sm p-3">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabTickets" type="button">
+                        Open Support Ticket
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCategory" type="button">
+                        Ticket Category
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- TAB 1: OPEN SUPPORT TICKET -->
+                <div class="tab-pane fade show active" id="tabTickets">
+                    <form id="filterForm" class="row g-2 mb-3 align-items-center">
+                        <div class="col-md-2">
+                            <select id="filterCategory" class="form-select">
+                                <option value="">Ticket Category</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="filterStaff" class="form-select">
+                                <option value="">Staff</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="filterType" class="form-select">
+                                <option value="">Ticket Type</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="filterStatus" class="form-select">
+                                <option value="">Status</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Process">Process</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+                        </div>
+                    </form>
+
+                    <div class="data-toolbar mb-3">
+                        <div>
+                            <i class="fa fa-cog"></i> Total Data:
+                            <span class="badge bg-primary border border-light" id="ticketCount">0</span>
+                        </div>
+                        <input type="text" id="ticketSearch" class="search-input" placeholder="Search" />
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID <span class="sort-hint">↓↑</span></th>
+                                    <th>Ticket ID <span class="sort-hint">↓↑</span></th>
+                                    <th>Name <span class="sort-hint">↓↑</span></th>
+                                    <th>Message <span class="sort-hint">↓↑</span></th>
+                                    <th>Staff <span class="sort-hint">↓↑</span></th>
+                                    <th>Status <span class="sort-hint">↓↑</span></th>
+                                    <th>Type <span class="sort-hint">↓↑</span></th>
+                                    <th>Category <span class="sort-hint">↓↑</span></th>
+                                    <th>Created At <span class="sort-hint">↓↑</span></th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketTableBody">
+                                <tr><td colspan="10" class="py-4 text-muted">No Data Found !</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TICKET CATEGORY -->
+                <div class="tab-pane fade" id="tabCategory">
+                    <div class="data-toolbar mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span>
+                                <i class="fa fa-cog"></i> Total Data:
+                                <span class="badge bg-primary border border-light" id="categoryCount">0</span>
+                            </span>
+                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="Add Category">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <input type="text" id="categorySearch" class="search-input" placeholder="Search" />
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th># <span class="sort-hint">↓↑</span></th>
+                                    <th>Name <span class="sort-hint">↓↑</span></th>
+                                    <th>Created At <span class="sort-hint">↓↑</span></th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody">
+                                <tr><td colspan="4" class="py-4 text-muted">No Data Found !</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">© Irfan IT - 2026</div>
+    </main>
+
+    <!-- ADD CATEGORY MODAL -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addCategoryForm">
+                    <div class="modal-body">
+                        <label class="form-label">Name</label>
+                        <input type="text" id="categoryNameInput" class="form-control" required />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TICKET MODAL -->
+    <div class="modal fade" id="addTicketModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Support Ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addTicketForm">
+                    <div class="modal-body row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Customer Name *</label>
+                            <input type="text" name="customer_name" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <select name="category_id" id="modalCategorySelect" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ticket Type</label>
+                            <select name="ticket_type" class="form-select">
+                                <option value="High">High</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Assign Staff</label>
+                            <input type="text" name="staff_name" class="form-control" placeholder="Staff Name" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Message *</label>
+                            <textarea name="message" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+        let csrfToken = "";
+        async function getCsrf() {
+            if (csrfToken) return csrfToken;
+            const res = await fetch("/api/csrf-token");
+            const data = await res.json();
+            csrfToken = data.csrf_token || "";
+            return csrfToken;
+        }
+
+        function getStatusBadge(status) {
+            if (status === "Completed") {
+                return `<span class="badge bg-success">Completed</span>`;
+            }
+            if (status === "Process") {
+                return `<span class="badge bg-warning text-dark">Process</span>`;
+            }
+            return `<span class="badge bg-danger">Pending</span>`;
+        }
+
+        function getTypeBadge(type) {
+            if (type === "High") {
+                return `<span class="badge bg-danger">High</span>`;
+            }
+            if (type === "Low") {
+                return `<span class="badge bg-secondary">Low</span>`;
+            }
+            return `<span class="badge bg-primary">Medium</span>`;
+        }
+
+        async function loadCategories() {
+            const search = document.getElementById("categorySearch").value.trim();
+            const res = await fetch(`/api/support/categories?search=${encodeURIComponent(search)}`);
+            const json = await res.json();
+            const rows = json.data || [];
+
+            document.getElementById("categoryCount").textContent = rows.length;
+            const filterCat = document.getElementById("filterCategory");
+            const modalCat = document.getElementById("modalCategorySelect");
+            const currentFilter = filterCat.value;
+
+            filterCat.innerHTML = `<option value="">Ticket Category</option>` + rows.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+            modalCat.innerHTML = `<option value="">-- Select --</option>` + rows.map(r => `<option value="${r.id}">${r.name}</option>`).join("");
+            filterCat.value = currentFilter;
+
+            const tbody = document.getElementById("categoryTableBody");
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-muted">No Data Found !</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map((r, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${r.name}</td>
+                    <td>${new Date(r.created_at).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${r.id})"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        async function loadTickets() {
+            const params = new URLSearchParams({
+                category_id: document.getElementById("filterCategory").value,
+                staff_name: document.getElementById("filterStaff").value,
+                ticket_type: document.getElementById("filterType").value,
+                status: document.getElementById("filterStatus").value,
+                search: document.getElementById("ticketSearch").value.trim()
+            });
+
+            const res = await fetch(`/api/support/tickets?${params.toString()}`);
+            const json = await res.json();
+            const rows = json.data || [];
+
+            document.getElementById("ticketCount").textContent = rows.length;
+            const staffSelect = document.getElementById("filterStaff");
+            const currentStaff = staffSelect.value;
+            const staffList = [...new Set(rows.map(r => r.staff_name).filter(Boolean))];
+            staffSelect.innerHTML = `<option value="">Staff</option>` + staffList.map(s => `<option value="${s}">${s}</option>`).join("");
+            staffSelect.value = currentStaff;
+
+            const tbody = document.getElementById("ticketTableBody");
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="10" class="py-4 text-muted">No Data Found !</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.ticket_code}</td>
+                    <td>${r.customer_name}</td>
+                    <td>${r.message}</td>
+                    <td>${r.staff_name || "-"}</td>
+                    <td>${getStatusBadge(r.status)}</td>
+                    <td>${getTypeBadge(r.ticket_type)}</td>
+                    <td>${r.category_name || "-"}</td>
+                    <td>${new Date(r.created_at).toLocaleString()}</td>
+                    <td>
+                        <div class="d-flex justify-content-center gap-1">
+                            <select class="form-select form-select-sm" style="width: 112px;" onchange="updateTicketStatus(${r.id}, this.value)">
+                                <option value="Pending" ${r.status === "Pending" ? "selected" : ""}>Pending</option>
+                                <option value="Process" ${r.status === "Process" ? "selected" : ""}>Process</option>
+                                <option value="Completed" ${r.status === "Completed" ? "selected" : ""}>Completed</option>
+                            </select>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTicket(${r.id})" title="Delete"><i class="fa fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        document.getElementById("addCategoryForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = await getCsrf();
+            const name = document.getElementById("categoryNameInput").value.trim();
+            const res = await fetch("/api/support/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                document.getElementById("addCategoryForm").reset();
+                bootstrap.Modal.getInstance(document.getElementById("addCategoryModal")).hide();
+                loadCategories();
+            }
+        });
+
+        document.getElementById("addTicketForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = await getCsrf();
+            const body = Object.fromEntries(new FormData(e.target).entries());
+            const res = await fetch("/api/support/tickets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                e.target.reset();
+                bootstrap.Modal.getInstance(document.getElementById("addTicketModal")).hide();
+                loadTickets();
+            }
+        });
+
+        async function updateTicketStatus(id, status) {
+            const token = await getCsrf();
+            await fetch(`/api/support/tickets/${id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                body: JSON.stringify({ status })
+            });
+            loadTickets();
+        }
+
+        async function deleteTicket(id) {
+            const token = await getCsrf();
+            await fetch(`/api/support/tickets/${id}`, {
+                method: "DELETE",
+                headers: { "X-CSRF-Token": token }
+            });
+            loadTickets();
+        }
+
+        async function deleteCategory(id) {
+            const token = await getCsrf();
+            await fetch(`/api/support/categories/${id}`, {
+                method: "DELETE",
+                headers: { "X-CSRF-Token": token }
+            });
+            loadCategories();
+        }
+
+        document.getElementById("filterForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            loadTickets();
+        });
+        document.getElementById("ticketSearch").addEventListener("input", loadTickets);
+        document.getElementById("categorySearch").addEventListener("input", loadCategories);
+
+        loadCategories();
+        loadTickets();
+document.addEventListener("show.bs.modal", function (event) {
+    const modal = event.target;
+    document.body.appendChild(modal);
+
+    modal.style.setProperty("z-index", "2147483647", "important");
+    document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+        document.body.appendChild(bd);
+        bd.style.setProperty("z-index", "2147483640", "important");
+    });
+
+    document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+        el.style.setProperty("z-index", "10", "important");
+        el.querySelectorAll("*").forEach((child) => {
+            child.style.setProperty("z-index", "10", "important");
+        });
+    });
+});
+
+document.addEventListener("hidden.bs.modal", function () {
+    document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+        el.style.removeProperty("z-index");
+        el.querySelectorAll("*").forEach((child) => child.style.removeProperty("z-index"));
+    });
+});
+    </script>
+</body>
+</html>

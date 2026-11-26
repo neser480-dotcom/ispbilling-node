@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bill Payment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(90deg, #00b4db 0%, #1e88e5 55%, #2b3a9f 100%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pay-wrapper {
+            max-width: 1140px;
+            width: 100%;
+            margin: 28px auto;
+            padding: 0 14px;
+            flex: 1;
+        }
+
+        .panel-box {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .panel-dark-header {
+            background: #364152;
+            color: #fff;
+            padding: 11px 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-grid-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 24px;
+            padding: 16px 18px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .info-item i {
+            color: #1e88e5;
+            margin-top: 3px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.2;
+        }
+
+        .info-val {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .pay-footer-bar {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 13px;
+            padding: 14px 10px;
+        }
+
+        @media (max-width: 767.98px) {
+            .info-grid-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="pay-wrapper">
+        <!-- Company Info Card -->
+        <div class="panel-box">
+            <div class="panel-dark-header">
+                <i class="fa fa-building"></i>
+                <span id="companyName">আযহার ক্যাবল টিভি এন্ড ব্রডব্যান্ড</span>
+            </div>
+            <div class="info-grid-row">
+                <div class="info-item">
+                    <i class="fa fa-user"></i>
+                    <div>
+                        <div class="info-label">Owner</div>
+                        <div class="info-val" id="companyOwner">নেছার উদ্দিন</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fa fa-phone"></i>
+                    <div>
+                        <div class="info-label">Contact Number</div>
+                        <div class="info-val" id="companyPhone">NESER UDDIN</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fa fa-location-dot"></i>
+                    <div>
+                        <div class="info-label">Office</div>
+                        <div class="info-val" id="companyOffice">গ্রাম মধ্যকান্দি</div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <i class="fa fa-envelope"></i>
+                    <div>
+                        <div class="info-label">Email Address</div>
+                        <div class="info-val" id="companyEmail">neser480@gmail.com</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Search Customer by ID -->
+        <div class="panel-box" id="lookupCard">
+            <div class="panel-dark-header">
+                <i class="fa fa-credit-card"></i>
+                <span>Bill Payment</span>
+            </div>
+            <form id="lookupForm" class="p-3">
+                <div class="text-muted small mb-2">
+                    <i class="fa fa-circle-info me-1"></i>Find your ID and pay monthly bills
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white"><i class="fa fa-id-card text-muted"></i></span>
+                    <input type="text" id="customerIdInput" class="form-control" placeholder="Enter Customer ID" required />
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-medium">
+                    <i class="fa fa-magnifying-glass me-1"></i>Find &amp; Proceed to Payment
+                </button>
+            </form>
+        </div>
+
+        <!-- Step 2: Customer Account & Payable Summary -->
+        <div class="panel-box d-none" id="accountCard">
+            <div class="panel-dark-header">
+                <i class="fa fa-credit-card"></i>
+                <span>Bill Payment</span>
+            </div>
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 pb-3 border-bottom">
+                    <div>
+                        <h5 class="mb-1 fw-bold" id="custName">-</h5>
+                        <div class="text-muted small"><i class="fa fa-phone me-1"></i><span id="custMobile">-</span></div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fs-4 fw-bold text-primary" id="custBillAmount">0 TK</div>
+                        <div class="text-muted small" id="custCycle">Monthly</div>
+                    </div>
+                </div>
+
+                <div class="row g-2 my-3">
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="small text-muted">Status</div>
+                            <span class="badge bg-primary mt-1" id="custStatus">active</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="small text-muted">Balance</div>
+                            <div class="fw-bold mt-1" id="custBalance">0 TK <i class="fa fa-circle-check text-success"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center bg-light border rounded px-3 py-2 mb-3">
+                    <div>
+                        <div class="fw-semibold">Total Payable</div>
+                        <div class="small text-muted">One-time payment</div>
+                    </div>
+                    <div class="fs-5 fw-bold text-success" id="totalPayableText">0 TK</div>
+                </div>
+
+                <button type="button" class="btn btn-success w-100 py-2 fw-medium mb-2" data-bs-toggle="modal" data-bs-target="#billingInfoModal">
+                    <i class="fa fa-credit-card me-1"></i>Pay Now Securely
+                </button>
+                <button type="button" class="btn btn-outline-primary w-100 py-2" onclick="resetLookup()">
+                    <i class="fa fa-rotate-right me-1"></i>Search Another Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pay-footer-bar">© Irfan IT - 2026</div>
+
+    <!-- BILLING INFORMATION MODAL -->
+    <div class="modal fade" id="billingInfoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-normal">Billing Information</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="billingPayForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Total Bill Amount <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="1" id="modalBillAmount" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Bill Month <span class="text-danger">*</span></label>
+                            <select id="modalBillMonth" class="form-select" required>
+                                <option value="January">January</option>
+                                <option value="February">February</option>
+                                <option value="March">March</option>
+                                <option value="April">April</option>
+                                <option value="May">May</option>
+                                <option value="June">June</option>
+                                <option value="July">July</option>
+                                <option value="August">August</option>
+                                <option value="September">September</option>
+                                <option value="October">October</option>
+                                <option value="November" selected>November</option>
+                                <option value="December">December</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Select your payment method</label>
+                            <select id="modalPaymentMethod" class="form-select" required>
+                                <option value="">-- Choose Gateway --</option>
+                                <option value="bKash">bKash</option>
+                                <option value="Nagad">Nagad</option>
+                                <option value="Rocket">Rocket</option>
+                                <option value="SSLCommerz">SSLCommerz</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success">Proceed</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentCustomer = null;
+
+        function resetLookup() {
+            currentCustomer = null;
+            document.getElementById("customerIdInput").value = "";
+            document.getElementById("accountCard").classList.add("d-none");
+            document.getElementById("lookupCard").classList.remove("d-none");
+        }
+
+        document.getElementById("lookupForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const custId = document.getElementById("customerIdInput").value.trim();
+            if (!custId) return;
+
+            try {
+                const res = await fetch(`/api/customers?search=${encodeURIComponent(custId)}`, {
+                    credentials: "same-origin"
+                });
+                const json = await res.json();
+                const list = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+                const found = list.find((c) => String(c.id) === custId || String(c.customer_code || "") === custId) || list[0];
+
+                if (!found) {
+                    Swal.fire({ icon: "warning", title: "Not Found", text: "No customer found with this ID." });
+                    return;
+                }
+
+                currentCustomer = found;
+                const due = Number(found.due_amount ?? found.monthly_fee ?? found.bill ?? 500);
+                const bal = Number(found.balance ?? 0);
+
+                document.getElementById("custName").textContent = found.name || found.customer_name || "Customer";
+                document.getElementById("custMobile").textContent = found.mobile || found.phone || "-";
+                document.getElementById("custBillAmount").textContent = `${due} TK`;
+                document.getElementById("custStatus").textContent = found.status || "active";
+                document.getElementById("custBalance").innerHTML = `${bal} TK <i class="fa fa-circle-check text-success"></i>`;
+                document.getElementById("totalPayableText").textContent = `${due} TK`;
+                document.getElementById("modalBillAmount").value = due;
+
+                document.getElementById("lookupCard").classList.add("d-none");
+                document.getElementById("accountCard").classList.remove("d-none");
+            } catch (err) {
+                Swal.fire({ icon: "error", title: "Error", text: err.message || "Failed to lookup customer." });
+            }
+        });
+
+        document.getElementById("billingPayForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const amount = Number(document.getElementById("modalBillAmount").value || 0);
+            const month = document.getElementById("modalBillMonth").value;
+            const method = document.getElementById("modalPaymentMethod").value;
+
+            if (!(amount > 0) || !method) {
+                Swal.fire({ icon: "warning", title: "Required", text: "Please enter amount and select payment method." });
+                return;
+            }
+
+            const modalEl = document.getElementById("billingInfoModal");
+            const inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+
+            Swal.fire({
+                icon: "info",
+                title: "Payment Request",
+                text: `${amount} TK (${month}) via ${method} prepared for ${currentCustomer?.name || "Customer"}.`
+            });
+        });
+    </script>
+</body>
+</html>

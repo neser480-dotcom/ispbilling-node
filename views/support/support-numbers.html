@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Numbers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --topbar-height: 70px;
+            --sidebar-width: 250px;
+        }
+
+        body {
+            background: #f4f6f9;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding-top: calc(var(--topbar-height) + 16px);
+            padding-right: 18px;
+            padding-bottom: 24px;
+            padding-left: 18px;
+            min-height: 100vh;
+            transition: margin-left 0.25s ease;
+        }
+
+        .page-banner {
+            background: #1e88e5;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-toolbar {
+            background: #1e88e5;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .data-toolbar .search-input {
+            max-width: 340px;
+            width: 100%;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #333;
+        }
+
+        .sort-hint {
+            font-size: 11px;
+            color: #8c96a5;
+            margin-left: 3px;
+            white-space: nowrap;
+        }
+
+        .page-footer {
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 28px;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 991.98px) {
+            .main-content {
+                margin-left: 0;
+                padding-top: calc(var(--topbar-height) + 14px);
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+/* পপ-আপ বা মডাল যেন সব কিছুর উপরে থাকে */
+.modal-backdrop {
+    z-index: 19990 !important;
+}
+
+.modal {
+    z-index: 20000 !important;
+}
+
+.modal-dialog {
+    z-index: 20010 !important;
+}
+
+/* SweetAlert2 ব্যবহার করলে সেও যেন সব কিছুর উপরে থাকে */
+.swal2-container {
+    z-index: 20050 !important;
+}
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div id="topbarContainer"></div>
+
+    <main class="main-content">
+        <div class="page-banner mb-3">
+            <h4 class="m-0 fw-normal">Support Numbers</h4>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light text-primary" data-bs-toggle="modal" data-bs-target="#createSupporterModal" title="Add Supporter">
+                    <i class="fa fa-user-plus"></i>
+                </button>
+                <button class="btn btn-light text-primary" onclick="loadNumbers()" title="Refresh">
+                    <i class="fa fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3">
+            <div class="data-toolbar mb-3">
+                <div>
+                    <i class="fa fa-cog"></i> Total Data:
+                    <span class="badge bg-primary border border-light" id="numCount">0</span>
+                </div>
+                <input type="text" id="numSearch" class="search-input" placeholder="Search" />
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th># <span class="sort-hint">↓↑</span></th>
+                            <th>Name <span class="sort-hint">↓↑</span></th>
+                            <th>Mobile <span class="sort-hint">↓↑</span></th>
+                            <th>Start Time <span class="sort-hint">↓↑</span></th>
+                            <th>End Time <span class="sort-hint">↓↑</span></th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="numTableBody">
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No Data Found !</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="page-footer">© Irfan IT - 2026</div>
+    </main>
+
+    <!-- CREATE CUSTOMERS SUPPORTER MODAL -->
+    <div class="modal fade" id="createSupporterModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Customers Supporter</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="supporterForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mobile <span class="text-danger">*</span></label>
+                            <input type="text" name="mobile" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Support Start Time <span class="text-danger">*</span></label>
+                            <input type="text" name="start_time" class="form-control" placeholder="11:52 AM" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Select Support End Time <span class="text-danger">*</span></label>
+                            <input type="text" name="end_time" class="form-control" placeholder="11:52 AM" required />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/sidebar-loader.js"></script>
+    <script src="/assets/js/topbar-loader.js"></script>
+    <script>
+        let csrfToken = "";
+        async function getCsrf() {
+            if (csrfToken) return csrfToken;
+            const res = await fetch("/api/csrf-token");
+            const data = await res.json();
+            csrfToken = data.csrf_token || "";
+            return csrfToken;
+        }
+
+        async function loadNumbers() {
+            const search = document.getElementById("numSearch").value.trim();
+            const res = await fetch(`/api/support/numbers?search=${encodeURIComponent(search)}`);
+            const json = await res.json();
+            const rows = json.data || [];
+
+            document.getElementById("numCount").textContent = rows.length;
+            const tbody = document.getElementById("numTableBody");
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No Data Found !</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map((r, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${r.name}</td>
+                    <td>${r.mobile}</td>
+                    <td>${r.start_time}</td>
+                    <td>${r.end_time}</td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-primary text-decoration-none fw-bold" type="button" data-bs-toggle="dropdown">
+                                •••
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <button class="dropdown-item text-danger" type="button" onclick="deleteNumber(${r.id})">
+                                        <i class="fa fa-trash me-2"></i>Delete
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        document.getElementById("supporterForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = await getCsrf();
+            const body = Object.fromEntries(new FormData(e.target).entries());
+            const res = await fetch("/api/support/numbers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                e.target.reset();
+                bootstrap.Modal.getInstance(document.getElementById("createSupporterModal")).hide();
+                loadNumbers();
+            }
+        });
+
+        async function deleteNumber(id) {
+            const token = await getCsrf();
+            await fetch(`/api/support/numbers/${id}`, {
+                method: "DELETE",
+                headers: { "X-CSRF-Token": token }
+            });
+            loadNumbers();
+        }
+
+        document.getElementById("numSearch").addEventListener("input", loadNumbers);
+        loadNumbers();
+document.addEventListener("show.bs.modal", function (event) {
+    const modal = event.target;
+    document.body.appendChild(modal);
+
+    // সব মডাল ও ব্যাকড্রপ সবার উপরে
+    modal.style.setProperty("z-index", "2147483647", "important");
+    document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+        document.body.appendChild(bd);
+        bd.style.setProperty("z-index", "2147483640", "important");
+    });
+
+    // টপবার ও সাইডবারকে মডালের নিচে রাখা
+    const topbar = document.getElementById("topbarContainer");
+    const sidebar = document.getElementById("sidebarContainer");
+    if (topbar) {
+        topbar.style.setProperty("z-index", "100", "important");
+        topbar.querySelectorAll("*").forEach((el) => {
+            el.style.setProperty("z-index", "100", "important");
+        });
+    }
+    if (sidebar) {
+        sidebar.style.setProperty("z-index", "100", "important");
+    }
+});
+
+document.addEventListener("hidden.bs.modal", function () {
+    const topbar = document.getElementById("topbarContainer");
+    const sidebar = document.getElementById("sidebarContainer");
+    if (topbar) {
+        topbar.style.removeProperty("z-index");
+        topbar.querySelectorAll("*").forEach((el) => el.style.removeProperty("z-index"));
+    }
+    if (sidebar) {
+        sidebar.style.removeProperty("z-index");
+    }
+});document.addEventListener("show.bs.modal", function (event) {
+    const modal = event.target;
+    document.body.appendChild(modal);
+
+    modal.style.setProperty("z-index", "2147483647", "important");
+    document.querySelectorAll(".modal-backdrop").forEach((bd) => {
+        document.body.appendChild(bd);
+        bd.style.setProperty("z-index", "2147483640", "important");
+    });
+
+    // সাইডবার ও টপবারকে মডালের নিচে রাখা
+    document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+        el.style.setProperty("z-index", "10", "important");
+        el.querySelectorAll("*").forEach((child) => {
+            child.style.setProperty("z-index", "10", "important");
+        });
+    });
+});
+
+document.addEventListener("hidden.bs.modal", function () {
+    document.querySelectorAll("#sidebarContainer, #topbarContainer, .sidebar, .topbar").forEach((el) => {
+        el.style.removeProperty("z-index");
+        el.querySelectorAll("*").forEach((child) => child.style.removeProperty("z-index"));
+    });
+});
+    </script>
+</body>
+</html>
