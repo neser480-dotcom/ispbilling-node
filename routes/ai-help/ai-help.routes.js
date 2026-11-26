@@ -695,7 +695,7 @@ router.post("/chat", async (req, res) => {
             try{
                 const response=await fetch(p.endpoint,{method:"POST",headers:{Authorization:"Bearer "+p.apiKey,"Content-Type":"application/json",
                     ...(p.id==="openrouter"?{"HTTP-Referer":"https://amaderbill.com","X-Title":"Amader Bill AI Help"}:{})},
-                    body:JSON.stringify({model:p.model,messages,temperature:0.2,max_tokens:900}),signal:controller.signal});
+                    body:JSON.stringify({model:p.model,messages,...(p.id==="openai"?{max_completion_tokens:900}:{max_tokens:900})}),signal:controller.signal});
                 const result=await response.json().catch(()=>({}));
                 if(!response.ok){failures.push(p.id+":"+response.status);console.warn("[AI Help Provider]",p.id,response.status);continue;}
                 answer=String(result.choices?.[0]?.message?.content||"").trim();
