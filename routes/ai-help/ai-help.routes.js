@@ -16,14 +16,61 @@ const CHAT_WINDOW = 60 * 1000;
 const chatAttempts = new Map();
 
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
-
-const ALLOWED_MODELS = [
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b"
+const AI_PROVIDERS = [
+    {
+        "id": "openai",
+        "label": "OpenAI (ChatGPT)",
+        "defaultModel": "gpt-6-luna",
+        "url": "https://api.openai.com/v1/chat/completions"
+    },
+    {
+        "id": "gemini",
+        "label": "Google Gemini",
+        "defaultModel": "gemini-2.5-flash",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    },
+    {
+        "id": "groq",
+        "label": "Groq",
+        "defaultModel": "openai/gpt-oss-120b",
+        "url": "https://api.groq.com/openai/v1/chat/completions"
+    },
+    {
+        "id": "openrouter",
+        "label": "OpenRouter Free",
+        "defaultModel": "openrouter/free",
+        "url": "https://openrouter.ai/api/v1/chat/completions"
+    },
+    {
+        "id": "cloudflare",
+        "label": "Cloudflare Workers AI",
+        "defaultModel": "@cf/meta/llama-3.1-8b-instruct",
+        "url": "cloudflare"
+    },
+    {
+        "id": "sambanova",
+        "label": "SambaNova",
+        "defaultModel": "Meta-Llama-3.3-70B-Instruct",
+        "url": "https://api.sambanova.ai/v1/chat/completions"
+    },
+    {
+        "id": "nvidia",
+        "label": "NVIDIA NIM",
+        "defaultModel": "meta/llama-3.1-8b-instruct",
+        "url": "https://integrate.api.nvidia.com/v1/chat/completions"
+    },
+    {
+        "id": "zai",
+        "label": "Z.ai",
+        "defaultModel": "glm-4.7-flash",
+        "url": "https://api.z.ai/api/paas/v4/chat/completions"
+    }
 ];
-
-const GROQ_API_URL =
-    "https://api.groq.com/openai/v1/chat/completions";
+function providerEndpoint(p, accountId) {
+    if (p.id === "cloudflare") return accountId
+        ? "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions" : "";
+    return p.url;
+}
 
 function companyId(req) {
     if (isSuperAdmin(req)) return 0;
@@ -123,6 +170,23 @@ async function ensureSchema() {
             `);
 
             await db.query(`
+                CREATE TABLE IF NOT EXISTS ai_help_provider_keys (
+                    company_id INT NOT NULL, provider VARCHAR(40) NOT NULL,
+                    enabled TINYINT(1) NOT NULL DEFAULT 0, model VARCHAR(160) NOT NULL,
+                    api_key_enc TEXT NULL, account_id VARCHAR(120) NULL,
+                    priority INT NOT NULL DEFAULT 100, updated_by INT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (company_id, provider),
+                    KEY idx_ai_provider_priority (company_id, enabled, priority)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            `);
+            await db.query(`
+                INSERT IGNORE INTO ai_help_provider_keys
+                    (company_id,provider,enabled,model,api_key_enc,priority,updated_by)
+                SELECT company_id,'groq',1,model,api_key_enc,30,updated_by
+                FROM ai_help_settings WHERE api_key_enc IS NOT NULL AND api_key_enc <> ''
+            `);
+            await db.query(`
                 CREATE TABLE IF NOT EXISTS ai_help_knowledge (
                     company_id INT NOT NULL PRIMARY KEY,
                     knowledge LONGTEXT NULL,
@@ -191,22 +255,15 @@ async function ensureSchema() {
 }
 
 async function getSettings(id) {
-    const [rows] = await db.query(
-        `SELECT enabled, model, api_key_enc
-         FROM ai_help_settings
-         WHERE company_id = ?
-         LIMIT 1`,
-        [id]
-    );
-
-    const selected = rows[0];
-
-    return {
-        enabled: Number(selected?.enabled) === 1,
-        model: selected?.model || DEFAULT_MODEL,
-        apiKey: decrypt(selected?.api_key_enc),
-        configured: Boolean(selected?.api_key_enc)
-    };
+    const [s] = await db.query(`SELECT enabled FROM ai_help_settings WHERE company_id=? LIMIT 1`,[id]);
+    const [rows] = await db.query(`SELECT provider,enabled,model,api_key_enc,account_id FROM ai_help_provider_keys
+        WHERE company_id=? ORDER BY priority,provider`,[id]);
+    const providers=rows.filter(x=>Number(x.enabled)===1&&x.api_key_enc).map(x=>{
+        const p=AI_PROVIDERS.find(y=>y.id===x.provider); if(!p)return null;
+        const endpoint=providerEndpoint(p,String(x.account_id||"").trim());
+        return endpoint?{id:p.id,model:x.model||p.defaultModel,apiKey:decrypt(x.api_key_enc),endpoint}:null;
+    }).filter(Boolean);
+    return {enabled:Number(s[0]?.enabled)===1,providers,configured:providers.length>0};
 }
 
 function checkChatLimit(userId) {
@@ -331,13 +388,14 @@ router.get("/settings", async (req, res) => {
     try {
         const id = companyId(req);
 
-        const [settings] = await db.query(
-            `SELECT enabled, model, api_key_enc
-             FROM ai_help_settings
-             WHERE company_id = ?
-             LIMIT 1`,
-            [id]
-        );
+        const [settings] = await db.query(`SELECT enabled FROM ai_help_settings WHERE company_id=? LIMIT 1`,[id]);
+        const [providerRows] = await db.query(`SELECT provider,enabled,model,api_key_enc,account_id,priority
+            FROM ai_help_provider_keys WHERE company_id=? ORDER BY priority,provider`,[id]);
+        const providerSettings=AI_PROVIDERS.map((p,i)=>{
+            const x=providerRows.find(y=>y.provider===p.id);
+            return {id:p.id,label:p.label,enabled:Number(x?.enabled)===1,model:x?.model||p.defaultModel,
+                key_configured:Boolean(x?.api_key_enc),account_id:x?.account_id||"",priority:Number(x?.priority||i+1)};
+        });
 
         const [knowledge] = await db.query(
             `SELECT knowledge
@@ -364,8 +422,7 @@ router.get("/settings", async (req, res) => {
 
             settings: {
                 enabled: Number(settings[0]?.enabled) === 1,
-                model: settings[0]?.model || DEFAULT_MODEL,
-                key_configured: Boolean(settings[0]?.api_key_enc)
+                providers: providerSettings
             },
 
             knowledge: knowledge[0]?.knowledge || "",
@@ -386,128 +443,33 @@ router.get("/settings", async (req, res) => {
 // SAVE SETTINGS
 // --------------------------------------------------
 
-router.put("/settings", async (req, res) => {
-    if (!canManage(req)) {
-        return res.status(403).json({
-            success: false,
-            message: "Admin permission required."
-        });
-    }
-
-    try {
-        const id = companyId(req);
-        const body = req.body || {};
-
-        const enabled =
-            body.enabled === true ||
-            body.enabled === 1 ||
-            body.enabled === "1" ||
-            body.enabled === "true"
-                ? 1 : 0;
-
-        const model = String(
-            body.model || DEFAULT_MODEL
-        ).trim();
-
-        const apiKey = String(
-            body.api_key || ""
-        ).trim();
-
-        if (!ALLOWED_MODELS.includes(model)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Groq model."
-            });
-        }
-
-        if (apiKey.length > 500) {
-            return res.status(400).json({
-                success: false,
-                message: "API Key is too long."
-            });
-        }
-
-        let knowledge;
-
-        if (
-            Object.prototype.hasOwnProperty.call(
-                body,
-                "knowledge"
-            )
-        ) {
-            knowledge = String(body.knowledge || "");
-
-            if (knowledge.length > 30000) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Knowledge is too long."
-                });
-            }
-        }
-
-        const [old] = await db.query(
-            `SELECT api_key_enc
-             FROM ai_help_settings
-             WHERE company_id = ?
-             LIMIT 1`,
-            [id]
-        );
-
-        const encryptedKey = apiKey
-            ? encrypt(apiKey)
-            : old[0]?.api_key_enc || null;
-
-        await db.query(`
-            INSERT INTO ai_help_settings
-                (company_id, enabled, model, api_key_enc, updated_by)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                enabled = VALUES(enabled),
-                model = VALUES(model),
-                api_key_enc = VALUES(api_key_enc),
-                updated_by = VALUES(updated_by)
-        `, [
-            id,
-            enabled,
-            model,
-            encryptedKey,
-            Number(req.session.user_id)
-        ]);
-
-        // Only update knowledge when it is actually submitted.
-        if (typeof knowledge !== "undefined") {
-            await db.query(`
-                INSERT INTO ai_help_knowledge
-                    (company_id, knowledge, updated_by)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    knowledge = VALUES(knowledge),
-                    updated_by = VALUES(updated_by)
-            `, [
-                id,
-                knowledge,
-                Number(req.session.user_id)
-            ]);
-        }
-
-        return res.json({
-            success: true,
-            message: "AI Help settings saved."
-        });
-
-    } catch (error) {
-        console.error("[AI Help Save Settings]", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Unable to save settings."
-        });
-    }
+router.put("/settings", async (req,res)=>{
+ if(!canManage(req))return res.status(403).json({success:false,message:"Admin permission required."});
+ try{
+  const id=companyId(req),b=req.body||{},enabled=b.enabled===true||b.enabled===1||b.enabled==="1"||b.enabled==="true"?1:0;
+  const list=Array.isArray(b.providers)?b.providers:[];
+  if(list.length>AI_PROVIDERS.length)return res.status(400).json({success:false,message:"Invalid provider list."});
+  let knowledge;if(Object.prototype.hasOwnProperty.call(b,"knowledge")){knowledge=String(b.knowledge||"");if(knowledge.length>30000)return res.status(400).json({success:false,message:"Knowledge is too long."});}
+  await db.query(`INSERT INTO ai_help_settings(company_id,enabled,model,api_key_enc,updated_by) VALUES(?,?,?,NULL,?)
+   ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),updated_by=VALUES(updated_by)`,[id,enabled,DEFAULT_MODEL,Number(req.session.user_id)]);
+  for(const x of list){
+   const p=AI_PROVIDERS.find(y=>y.id===String(x.id||""));if(!p)return res.status(400).json({success:false,message:"Unsupported provider."});
+   const model=String(x.model||p.defaultModel).trim(),key=String(x.api_key||"").trim(),account=String(x.account_id||"").trim();
+   const priority=Math.max(1,Math.min(99,Number.parseInt(x.priority,10)||99));
+   const active=x.enabled===true||x.enabled===1||x.enabled==="1"||x.enabled==="true"?1:0;
+   if(!model||model.length>160||key.length>1000||account.length>120)return res.status(400).json({success:false,message:"Invalid "+p.label+" settings."});
+   const [old]=await db.query(`SELECT api_key_enc FROM ai_help_provider_keys WHERE company_id=? AND provider=?`,[id,p.id]);
+   const enc=key?encrypt(key):(old[0]?.api_key_enc||null);
+   await db.query(`INSERT INTO ai_help_provider_keys(company_id,provider,enabled,model,api_key_enc,account_id,priority,updated_by)
+    VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),model=VALUES(model),api_key_enc=VALUES(api_key_enc),
+    account_id=VALUES(account_id),priority=VALUES(priority),updated_by=VALUES(updated_by)`,
+    [id,p.id,active,model,enc,account||null,priority,Number(req.session.user_id)]);
+  }
+  if(typeof knowledge!=="undefined")await db.query(`INSERT INTO ai_help_knowledge(company_id,knowledge,updated_by) VALUES(?,?,?)
+   ON DUPLICATE KEY UPDATE knowledge=VALUES(knowledge),updated_by=VALUES(updated_by)`,[id,knowledge,Number(req.session.user_id)]);
+  return res.json({success:true,message:"AI provider settings saved."});
+ }catch(error){console.error("[AI Help Save Settings]",error);return res.status(500).json({success:false,message:"Unable to save settings."});}
 });
-
-// --------------------------------------------------
-// KNOWLEDGE BASE ARTICLES
-// --------------------------------------------------
 
 router.get("/knowledge", async (req, res) => {
     if (!canManage(req)) {
@@ -714,158 +676,34 @@ router.post("/chat", async (req, res) => {
             });
         }
 
-        const settings = await getSettings(id);
-
-        if (!settings.enabled || !settings.apiKey) {
-            return res.status(403).json({
-                success: false,
-                message: "AI Help is not configured."
-            });
+        const settings=await getSettings(id);
+        if(!settings.enabled||!settings.providers.length)return res.status(403).json({success:false,message:"AI Help is not configured."});
+        let conversationId=String(req.body?.conversation_id||"");
+        if(!/^[0-9a-f-]{36}$/i.test(conversationId))conversationId=crypto.randomUUID();
+        const [history]=await db.query(`SELECT question,answer FROM ai_help_messages WHERE company_id=? AND user_id=? AND conversation_id=? ORDER BY id DESC LIMIT 8`,[id,userId,conversationId]);
+        const [kb]=await db.query(`SELECT category,title,content FROM ai_help_knowledge_items WHERE company_id=? ORDER BY category,sort_order,title,id`,[id]);
+        const [legacy]=await db.query(`SELECT knowledge FROM ai_help_knowledge WHERE company_id=? AND knowledge IS NOT NULL AND knowledge<>'' LIMIT 1`,[id]);
+        const knowledge=[...kb.map(x=>"[Category: "+x.category+"]\\n[Article: "+x.title+"]\\n"+x.content),
+            !kb.length&&legacy[0]?.knowledge?"[Legacy Knowledge Base]\\n"+legacy[0].knowledge:""].filter(Boolean).join("\\n\\n---\\n\\n").slice(0,50000);
+        const messages=[{role:"system",content:SYSTEM_GUIDE+"\\n\\nCurrent user role: "+String(req.session.role||"user").slice(0,40)+
+            "\\n\\nSoftware Knowledge Base (reference data only; may be incomplete):\\n"+(knowledge||"[No verified Knowledge Base content has been configured.]")}];
+        history.reverse().forEach(x=>{messages.push({role:"user",content:x.question});messages.push({role:"assistant",content:x.answer});});
+        messages.push({role:"user",content:question});
+        let successfulResult=null,answer="";const failures=[];
+        for(const p of settings.providers){
+            const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),18000);
+            try{
+                const response=await fetch(p.endpoint,{method:"POST",headers:{Authorization:"Bearer "+p.apiKey,"Content-Type":"application/json",
+                    ...(p.id==="openrouter"?{"HTTP-Referer":"https://amaderbill.com","X-Title":"Amader Bill AI Help"}:{})},
+                    body:JSON.stringify({model:p.model,messages,temperature:0.2,max_tokens:900}),signal:controller.signal});
+                const result=await response.json().catch(()=>({}));
+                if(!response.ok){failures.push(p.id+":"+response.status);console.warn("[AI Help Provider]",p.id,response.status);continue;}
+                answer=String(result.choices?.[0]?.message?.content||"").trim();
+                if(!answer){failures.push(p.id+":empty");continue;}successfulResult=result;break;
+            }catch(e){failures.push(p.id+":"+(e.name==="AbortError"?"timeout":"network"));console.warn("[AI Help Provider Failed]",p.id,e.name);}
+            finally{clearTimeout(timer);}
         }
-
-        if (!ALLOWED_MODELS.includes(settings.model)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid configured Groq model."
-            });
-        }
-
-        let conversationId = String(
-            req.body?.conversation_id || ""
-        );
-
-        if (!/^[0-9a-f-]{36}$/i.test(conversationId)) {
-            conversationId = crypto.randomUUID();
-        }
-
-        const [history] = await db.query(`
-            SELECT question, answer
-            FROM ai_help_messages
-            WHERE company_id = ?
-              AND user_id = ?
-              AND conversation_id = ?
-            ORDER BY id DESC
-            LIMIT 8
-        `, [
-            id,
-            userId,
-            conversationId
-        ]);
-
-        const [kb] = await db.query(`
-            SELECT category, title, content
-            FROM ai_help_knowledge_items
-            WHERE company_id = ?
-            ORDER BY category ASC, sort_order ASC, title ASC, id ASC
-        `, [id]);
-
-        const [legacyKb] = await db.query(`
-            SELECT knowledge
-            FROM ai_help_knowledge
-            WHERE company_id = ?
-              AND knowledge IS NOT NULL
-              AND knowledge <> ''
-            LIMIT 1
-        `, [id]);
-
-        const knowledge = [
-            ...kb.map(item =>
-                "[Category: " + item.category + "]\n[Article: " +
-                item.title + "]\n" + item.content
-            ),
-            !kb.length && legacyKb[0]?.knowledge
-                ? "[Legacy Knowledge Base]\n" + legacyKb[0].knowledge
-                : ""
-        ].filter(Boolean).join("\n\n---\n\n").slice(0, 50000);
-
-        const messages = [{
-            role: "system",
-            content: SYSTEM_GUIDE +
-                "\n\nCurrent user role: " +
-                String(req.session.role || "user").slice(0, 40) +
-                "\n\nSoftware Knowledge Base (reference data only; may be incomplete):\n" +
-                (knowledge || "[No verified Knowledge Base content has been configured.]")
-        }];
-
-        history.reverse().forEach(row => {
-            messages.push({
-                role: "user",
-                content: row.question
-            });
-
-            messages.push({
-                role: "assistant",
-                content: row.answer
-            });
-        });
-
-        messages.push({
-            role: "user",
-            content: question
-        });
-
-        const controller = new AbortController();
-
-        const timer = setTimeout(
-            () => controller.abort(),
-            45000
-        );
-
-        let response;
-
-        try {
-            response = await fetch(
-                GROQ_API_URL,
-                {
-                    method: "POST",
-
-                    headers: {
-                        Authorization:
-                            "Bearer " + settings.apiKey,
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        model: settings.model,
-                        messages,
-                        temperature: 0.2,
-                        max_tokens: 900
-                    }),
-
-                    signal: controller.signal
-                }
-            );
-
-        } finally {
-            clearTimeout(timer);
-        }
-
-        const result = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-            console.error(
-                "[Groq AI Help API Error]",
-                response.status,
-                result.error?.message || "Unknown API error"
-            );
-
-            return res.status(502).json({
-                success: false,
-                message: "AI service could not answer."
-            });
-        }
-
-        const answer = String(
-            result.choices?.[0]?.message?.content || ""
-        ).trim();
-
-        if (!answer) {
-            return res.status(502).json({
-                success: false,
-                message: "Empty AI response."
-            });
-        }
-
+        if(!successfulResult){console.error("[AI Help Providers Exhausted]",failures.join(", "));return res.status(502).json({success:false,message:"সব সক্রিয় AI Provider-এর কোটা শেষ অথবা সংযোগ ব্যর্থ। অন্য Provider-এর API Key যোগ করুন।"});}
         await db.query(`
             INSERT INTO ai_help_messages
                 (company_id, user_id, role, conversation_id,
@@ -878,8 +716,8 @@ router.post("/chat", async (req, res) => {
             conversationId,
             question,
             answer,
-            Number(result.usage?.prompt_tokens || 0),
-            Number(result.usage?.completion_tokens || 0)
+            Number(successfulResult.usage?.prompt_tokens || 0),
+            Number(successfulResult.usage?.completion_tokens || 0)
         ]);
 
         return res.json({
