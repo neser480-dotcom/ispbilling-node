@@ -2,6 +2,15 @@
 
     'use strict';
 
+    // Ensure every page loading the shared sidebar also gets the
+    // centralized action toast and automatic modal-close handler.
+    if (!document.querySelector('script[src*="/assets/js/topbar-loader.js"]')) {
+        const masterScript = document.createElement('script');
+        masterScript.src = '/assets/js/topbar-loader.js';
+        masterScript.dataset.masterLoader = 'true';
+        document.head.appendChild(masterScript);
+    }
+
 
     /* =====================================================
        STAFF PERMISSION FILTER
