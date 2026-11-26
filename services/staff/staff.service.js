@@ -141,6 +141,22 @@ async function getStaff(req, filters = {}) {
     };
 }
 
+async function assertStaffUnique(companyId, name, mobile, excludeId = 0) {
+    const [duplicates] = await db.execute(
+        `SELECT id, name, mobile FROM staff
+         WHERE company_id = ? AND LOWER(role) = 'staff' AND id <> ?
+           AND (LOWER(TRIM(name)) = LOWER(TRIM(?)) OR TRIM(mobile) = TRIM(?))
+         LIMIT 10`,
+        [companyId, excludeId, name, mobile]
+    );
+    if (duplicates.some(row => String(row.name || '').trim().toLowerCase() === name.toLowerCase())) {
+        throw new StaffError("এই কোম্পানিতে এই নামের স্টাফ আগে থেকেই আছে।", 409);
+    }
+    if (duplicates.some(row => String(row.mobile || '').trim() === mobile)) {
+        throw new StaffError("এই কোম্পানিতে এই মোবাইল নম্বরের স্টাফ আগে থেকেই আছে।", 409);
+    }
+}
+
 async function addStaff(req, body) {
     const companyId = isSuperAdmin(req)
         ? Number(
@@ -179,6 +195,8 @@ async function addStaff(req, body) {
     if (!mobile) {
         throw new StaffError("Mobile is required.");
     }
+
+    await assertStaffUnique(companyId, name, mobile);
 
     const values = [
         companyId,
@@ -252,6 +270,15 @@ async function updateStaff(req, rawId, body) {
             "Name and mobile are required."
         );
     }
+
+    const [currentRows] = await db.execute(
+        `SELECT s.company_id FROM staff AS s
+         WHERE s.id = ? AND LOWER(s.role) = 'staff' AND ${staffScope.sql}
+         LIMIT 1`,
+        [id, ...staffScope.params]
+    );
+    if (!currentRows.length) throw new StaffError("Staff not found or access denied.", 404);
+    await assertStaffUnique(Number(currentRows[0].company_id), name, mobile, id);
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new StaffError("Invalid e-mail address.");
