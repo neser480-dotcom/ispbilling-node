@@ -207,10 +207,13 @@ function normalizeRow(row) {
     const rawStatus = String(
         row.status ??
         row.run_state ??
-        'unknown'
+        'offline'
     ).trim().toLowerCase();
 
-    let status = 'unknown';
+    // ONU status is the OLT hardware registration state, never the
+    // customer's PPPoE active-session state. If OLT does not report online,
+    // treat the ONU as offline instead of exposing an Unknown status.
+    let status = 'offline';
 
     if (
         /^(online|up|active|working|registered)$/.test(rawStatus)
