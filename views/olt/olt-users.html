@@ -1289,34 +1289,19 @@ function getCell(user, key) {
         case "lastUpdate":
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
 
-            // A PPPoE-session row has no ONU record yet (id is "session-N"):
-            // there is no ONU to read, so say so instead of sending a bad ID.
-            if (user.customerOnly || !/^\d+$/.test(String(user.id))) {
-                return `
-                    <button
-                        type="button"
-                        class="olt-action-icon-btn"
-                        style="opacity:.45;"
-                        data-no-onu="1"
-                        title="এই কাস্টমারের ONU এখনো পাওয়া যায়নি"
-                        aria-label="ONU not found for this customer">
-                        <i class="fa-solid fa-rotate"></i>
-                    </button>
-                `;
-            }
-
-            return `
-                <button
-                    type="button"
-                    class="olt-action-icon-btn"
-                    data-sync-onu="${escapeHTML(user.id)}"
-                    data-olt-id="${escapeHTML(user.oltId)}"
-                    title="এই ONU সিংক করুন (RX/TX, distance, voltage, temp)"
-                    aria-label="Sync ONU ${escapeHTML(user.id)}"
-                    ${syncing ? "disabled" : ""}>
-                    <i class="fa-solid fa-rotate"></i>
-                </button>
-            `;
+        case "action":
+            return '<button type="button" class="olt-action-icon-btn" data-sync-olt="' +
+                escapeHTML(user.oltId) +
+                '" title="Sync all ONU hardware on this OLT" aria-label="Sync OLT ' +
+                escapeHTML(user.oltId) + '" ' + (syncing ? "disabled" : "") + '>' +
+                '<i class="fa-solid fa-network-wired"></i></button>' +
+                (!user.customerOnly && /^\\d+$/.test(String(user.id)) ?
+                    '<button type="button" class="olt-action-icon-btn" data-sync-onu="' +
+                    escapeHTML(user.id) + '" data-olt-id="' + escapeHTML(user.oltId) +
+                    '" title="এই ONU সিংক করুন (RX/TX, distance, voltage, temp)" ' +
+                    '" aria-label="Sync ONU ' + escapeHTML(user.id) + '" ' +
+                    (syncing ? "disabled" : "") + '>' +
+                    '<i class="fa-solid fa-rotate"></i></button>' : "");
 
         default:
             return "";
