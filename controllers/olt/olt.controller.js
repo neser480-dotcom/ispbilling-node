@@ -1319,16 +1319,9 @@ exports.listOnus = async (req, res) => {
             }
         }
 
-        // Show only ONUs linked to at least one valid customer.
-        const visibleRows = rows.filter(row => {
-            const hasPrimaryCustomer =
-                row.matched_customer_id != null;
-
-            const hasExtraCustomers =
-                (extrasByOnu.get(Number(row.id)) || []).length > 0;
-
-            return hasPrimaryCustomer || hasExtraCustomers;
-        });
+        // Show every ONU discovered by hardware sync, whether mapped or not.
+        // Unmapped ONUs remain visible so they can be linked from the ONU page.
+        const visibleRows = rows;
         return res.json({
             success: true,
             total: visibleRows.length,
