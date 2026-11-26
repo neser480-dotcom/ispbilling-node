@@ -759,9 +759,9 @@ async function resellersFor(user) {
     const params = [];
 
     let sql = `
-        SELECT id, name, username
-        FROM users
-        WHERE role = 'reseller'
+        SELECT id, name
+        FROM resellers
+        WHERE 1 = 1
     `;
 
     if (!isSuperAdmin(user)) {
@@ -2097,16 +2097,12 @@ actions.reseller = {
         const resellerColumn =
             await findColumn(
                 "customers",
-                [
-                    "reseller_id",
-                    "reseller_user_id",
-                    "reseller"
-                ]
+                ["reseller_id"]
             );
 
         if (!resellerColumn) {
             throw new BulkError(
-                "Reseller field was not found in customers table."
+                "customers.reseller_id field was not found."
             );
         }
 

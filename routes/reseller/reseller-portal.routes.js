@@ -20,46 +20,97 @@ router.get("/resellers", async (req, res) => {
 
         let sql = `
             SELECT
-                id, company_id, name, mobile, nid_no, address, email, website,
-                status, balance, commission_type, areas_json, packages_json, permissions_json,
-                created_at
+                resellers.id,
+                resellers.company_id,
+                resellers.name,
+                resellers.mobile,
+                resellers.nid_no,
+                resellers.address,
+                resellers.email,
+                resellers.website,
+                resellers.status,
+                resellers.balance,
+                resellers.commission_type,
+                resellers.areas_json,
+                resellers.packages_json,
+                resellers.permissions_json,
+                resellers.created_at,
+
+                (
+                    SELECT COUNT(*)
+                    FROM customers c
+                    WHERE c.reseller_id = resellers.id
+                      AND c.company_id = resellers.company_id
+                ) AS total_customers
+
             FROM resellers
-            WHERE company_id = ?
+            WHERE resellers.company_id = ?
         `;
+
         const params = [companyId];
 
         if (search) {
-            sql += ` AND (name LIKE ? OR mobile LIKE ? OR email LIKE ? OR address LIKE ?)`;
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+            sql += `
+                AND (
+                    resellers.name LIKE ?
+                    OR resellers.mobile LIKE ?
+                    OR resellers.email LIKE ?
+                    OR resellers.address LIKE ?
+                )
+            `;
+
+            params.push(
+                `%${search}%`,
+                `%${search}%`,
+                `%${search}%`,
+                `%${search}%`
+            );
         }
 
-        sql += ` ORDER BY id DESC`;
+        sql += ` ORDER BY resellers.id DESC`;
 
         const [rows] = await db.query(sql, params);
+
         const formatted = rows.map((r) => ({
             ...r,
+            total_customers: Number(r.total_customers || 0),
             areas: parseJsonSafe(r.areas_json, []),
             packages: parseJsonSafe(r.packages_json, []),
             permissions: parseJsonSafe(r.permissions_json, [])
         }));
 
-        const totalBalance = formatted.reduce((sum, r) => sum + Number(r.balance || 0), 0);
+        const totalBalance = formatted.reduce(
+            (sum, r) => sum + Number(r.balance || 0),
+            0
+        );
+
+        const totalCustomers = formatted.reduce(
+            (sum, r) => sum + Number(r.total_customers || 0),
+            0
+        );
 
         return res.json({
             success: true,
             data: formatted,
             summary: {
                 total_resellers: formatted.length,
-                total_customers: 0,
+                total_customers: totalCustomers,
                 total_balance: Number(totalBalance.toFixed(2))
             }
         });
+
     } catch (err) {
-        console.error("GET /api/reseller-portal/resellers error:", err);
-        return res.status(500).json({ success: false, message: "Failed to load resellers." });
+        console.error(
+            "GET /api/reseller-portal/resellers error:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to load resellers."
+        });
     }
 });
-
 router.post("/resellers", async (req, res) => {
     try {
         const companyId = getCompanyId(req);

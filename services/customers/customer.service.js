@@ -225,14 +225,20 @@ function buildStatusScope(status, alias = "c") {
 function buildAdvancedFilterScope(filters = {}, alias = "c") {
     const clauses = [];
     const params = [];
+const idFilters = [
+    ["router_id", "mikrotik_id"],
+    ["package_id", "package_id"],
+    ["area_id", "area_id"],
+    ["sub_area_id", "sub_area_id"],
+    ["reseller_id", "reseller_id"]
+];
+const resellerOnly = String(filters.reseller ?? "").trim().toLowerCase();
 
-    const idFilters = [
-        ["router_id", "mikrotik_id"],
-        ["package_id", "package_id"],
-        ["area_id", "area_id"],
-        ["sub_area_id", "sub_area_id"]
-    ];
-
+if (["1", "true", "yes"].includes(resellerOnly)) {
+    clauses.push(
+        ` AND ${alias}.reseller_id IS NOT NULL AND ${alias}.reseller_id > 0 `
+    );
+}
     for (const [key, column] of idFilters) {
         const value = String(filters[key] ?? "").trim();
 
