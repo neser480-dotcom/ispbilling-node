@@ -792,6 +792,9 @@ exports.check = async (req, res) => {
         } else if (vendor === "ecom") {
             const { EcomDriver } = require("../../drivers/hardware/ecom");
             driver = new EcomDriver(config);
+        } else if (vendor === "vsol") {
+            const { VsolDriver } = require("../../drivers/hardware/vsol");
+            driver = new VsolDriver(config);
         } else if (snmpVendor) {
             /* Hioso / HSGQ / ZTE EPON: SNMP drivers, built from the OLT row. */
             const { driverFor } = require("../../drivers/services/olt-sync.service");

@@ -23,6 +23,7 @@ const VENDORS = {
     cdata: () => require("./vendors/cdata/sync"),
     hioso: () => require("./vendors/hioso/sync"),
     hsgq: () => require("./vendors/hsgq/sync"),
+    vsol: () => require("./vendors/vsol/sync"),
     zteepon: () => require("./vendors/zte-epon/sync")
 };
 
@@ -43,6 +44,7 @@ function vendorKey(olt) {
     if (key.startsWith("cdata")) return "cdata";
     if (key.startsWith("hioso")) return "hioso";
     if (key.startsWith("hsgq")) return "hsgq";
+    if (key.startsWith("vsol")) return "vsol";
     if (key.startsWith("zte")) return "zteepon";
 
     return key;
