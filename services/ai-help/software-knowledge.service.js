@@ -60,7 +60,7 @@ function sanitizeSource(source) {
     // Remove credential declarations and nearby continuation lines too
     // (for example, a multi-line SESSION_SECRET fallback expression).
     lines.forEach((line, index) => {
-        if (SENSITIVE_LINE.test(line) || SECRET_VALUE.test(line)) {
+        if (SENSITIVE_LINE.test(line) || new RegExp(SECRET_VALUE.source).test(line)) {
             for (let offset = -2; offset <= 2; offset++) {
                 const target = index + offset;
                 if (target >= 0 && target < lines.length) blocked.add(target);
