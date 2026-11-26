@@ -834,6 +834,36 @@ exports.syncOnuHardware = async (req, res) => {
     }
 };
 
+
+/*
+|--------------------------------------------------------------------------
+| POST /api/olt/:id/onus/:onuId/sync
+|--------------------------------------------------------------------------
+| Synchronize hardware fields for exactly one existing ONU.
+*/
+exports.syncOneOnu = async (req, res) => {
+    try {
+        verifyMappingCsrf(req);
+
+        const oltId = validId(req.params.id);
+        const onuId = validId(req.params.onuId);
+        const olt = await findOlt(req, oltId);
+        const result = await syncManager.syncOneOnuHardware(
+            getPool(),
+            olt,
+            onuId
+        );
+
+        return res.json({
+            success: true,
+            message: "ONU #" + onuId + " hardware synchronization completed.",
+            data: result
+        });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
+
 // Old endpoint (POST /:id/sync) keeps working as ONU hardware sync.
 exports.sync = exports.syncOnuHardware;
 
