@@ -1289,14 +1289,20 @@ function getCell(user, key) {
         case "lastUpdate":
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
 
-        case "action":
-            return (!user.customerOnly && /^\d+$/.test(String(user.id)) ?
-                '<button type="button" class="olt-action-icon-btn" data-sync-onu="' +
-                escapeHTML(user.id) + '" data-olt-id="' + escapeHTML(user.oltId) +
-                '" title="শুধু এই ONU/Customer Sync করুন" ' +
-                '" aria-label="Sync ONU ' + escapeHTML(user.id) + '" ' +
+        case "action": {
+            const onuId = Number(user.onuId ?? user.id);
+            if (user.customerOnly || !Number.isSafeInteger(onuId) || onuId < 1) {
+                return '<span class="olt-sub-text" title="এই Customer-এর ONU এখনো যুক্ত নেই">ONU নেই</span>';
+            }
+
+            return '<button type="button" class="olt-action-icon-btn" ' +
+                'data-sync-onu="' + escapeHTML(onuId) + '" ' +
+                'data-olt-id="' + escapeHTML(user.oltId) + '" ' +
+                'title="শুধু এই ONU Sync করুন" ' +
+                'aria-label="Sync ONU ' + escapeHTML(onuId) + '" ' +
                 (syncing ? "disabled" : "") + '>' +
-                '<i class="fa-solid fa-rotate"></i></button>' : "");
+                '<i class="fa-solid fa-rotate"></i><span> Sync</span></button>';
+        }
 
         default:
             return "";
