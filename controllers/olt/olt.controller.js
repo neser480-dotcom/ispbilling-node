@@ -891,7 +891,44 @@ exports.syncOneOnu = async (req, res) => {
     }
 };
 
-exports.sync = exports.syncOnuHardware;
+/*
+|--------------------------------------------------------------------------
+| OLT LIST BULK SYNC
+|--------------------------------------------------------------------------
+| Run PPPoE/customer session sync first, then ONU hardware sync.
+| The hardware service performs per-ONU customer mapping using each ONU's
+| own learned-MAC evidence and the collected PPP caller-ID sessions.
+|--------------------------------------------------------------------------
+*/
+exports.sync = async (req, res) => {
+    try {
+        verifyMappingCsrf(req);
+
+        const id = validId(req.params.id);
+        const olt = await findOlt(req, id);
+
+        const customerSync = await syncManager.syncCustomers(
+            getPool(),
+            olt
+        );
+
+        const hardwareSync = await syncManager.syncOnuHardware(
+            getPool(),
+            olt
+        );
+
+        return res.json({
+            success: true,
+            message: "OLT hardware and customer mapping sync completed.",
+            data: {
+                customerSync,
+                hardwareSync
+            }
+        });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
 
 /*
 |--------------------------------------------------------------------------
