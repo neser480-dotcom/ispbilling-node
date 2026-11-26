@@ -631,7 +631,7 @@ class VsolDriver {
 
         const configOutput = await this.command("show running-config", 30000);
         const fsList = [...new Set(
-            [...stripAnsi(configOutput).matchAll(/^\\s*interface\\s+epon\\s+(\\d+\\/\\d+)\\s*$/gim)]
+            [...stripAnsi(configOutput).matchAll(/^\s*interface\s+epon\s+(\d+\/\d+)\s*$/gim)]
                 .map(match => match[1])
         )];
 
