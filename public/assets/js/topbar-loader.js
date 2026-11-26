@@ -86,17 +86,62 @@
 
         const originalFetch = window.fetch.bind(window);
         let lastUserActionAt = 0;
+        let lastActionModal = null;
+
+        function rememberUserAction(target) {
+            lastUserActionAt = Date.now();
+            const modal = target && target.closest
+                ? target.closest(".modal.show, [role='dialog'][aria-modal='true'], dialog[open]")
+                : null;
+
+            if (modal) {
+                lastActionModal = modal;
+            } else if (!target || !target.closest || !target.closest(".swal2-container")) {
+                lastActionModal = null;
+            }
+        }
+
+        function closeActionModal() {
+            const modal = lastActionModal;
+            lastActionModal = null;
+
+            if (!modal || !modal.isConnected) return;
+
+            if (modal.tagName === "DIALOG" && modal.open) {
+                modal.close();
+                return;
+            }
+
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const instance = window.bootstrap.Modal.getInstance(modal) ||
+                    window.bootstrap.Modal.getOrCreateInstance(modal);
+                instance.hide();
+                return;
+            }
+
+            // Fallback for custom modal markup when Bootstrap is not present.
+            modal.classList.remove("show");
+            modal.style.display = "none";
+            modal.setAttribute("aria-hidden", "true");
+            modal.removeAttribute("aria-modal");
+            document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+                backdrop.remove();
+            });
+            document.body.classList.remove("modal-open");
+            document.body.style.removeProperty("overflow");
+            document.body.style.removeProperty("padding-right");
+        }
 
         // Only show action confirmations for requests that follow a real
         // user interaction; background polling and page-load requests stay silent.
         document.addEventListener("click", function (event) {
             if (event.target.closest("button, [role='button'], input[type='submit'], a[data-action]")) {
-                lastUserActionAt = Date.now();
+                rememberUserAction(event.target);
             }
         }, true);
 
-        document.addEventListener("submit", function () {
-            lastUserActionAt = Date.now();
+        document.addEventListener("submit", function (event) {
+            rememberUserAction(event.target);
         }, true);
 
         // Handle plain same-origin POST forms centrally. Forms already handled
@@ -184,6 +229,7 @@
                             data.message || "তথ্য সফলভাবে জমা হয়েছে।"
                         );
                     }
+                    closeActionModal();
                 } catch (error) {
                     console.error("Central form submission error:", error);
                     if (window.AppToast) {
@@ -252,10 +298,15 @@
                                     : "অনুরোধটি সম্পন্ন হয়নি।");
                             window.AppToast.error(message);
                         }
-                    } else if (isMutation && isUserAction && window.AppToast) {
-                        window.AppToast.success(
-                            data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।"
-                        );
+                    } else if (isMutation && isUserAction) {
+                        if (window.AppToast) {
+                            window.AppToast.success(
+                                data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।"
+                            );
+                        }
+                        // Close the Add/Edit dialog automatically only after
+                        // the server confirms the mutation was successful.
+                        closeActionModal();
                     }
                 }
             } catch (error) {
@@ -265,6 +316,63 @@
             // Return the original response unchanged for existing page logic.
             return response;
         };
+
+        // Also cover XMLHttpRequest/jQuery AJAX pages so the same success
+        // toast and automatic modal close work across older sidebar modules.
+        if (window.XMLHttpRequest && !window.XMLHttpRequest.prototype.__ispToastWrapped) {
+            const xhrOpen = window.XMLHttpRequest.prototype.open;
+            const xhrSend = window.XMLHttpRequest.prototype.send;
+
+            window.XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                this.__ispRequestMethod = String(method || "GET").toUpperCase();
+                this.__ispRequestUrl = url;
+                return xhrOpen.call(this, method, url, ...rest);
+            };
+
+            window.XMLHttpRequest.prototype.send = function (...args) {
+                const xhr = this;
+                const method = xhr.__ispRequestMethod || "GET";
+                const requestUrl = xhr.__ispRequestUrl || "";
+                const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+                const isUserAction = lastUserActionAt > 0 && Date.now() - lastUserActionAt < 10000;
+
+                if (isMutation && isUserAction) {
+                    xhr.addEventListener("loadend", function () {
+                        try {
+                            const url = new URL(requestUrl, window.location.href);
+                            if (url.origin !== window.location.origin) return;
+
+                            let data = {};
+                            const responseText = xhr.responseText || "";
+                            try { data = JSON.parse(responseText); } catch (_) {}
+
+                            const failed = xhr.status < 200 || xhr.status >= 300 || data.success === false;
+                            if (failed) {
+                                if (window.AppToast) {
+                                    window.AppToast.error(
+                                        data.message || (xhr.status >= 500
+                                            ? "সার্ভারে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।"
+                                            : "অনুরোধটি সম্পন্ন হয়নি।")
+                                    );
+                                }
+                                return;
+                            }
+
+                            if (window.AppToast) {
+                                window.AppToast.success(data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।");
+                            }
+                            closeActionModal();
+                        } catch (error) {
+                            console.error("Central XHR action toast error:", error);
+                        }
+                    }, { once: true });
+                }
+
+                return xhrSend.apply(this, args);
+            };
+
+            window.XMLHttpRequest.prototype.__ispToastWrapped = true;
+        }
     }
 
     /*
