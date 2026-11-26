@@ -156,7 +156,7 @@
             ).forEach(node => node.remove());
 
             return String(copy.innerText || copy.textContent || "")
-                .replace(/\\s+/g, " ")
+                .replace(/\s+/g, " ")
                 .trim();
         }
 
@@ -193,9 +193,9 @@
             element.dataset.ispToastMessage = message;
 
             const classes = element.className || "";
-            const type = /\\balert-success\\b/.test(classes) ? "success"
-                : /\\balert-warning\\b/.test(classes) ? "warning"
-                : /\\balert-info\\b/.test(classes) ? "info"
+            const type = /\balert-success\b/.test(classes) ? "success"
+                : /\balert-warning\b/.test(classes) ? "warning"
+                : /\balert-info\b/.test(classes) ? "info"
                 : "error";
 
             window.AppToast[type](message);
