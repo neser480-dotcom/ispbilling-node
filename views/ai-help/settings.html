@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Help Settings | Amader Bill</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/ai-help.css?v=20261126">
+    <link rel="stylesheet" href="/assets/css/ai-help.css?v=20261127">
 </head>
 <body>
 <div id="sidebarContainer"></div>
@@ -59,25 +59,57 @@
                     </label>
                 </div>
 
-                <section class="ai-knowledge-section">
-                    <h2>Software Knowledge Base</h2>
-                    <p class="ai-section-description">
-                        Add only verified Amader Bill instructions, menu names, procedures and troubleshooting notes.
-                        The assistant must not guess when information is missing.
-                    </p>
-                    <label for="aiKnowledge">Verified Knowledge</label>
-                    <textarea id="aiKnowledge" name="knowledge" rows="14" maxlength="30000"
-                              placeholder="Example:
-Module: Customer Recharge
-Verified procedure:
-1. ...
-
-Rules:
-- ..."></textarea>
-                    <div class="ai-field-footer">
-                        <small>Maximum 30,000 characters. Do not add passwords, API keys or customer personal data.</small>
-                        <span id="knowledgeCount">0 / 30000</span>
+                <section class="ai-knowledge-section ai-kb-manager" aria-labelledby="knowledgeHeading">
+                    <div class="ai-kb-heading">
+                        <div>
+                            <span class="ai-eyebrow">VERIFIED SUPPORT CONTENT</span>
+                            <h2 id="knowledgeHeading">Knowledge Base Manager</h2>
+                            <p class="ai-section-description">Organize verified software guidance into categories and articles. Only saved articles are used by AI Help.</p>
+                        </div>
+                        <button type="button" id="addKnowledgeArticle" class="ai-kb-add-button">＋ Add Article</button>
                     </div>
+
+                    <div class="ai-kb-toolbar">
+                        <label class="ai-kb-search-label" for="knowledgeSearch">Search articles</label>
+                        <input type="search" id="knowledgeSearch" placeholder="Search title, category or content..." autocomplete="off">
+                        <label class="ai-kb-filter-label" for="knowledgeCategoryFilter">Category</label>
+                        <select id="knowledgeCategoryFilter">
+                            <option value="">All categories</option>
+                        </select>
+                        <span id="knowledgeArticleCount" class="ai-kb-count">0 articles</span>
+                    </div>
+
+                    <div class="ai-kb-workspace">
+                        <div id="knowledgeArticleList" class="ai-kb-article-list" aria-live="polite">
+                            <div class="ai-kb-empty">Loading Knowledge Base…</div>
+                        </div>
+
+                        <form id="knowledgeArticleForm" class="ai-kb-editor" hidden>
+                            <div class="ai-kb-editor-heading">
+                                <div>
+                                    <span class="ai-eyebrow">ARTICLE EDITOR</span>
+                                    <h3 id="knowledgeEditorTitle">Add Knowledge Article</h3>
+                                </div>
+                                <button type="button" id="cancelKnowledgeEdit" class="ai-kb-close" aria-label="Close editor">×</button>
+                            </div>
+                            <input type="hidden" id="knowledgeArticleId">
+                            <label for="knowledgeArticleCategory">Category</label>
+                            <input id="knowledgeArticleCategory" maxlength="100" list="knowledgeCategorySuggestions" required placeholder="e.g. Customers, Billing, MikroTik">
+                            <datalist id="knowledgeCategorySuggestions"></datalist>
+                            <label for="knowledgeArticleTitle">Article title</label>
+                            <input id="knowledgeArticleTitle" maxlength="180" required placeholder="Short, searchable title">
+                            <label for="knowledgeArticleContent">Verified instructions</label>
+                            <textarea id="knowledgeArticleContent" rows="10" maxlength="20000" required placeholder="Write only verified steps, menu names and troubleshooting information..."></textarea>
+                            <div class="ai-kb-editor-footer">
+                                <small id="knowledgeContentCount">0 / 20000</small>
+                                <div>
+                                    <button type="button" id="cancelKnowledgeArticle" class="ai-kb-cancel">Cancel</button>
+                                    <button type="submit" id="saveKnowledgeArticle">Save Article</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <p class="ai-kb-security-note">Keep content accurate and current. Never store passwords, API keys, OTPs or customer personal information.</p>
                 </section>
 
                 <div class="ai-settings-actions">
@@ -101,6 +133,6 @@ Rules:
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/sidebar-loader.js"></script>
 <script src="/assets/js/topbar-loader.js"></script>
-<script src="/assets/js/ai-help-settings.js?v=20261126"></script>
+<script src="/assets/js/ai-help-settings.js?v=20261127"></script>
 </body>
 </html>
