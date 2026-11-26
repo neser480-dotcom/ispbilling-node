@@ -149,13 +149,47 @@ router.get("/support-numbers", async (req, res, next) => {
 
 router.get("/tickets", async (req, res, next) => {
     try {
-        const [rows] = await db.execute(
-            `SELECT id, type, subject, status, created_at FROM customer_tickets
-             WHERE customer_pk = ? AND company_id = ? ORDER BY id DESC LIMIT 50`,
+        const [customerTickets] = await db.execute(
+            `SELECT id, subject, status, created_at
+             FROM customer_tickets
+             WHERE customer_pk = ? AND company_id = ? AND type = 'package_change'
+             ORDER BY id DESC LIMIT 50`,
             [req.auth.customerPk, req.auth.companyId]);
+
+        const [supportTickets] = await db.execute(
+            `SELECT id, ticket_code, message, status, created_at
+             FROM support_tickets
+             WHERE customer_id = ? AND company_id = ?
+             ORDER BY id DESC LIMIT 50`,
+            [req.auth.customerPk, req.auth.companyId]);
+
+        const rows = [
+            ...customerTickets.map((r) => ({
+                id: `package-${r.id}`,
+                subject: `[Package] ${r.subject}`,
+                status: r.status === "pending" ? "open" : r.status,
+                created_at: r.created_at
+            })),
+            ...supportTickets.map((r) => {
+                const parts = String(r.message || "").split("\\n\\n");
+                const adminStatus = String(r.status || "").toLowerCase();
+                return {
+                    id: r.id,
+                    subject: parts[0] || r.ticket_code || "Support Ticket",
+                    status: adminStatus === "process" ? "in_progress"
+                        : adminStatus === "completed" ? "closed" : "open",
+                    date: iso(r.created_at),
+                    created_at: r.created_at
+                };
+            })
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 50);
+
         res.json(rows.map((r) => ({
-            id: r.id, subject: r.type === "package_change" ? `[Package] ${r.subject}` : r.subject,
-            status: r.status, date: iso(r.created_at) })));
+            id: r.id,
+            subject: r.subject,
+            status: r.status,
+            date: r.date || iso(r.created_at)
+        })));
     } catch (e) { next(e); }
 });
 
@@ -166,19 +200,35 @@ router.post("/tickets", async (req, res, next) => {
         if (!subject) {
             return res.status(400).json({ success: false, code: "BAD_REQUEST", message: "বিষয় লিখুন।" });
         }
+
+        const customer = await loadCustomer(req);
+        if (!customer) {
+            return res.status(404).json({ success: false, code: "NOT_FOUND", message: "কাস্টমার তথ্য পাওয়া যায়নি।" });
+        }
+
         const [open] = await db.execute(
-            `SELECT COUNT(*) AS c FROM customer_tickets
-             WHERE customer_pk = ? AND company_id = ? AND status IN ('open','in_progress')`,
+            `SELECT COUNT(*) AS c FROM support_tickets
+             WHERE customer_id = ? AND company_id = ? AND status IN ('Pending','Process')`,
             [req.auth.customerPk, req.auth.companyId]);
         if (Number(open[0].c) >= 5) {
             return res.status(429).json({ success: false, code: "TOO_MANY_OPEN",
                 message: "আগের টিকেটগুলো নিষ্পত্তি না হওয়া পর্যন্ত নতুন টিকেট খোলা যাবে না।" });
         }
-        await db.execute(
-            `INSERT INTO customer_tickets (company_id, customer_pk, type, subject, message)
-             VALUES (?, ?, 'ticket', ?, ?)`,
-            [req.auth.companyId, req.auth.customerPk, subject, message]);
-        res.json({ success: true });
+
+        const ticketCode = "TCK-" + Date.now().toString().slice(-8);
+        const fullMessage = message ? `${subject}\\n\\n${message}` : subject;
+        const [result] = await db.execute(
+            `INSERT INTO support_tickets
+             (company_id, ticket_code, customer_id, customer_name, message, ticket_type, status)
+             VALUES (?, ?, ?, ?, ?, 'Medium', 'Pending')`,
+            [req.auth.companyId, ticketCode, req.auth.customerPk, customer.name, fullMessage]);
+
+        res.status(201).json({
+            success: true,
+            id: result.insertId,
+            ticket_code: ticketCode,
+            message: "সাপোর্ট টিকিট জমা হয়েছে।"
+        });
     } catch (e) { next(e); }
 });
 
