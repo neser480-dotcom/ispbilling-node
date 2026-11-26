@@ -125,7 +125,7 @@
                 const isMutation =
                     ["POST", "PUT", "PATCH", "DELETE"].includes(method);
 
-                if (isSameOriginApi && isMutation) {
+                if (isSameOriginApi && (isMutation || !response.ok)) {
                     const contentType =
                         response.headers.get("content-type") || "";
                     let data = {};
@@ -156,7 +156,7 @@
                                     : "অনুরোধটি সম্পন্ন হয়নি।");
                             window.AppToast.error(message);
                         }
-                    } else if (isUserAction && window.AppToast) {
+                    } else if (isMutation && isUserAction && window.AppToast) {
                         window.AppToast.success(
                             data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।"
                         );
