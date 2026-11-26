@@ -1305,22 +1305,15 @@ exports.listOnus = async (req, res) => {
             }
         }
 
-        // Show only ONUs linked to at least one valid customer.
-        const visibleRows = rows.filter(row => {
-            const hasPrimaryCustomer =
-                row.matched_customer_id != null;
-
-            const hasExtraCustomers =
-                (extrasByOnu.get(Number(row.id)) || []).length > 0;
-
-            return hasPrimaryCustomer || hasExtraCustomers;
-        });
+        // Keep every ONU hardware row visible, including unmapped ONUs.
+        // Customer mapping is displayed separately and must not control
+        // whether the ONU itself appears in the hardware list.
         return res.json({
             success: true,
-            total: visibleRows.length,
+            total: rows.length,
             customer_session_total: customerSessions.length,
             customer_sessions: customerSessions,
-            data: visibleRows.map(row => {
+            data: rows.map(row => {
                 const linked = row.matched_customer_id != null;
                 const primaryPpp = linked
                     ? pppByCustomer.get(Number(row.matched_customer_id))
