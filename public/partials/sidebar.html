@@ -252,15 +252,11 @@
                     aria-controls="updateMenu"
                 >
                     <i class="fa fa-sync-alt"></i>
-                    AI Help Settings
+                    Software Update
                     <span>▼</span>
                 </a>
 
                 <div class="collapse" id="updateMenu">
-<a href="/ai-help/settings">
-    AI Help Settings
-</a>
-
                     <a
                         class="submenu"
                         href="/super-admin/upgrade"
@@ -268,9 +264,37 @@
                         <i class="fa fa-level-up-alt"></i>
                         Upgrade
                     </a>
-
                 </div>
 
+            </li>
+
+
+            <!-- =================================================
+                 AI HELP
+            ================================================== -->
+
+            <li>
+                <a
+                    data-bs-toggle="collapse"
+                    href="#superAdminAiHelpMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="superAdminAiHelpMenu"
+                >
+                    <i class="fas fa-robot"></i>
+                    AI Help
+                    <span>▼</span>
+                </a>
+                <div class="collapse" id="superAdminAiHelpMenu">
+                    <a class="submenu" href="/ai-help">
+                        <i class="fa fa-comments"></i>
+                        AI Help Chat
+                    </a>
+                    <a class="submenu" href="/ai-help/settings">
+                        <i class="fa fa-sliders-h"></i>
+                        AI Help Settings
+                    </a>
+                </div>
             </li>
 
 
@@ -941,6 +965,29 @@
             </li>
 
 
+            <!-- AI Help -->
+
+            <li>
+                <a
+                    data-bs-toggle="collapse"
+                    href="#companyAiHelpMenu"
+                    role="button"
+                    aria-expanded="false"
+                    aria-controls="companyAiHelpMenu"
+                >
+                    <i class="fas fa-robot"></i>
+                    AI Help
+                    <span>▼</span>
+                </a>
+                <div class="collapse" id="companyAiHelpMenu">
+                    <a class="submenu" href="/ai-help">
+                        <i class="fa fa-comments"></i>
+                        AI Help Chat
+                    </a>
+                </div>
+            </li>
+
+
             <!-- Activity Log -->
 
             <li>
@@ -990,10 +1037,6 @@
         >
             Support Numbers
         </a>
-<a href="/ai-help">
-    <i class="fas fa-robot"></i>
-    <span>AI Help Chat</span>
-</a>
     </div>
 
 </li>
