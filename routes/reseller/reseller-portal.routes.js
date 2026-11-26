@@ -134,6 +134,20 @@ router.post("/resellers", async (req, res) => {
             });
         }
 
+        const [duplicates] = await db.query(
+            `SELECT id, name, mobile FROM resellers
+             WHERE company_id = ?
+               AND (LOWER(TRIM(name)) = LOWER(TRIM(?)) OR TRIM(mobile) = TRIM(?))
+             LIMIT 10`,
+            [companyId, name, mobile]
+        );
+        if (duplicates.some(row => String(row.name || "").trim().toLowerCase() === name.toLowerCase())) {
+            return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই নামের রিসেলার আগে থেকেই আছে।" });
+        }
+        if (duplicates.some(row => String(row.mobile || "").trim() === mobile)) {
+            return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই মোবাইল নম্বরের রিসেলার আগে থেকেই আছে।" });
+        }
+
         const [result] = await db.query(
             `INSERT INTO resellers
              (
