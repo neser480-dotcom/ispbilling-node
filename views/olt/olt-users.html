@@ -1290,7 +1290,7 @@ function getCell(user, key) {
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
 
         case "action":
-            return (!user.customerOnly && /^\\d+$/.test(String(user.id)) ?
+            return (!user.customerOnly && /^\d+$/.test(String(user.id)) ?
                 '<button type="button" class="olt-action-icon-btn" data-sync-onu="' +
                 escapeHTML(user.id) + '" data-olt-id="' + escapeHTML(user.oltId) +
                 '" title="শুধু এই ONU/Customer Sync করুন" ' +
