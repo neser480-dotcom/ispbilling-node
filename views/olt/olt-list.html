@@ -1304,7 +1304,7 @@
           { ...syncOptions }
         );
 
-        const customerSync = await apiRequest(
+        await apiRequest(
           "/api/olt/" + id + "/sync/customers",
           { ...syncOptions }
         );
