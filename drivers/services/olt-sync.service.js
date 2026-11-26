@@ -647,9 +647,232 @@ console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| SYNC ONE ONU (OLT Users page, row button)
+|--------------------------------------------------------------------------
+| Reads only this ONU from the OLT and updates only its own row.
+| It never inserts ONUs, never changes customer links, never runs
+| auto-mapping, and never touches the other ONUs. Use syncOnus() to
+| discover new ONUs.
+|--------------------------------------------------------------------------
+*/
+
+function httpError(message, status) {
+    const error = new Error(message);
+    error.status = status;
+    return error;
+}
+
+// "epon0/1/3" / "pon0/1/3" -> { fs: "0/1", pon: 3 }; anything else -> nulls
+function parsePonLabel(label) {
+    const match = String(label || '').trim().match(/(\d+\/\d+)\/(\d+)\s*$/);
+
+    return match
+        ? { fs: match[1], pon: Number(match[2]) }
+        : { fs: null, pon: null };
+}
+
+async function syncOneOnu(pool, olt, onuId) {
+    if (!olt || !olt.id || !olt.company_id) {
+        throw httpError(
+            'Invalid OLT context: OLT ID and company ID are required.',
+            400
+        );
+    }
+
+    const id = Number(onuId);
+
+    if (!Number.isSafeInteger(id) || id < 1) {
+        throw httpError('Invalid ONU ID.', 400);
+    }
+
+    const [found] = await pool.execute(
+        `SELECT id, pon, onu_sn, onu_mac
+         FROM onu
+         WHERE id = ? AND olt_id = ?
+         LIMIT 1`,
+        [id, olt.id]
+    );
+
+    if (!found.length) {
+        throw httpError('ONU not found on this OLT.', 404);
+    }
+
+    const current = found[0];
+    const target = normalizeRow({
+        mac: current.onu_mac,
+        serial: current.onu_sn
+    });
+    const position = parsePonLabel(current.pon);
+
+    const driver = driverFor(olt);
+    let rows;
+    let opticalErrors = [];
+
+    try {
+        await driver.connect();
+
+        if (typeof driver.detectModel === 'function') {
+            await driver.detectModel();
+        }
+
+        if (typeof driver.getONU === 'function') {
+            rows = await driver.getONU({
+                mac: target.mac,
+                serial: target.serial,
+                fs: position.fs,
+                pon: position.pon
+            });
+        } else if (typeof driver.getONUList === 'function') {
+            rows = await driver.getONUList();
+        } else {
+            throw new Error('OLT driver does not implement getONUList().');
+        }
+
+        opticalErrors = Array.isArray(driver.opticalErrors)
+            ? driver.opticalErrors.slice(0, 10)
+            : [];
+    } finally {
+        await disconnectDriver(driver);
+    }
+
+    const match = (Array.isArray(rows) ? rows : [])
+        .filter(row => row && typeof row === 'object')
+        .map(row => {
+            const item = normalizeRow(row);
+            item.pon = ponLabel(item, olt);
+            return item;
+        })
+        .find(item => {
+            if (target.mac) return item.mac === target.mac;
+
+            return !item.mac &&
+                !!item.serial &&
+                item.serial === target.serial;
+        });
+
+    if (!match) {
+        throw httpError(
+            'This ONU was not found on the OLT. Database was not changed.',
+            404
+        );
+    }
+
+    const serial = match.serial || match.mac || '';
+    const name = match.name;
+
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        await conn.execute(
+            `UPDATE onu
+             SET
+                 pon = ?,
+                 onu_sn = CASE WHEN ? <> '' THEN ? ELSE onu_sn END,
+                 onu_mac = CASE WHEN ? <> '' THEN ? ELSE onu_mac END,
+                 onu_name = CASE WHEN ? <> '' THEN ? ELSE onu_name END,
+                 rx_power = COALESCE(?, rx_power),
+                 tx_power = COALESCE(?, tx_power),
+                 distance = COALESCE(?, distance),
+                 bias_current = COALESCE(?, bias_current),
+                 voltage = COALESCE(?, voltage),
+                 temperature = COALESCE(?, temperature),
+                 status = CASE
+                     WHEN ? IN ('online', 'offline') THEN ?
+                     ELSE status
+                 END,
+                 last_seen = CASE
+                     WHEN ? = 'online' THEN NOW()
+                     ELSE last_seen
+                 END,
+                 updated_at = NOW()
+             WHERE id = ?
+               AND olt_id = ?`,
+            [
+                match.pon,
+                serial, serial,
+                match.mac, match.mac,
+                name, name,
+                match.rx_power,
+                match.tx_power,
+                match.distance,
+                match.bias_current,
+                match.voltage,
+                match.temperature,
+                match.status, match.status,
+                match.status,
+                id,
+                olt.id
+            ]
+        );
+
+        const [counts] = await conn.execute(
+            `SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(status = 'online'), 0) AS online,
+                COALESCE(SUM(status = 'offline'), 0) AS offline
+             FROM onu
+             WHERE olt_id = ?`,
+            [olt.id]
+        );
+
+        await conn.execute(
+            `UPDATE olts
+             SET
+                 status = 'online',
+                 last_check = NOW(),
+                 onu_total = ?,
+                 onu_online = ?,
+                 onu_offline = ?
+             WHERE id = ?
+               AND company_id = ?`,
+            [
+                Number(counts[0].total || 0),
+                Number(counts[0].online || 0),
+                Number(counts[0].offline || 0),
+                olt.id,
+                olt.company_id
+            ]
+        );
+
+        await conn.commit();
+    } catch (error) {
+        try {
+            await conn.rollback();
+        } catch (_) {
+            // Preserve the original error.
+        }
+
+        throw error;
+    } finally {
+        conn.release();
+    }
+
+    return {
+        success: true,
+        updated: 1,
+        opticalErrors,
+        onu: {
+            id,
+            pon: match.pon,
+            status: match.status,
+            rx_power: match.rx_power,
+            tx_power: match.tx_power,
+            distance: match.distance,
+            voltage: match.voltage,
+            temperature: match.temperature
+        }
+    };
+}
+
+
 module.exports = {
     driverFor,
     testConnection,
     syncOnus,
+    syncOneOnu,
     disconnectDriver
 };
