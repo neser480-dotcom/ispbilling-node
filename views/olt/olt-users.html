@@ -1290,18 +1290,13 @@ function getCell(user, key) {
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
 
         case "action":
-            return '<button type="button" class="olt-action-icon-btn" data-sync-olt="' +
-                escapeHTML(user.oltId) +
-                '" title="Sync all ONU hardware on this OLT" aria-label="Sync OLT ' +
-                escapeHTML(user.oltId) + '" ' + (syncing ? "disabled" : "") + '>' +
-                '<i class="fa-solid fa-network-wired"></i></button>' +
-                (!user.customerOnly && /^\\d+$/.test(String(user.id)) ?
-                    '<button type="button" class="olt-action-icon-btn" data-sync-onu="' +
-                    escapeHTML(user.id) + '" data-olt-id="' + escapeHTML(user.oltId) +
-                    '" title="এই ONU সিংক করুন (RX/TX, distance, voltage, temp)" ' +
-                    '" aria-label="Sync ONU ' + escapeHTML(user.id) + '" ' +
-                    (syncing ? "disabled" : "") + '>' +
-                    '<i class="fa-solid fa-rotate"></i></button>' : "");
+            return (!user.customerOnly && /^\\d+$/.test(String(user.id)) ?
+                '<button type="button" class="olt-action-icon-btn" data-sync-onu="' +
+                escapeHTML(user.id) + '" data-olt-id="' + escapeHTML(user.oltId) +
+                '" title="শুধু এই ONU/Customer Sync করুন" ' +
+                '" aria-label="Sync ONU ' + escapeHTML(user.id) + '" ' +
+                (syncing ? "disabled" : "") + '>' +
+                '<i class="fa-solid fa-rotate"></i></button>' : "");
 
         default:
             return "";
@@ -1671,63 +1666,11 @@ async function loadOnus(keepMessage = false) {
 
 
 /* --------------------------------------------------
-   SYNC OLT
+   SYNC ONE ONU ONLY
 -------------------------------------------------- */
 
-async function syncSelectedOlt(button, targetOltId) {
-    if (
-        !targetOltId ||
-        targetOltId === "all" ||
-        syncing ||
-        loading
-    ) {
-        return;
-    }
-
-    const targetOlt = oltList.find(
-        olt => String(olt.id) === String(targetOltId)
-    );
-
-    if (!targetOlt) {
-        if (window.AppToast) {
-            window.AppToast.error("নির্বাচিত OLT পাওয়া যায়নি।");
-        } else {
-            showMessage("নির্বাচিত OLT পাওয়া যায়নি।", "error");
-        }
-        return;
-    }
-
-    syncing = true;
-    clearMessage();
-
-    if (button) {
-        button.disabled = true;
-        button.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i>';
-    }
-
-    refreshButton.disabled = true;
-
-    try {
-        const result = await apiPost(
-            `/api/olt/${encodeURIComponent(targetOltId)}/sync/onu`
-        );
-
-        const details = result.data || {};
-
-        const syncMessage =
-            `${result.message || "ONU synchronization completed."} ` +
-   
-
 async function syncOneOnuRow(button, targetOltId, onuId) {
-    if (
-        !targetOltId ||
-        !onuId ||
-        syncing ||
-        loading
-    ) {
-        return;
-    }
+    if (!targetOltId || !onuId || syncing || loading) return;
 
     if (!/^\d+$/.test(String(onuId))) {
         showMessage(
@@ -1744,8 +1687,7 @@ async function syncOneOnuRow(button, targetOltId, onuId) {
 
     if (button) {
         button.disabled = true;
-        button.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i>';
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
 
     refreshButton.disabled = true;
@@ -1762,7 +1704,6 @@ async function syncOneOnuRow(button, targetOltId, onuId) {
 
         await loadOnus(true);
 
-        // loadOnus clears messages when it finishes, so show this afterwards.
         showMessage(
             `ONU সিংক হয়েছে। Status: ${show(onu.status)}, ` +
             `RX: ${show(onu.rx_power)}, TX: ${show(onu.tx_power)}, ` +
@@ -1776,33 +1717,7 @@ async function syncOneOnuRow(button, targetOltId, onuId) {
             showMessage(error.message || "ONU synchronization failed.", "error");
         }
 
-        if (button) {
-            button.innerHTML = originalHtml;
-        }
-    } finally {
-        syncing = false;
-        refreshButton.disabled = false;
-        renderRows();
-    }
-}         `Inserted: ${details.inserted ?? 0}, ` +
-            `Updated: ${details.updated ?? 0}, ` +
-            `Skipped: ${details.skipped ?? 0}.` +
-            mappingSummary(details.mapping);
-
-        if (window.AppToast) {
-            window.AppToast.success(syncMessage);
-        } else {
-            showMessage(syncMessage, "success");
-        }
-
-        await loadOnus(true);
-    } catch (error) {
-        const syncError = error.message || "ONU synchronization failed.";
-        if (window.AppToast) {
-            window.AppToast.error(syncError);
-        } else {
-            showMessage(syncError, "error");
-        }
+        if (button) button.innerHTML = originalHtml;
     } finally {
         syncing = false;
         refreshButton.disabled = false;
@@ -2030,22 +1945,7 @@ body.addEventListener("click", async event => {
         return;
     }
 
-    const syncButton = event.target.closest("[data-sync-olt]");
-
-    if (
-        !syncButton ||
-        syncButton.disabled ||
-        syncing ||
-        mappingBusy ||
-        loading
-    ) {
-        return;
-    }
-
-    await syncSelectedOlt(
-        syncButton,
-        syncButton.dataset.syncOlt
-    );
+    // OLT-wide bulk sync is intentionally not available on this page.
 });
 
 
