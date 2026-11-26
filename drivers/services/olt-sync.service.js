@@ -4,6 +4,7 @@
 const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
 const { BdcomDriver } = require('../hardware/bdcom');
+const { VsolDriver } = require('../hardware/vsol');
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,10 @@ function driverFor(olt) {
 
     if (['bdcom', 'bd-com', 'bdcom-epon', 'bdcom-olt'].includes(vendor)) {
         return new BdcomDriver(config);
+    }
+
+    if (['vsol', 'v-sol', 'vsol-epon'].includes(vendor)) {
+        return new VsolDriver(config);
     }
 
     throw new Error(`Unsupported OLT vendor: ${olt.vendor}`);
