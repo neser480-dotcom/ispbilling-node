@@ -5,6 +5,7 @@ const {
     loadMikrotikService
 } = require("../services/ppp-sessions");
 const { normalizeMac } = require("./core/sync-normalizer");
+const { syncOneOnu } = require("../services/olt-sync.service");
 
 /*
 |--------------------------------------------------------------------------
@@ -529,7 +530,15 @@ async function syncOnuHardware(pool, olt) {
     );
 }
 
+async function syncOneOnuHardware(pool, olt, onuId) {
+    return exclusive(
+        olt.id,
+        () => syncOneOnu(pool, olt, onuId)
+    );
+}
+
 module.exports = {
     syncCustomers,
-    syncOnuHardware
+    syncOnuHardware,
+    syncOneOnuHardware
 };
