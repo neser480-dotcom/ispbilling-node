@@ -986,10 +986,15 @@ exports.listOnus = async (req, res) => {
                     WHEN c.id IS NOT NULL THEN
                         COALESCE(
                             NULLIF(TRIM(c.name), ''),
-                            NULLIF(TRIM(c.customer_id), ''),
+                            NULLIF(TRIM(c.comment), ''),
+                            NULLIF(TRIM(o.ip_address), ''),
                             'Customer name unavailable'
                         )
-                    ELSE 'Customer not linked'
+                    ELSE
+                        COALESCE(
+                            NULLIF(TRIM(o.ip_address), ''),
+                            'Customer not linked'
+                        )
                 END AS name,
 
                 COALESCE(
