@@ -5,6 +5,7 @@ const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
 const { HiosoDriver } = require('../hardware/hioso');
 const { HsgqDriver } = require('../hardware/hsgq');
+const { VsolDriver } = require('../hardware/vsol');
 const { ZteEponDriver } = require('../hardware/zte-epon');
 const { autoMapOnus } = require('./onu-auto-mapping.service');
 const { collectPppSessions, loadMikrotikService } = require('./ppp-sessions');
@@ -50,6 +51,10 @@ function driverFor(olt) {
 
     if (['hioso', 'hiosoepon'].includes(key)) {
         return new HiosoDriver(config);
+    }
+
+    if (['vsol', 'vsolepon', 'vsololt'].includes(key)) {
+        return new VsolDriver(config);
     }
 
     if (['hsgq', 'hsgqepon', 'hsgqgpon'].includes(key)) {
