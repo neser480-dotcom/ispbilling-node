@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "../..");
+const ROOT_FILES = ["app.js", "README.txt"];
 const SOURCE_DIRS = [
     "views",
     "routes",
@@ -95,6 +96,8 @@ async function buildIndex() {
         for (const relativeDir of SOURCE_DIRS) {
             walk(path.join(ROOT, relativeDir), files);
         }
+
+        for (const relativeFile of ROOT_FILES) files.push(path.join(ROOT, relativeFile));
 
         const chunks = [];
         let indexedFiles = 0;
