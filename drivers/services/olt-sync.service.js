@@ -5,6 +5,9 @@ const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
 const { BdcomDriver } = require('../hardware/bdcom');
 const { VsolDriver } = require('../hardware/vsol');
+const { HiosoDriver } = require('../hardware/hioso');
+const { HsgqDriver } = require('../hardware/hsgq');
+const { ZteEponDriver } = require('../hardware/zte-epon');
 
 /*
 |--------------------------------------------------------------------------
@@ -18,27 +21,47 @@ function driverFor(olt) {
         .toLowerCase()
         .replace(/[_\s]+/g, '-');
 
+    // Normalize vendor labels such as Hioso EPON / ZTE-EPON.
+    const key = vendor.replace(/[^a-z0-9]/g, '');
+
     const config = {
         ip: olt.ip,
         port: Number(olt.port || 23),
         username: olt.username,
         password: olt.password,
-        timeout: Number(olt.timeout || 12)
+        timeout: Number(olt.timeout || 12),
+        community: olt.community || olt.snmp_community || olt.snmp_read_community || '',
+        snmpPort: Number(olt.snmp_port || olt.port) && Number(olt.snmp_port || olt.port) !== 23
+            ? Number(olt.snmp_port || olt.port)
+            : 161,
+        snmpVersion: olt.snmp_version || '2c'
     };
 
-    if (['ecom', 'e-com', 'ecom-epon'].includes(vendor)) {
+    if (['ecom', 'e-com', 'ecom-epon'].includes(vendor) || ['ecom', 'ecomepon'].includes(key)) {
         return new EcomDriver(config);
     }
 
-    if (['cdata', 'c-data', 'c-data-epon'].includes(vendor)) {
+    if (['cdata', 'c-data', 'c-data-epon'].includes(vendor) || ['cdata', 'cdataepon'].includes(key)) {
         return new CDataDriver(config);
     }
 
-    if (['bdcom', 'bd-com', 'bdcom-epon', 'bdcom-olt'].includes(vendor)) {
+    if (['hioso', 'hiosoepon'].includes(key)) {
+        return new HiosoDriver(config);
+    }
+
+    if (['hsgq', 'hsgqepon', 'hsgqgpon'].includes(key)) {
+        return new HsgqDriver(config);
+    }
+
+    if (['zte', 'zteepon'].includes(key)) {
+        return new ZteEponDriver(config);
+    }
+
+    if (['bdcom', 'bd-com', 'bdcom-epon', 'bdcom-olt'].includes(vendor) || ['bdcom', 'bdcomepon', 'bdcomolt'].includes(key)) {
         return new BdcomDriver(config);
     }
 
-    if (['vsol', 'v-sol', 'vsol-epon'].includes(vendor)) {
+    if (['vsol', 'v-sol', 'vsol-epon'].includes(vendor) || ['vsol', 'vsolepon'].includes(key)) {
         return new VsolDriver(config);
     }
 
