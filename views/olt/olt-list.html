@@ -1322,7 +1322,9 @@
           ", already linked: " + Number(mappingData.alreadyLinked || 0) +
           ", unmatched: " + Number(mappingData.unmatched || 0) +
           ", ambiguous: " + Number(mappingData.ambiguous || 0) +
-          ", conflicts: " + Number(mappingData.conflicts || 0) + ".";
+          ", conflicts: " + Number(mappingData.conflicts || 0) +
+          ", learned-MAC evidence: " +
+          (mappingData.learnedMacsSupported ? "available" : "unavailable") + ".";
       } else {
         result = await apiRequest(
           "/api/olt/" + id + "/" + action,
