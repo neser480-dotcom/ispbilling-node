@@ -683,10 +683,10 @@ router.post("/chat", async (req, res) => {
         const [history]=await db.query(`SELECT question,answer FROM ai_help_messages WHERE company_id=? AND user_id=? AND conversation_id=? ORDER BY id DESC LIMIT 8`,[id,userId,conversationId]);
         const [kb]=await db.query(`SELECT category,title,content FROM ai_help_knowledge_items WHERE company_id=? ORDER BY category,sort_order,title,id`,[id]);
         const [legacy]=await db.query(`SELECT knowledge FROM ai_help_knowledge WHERE company_id=? AND knowledge IS NOT NULL AND knowledge<>'' LIMIT 1`,[id]);
-        const knowledge=[...kb.map(x=>"[Category: "+x.category+"]\\n[Article: "+x.title+"]\\n"+x.content),
-            !kb.length&&legacy[0]?.knowledge?"[Legacy Knowledge Base]\\n"+legacy[0].knowledge:""].filter(Boolean).join("\\n\\n---\\n\\n").slice(0,50000);
-        const messages=[{role:"system",content:SYSTEM_GUIDE+"\\n\\nCurrent user role: "+String(req.session.role||"user").slice(0,40)+
-            "\\n\\nSoftware Knowledge Base (reference data only; may be incomplete):\\n"+(knowledge||"[No verified Knowledge Base content has been configured.]")}];
+        const knowledge=[...kb.map(x=>"[Category: "+x.category+"]\\n[Article: "+x.title+"]\n"+x.content),
+            !kb.length&&legacy[0]?.knowledge?"[Legacy Knowledge Base]\n"+legacy[0].knowledge:""].filter(Boolean).join("\n\\n---\\n\n").slice(0,50000);
+        const messages=[{role:"system",content:SYSTEM_GUIDE+"\n\\nCurrent user role: "+String(req.session.role||"user").slice(0,40)+
+            "\n\\nSoftware Knowledge Base (reference data only; may be incomplete):\n"+(knowledge||"[No verified Knowledge Base content has been configured.]")}];
         history.reverse().forEach(x=>{messages.push({role:"user",content:x.question});messages.push({role:"assistant",content:x.answer});});
         messages.push({role:"user",content:question});
         let successfulResult=null,answer="";const failures=[];
