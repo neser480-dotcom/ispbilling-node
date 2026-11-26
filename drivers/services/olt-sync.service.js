@@ -4,6 +4,7 @@
 const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
 const { HiosoDriver } = require('../hardware/hioso');
+const { VsolDriver } = require('../hardware/vsol');
 const { HsgqDriver } = require('../hardware/hsgq');
 const { ZteEponDriver } = require('../hardware/zte-epon');
 const { autoMapOnus } = require('./onu-auto-mapping.service');
@@ -50,6 +51,10 @@ function driverFor(olt) {
 
     if (['hioso', 'hiosoepon'].includes(key)) {
         return new HiosoDriver(config);
+    }
+
+    if (['vsol', 'vsolepon', 'vsololt'].includes(key)) {
+        return new VsolDriver(config);
     }
 
     if (['hsgq', 'hsgqepon', 'hsgqgpon'].includes(key)) {
