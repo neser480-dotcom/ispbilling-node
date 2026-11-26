@@ -45,7 +45,7 @@ const DEFAULT_CONFIG = {
         command: 'show mac-address port pon {iface}/{pon} with-ont-location',
         perPort: true,
         lineRegex:
-            '^(?<mac>[0-9a-f]{2}(?::[0-9a-f]{2}){5})\\s+\\d+\\s+epon\\d+/\\d+/(?<pon>\\d+)\\s+(?<ont>\\d+)\\s+dynamic$'
+            '^(?<mac>(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}|(?:[0-9a-f]{4}\\.){2}[0-9a-f]{4}|[0-9a-f]{12})\\s+\\d+\\s+(?:epon|pon)\\d+/\\d+/(?<pon>\\d+)\\s+(?<ont>\\d+)\\s+(?:dynamic|static)$'
     }]
 };
 
