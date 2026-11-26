@@ -58,7 +58,7 @@ await ok("merge: optical only for online ONUs, offline stays null (no invented v
     assert.strictEqual(by("0/1:4").vendor_id, "HWTC");
     // 0/1:3 is offline but listed in opm-diag -> must be ignored
     assert.strictEqual(by("0/1:3").rx_power, null);
-    assert.strictEqual(by("0/1:3").distance, null);
+    assert.strictEqual(by("0/1:3").distance, 0); // retain distance reported by status table
     assert.strictEqual(by("0/1:1").status, "offline");
     assert.strictEqual(by("0/1:1").onu_mac, "54:93:59:21:3C:92");
     assert.strictEqual(by("0/1:4").pon, "epon0/1");
@@ -74,37 +74,58 @@ await ok("N/A optical values become null, never 0", async () => {
 // ---- fake VSOL telnet server (login, enable, --More-- paging, IAC) ----
 function fakeOlt({ failLogin = false } = {}) {
     const server = net.createServer(socket => {
-        let state = "login", buf = "";
-        socket.write(Buffer.from([255, 253, 1, 255, 251, 3]));            // IAC DO ECHO, IAC WILL SGA
+        let state = "login", buf = "", currentPon = "";
+        socket.write(Buffer.from([255, 253, 1, 255, 251, 3]));
         socket.write("\r\nHello, this is epon olt platform (version 1.00).\r\nUser Access Verification\r\nLogin: ");
         socket.on("data", d => {
             const text = d.toString("latin1").replace(/\xff[\xfb-\xfe]./g, "");
             buf += text;
             let i;
             while ((i = buf.indexOf("\r\n")) !== -1) {
-                const line = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
-                if (state === "login") { state = "pass"; socket.write("Password: "); }
-                else if (state === "pass") {
-                    if (failLogin || line !== "secret") { socket.write("\r\nAuthentication failed\r\nLogin: "); state = "login"; }
-                    else { state = "user"; socket.write("\r\nepon-olt>"); }
+                const line = buf.slice(0, i).trim();
+                buf = buf.slice(i + 2);
+                if (state === "login") {
+                    state = "pass";
+                    socket.write("Password: ");
+                } else if (state === "pass") {
+                    if (failLogin || line !== "secret") {
+                        socket.write("\r\nAuthentication failed\r\nLogin: ");
+                        state = "login";
+                    } else {
+                        state = "user";
+                        socket.write("\r\nepon-olt>");
+                    }
+                } else if (line === "enable") {
+                    state = "priv";
+                    socket.write("enable\r\nepon-olt#");
+                } else if (line === "show running-config") {
+                    socket.write("show running-config\r\ninterface epon 0/1\r\ninterface epon 0/3\r\nepon-olt#");
+                } else if (line === "configure terminal") {
+                    state = "config";
+                    socket.write("configure terminal\r\nepon-olt(config)#");
+                } else if (/^interface epon \d+\/\d+$/.test(line)) {
+                    currentPon = line.replace("interface epon ", "");
+                    state = "interface";
+                    socket.write(\`\${line}\r\nepon-olt(config-if)#\`);
+                } else if (line === "show onu status all") {
+                    const rows = STATUS.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
+                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                } else if (line === "show onu opm-diag") {
+                    const rows = OPM.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
+                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                } else if (line === "show onu baisc-info") {
+                    const rows = BASIC.split("\n").filter((row, n) => n === 0 || row.startsWith(\`EPON\${currentPon}:\`));
+                    socket.write(\`\${line}\r\n\${rows.join("\r\n")}\r\nepon-olt(config-if)#\`);
+                } else {
+                    socket.write(\`\${line}\r\n% Unknown command\r\nepon-olt#\`);
                 }
-                else if (line === "enable") { state = "priv"; socket.write("enable\r\nepon-olt#"); }
-                else if (line === "show onu status all") socket.write(`${line}\r\n${STATUS.replace(/\n/g, "\r\n")}\r\nepon-olt#`);
-                else if (line === "show onu opm-diag") {
-                    // paged: first half, --More--, then rest after a space
-                    const L = OPM.split("\n");
-                    socket.write(`${line}\r\n${L.slice(0, 2).join("\r\n")}\r\n --More-- `);
-                    socket.once("data", () => socket.write(`\r${L.slice(2).join("\r\n")}\r\nepon-olt#`));
-                }
-                else if (line === "show onu baisc-info") socket.write(`${line}\r\n${BASIC.replace(/\n/g, "\r\n")}\r\nepon-olt#`);
-                else socket.write(`${line}\r\n% Unknown command\r\nepon-olt#`);
             }
         });
     });
     return new Promise(res => server.listen(0, "127.0.0.1", () => res(server)));
 }
 
-await ok("driver: login+enable, IAC ignored, paging, merges three commands", async () => {
+await ok("driver: discovers PONs and reads tables per interface", async () => {
     const server = await fakeOlt();
     const d = new VsolDriver({ ip: "127.0.0.1", port: server.address().port, username: "admin", password: "secret", timeout: 8000 });
     try {
@@ -118,6 +139,7 @@ await ok("driver: login+enable, IAC ignored, paging, merges three commands", asy
         assert.strictEqual(rows.find(r => r.ont_id === 12).rx_power, -20.09);   // line after --More--
         assert.strictEqual(rows.find(r => r.ont_id === 12).model_id, "D701");
         assert.deepStrictEqual(d.opticalErrors, []);
+        assert.strictEqual(rows.find(r => r.ont_id === 1).distance, 0);
     } finally { d.disconnect(); server.close(); }
 });
 
