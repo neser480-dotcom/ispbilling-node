@@ -4,8 +4,6 @@
 const { EcomDriver, cleanMac } = require('../hardware/ecom');
 const { CDataDriver } = require('../hardware/cdata');
 const { BdcomDriver } = require('../hardware/bdcom');
-const { autoMapOnus } = require('./onu-auto-mapping.service');
-const { collectPppSessions, loadMikrotikService } = require('./ppp-sessions');
 
 /*
 |--------------------------------------------------------------------------
@@ -562,48 +560,10 @@ async function syncOnus(pool, olt) {
 
         await conn.commit();
 
-        /*
-         * Customer auto-mapping runs AFTER the ONU data is committed and in
-         * its own transaction. Any failure is reported, never thrown.
-         */
-        let mapping = null;
-
-        if (String(process.env.ONU_AUTO_MAP || 'on').toLowerCase() !== 'off') {
-            try {
-                let ppp = { sessions: [], errors: [] };
-
-                try {
-ppp = await collectPppSessions(
-    pool,
-    olt.company_id,
-    loadMikrotikService(),
-    olt.mikrotik_id
-);
-                } catch (error) {
-                    ppp.errors.push(error.message);
-                }
-
-                mapping = await autoMapOnus(pool, {
-                    companyId: olt.company_id,
-                    oltId: olt.id,
-                    entries: learned.entries,
-                    sessions: ppp.sessions
-                });
-
-                mapping.learnedMacSupported = !!learned.supported;
-                mapping.learnedMacErrors = (learned.errors || []).slice(0, 10);
-                mapping.pppSessions = ppp.sessions.length;
-                mapping.pppErrors = (ppp.errors || []).slice(0, 10);
-console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
-            } catch (error) {
-                console.error('[ONU AUTO MAP]', error);
-                mapping = { error: error.message };
-            }
-        }
-
+        // Hardware sync is strictly ONU-only; customer mapping is a separate operation.
         return {
             success: true,
-            mapping,
+            mapping: null,
             opticalErrors,
             found: normalized.length,
             inserted,
@@ -626,9 +586,160 @@ console.log('[ONU MAPPING RESULT]', JSON.stringify(mapping, null, 2));
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| SINGLE ONU HARDWARE SYNC
+|--------------------------------------------------------------------------
+| Reads the selected OLT but updates only the requested existing ONU row.
+| Customer mappings, PPPoE sessions, and every other ONU remain untouched.
+|--------------------------------------------------------------------------
+*/
+async function syncOneOnu(pool, olt, onuId) {
+    if (!olt || !olt.id || !olt.company_id) {
+        throw new Error('Invalid OLT context.');
+    }
+
+    const id = Number(onuId);
+    if (!Number.isSafeInteger(id) || id < 1) {
+        throw new Error('Invalid ONU ID.');
+    }
+
+    const [targetRows] = await pool.execute(
+        "SELECT id, pon, onu_sn, onu_mac, mac_address " +
+        "FROM onu WHERE id = ? AND olt_id = ? LIMIT 1",
+        [id, Number(olt.id)]
+    );
+
+    if (!targetRows.length) {
+        const error = new Error('ONU not found on this OLT.');
+        error.status = 404;
+        throw error;
+    }
+
+    const target = targetRows[0];
+    const targetMac = cleanMac(String(target.onu_mac || target.mac_address || ''));
+    const targetSerial = nullableText(target.onu_sn, 100);
+    const targetPon = String(target.pon ?? '').trim();
+
+    if (!targetMac && (!targetSerial || !targetPon)) {
+        throw new Error(
+            'ONU has no unique hardware identity (MAC or PON + serial).'
+        );
+    }
+
+    const driver = driverFor(olt);
+    let hardwareRows;
+
+    try {
+        await driver.connect();
+
+        if (typeof driver.detectModel === 'function') {
+            await driver.detectModel();
+        }
+
+        if (typeof driver.getONUList !== 'function') {
+            throw new Error('OLT driver does not implement getONUList().');
+        }
+
+        hardwareRows = await driver.getONUList();
+    } finally {
+        await disconnectDriver(driver);
+    }
+
+    if (!Array.isArray(hardwareRows) || !hardwareRows.length) {
+        throw new Error('OLT returned no ONU hardware records.');
+    }
+
+    const normalized = hardwareRows
+        .filter(row => row && typeof row === 'object')
+        .map(row => {
+            const item = normalizeRow(row);
+            item.pon = ponLabel(item, olt);
+            return item;
+        });
+
+    const matches = normalized.filter(row => {
+        if (targetMac) return row.mac === targetMac;
+        return row.pon === targetPon && row.serial === targetSerial;
+    });
+
+    if (matches.length === 0) {
+        throw new Error(
+            'The selected ONU was not found in the OLT hardware response. No database changes were made.'
+        );
+    }
+
+    if (matches.length > 1) {
+        throw new Error(
+            'The selected ONU hardware identity is ambiguous. No database changes were made.'
+        );
+    }
+
+    const row = matches[0];
+    const serial = row.serial || row.mac || '';
+    const name = row.name || '';
+
+    const [updateResult] = await pool.execute(
+        "UPDATE onu SET " +
+        "pon = ?, " +
+        "onu_sn = CASE WHEN ? <> '' THEN ? ELSE onu_sn END, " +
+        "onu_mac = CASE WHEN ? <> '' THEN ? ELSE onu_mac END, " +
+        "onu_name = CASE WHEN ? <> '' THEN ? ELSE onu_name END, " +
+        "rx_power = COALESCE(?, rx_power), " +
+        "tx_power = COALESCE(?, tx_power), " +
+        "distance = COALESCE(?, distance), " +
+        "bias_current = COALESCE(?, bias_current), " +
+        "voltage = COALESCE(?, voltage), " +
+        "temperature = COALESCE(?, temperature), " +
+        "status = CASE WHEN ? IN ('online', 'offline') THEN ? ELSE status END, " +
+        "last_seen = CASE WHEN ? = 'online' THEN NOW() ELSE last_seen END, " +
+        "updated_at = NOW() " +
+        "WHERE id = ? AND olt_id = ?",
+        [
+            row.pon,
+            serial, serial,
+            row.mac, row.mac,
+            name, name,
+            row.rx_power,
+            row.tx_power,
+            row.distance,
+            row.bias_current,
+            row.voltage,
+            row.temperature,
+            row.status, row.status,
+            row.status,
+            id,
+            Number(olt.id)
+        ]
+    );
+
+    if (!updateResult.affectedRows) {
+        throw new Error('ONU hardware record was not updated.');
+    }
+
+    return {
+        success: true,
+        onuId: id,
+        updated: true,
+        hardware: {
+            pon: row.pon,
+            onu_sn: serial || target.onu_sn || null,
+            onu_mac: row.mac || target.onu_mac || target.mac_address || null,
+            status: row.status,
+            rx_power: row.rx_power,
+            tx_power: row.tx_power,
+            distance: row.distance,
+            bias_current: row.bias_current,
+            voltage: row.voltage,
+            temperature: row.temperature
+        }
+    };
+}
+
 module.exports = {
     driverFor,
     testConnection,
     syncOnus,
+    syncOneOnu,
     disconnectDriver
 };
