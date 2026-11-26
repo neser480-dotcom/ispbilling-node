@@ -171,7 +171,7 @@ router.get("/tickets", async (req, res, next) => {
                 created_at: r.created_at
             })),
             ...supportTickets.map((r) => {
-                const parts = String(r.message || "").split("\\n\\n");
+                const parts = String(r.message || "").split("\n\n");
                 const adminStatus = String(r.status || "").toLowerCase();
                 return {
                     id: r.id,
@@ -215,8 +215,8 @@ router.post("/tickets", async (req, res, next) => {
                 message: "আগের টিকেটগুলো নিষ্পত্তি না হওয়া পর্যন্ত নতুন টিকেট খোলা যাবে না।" });
         }
 
-        const ticketCode = "TCK-" + Date.now().toString().slice(-8);
-        const fullMessage = message ? `${subject}\\n\\n${message}` : subject;
+        const ticketCode = "CUS-" + Date.now().toString();
+        const fullMessage = message ? `${subject}\n\n${message}` : subject;
         const [result] = await db.execute(
             `INSERT INTO support_tickets
              (company_id, ticket_code, customer_id, customer_name, message, ticket_type, status)
