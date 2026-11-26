@@ -98,9 +98,6 @@ function validId(value) {
     return id;
 }
 
-/* Vendors read over SNMP: a community instead of a telnet login. */
-const SNMP_VENDORS = new Set(["hioso", "hsgq", "zte"]);
-
 function clean(value, max = 255) {
     return String(value ?? "").trim().slice(0, max);
 }
@@ -118,13 +115,6 @@ function normalizeVendor(value) {
         cdataepon: "cdata",
         cdataolt: "cdata",
         cdataeponolt: "cdata",
-        hioso: "hioso",
-        hiosoepon: "hioso",
-        hiosoolt: "hioso",
-        hsgq: "hsgq",
-        hsgqepon: "hsgq",
-        hsgqgpon: "hsgq",
-        hsgqolt: "hsgq",
         vsol: "vsol",
         vsololt: "vsol",
         bdcom: "bdcom",
@@ -133,8 +123,6 @@ function normalizeVendor(value) {
         huaweiolt: "huawei",
         zte: "zte",
         zteolt: "zte",
-        zteepon: "zte",
-        zteeponolt: "zte",
         fiberhome: "fiberhome",
         raisecom: "raisecom",
         nokia: "nokia",
@@ -161,8 +149,7 @@ function validateInput(body, editing = false) {
     const ip = clean(body.ip || body.host, 255);
     const username = clean(body.username, 150);
     const password = String(body.password ?? "");
-    const snmpVendor = SNMP_VENDORS.has(vendor);
-    const port = Number(body.port || (snmpVendor ? 161 : 23));
+    const port = Number(body.port || 23);
     const ponPorts = Number(body.pon_ports || 4);
 const mikrotikId = body.mikrotik_id
     ? Number(body.mikrotik_id)
@@ -180,9 +167,7 @@ if (
         10
     ).toLowerCase();
 
-    const communityInput = clean(body.community, 100);
-    /* Edit: blank = keep the stored community (see update). */
-    const community = communityInput || (editing ? "" : "public");
+    const community = clean(body.community || "public", 100);
     const remarks = clean(body.remarks, 1000);
 
     if (!name) {
@@ -211,21 +196,11 @@ if (
         throw new OltError("Invalid SNMP version.");
     }
 
-    if (snmpVendor && snmpVersion === "v3") {
-        throw new OltError(
-            "SNMP v3 is not supported for this vendor yet. Use v1 or v2c."
-        );
-    }
-
-    if (snmpVendor && !editing && !communityInput) {
-        throw new OltError("SNMP community is required.");
-    }
-
-    if (!editing && !snmpVendor && !username) {
+    if (!editing && !username) {
         throw new OltError("OLT username is required.");
     }
 
-    if (!editing && !snmpVendor && !password) {
+    if (!editing && !password) {
         throw new OltError("OLT password is required.");
     }
 
@@ -321,7 +296,7 @@ exports.list = async (req, res) => {
         const search = clean(req.query.search, 150);
         const scope = scopeSql(req, "ol");
 
-        let where = `WHERE ol.deleted_at IS NULL ${scope.sql}`;
+        let where = `WHERE 1=1 ${scope.sql}`;
         const params = [...scope.params];
 
         if (search) {
@@ -345,7 +320,6 @@ exports.list = async (req, res) => {
                 ol.port,
                 ol.username,
                 ol.pon_ports,
-                ol.snmp_version,
                 ol.status,
                 ol.created_at,
                 ol.last_check,
@@ -546,8 +520,6 @@ exports.update = async (req, res) => {
         const data = validateInput(req.body || {}, true);
         const password =
             String(req.body?.password ?? "") || old.password;
-        const community =
-            data.community || old.community || "public";
 
         const scope = scopeSql(req, "ol");
 
@@ -575,7 +547,7 @@ exports.update = async (req, res) => {
                 data.username,
                 password,
                 data.snmp_version,
-                community,
+                data.community,
                 data.pon_ports,
                 data.remarks,
                 id,
@@ -619,25 +591,20 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        // Soft-delete the OLT configuration. A hard DELETE can trigger
-        // production database cascades and remove ONU rows plus their customer
-        // mappings. Keep all related ONU/customer records intact.
+        // Only the OLT row is deleted. ONU rows and customer mappings
+        // (onu_user_mapping, onu_ppp_info, onu_customer_links) are kept;
+        // an ONU is removed only by a manual ONU delete.
         const [[kept]] = await connection.execute(
             "SELECT COUNT(*) AS total FROM onu WHERE olt_id = ?",
             [id]
         );
 
-        const [deleted] = await connection.execute(
-            `UPDATE olts AS ol
-                SET ol.deleted_at = NOW()
-              WHERE ol.id = ?
-                AND ol.deleted_at IS NULL ${scope.sql}`,
+        await connection.execute(
+            `DELETE ol
+               FROM olts AS ol
+              WHERE ol.id = ? ${scope.sql}`,
             [id, ...scope.params]
         );
-
-        if (!deleted.affectedRows) {
-            throw new OltError("OLT is already deleted or unavailable.", 404);
-        }
 
         await connection.commit();
 
@@ -682,16 +649,7 @@ exports.check = async (req, res) => {
         const id = validId(req.params.id);
         olt = await findOlt(req, id);
 
-        const vendor = normalizeVendor(olt.vendor);
-        const snmpVendor = SNMP_VENDORS.has(vendor);
-
-        if (snmpVendor) {
-            if (!olt.ip || !olt.community) {
-                throw new OltError(
-                    "OLT IP এবং SNMP community যাচাই করুন।"
-                );
-            }
-        } else if (
+        if (
             !olt.ip ||
             !olt.port ||
             !olt.username ||
@@ -701,6 +659,8 @@ exports.check = async (req, res) => {
                 "OLT IP, Port, Username এবং Password যাচাই করুন।"
             );
         }
+
+        const vendor = normalizeVendor(olt.vendor);
 
         const config = {
             id: olt.id,
@@ -725,13 +685,9 @@ exports.check = async (req, res) => {
         } else if (vendor === "ecom") {
             const { EcomDriver } = require("../../drivers/hardware/ecom");
             driver = new EcomDriver(config);
-        } else if (vendor === "vsol") {
-            const { VsolDriver } = require("../../drivers/hardware/vsol");
-            driver = new VsolDriver(config);
-        } else if (snmpVendor) {
-            /* Hioso / HSGQ / ZTE EPON: SNMP drivers, built from the OLT row. */
-            const { driverFor } = require("../../drivers/services/olt-sync.service");
-            driver = driverFor(olt);
+        } else if (vendor === "bdcom") {
+            const { BdcomDriver } = require("../../drivers/hardware/bdcom");
+            driver = new BdcomDriver(config);
         } else {
             throw new OltError(
                 `এই Vendor-এর connection test সেট করা নেই: ${vendor}`
@@ -826,7 +782,7 @@ exports.check = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| POST /api/olt/:id/sync/customers
+| POST /api/olt/:id/sync
 |--------------------------------------------------------------------------
 */
 
@@ -837,13 +793,23 @@ exports.syncCustomers = async (req, res) => {
         const id = validId(req.params.id);
         const olt = await findOlt(req, id);
 
-        const customerSync = await syncManager.syncCustomers(getPool(), olt);
-        const mappingSync = await syncManager.syncCustomerMapping(getPool(), olt);
+        const dryRun =
+            req.body?.dry_run === true ||
+            req.body?.dry_run === "true" ||
+            req.query?.dry_run === "1";
+
+        const result = await syncManager.syncCustomers(
+            getPool(),
+            olt,
+            { dryRun }
+        );
 
         return res.json({
             success: true,
-            message: 'PPPoE customer session and mapping sync completed. ONU hardware records were not synced.',
-            data: { customerSync, mappingSync }
+            message: dryRun
+                ? "PPPoE customer session and mapping sync preview completed. ONU hardware records were not synced."
+                : "PPPoE customer session and mapping sync completed. ONU hardware records were not synced.",
+            data: result
         });
     } catch (error) {
         return jsonError(res, error);
@@ -869,32 +835,8 @@ exports.syncOnuHardware = async (req, res) => {
 };
 
 // Old endpoint (POST /:id/sync) keeps working as ONU hardware sync.
-/*
-|--------------------------------------------------------------------------
-| Legacy POST /api/olt/:id/sync alias: ONU hardware sync only.
-|--------------------------------------------------------------------------
-*/
-/* One ONU: POST /api/olt/:id/onus/:onuId/sync (OLT Users row button). */
-exports.syncOneOnu = async (req, res) => {
-    try {
-        verifyMappingCsrf(req);
-
-        const id = validId(req.params.id);
-        const onuId = validId(req.params.onuId);
-        const olt = await findOlt(req, id);
-        const result = await syncManager.syncOnu(getPool(), olt, onuId);
-
-        return res.json({
-            success: true,
-            message: "ONU synchronization completed.",
-            data: result
-        });
-    } catch (error) {
-        return jsonError(res, error);
-    }
-};
-
 exports.sync = exports.syncOnuHardware;
+
 /*
 |--------------------------------------------------------------------------
 | POST /api/olt/:id/auto-map   (body: { dry_run: true } to preview)
@@ -1305,15 +1247,22 @@ exports.listOnus = async (req, res) => {
             }
         }
 
-        // Keep every ONU hardware row visible, including unmapped ONUs.
-        // Customer mapping is displayed separately and must not control
-        // whether the ONU itself appears in the hardware list.
+        // Show only ONUs linked to at least one valid customer.
+        const visibleRows = rows.filter(row => {
+            const hasPrimaryCustomer =
+                row.matched_customer_id != null;
+
+            const hasExtraCustomers =
+                (extrasByOnu.get(Number(row.id)) || []).length > 0;
+
+            return hasPrimaryCustomer || hasExtraCustomers;
+        });
         return res.json({
             success: true,
-            total: rows.length,
+            total: visibleRows.length,
             customer_session_total: customerSessions.length,
             customer_sessions: customerSessions,
-            data: rows.map(row => {
+            data: visibleRows.map(row => {
                 const linked = row.matched_customer_id != null;
                 const primaryPpp = linked
                     ? pppByCustomer.get(Number(row.matched_customer_id))

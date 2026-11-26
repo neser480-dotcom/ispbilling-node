@@ -1,0 +1,2144 @@
+# BDCOM probe 2026-11-26T21:15:05.251Z  103.109.56.193:56790
+# prompt: DORICHOR-BABU#
+
+## show version   [OK 570 chars 264ms]
+BDCOM(tm) P3310D Software, Version 10.1.0F Build 103950
+Copyright by Shanghai Baud Data Communication CO. LTD.
+Compiled: 2022-9-28 10:8:29 by SYS, Image text-base: 0x80008000
+ROM: System Bootstrap, Version 0.4.2, Serial num:00325017791
+System image file is "Switch.bin"
+hardware version:A
+(RISC) processor with 131072K bytes of memory, 32768K bytes of flash
+Base ethernet MAC Address: 00:55:b1:4a:c7:7e
+PCB version:A 
+snmp info:
+  product_ID:441   system_ID:1.3.6.1.4.1.3320.1.441.0
+DORICHOR-BABU uptime is 94:14:33:42, The current time: 1970-4-5 14:33:42
+DORICHOR-BABU#
+
+## show running-config   [OK 12437 chars 9408ms]
+Building configuration...
+
+
+Current configuration:
+!
+!version 10.1.0F build 103950
+service timestamps log date
+service timestamps debug date
+logging buffered 4096
+!
+hostname DORICHOR-BABU
+port-protected 1
+!
+!
+!
+!
+ip default-gateway 172.30.173.157
+!
+!
+spanning-tree mode rstp
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+aaa authentication login default local
+aaa authentication enable default none
+aaa authorization exec default local
+!
+username admin password 0 admin
+!
+
+epon oam-version 1 0x30
+epon oam-version 2 0x21
+epon oam-version 3 0x20
+!
+!!slot 0 89 unknow CARD
+interface GigaEthernet0/1
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface GigaEthernet0/2
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface GigaEthernet0/3
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface GigaEthernet0/4
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface GigaEthernet0/5
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface GigaEthernet0/6
+ switchport mode dot1q-tunnel-uplink
+ storm-control broadcast threshold 500
+ no storm-control multicast threshold
+ storm-control unicast threshold 500
+!
+interface EPON0/1
+ epon bind-onu mac d05f.af88.e690 1
+ epon bind-onu mac 00d3.9eb5.1800 2
+ epon bind-onu mac a07d.0818.004f 3
+ epon bind-onu mac 38d4.a598.1a6f 4
+ epon bind-onu mac c07e.40a9.2132 5
+ epon bind-onu mac 8246.6252.7a80 6
+ epon bind-onu mac d4f9.a147.6643 7
+ epon bind-onu mac 38d4.a592.3a8f 8
+ epon bind-onu mac a07e.0901.84b0 9
+ epon bind-onu mac 30f3.35ae.4fea 10
+ epon bind-onu mac a28b.1127.51b0 11
+ epon bind-onu mac a24d.0907.3550 12
+ epon bind-onu mac a28d.1229.5f50 13
+ epon bind-onu mac a07f.0718.2ce0 14
+ epon bind-onu mac a23d.1022.41e0 15
+ epon bind-onu mac 00d3.9e6e.febe 16
+ epon bind-onu mac 00d3.9e73.4d2e 17
+ epon bind-onu mac c07e.40a3.551a 18
+ epon bind-onu mac 00d3.9e6e.fec4 19
+ epon bind-onu mac a68f.1202.0dd4 20
+ epon bind-onu mac 00d3.9ef0.9312 21
+ epon bind-onu mac e42d.7b3a.f21f 22
+ epon bind-onu mac 38d4.a593.f95f 23
+ epon bind-onu mac 00d5.9e60.e3b8 24
+ epon bind-onu mac bc3f.8fc3.b1f0 25
+ epon bind-onu mac 38d4.a57a.a10f 26
+ epon bind-onu mac c07e.40a3.5529 27
+ epon bind-onu mac a23d.1022.06f0 28
+ epon bind-onu mac e4a8.b604.4bc2 29
+ epon bind-onu mac c07e.40a3.58e8 30
+ epon bind-onu mac 00d5.9f71.0fe0 31
+ epon bind-onu mac e8bd.d17e.37f2 32
+ epon bind-onu mac e4a8.b604.bb8f 33
+ epon bind-onu mac a07e.0622.01b4 34
+ epon bind-onu mac bc3f.8f2b.fdc6 35
+ epon bind-onu mac c07e.40b8.e65f 36
+ epon bind-onu mac b415.13f0.6f27 37
+ epon bind-onu mac bc3f.8f2e.aa1d 38
+ epon bind-onu mac 4cf9.b11a.f3a4 39
+ epon bind-onu mac a07e.1117.0418 40
+ epon bind-onu mac a07d.0801.0b8c 41
+ epon bind-onu mac 8246.3260.3630 42
+ epon bind-onu mac a07d.1021.07de 43
+ epon bind-onu mac 70a5.6a0a.fd80 44
+ epon bind-onu mac a07d.0801.0b92 45
+ epon bind-onu mac bc3f.8f32.277c 46
+ epon bind-onu mac 00d3.9e73.ec04 47
+ epon bind-onu mac e868.1906.24c7 48
+ epon bind-onu mac a23e.0910.4e90 49
+ epon bind-onu mac e42d.7b9f.d25f 50
+ epon bind-onu mac a28b.1124.5850 51
+ epon bind-onu mac a008.6f55.a9b1 52
+ epon bind-onu mac a23d.1107.5420 53
+ epon bind-onu mac a23e.071a.7670 54
+ epon bind-onu mac 00d3.9ec6.15e8 55
+ epon bind-onu mac 00d3.9e6f.082a 56
+ epon bind-onu mac f898.b9e9.39d1 57
+ epon bind-onu mac 00d5.9e60.fe3a 58
+ epon bind-onu mac a24f.a205.c198 59
+ epon bind-onu mac 00d3.9f70.d0bc 60
+ epon bind-onu mac c83a.357b.1300 61
+ epon bind-onu mac 4455.b174.2997 62
+ epon bind-onu mac f4b8.c535.498d 63
+ epon bind-onu mac 98c7.a434.efba 64
+ storm-control broadcast threshold 500
+ storm-control multicast threshold 500
+ storm-control unicast threshold 500
+ switchport protected 1
+!
+interface EPON0/1:1
+!
+interface EPON0/1:2
+!
+interface EPON0/1:3
+!
+interface EPON0/1:4
+!
+interface EPON0/1:5
+!
+interface EPON0/1:6
+!
+interface EPON0/1:7
+!
+interface EPON0/1:8
+!
+interface EPON0/1:9
+!
+interface EPON0/1:10
+!
+interface EPON0/1:11
+!
+interface EPON0/1:12
+!
+interface EPON0/1:13
+!
+interface EPON0/1:14
+!
+interface EPON0/1:15
+!
+interface EPON0/1:16
+!
+interface EPON0/1:17
+!
+interface EPON0/1:18
+!
+interface EPON0/1:19
+!
+interface EPON0/1:20
+!
+interface EPON0/1:21
+!
+interface EPON0/1:22
+!
+interface EPON0/1:23
+!
+interface EPON0/1:24
+!
+interface EPON0/1:25
+!
+interface EPON0/1:26
+!
+interface EPON0/1:27
+!
+interface EPON0/1:28
+!
+interface EPON0/1:29
+!
+interface EPON0/1:30
+!
+interface EPON0/1:31
+!
+interface EPON0/1:32
+!
+interface EPON0/1:33
+!
+interface EPON0/1:34
+!
+interface EPON0/1:35
+!
+interface EPON0/1:36
+!
+interface EPON0/1:37
+!
+interface EPON0/1:38
+!
+interface EPON0/1:39
+!
+interface EPON0/1:40
+!
+interface EPON0/1:41
+!
+interface EPON0/1:42
+!
+interface EPON0/1:43
+!
+interface EPON0/1:44
+!
+interface EPON0/1:45
+!
+interface EPON0/1:46
+!
+interface EPON0/1:47
+!
+interface EPON0/1:48
+!
+interface EPON0/1:49
+!
+interface EPON0/1:50
+!
+interface EPON0/1:51
+!
+interface EPON0/1:52
+!
+interface EPON0/1:53
+!
+interface EPON0/1:54
+!
+interface EPON0/1:55
+!
+interface EPON0/1:56
+!
+interface EPON0/1:57
+!
+interface EPON0/1:58
+!
+interface EPON0/1:59
+!
+interface EPON0/1:60
+!
+interface EPON0/1:61
+!
+interface EPON0/1:62
+!
+interface EPON0/1:63
+!
+interface EPON0/1:64
+!
+interface EPON0/2
+ epon bind-onu mac 1809.d102.62d1 1
+ epon bind-onu mac 1809.d102.6921 2
+ epon bind-onu mac e42d.7b3a.cb1f 3
+ epon bind-onu mac 78d7.52cf.a563 4
+ epon bind-onu mac e42d.7b9f.d28f 5
+ epon bind-onu mac a07d.0801.0c40 6
+ epon bind-onu mac a07d.0801.706c 7
+ epon bind-onu mac a28b.1123.9920 8
+ epon bind-onu mac 00d3.9e6e.feb8 9
+ epon bind-onu mac a24e.0511.3980 10
+ epon bind-onu mac a24e.0511.39f0 11
+ epon bind-onu mac 4862.a460.4a74 12
+ epon bind-onu mac 1809.d218.8109 13
+ epon bind-onu mac 1809.d218.7749 14
+ epon bind-onu mac 1809.d102.0cd1 15
+ epon bind-onu mac 1809.d218.61d1 16
+ epon bind-onu mac 80d4.a552.e20f 17
+ epon bind-onu mac a24f.a203.9098 18
+ epon bind-onu mac a07d.0821.a564 19
+ epon bind-onu mac 00d3.9e74.cef0 20
+ epon bind-onu mac bc3f.8fc7.23d3 21
+ epon bind-onu mac 00d3.9e70.47b2 22
+ epon bind-onu mac 1809.d102.9a81 23
+ epon bind-onu mac 4c46.d1b1.2625 24
+ epon bind-onu mac 98c7.a42a.1654 25
+ epon bind-onu mac 9845.62d7.41ad 26
+ epon bind-onu mac c83a.357b.67e8 27
+ epon bind-onu mac a07f.b160.7590 28
+ epon bind-onu mac 00d5.9ec4.363c 29
+ epon bind-onu mac a24f.0615.1330 30
+ storm-control broadcast threshold 500
+ storm-control multicast threshold 500
+ storm-control unicast threshold 500
+ switchport protected 1
+!
+interface EPON0/2:1
+!
+interface EPON0/2:2
+!
+interface EPON0/2:3
+!
+interface EPON0/2:4
+!
+interface EPON0/2:5
+!
+interface EPON0/2:6
+!
+interface EPON0/2:7
+!
+interface EPON0/2:8
+!
+interface EPON0/2:9
+!
+interface EPON0/2:10
+!
+interface EPON0/2:11
+!
+interface EPON0/2:12
+!
+interface EPON0/2:13
+!
+interface EPON0/2:14
+!
+interface EPON0/2:15
+!
+interface EPON0/2:16
+!
+interface EPON0/2:17
+!
+interface EPON0/2:18
+!
+interface EPON0/2:19
+!
+interface EPON0/2:20
+!
+interface EPON0/2:21
+!
+interface EPON0/2:22
+!
+interface EPON0/2:23
+!
+interface EPON0/2:24
+!
+interface EPON0/2:25
+!
+interface EPON0/2:26
+!
+interface EPON0/2:27
+!
+interface EPON0/2:28
+!
+interface EPON0/2:29
+!
+interface EPON0/2:30
+!
+interface EPON0/3
+ epon bind-onu mac a24e.0921.85a0 1
+ epon bind-onu mac a23e.0317.0ca0 2
+ epon bind-onu mac c07e.40af.5b33 3
+ epon bind-onu mac 70a8.e39d.d635 4
+ epon bind-onu mac e435.c882.a936 5
+ epon bind-onu mac 8066.290a.d8ac 6
+ epon bind-onu mac e0e8.e6de.53b9 7
+ epon bind-onu mac 38d4.a590.332f 8
+ epon bind-onu mac c07e.40a9.2164 9
+ epon bind-onu mac a07d.0801.6fac 10
+ epon bind-onu mac a24e.0511.3ab0 11
+ epon bind-onu mac 5493.5921.ec70 12
+ epon bind-onu mac 1809.d218.2749 13
+ epon bind-onu mac 1809.d218.10c9 14
+ epon bind-onu mac 1809.d218.3389 15
+ epon bind-onu mac 00d5.9f5e.1956 16
+ epon bind-onu mac 00d3.9ec6.164e 17
+ epon bind-onu mac f098.3814.8b0d 18
+ epon bind-onu mac 344e.fa02.9035 19
+ epon bind-onu mac 1809.d102.9ba1 20
+ epon bind-onu mac a68f.1202.0e10 22
+ epon bind-onu mac a68f.1202.1212 24
+ epon bind-onu mac a68f.1202.1278 25
+ epon bind-onu mac 2cac.2bbd.ad2b 26
+ storm-control broadcast threshold 500
+ storm-control multicast threshold 500
+ storm-control unicast threshold 500
+ switchport protected 1
+!
+interface EPON0/3:1
+!
+interface EPON0/3:2
+!
+interface EPON0/3:3
+!
+interface EPON0/3:4
+!
+interface EPON0/3:5
+!
+interface EPON0/3:6
+!
+interface EPON0/3:7
+!
+interface EPON0/3:8
+!
+interface EPON0/3:9
+!
+interface EPON0/3:10
+!
+interface EPON0/3:11
+!
+interface EPON0/3:12
+!
+interface EPON0/3:13
+!
+interface EPON0/3:14
+!
+interface EPON0/3:15
+!
+interface EPON0/3:16
+!
+interface EPON0/3:17
+!
+interface EPON0/3:18
+!
+interface EPON0/3:19
+!
+interface EPON0/3:20
+!
+interface EPON0/3:22
+!
+interface EPON0/3:24
+!
+interface EPON0/3:25
+!
+interface EPON0/3:26
+!
+interface EPON0/4
+ epon bind-onu mac 8866.394d.41ef 1
+ epon bind-onu mac a23d.1119.67c0 2
+ epon bind-onu mac 0011.410a.139d 3
+ epon bind-onu mac 38d4.a57b.632f 4
+ epon bind-onu mac 00d3.9ef0.9318 5
+ epon bind-onu mac a07d.0801.7bac 6
+ epon bind-onu mac a07d.0801.8146 7
+ epon bind-onu mac 00d3.9e67.3524 8
+ epon bind-onu mac a23d.1022.6910 9
+ epon bind-onu mac a07e.1117.024a 10
+ epon bind-onu mac 1809.d102.8b89 11
+ epon bind-onu mac 1809.d218.5321 12
+ epon bind-onu mac 1809.d218.6539 13
+ epon bind-onu mac fce3.3c73.a4e0 14
+ epon bind-onu mac 00d5.9f5e.19f8 15
+ epon bind-onu mac a24f.0711.6280 16
+ epon bind-onu mac 00d3.9ec6.1654 17
+ epon bind-onu mac 4c64.f5a6.07df 18
+ epon bind-onu mac bc3f.8f03.791d 19
+ epon bind-onu mac a07e.122a.abf6 20
+ epon bind-onu mac 98c7.a42a.22fa 21
+ epon bind-onu mac 5493.5923.a396 22
+ epon bind-onu mac 688f.8490.2943 23
+ epon bind-onu mac 0011.411b.27ce 24
+ epon bind-onu mac c07e.40a9.1b74 25
+ epon bind-onu mac a07e.122a.8b5c 26
+ epon bind-onu mac 00d3.9e9b.2088 27
+ epon bind-onu mac 60d2.dd14.f031 28
+ epon bind-onu mac 4cf9.b122.e768 29
+ epon bind-onu mac 8479.73ed.19a0 30
+ epon bind-onu mac c07e.40a6.acf4 31
+ epon bind-onu mac 249e.abe2.e77f 32
+ epon bind-onu mac 38d4.a57b.634f 33
+ epon bind-onu mac 0011.4126.e9c5 34
+ epon bind-onu mac e4a8.b604.001e 35
+ epon bind-onu mac 00d5.9f5e.189c 36
+ epon bind-onu mac 4cf9.b1e7.93b4 37
+ epon bind-onu mac 9404.9cba.ed02 38
+ epon bind-onu mac a24d.0620.bd20 39
+ epon bind-onu mac 2cad.ccbd.aecc 40
+ epon bind-onu mac 00d5.9f3b.fd3a 41
+ epon bind-onu mac 4c46.d1b0.e4a5 42
+ epon bind-onu mac 38d4.a57a.a5bf 43
+ epon bind-onu mac c07e.40b3.d004 44
+ epon bind-onu mac 98c7.a435.3960 45
+ epon bind-onu mac 00d5.9f3b.fbba 46
+ epon bind-onu mac a24e.0924.c010 47
+ epon bind-onu mac a24f.c110.2210 48
+ epon bind-onu mac 00d5.9eb2.3d56 49
+ storm-control broadcast threshold 500
+ storm-control multicast threshold 500
+ storm-control unicast threshold 500
+ switchport protected 1
+!
+interface EPON0/4:1
+!
+interface EPON0/4:2
+!
+interface EPON0/4:3
+!
+interface EPON0/4:4
+!
+interface EPON0/4:5
+!
+interface EPON0/4:6
+!
+interface EPON0/4:7
+!
+interface EPON0/4:8
+!
+interface EPON0/4:9
+!
+interface EPON0/4:10
+!
+interface EPON0/4:11
+!
+interface EPON0/4:12
+!
+interface EPON0/4:13
+!
+interface EPON0/4:14
+!
+interface EPON0/4:15
+!
+interface EPON0/4:16
+!
+interface EPON0/4:17
+!
+interface EPON0/4:18
+!
+interface EPON0/4:19
+!
+interface EPON0/4:20
+!
+interface EPON0/4:21
+!
+interface EPON0/4:22
+!
+interface EPON0/4:23
+!
+interface EPON0/4:24
+!
+interface EPON0/4:25
+!
+interface EPON0/4:26
+!
+interface EPON0/4:27
+!
+interface EPON0/4:28
+!
+interface EPON0/4:29
+!
+interface EPON0/4:30
+!
+interface EPON0/4:31
+!
+interface EPON0/4:32
+!
+interface EPON0/4:33
+!
+interface EPON0/4:34
+!
+interface EPON0/4:35
+!
+interface EPON0/4:36
+!
+interface EPON0/4:37
+!
+interface EPON0/4:38
+!
+interface EPON0/4:39
+!
+interface EPON0/4:40
+!
+interface EPON0/4:41
+!
+interface EPON0/4:42
+!
+interface EPON0/4:43
+!
+interface EPON0/4:44
+!
+interface EPON0/4:45
+!
+interface EPON0/4:46
+!
+interface EPON0/4:47
+!
+interface EPON0/4:48
+!
+interface EPON0/4:49
+!
+!!slot end
+!
+interface VLAN1
+ ip address 172.30.173.158 255.255.255.252
+!
+!
+!
+vlan 1
+!
+!
+!
+!
+!
+!
+!
+ip http server
+!
+!
+!
+!
+!
+!
+!Pending configurations for absent linecards:
+!
+!No configurations pending global
+DORICHOR-BABU#
+
+## show clock   [OK 36 chars 263ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show cpu usage   [OK 36 chars 262ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show memory   [UNSUPPORTED 33 chars 269ms]
+Incomplete command
+DORICHOR-BABU#
+
+## show temperature   [OK 146 chars 281ms]
+upper temperature threshold is 75 degree
+ low temperature threshold is -15 degree
+ current temperature is 50 degree
+ Status:Normal
+
+DORICHOR-BABU#
+
+## show fan   [OK 89 chars 266ms]
+FAN_NUMBER		  STATUS
+               1		 running
+               2		 running
+DORICHOR-BABU#
+
+## show power   [OK 64 chars 281ms]
+POWER_NUMBER		  STATUS
+               1		      on
+DORICHOR-BABU#
+
+## show interface brief   [OK 16183 chars 11323ms]
+Port    Description           Status    Vlan        Duplex   Speed    Type
+g0/1                          up        Trunk(1)    full     1000Mb   Giga-TX          
+g0/2                          down      Trunk(1)    auto     auto     Giga-TX          
+g0/3                          down      Trunk(1)    full     auto     Giga-FX          
+g0/4                          down      Trunk(1)    full     auto     Giga-FX          
+g0/5                          up        Trunk(1)    full     1000Mb   Giga-Combo-TX    
+g0/6                          up        Trunk(1)    full     100Mb    Giga-Combo-TX    
+epon0/1                       up                                      Giga-PON         
+epon0/2                       up                                      Giga-PON         
+epon0/3                       up                                      Giga-PON         
+epon0/4                       up                                      Giga-PON         
+epon0/1:1                       up                                      Giga-LLID        
+epon0/1:2                       up                                      Giga-LLID        
+epon0/1:3                       up                                      Giga-LLID        
+epon0/1:4                       up                                      Giga-LLID        
+epon0/1:5                       up                                      Giga-LLID        
+epon0/1:6                       up                                      Giga-LLID        
+epon0/1:7                       up                                      Giga-LLID        
+epon0/1:8                       up                                      Giga-LLID        
+epon0/1:9                       up                                      Giga-LLID        
+epon0/1:10                       up                                      Giga-LLID        
+epon0/1:11                       up                                      Giga-LLID        
+epon0/1:12                       up                                      Giga-LLID        
+epon0/1:13                       up                                      Giga-LLID        
+epon0/1:14                       up                                      Giga-LLID        
+epon0/1:15                       up                                      Giga-LLID        
+epon0/1:16                       up                                      Giga-LLID        
+epon0/1:17                       up                                      Giga-LLID        
+epon0/1:18                       up                                      Giga-LLID        
+epon0/1:19                       up                                      Giga-LLID        
+epon0/1:20                       up                                      Giga-LLID        
+epon0/1:21                       up                                      Giga-LLID        
+epon0/1:22                       up                                      Giga-LLID        
+epon0/1:23                       up                                      Giga-LLID        
+epon0/1:24                       up                                      Giga-LLID        
+epon0/1:25                       up                                      Giga-LLID        
+epon0/1:26                       up                                      Giga-LLID        
+epon0/1:27                       up                                      Giga-LLID        
+epon0/1:28                       up                                      Giga-LLID        
+epon0/1:29                       up                                      Giga-LLID        
+epon0/1:30                       up                                      Giga-LLID        
+epon0/1:31                       up                                      Giga-LLID        
+epon0/1:32                       up                                      Giga-LLID        
+epon0/1:33                       up                                      Giga-LLID        
+epon0/1:34                       up                                      Giga-LLID        
+epon0/1:35                       up                                      Giga-LLID        
+epon0/1:36                       up                                      Giga-LLID        
+epon0/1:37                       up                                      Giga-LLID        
+epon0/1:38                       up                                      Giga-LLID        
+epon0/1:39                       down                                    Giga-LLID        
+epon0/1:40                       down                                    Giga-LLID        
+epon0/1:41                       up                                      Giga-LLID        
+epon0/1:42                       up                                      Giga-LLID        
+epon0/1:43                       up                                      Giga-LLID        
+epon0/1:44                       down                                    Giga-LLID        
+epon0/1:45                       down                                    Giga-LLID        
+epon0/1:46                       down                                    Giga-LLID        
+epon0/1:47                       up                                      Giga-LLID        
+epon0/1:48                       down                                    Giga-LLID        
+epon0/1:49                       up                                      Giga-LLID        
+epon0/1:50                       down                                    Giga-LLID        
+epon0/1:51                       down                                    Giga-LLID        
+epon0/1:52                       down                                    Giga-LLID        
+epon0/1:53                       up                                      Giga-LLID        
+epon0/1:54                       up                                      Giga-LLID        
+epon0/1:55                       up                                      Giga-LLID        
+epon0/1:56                       up                                      Giga-LLID        
+epon0/1:57                       up                                      Giga-LLID        
+epon0/1:58                       up                                      Giga-LLID        
+epon0/1:59                       down                                    Giga-LLID        
+epon0/1:60                       up                                      Giga-LLID        
+epon0/1:61                       up                                      Giga-LLID        
+epon0/1:62                       up                                      Giga-LLID        
+epon0/1:63                       up                                      Giga-LLID        
+epon0/1:64                       up                                      Giga-LLID        
+epon0/2:1                       up                                      Giga-LLID        
+epon0/2:2                       up                                      Giga-LLID        
+epon0/2:3                       up                                      Giga-LLID        
+epon0/2:4                       up                                      Giga-LLID        
+epon0/2:5                       up                                      Giga-LLID        
+epon0/2:6                       up                                      Giga-LLID        
+epon0/2:7                       up                                      Giga-LLID        
+epon0/2:8                       up                                      Giga-LLID        
+epon0/2:9                       up                                      Giga-LLID        
+epon0/2:10                       down                                    Giga-LLID        
+epon0/2:11                       up                                      Giga-LLID        
+epon0/2:12                       up                                      Giga-LLID        
+epon0/2:13                       up                                      Giga-LLID        
+epon0/2:14                       up                                      Giga-LLID        
+epon0/2:15                       up                                      Giga-LLID        
+epon0/2:16                       up                                      Giga-LLID        
+epon0/2:17                       up                                      Giga-LLID        
+epon0/2:18                       up                                      Giga-LLID        
+epon0/2:19                       up                                      Giga-LLID        
+epon0/2:20                       up                                      Giga-LLID        
+epon0/2:21                       up                                      Giga-LLID        
+epon0/2:22                       down                                    Giga-LLID        
+epon0/2:23                       up                                      Giga-LLID        
+epon0/2:24                       up                                      Giga-LLID        
+epon0/2:25                       up                                      Giga-LLID        
+epon0/2:26                       up                                      Giga-LLID        
+epon0/2:27                       up                                      Giga-LLID        
+epon0/2:28                       up                                      Giga-LLID        
+epon0/2:29                       up                                      Giga-LLID        
+epon0/2:30                       down                                    Giga-LLID        
+epon0/3:1                       down                                    Giga-LLID        
+epon0/3:2                       up                                      Giga-LLID        
+epon0/3:3                       up                                      Giga-LLID        
+epon0/3:4                       up                                      Giga-LLID        
+epon0/3:5                       up                                      Giga-LLID        
+epon0/3:6                       up                                      Giga-LLID        
+epon0/3:7                       down                                    Giga-LLID        
+epon0/3:8                       up                                      Giga-LLID        
+epon0/3:9                       down                                    Giga-LLID        
+epon0/3:10                       down                                    Giga-LLID        
+epon0/3:11                       up                                      Giga-LLID        
+epon0/3:12                       up                                      Giga-LLID        
+epon0/3:13                       up                                      Giga-LLID        
+epon0/3:14                       up                                      Giga-LLID        
+epon0/3:15                       up                                      Giga-LLID        
+epon0/3:16                       up                                      Giga-LLID        
+epon0/3:17                       up                                      Giga-LLID        
+epon0/3:18                       up                                      Giga-LLID        
+epon0/3:19                       up                                      Giga-LLID        
+epon0/3:20                       down                                    Giga-LLID        
+epon0/3:22                       up                                      Giga-LLID        
+epon0/3:24                       up                                      Giga-LLID        
+epon0/3:25                       up                                      Giga-LLID        
+epon0/3:26                       down                                    Giga-LLID        
+epon0/4:1                       down                                    Giga-LLID        
+epon0/4:2                       down                                    Giga-LLID        
+epon0/4:3                       down                                    Giga-LLID        
+epon0/4:4                       down                                    Giga-LLID        
+epon0/4:5                       up                                      Giga-LLID        
+epon0/4:6                       down                                    Giga-LLID        
+epon0/4:7                       down                                    Giga-LLID        
+epon0/4:8                       down                                    Giga-LLID        
+epon0/4:9                       down                                    Giga-LLID        
+epon0/4:10                       down                                    Giga-LLID        
+epon0/4:11                       down                                    Giga-LLID        
+epon0/4:12                       down                                    Giga-LLID        
+epon0/4:13                       down                                    Giga-LLID        
+epon0/4:14                       down                                    Giga-LLID        
+epon0/4:15                       down                                    Giga-LLID        
+epon0/4:16                       up                                      Giga-LLID        
+epon0/4:17                       up                                      Giga-LLID        
+epon0/4:18                       up                                      Giga-LLID        
+epon0/4:19                       up                                      Giga-LLID        
+epon0/4:20                       up                                      Giga-LLID        
+epon0/4:21                       up                                      Giga-LLID        
+epon0/4:22                       up                                      Giga-LLID        
+epon0/4:23                       up                                      Giga-LLID        
+epon0/4:24                       up                                      Giga-LLID        
+epon0/4:25                       up                                      Giga-LLID        
+epon0/4:26                       up                                      Giga-LLID        
+epon0/4:27                       up                                      Giga-LLID        
+epon0/4:28                       up                                      Giga-LLID        
+epon0/4:29                       up                                      Giga-LLID        
+epon0/4:30                       up                                      Giga-LLID        
+epon0/4:31                       down                                    Giga-LLID        
+epon0/4:32                       up                                      Giga-LLID        
+epon0/4:33                       up                                      Giga-LLID        
+epon0/4:34                       up                                      Giga-LLID        
+epon0/4:35                       up                                      Giga-LLID        
+epon0/4:36                       up                                      Giga-LLID        
+epon0/4:37                       up                                      Giga-LLID        
+epon0/4:38                       up                                      Giga-LLID        
+epon0/4:39                       up                                      Giga-LLID        
+epon0/4:40                       up                                      Giga-LLID        
+epon0/4:41                       up                                      Giga-LLID        
+epon0/4:42                       up                                      Giga-LLID        
+epon0/4:43                       up                                      Giga-LLID        
+epon0/4:44                       down                                    Giga-LLID        
+epon0/4:45                       down                                    Giga-LLID        
+epon0/4:46                       down                                    Giga-LLID        
+epon0/4:47                       up                                      Giga-LLID        
+epon0/4:48                       up                                      Giga-LLID        
+epon0/4:49                       up                                      Giga-LLID        
+v1                            up                    
+DORICHOR-BABU#
+
+## show vlan   [OK 353 chars 275ms]
+VLAN Status  Name                             Ports
+---- ------- -------------------------------- ---------------------------------
+1    Static  Default                          g0/1, g0/2, g0/3, g0/4, g0/5
+                                              g0/6, epon0/1, epon0/2, epon0/3
+                                              epon0/4
+DORICHOR-BABU#
+
+## show epon active-onu   [OK 21446 chars 15606ms]
+Interface EPON0/1 has bound 54 active ONUs:
+IntfName         MAC Address    Status           OAM Status   Distance(m) RTT(TQ
+) LastRegTime         LastDeregTime       LastDeregReason   Alivetime   
+---------------- -------------- ---------------- ------------ ----------- ------
+- ------------------- ------------------- ----------------- ------------
+EPON0/1:1        d05f.af88.e690 auto-configured  ctc-oam-oper 961         593   
+  1970-04-04 18:42:51 1970-04-04 18:28:40 power-off         0  .19:51:13
+EPON0/1:2        00d3.9eb5.1800 auto-configured  ctc-oam-oper 2589        1597  
+  1970-03-31 22:30:59 1970-03-31 22:26:38 power-off         4  .16:03:05
+EPON0/1:3        a07d.0818.004f auto-configured  ctc-oam-oper 3175        1958  
+  1970-04-05 12:34:43 1970-04-05 12:34:43 wire-down         0  .01:59:21
+EPON0/1:4        38d4.a598.1a6f auto-configured  ctc-oam-oper 656         405   
+  1970-04-02 10:04:22 1970-04-02 10:03:50 power-off         3  .04:29:42
+EPON0/1:5        c07e.40a9.2132 auto-configured  ctc-oam-oper 1101        679   
+  1970-04-03 01:55:07 1970-04-03 01:54:28 power-off         2  .12:38:57
+EPON0/1:6        8246.6252.7a80 auto-configured  ctc-oam-oper 1368        844   
+  1970-04-04 18:42:42 1970-04-04 18:28:38 power-off         0  .19:51:22
+EPON0/1:7        d4f9.a147.6643 auto-configured  ctc-oam-oper 945         583   
+  1970-04-04 18:42:35 1970-04-04 18:28:39 power-off         0  .19:51:29
+EPON0/1:8        38d4.a592.3a8f auto-configured  ctc-oam-oper 634         391   
+  1970-04-04 18:42:37 1970-04-04 18:28:38 wire-down         0  .19:51:27
+EPON0/1:9        a07e.0901.84b0 auto-configured  ctc-oam-oper 1401        864   
+  1970-04-04 03:55:40 1970-04-03 23:42:47 power-off         1  .10:38:24
+EPON0/1:10       30f3.35ae.4fea auto-configured  ctc-oam-oper 1235        762   
+  1970-04-04 18:42:35 1970-04-04 18:28:40 power-off         0  .19:51:29
+EPON0/1:11       a28b.1127.51b0 auto-configured  ctc-oam-oper 541         334   
+  1970-03-29 18:55:50 1970-03-29 08:51:15 power-off         6  .19:38:14
+EPON0/1:12       a24d.0907.3550 auto-configured  ctc-oam-oper 700         432   
+  1970-04-04 18:42:43 1970-04-04 18:28:40 power-off         0  .19:51:21
+EPON0/1:13       a28d.1229.5f50 auto-configured  ctc-oam-oper 1352        834   
+  1970-04-04 03:55:30 1970-04-04 00:49:54 power-off         1  .10:38:34
+EPON0/1:14       a07f.0718.2ce0 auto-configured  ctc-oam-oper 514         317   
+  1970-04-04 18:42:41 1970-04-04 18:28:38 power-off         0  .19:51:23
+EPON0/1:15       a23d.1022.41e0 auto-configured  ctc-oam-oper 1289        795   
+  1970-04-04 18:42:38 1970-04-04 18:28:40 power-off         0  .19:51:26
+EPON0/1:16       00d3.9e6e.febe auto-configured  ctc-oam-oper 1352        834   
+  1970-04-04 18:42:47 1970-04-04 18:28:39 power-off         0  .19:51:17
+EPON0/1:17       00d3.9e73.4d2e auto-configured  ctc-oam-oper 1279        789   
+  1970-04-04 18:42:47 1970-04-04 18:28:40 power-off         0  .19:51:17
+EPON0/1:18       c07e.40a3.551a auto-configured  ctc-oam-oper 1542        951   
+  1970-04-04 18:42:36 1970-04-04 18:28:39 power-off         0  .19:51:28
+EPON0/1:19       00d3.9e6e.fec4 auto-configured  ctc-oam-oper 1389        857   
+  1970-04-04 05:30:19 1970-04-04 03:30:01 power-off         1  .09:03:45
+EPON0/1:20       a68f.1202.0dd4 auto-configured  ctc-oam-oper 1373        847   
+  1970-04-04 18:42:45 1970-04-04 18:28:39 power-off         0  .19:51:19
+EPON0/1:21       00d3.9ef0.9312 auto-configured  ctc-oam-oper 413         255   
+  1970-04-04 18:42:35 1970-04-04 18:28:39 power-off         0  .19:51:29
+EPON0/1:22       e42d.7b3a.f21f auto-configured  ctc-oam-oper 908         560   
+  1970-04-04 18:42:36 1970-04-04 18:28:39 power-off         0  .19:51:28
+EPON0/1:23       38d4.a593.f95f auto-configured  ctc-oam-oper 533         329   
+  1970-03-28 02:30:55 1970-03-28 02:30:07 power-off         8  .12:03:09
+EPON0/1:24       00d5.9e60.e3b8 auto-configured  ctc-oam-oper 617         381   
+  1970-04-04 18:42:46 1970-04-04 18:28:40 power-off         0  .19:51:18
+EPON0/1:25       bc3f.8fc3.b1f0 auto-configured  ctc-oam-oper 1289        795   
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:23
+EPON0/1:26       38d4.a57a.a10f auto-configured  ctc-oam-oper 948         585   
+  1970-04-04 18:44:55 1970-04-04 18:44:25 power-off         0  .19:49:09
+EPON0/1:27       c07e.40a3.5529 auto-configured  ctc-oam-oper 854         527   
+  1970-04-04 18:42:37 1970-04-04 18:28:38 power-off         0  .19:51:27
+EPON0/1:28       a23d.1022.06f0 auto-configured  ctc-oam-oper 647         399   
+  1970-04-04 18:42:37 1970-04-04 18:28:40 power-off         0  .19:51:27
+EPON0/1:29       e4a8.b604.4bc2 auto-configured  ctc-oam-oper 668         412   
+  1970-04-04 18:42:37 1970-04-04 18:28:38 power-off         0  .19:51:27
+EPON0/1:30       c07e.40a3.58e8 auto-configured  ctc-oam-oper 1076        664   
+  1970-04-04 18:46:01 1970-04-04 18:34:27 power-off         0  .19:48:03
+EPON0/1:31       00d5.9f71.0fe0 auto-configured  ctc-oam-oper 1431        883   
+  1970-04-04 18:42:36 1970-04-04 18:28:38 power-off         0  .19:51:28
+EPON0/1:32       e8bd.d17e.37f2 auto-configured  ctc-oam-oper 436         269   
+  1970-04-05 08:37:44 1970-04-05 08:37:08 power-off         0  .05:56:21
+EPON0/1:33       e4a8.b604.bb8f auto-configured  ctc-oam-oper 1227        757   
+  1970-04-04 18:42:38 1970-04-04 18:28:39 power-off         0  .19:51:26
+EPON0/1:34       a07e.0622.01b4 auto-configured  ctc-oam-oper 791         488   
+  1970-04-05 08:45:30 1970-04-05 08:44:56 power-off         0  .05:48:35
+EPON0/1:35       bc3f.8f2b.fdc6 auto-configured  ctc-oam-oper 458         283   
+  1970-04-04 18:42:39 1970-04-04 18:28:40 power-off         0  .19:51:25
+EPON0/1:36       c07e.40b8.e65f auto-configured  ctc-oam-oper 2542        1568  
+  1970-04-04 18:42:38 1970-04-04 18:28:40 power-off         0  .19:51:26
+EPON0/1:37       b415.13f0.6f27 auto-configured  ctc-oam-oper 497         307   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/1:38       bc3f.8f2e.aa1d auto-configured  ctc-oam-oper 538         332   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/1:41       a07d.0801.0b8c auto-configured  ctc-oam-oper 2547        1571  
+  1970-04-05 09:46:55 1970-04-05 09:46:17 power-off         0  .04:47:09
+EPON0/1:42       8246.3260.3630 auto-configured  ctc-oam-oper 822         507   
+  1970-04-04 18:42:39 1970-04-04 18:28:38 power-off         0  .19:51:25
+EPON0/1:43       a07d.1021.07de auto-configured  ctc-oam-oper 2931        1808  
+  1970-04-04 18:42:39 1970-04-04 18:28:38 power-off         0  .19:51:25
+EPON0/1:47       00d3.9e73.ec04 auto-configured  ctc-oam-oper 3548        2188  
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:24
+EPON0/1:49       a23e.0910.4e90 auto-configured  ctc-oam-oper 616         380   
+  1970-04-04 18:42:41 1970-04-04 18:28:39 power-off         0  .19:51:23
+EPON0/1:53       a23d.1107.5420 auto-configured  ctc-oam-oper 575         355   
+  1970-04-04 18:42:44 1970-04-04 18:28:38 power-off         0  .19:51:20
+EPON0/1:54       a23e.071a.7670 auto-configured  ctc-oam-oper 638         394   
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:23
+EPON0/1:55       00d3.9ec6.15e8 auto-configured  ctc-oam-oper 1151        710   
+  1970-04-04 18:42:42 1970-04-04 18:28:39 power-off         0  .19:51:22
+EPON0/1:56       00d3.9e6f.082a auto-configured  ctc-oam-oper 1029        635   
+  1970-04-04 18:42:48 1970-04-04 18:28:39 power-off         0  .19:51:16
+EPON0/1:57       f898.b9e9.39d1 auto-configured  ctc-oam-oper 431         266   
+  1970-04-04 18:42:44 1970-04-04 18:28:39 power-off         0  .19:51:20
+EPON0/1:58       00d5.9e60.fe3a auto-configured  ctc-oam-oper 1165        719   
+  1970-04-04 18:42:47 1970-04-04 18:28:39 power-off         0  .19:51:17
+EPON0/1:60       00d3.9f70.d0bc auto-configured  ctc-oam-oper 371         229   
+  1970-03-26 02:23:23 1970-03-26 02:22:11 power-off         10 .12:10:41
+EPON0/1:61       c83a.357b.1300 auto-configured  ctc-oam-oper 1320        814   
+  1970-03-31 06:45:27 1970-03-31 06:44:36 power-off         5  .07:48:37
+EPON0/1:62       4455.b174.2997 auto-configured  ctc-oam-oper 961         593   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/1:63       f4b8.c535.498d auto-configured  ctc-oam-oper 531         328   
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:23
+EPON0/1:64       98c7.a434.efba auto-configured  ctc-oam-oper 606         374   
+  1970-04-04 18:43:07 1970-04-04 18:28:40 power-off         0  .19:50:57
+
+Interface EPON0/2 has bound 27 active ONUs:
+IntfName         MAC Address    Status           OAM Status   Distance(m) RTT(TQ
+) LastRegTime         LastDeregTime       LastDeregReason   Alivetime   
+---------------- -------------- ---------------- ------------ ----------- ------
+- ------------------- ------------------- ----------------- ------------
+EPON0/2:1        1809.d102.62d1 auto-configured  ctc-oam-oper 2236        1379  
+  1970-03-14 18:56:54 1970-03-14 18:56:10 power-off         21 .19:37:10
+EPON0/2:2        1809.d102.6921 auto-configured  ctc-oam-oper 3549        2189  
+  1970-03-15 06:18:50 1970-03-15 06:17:58 wire-down         21 .08:15:15
+EPON0/2:3        e42d.7b3a.cb1f auto-configured  ctc-oam-oper 1662        1025  
+  1970-04-04 18:42:36 1970-04-04 18:28:39 power-off         0  .19:51:28
+EPON0/2:4        78d7.52cf.a563 auto-configured  ctc-oam-oper 1607        991   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/2:5        e42d.7b9f.d28f auto-configured  ctc-oam-oper 1647        1016  
+  1970-04-04 18:42:38 1970-04-04 18:28:39 power-off         0  .19:51:26
+EPON0/2:6        a07d.0801.0c40 auto-configured  ctc-oam-oper 3935        2427  
+  1970-04-04 18:42:39 1970-04-04 18:28:38 power-off         0  .19:51:25
+EPON0/2:7        a07d.0801.706c auto-configured  ctc-oam-oper 3754        2315  
+  1970-04-04 18:42:39 1970-04-04 18:28:40 power-off         0  .19:51:25
+EPON0/2:8        a28b.1123.9920 auto-configured  ctc-oam-oper 1331        821   
+  1970-04-04 18:42:38 1970-04-04 18:28:39 wire-down         0  .19:51:26
+EPON0/2:9        00d3.9e6e.feb8 auto-configured  ctc-oam-oper 1671        1031  
+  1970-04-04 18:42:48 1970-04-04 18:28:39 power-off         0  .19:51:16
+EPON0/2:11       a24e.0511.39f0 auto-configured  ctc-oam-oper 1225        756   
+  1970-04-04 18:42:45 1970-04-04 18:28:38 power-off         0  .19:51:19
+EPON0/2:12       4862.a460.4a74 auto-configured  ctc-oam-oper 625         386   
+  1970-03-01 03:33:48 1970-03-01 03:33:20 power-off         35 .11:00:16
+EPON0/2:13       1809.d218.8109 auto-configured  ctc-oam-oper 2935        1810  
+  1970-04-05 09:26:04 1970-04-05 09:26:02 wire-down         0  .05:08:00
+EPON0/2:14       1809.d218.7749 auto-configured  ctc-oam-oper 3173        1957  
+  1970-04-05 05:16:28 1970-04-05 05:15:42 power-off         0  .09:17:36
+EPON0/2:15       1809.d102.0cd1 auto-configured  ctc-oam-oper 2794        1723  
+  1970-04-04 18:42:48 1970-04-04 18:28:37 power-off         0  .19:51:16
+EPON0/2:16       1809.d218.61d1 auto-configured  ctc-oam-oper 3771        2326  
+  1970-04-04 18:42:48 1970-04-04 18:28:37 power-off         0  .19:51:16
+EPON0/2:17       80d4.a552.e20f auto-configured  ctc-oam-oper 1534        946   
+  1970-04-04 18:42:37 1970-04-04 18:28:39 power-off         0  .19:51:27
+EPON0/2:18       a24f.a203.9098 auto-configured  ctc-oam-oper 887         547   
+  1970-04-05 07:20:45 1970-04-05 07:20:01 wire-down         0  .07:13:20
+EPON0/2:19       a07d.0821.a564 auto-configured  ctc-oam-oper 3137        1935  
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/2:20       00d3.9e74.cef0 auto-configured  ctc-oam-oper 3518        2170  
+  1970-04-04 18:42:40 1970-04-04 18:28:40 power-off         0  .19:51:24
+EPON0/2:21       bc3f.8fc7.23d3 auto-configured  ctc-oam-oper 875         540   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/2:23       1809.d102.9a81 auto-configured  ctc-oam-oper 2928        1806  
+  1970-04-04 18:42:48 1970-04-04 18:28:37 power-off         0  .19:51:16
+EPON0/2:24       4c46.d1b1.2625 auto-configured  ctc-oam-oper 1720        1061  
+  1970-04-04 18:43:08 1970-04-04 18:28:40 power-off         0  .19:50:56
+EPON0/2:25       98c7.a42a.1654 auto-configured  ctc-oam-oper 767         473   
+  1970-04-04 21:57:54 1970-04-04 21:57:53 wire-down         0  .16:36:11
+EPON0/2:26       9845.62d7.41ad auto-configured  ctc-oam-oper 1174        724   
+  1970-04-04 18:43:16 1970-04-04 18:28:40 power-off         0  .19:50:48
+EPON0/2:27       c83a.357b.67e8 auto-configured  ctc-oam-oper 1934        1193  
+  1970-04-04 18:42:58 1970-04-04 18:28:38 power-off         0  .19:51:06
+EPON0/2:28       a07f.b160.7590 auto-configured  ctc-oam-oper 1673        1032  
+  1970-04-04 18:42:44 1970-04-04 18:28:40 power-off         0  .19:51:20
+EPON0/2:29       00d5.9ec4.363c auto-configured  ctc-oam-oper 841         519   
+  1970-04-05 06:16:25 1970-04-05 06:15:41 power-off         0  .08:17:40
+
+Interface EPON0/3 has bound 18 active ONUs:
+IntfName         MAC Address    Status           OAM Status   Distance(m) RTT(TQ
+) LastRegTime         LastDeregTime       LastDeregReason   Alivetime   
+---------------- -------------- ---------------- ------------ ----------- ------
+- ------------------- ------------------- ----------------- ------------
+EPON0/3:2        a23e.0317.0ca0 auto-configured  ctc-oam-oper 1175        725   
+  1970-03-27 07:33:36 1970-03-27 07:32:51 power-off         9  .07:00:28
+EPON0/3:3        c07e.40af.5b33 auto-configured  ctc-oam-oper 570         352   
+  1970-04-04 18:42:20 1970-04-04 18:28:39 power-off         0  .19:51:45
+EPON0/3:4        70a8.e39d.d635 auto-configured  ctc-oam-oper 1127        695   
+  1970-04-04 18:42:37 1970-04-04 18:28:39 power-off         0  .19:51:27
+EPON0/3:5        e435.c882.a936 auto-configured  ctc-oam-oper 1174        724   
+  1970-04-04 18:42:39 1970-04-04 18:28:38 power-off         0  .19:51:25
+EPON0/3:6        8066.290a.d8ac auto-configured  ctc-oam-oper 3115        1921  
+  1970-04-04 18:42:38 1970-04-04 18:28:40 power-off         0  .19:51:26
+EPON0/3:8        38d4.a590.332f auto-configured  ctc-oam-oper 1180        728   
+  1970-04-04 18:42:38 1970-04-04 18:28:38 power-off         0  .19:51:27
+EPON0/3:11       a24e.0511.3ab0 auto-configured  ctc-oam-oper 1225        756   
+  1970-04-04 18:42:41 1970-04-04 18:28:38 power-off         0  .19:51:23
+EPON0/3:12       5493.5921.ec70 auto-configured  ctc-oam-oper 805         497   
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:23
+EPON0/3:13       1809.d218.2749 auto-configured  ctc-oam-oper 3047        1879  
+  1970-04-04 18:42:48 1970-04-04 18:28:38 power-off         0  .19:51:17
+EPON0/3:14       1809.d218.10c9 auto-configured  ctc-oam-oper 3278        2022  
+  1970-03-19 23:00:13 1970-03-19 21:56:50 power-off         16 .15:33:51
+EPON0/3:15       1809.d218.3389 auto-configured  ctc-oam-oper 3089        1905  
+  1970-04-04 18:42:48 1970-04-04 18:28:40 power-off         0  .19:51:16
+EPON0/3:16       00d5.9f5e.1956 auto-configured  ctc-oam-oper 992         612   
+  1970-04-04 18:42:36 1970-04-04 18:28:39 power-off         0  .19:51:29
+EPON0/3:17       00d3.9ec6.164e auto-configured  ctc-oam-oper 1044        644   
+  1970-04-04 18:42:41 1970-04-04 18:28:38 power-off         0  .19:51:23
+EPON0/3:18       f098.3814.8b0d auto-configured  ctc-oam-oper 1125        694   
+  1970-04-04 18:42:37 1970-04-04 18:28:38 power-off         0  .19:51:28
+EPON0/3:19       344e.fa02.9035 auto-configured  oam-oper     3120        1924  
+  1970-04-04 18:42:39 1970-04-04 18:28:38 power-off         0  .19:51:25
+EPON0/3:22       a68f.1202.0e10 auto-configured  ctc-oam-oper 1041        642   
+  1970-04-04 18:42:45 1970-04-04 18:28:37 power-off         0  .19:51:19
+EPON0/3:24       a68f.1202.1212 auto-configured  ctc-oam-oper 836         516   
+  1970-04-05 06:16:15 1970-04-05 06:16:14 wire-down         0  .08:17:49
+EPON0/3:25       a68f.1202.1278 auto-configured  ctc-oam-oper 846         522   
+  1970-04-04 18:42:45 1970-04-04 18:28:37 power-off         0  .19:51:19
+
+Interface EPON0/4 has bound 31 active ONUs:
+IntfName         MAC Address    Status           OAM Status   Distance(m) RTT(TQ
+) LastRegTime         LastDeregTime       LastDeregReason   Alivetime   
+---------------- -------------- ---------------- ------------ ----------- ------
+- ------------------- ------------------- ----------------- ------------
+EPON0/4:5        00d3.9ef0.9318 auto-configured  ctc-oam-oper 669         413   
+  1970-04-04 03:56:38 1970-04-04 03:56:05 power-off         1  .10:37:26
+EPON0/4:16       a24f.0711.6280 auto-configured  ctc-oam-oper 609         376   
+  1970-03-30 05:34:30 1970-03-30 05:33:48 power-off         6  .08:59:35
+EPON0/4:17       00d3.9ec6.1654 auto-configured  ctc-oam-oper 217         134   
+  1970-01-01 00:00:46 1970-01-01 00:00:46 unknow            94 .14:33:18
+EPON0/4:18       4c64.f5a6.07df auto-configured  ctc-oam-oper 770         475   
+  1970-03-29 04:53:01 1970-03-29 04:52:20 power-off         7  .09:41:04
+EPON0/4:19       bc3f.8f03.791d auto-configured  ctc-oam-oper 604         373   
+  1970-04-04 18:29:09 1970-04-04 18:28:39 power-off         0  .20:04:55
+EPON0/4:20       a07e.122a.abf6 auto-configured  ctc-oam-oper 637         393   
+  1970-03-25 04:06:27 1970-03-25 04:05:51 power-off         11 .10:27:37
+EPON0/4:21       98c7.a42a.22fa auto-configured  ctc-oam-oper 710         438   
+  1970-03-24 03:35:35 1970-03-24 01:19:48 power-off         12 .10:58:29
+EPON0/4:22       5493.5923.a396 auto-configured  ctc-oam-oper 856         528   
+  1970-03-29 18:53:03 1970-03-29 18:52:34 power-off         6  .19:41:01
+EPON0/4:23       688f.8490.2943 auto-configured  ctc-oam-oper 789         487   
+  1970-03-27 08:11:09 1970-03-27 08:10:32 power-off         9  .06:22:55
+EPON0/4:24       0011.411b.27ce auto-configured  ctc-oam-oper 544         336   
+  1970-03-31 11:44:00 1970-03-31 11:38:50 power-off         5  .02:50:05
+EPON0/4:25       c07e.40a9.1b74 auto-configured  ctc-oam-oper 734         453   
+  1970-03-06 14:21:35 1970-03-06 14:08:42 power-off         30 .00:12:30
+EPON0/4:26       a07e.122a.8b5c auto-configured  ctc-oam-oper 222         137   
+  1970-04-05 05:03:44 1970-04-05 05:02:42 power-off         0  .09:30:20
+EPON0/4:27       00d3.9e9b.2088 auto-configured  ctc-oam-oper 3008        1855  
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:26
+EPON0/4:28       60d2.dd14.f031 auto-configured  ctc-oam-oper 656         405   
+  1970-04-04 18:42:41 1970-04-04 18:28:40 power-off         0  .19:51:23
+EPON0/4:29       4cf9.b122.e768 auto-configured  ctc-oam-oper 882         544   
+  1970-04-04 18:42:38 1970-04-04 18:28:40 power-off         0  .19:51:26
+EPON0/4:30       8479.73ed.19a0 auto-configured  ctc-oam-oper 781         482   
+  1970-04-04 18:42:45 1970-04-04 18:28:40 power-off         0  .19:51:19
+EPON0/4:32       249e.abe2.e77f auto-configured  ctc-oam-oper 556         343   
+  1970-04-04 18:42:37 1970-04-04 18:28:38 power-off         0  .19:51:28
+EPON0/4:33       38d4.a57b.634f auto-configured  ctc-oam-oper 715         441   
+  1970-04-04 18:42:38 1970-04-04 18:28:38 wire-down         0  .19:51:26
+EPON0/4:34       0011.4126.e9c5 auto-configured  ctc-oam-oper 888         548   
+  1970-04-04 18:42:40 1970-04-04 18:28:38 power-off         0  .19:51:24
+EPON0/4:35       e4a8.b604.001e auto-configured  ctc-oam-oper 747         461   
+  1970-04-04 18:42:37 1970-04-04 18:28:39 power-off         0  .19:51:28
+EPON0/4:36       00d5.9f5e.189c auto-configured  ctc-oam-oper 603         372   
+  1970-04-04 18:42:38 1970-04-04 18:28:40 wire-down         0  .19:51:27
+EPON0/4:37       4cf9.b1e7.93b4 auto-configured  ctc-oam-oper 150         93    
+  1970-04-04 18:42:39 1970-04-04 18:28:37 power-off         0  .19:51:26
+EPON0/4:38       9404.9cba.ed02 auto-configured  ctc-oam-oper 549         339   
+  1970-04-04 18:42:38 1970-04-04 18:28:38 power-off         0  .19:51:26
+EPON0/4:39       a24d.0620.bd20 auto-configured  ctc-oam-oper 637         393   
+  1970-04-04 18:43:37 1970-04-04 18:43:02 power-off         0  .19:50:27
+EPON0/4:40       2cad.ccbd.aecc auto-configured  ctc-oam-oper 827         510   
+  1970-04-04 18:42:39 1970-04-04 18:28:39 power-off         0  .19:51:25
+EPON0/4:41       00d5.9f3b.fd3a auto-configured  ctc-oam-oper 650         401   
+  1970-04-04 18:42:59 1970-04-04 18:28:40 power-off         0  .19:51:06
+EPON0/4:42       4c46.d1b0.e4a5 auto-configured  ctc-oam-oper 530         327   
+  1970-04-04 18:43:07 1970-04-04 18:28:39 power-off         0  .19:50:57
+EPON0/4:43       38d4.a57a.a5bf auto-configured  ctc-oam-oper 664         410   
+  1970-04-04 18:42:36 1970-04-04 18:28:38 power-off         0  .19:51:29
+EPON0/4:47       a24e.0924.c010 auto-configured  ctc-oam-oper 559         345   
+  1970-04-04 18:42:42 1970-04-04 18:28:38 power-off         0  .19:51:22
+EPON0/4:48       a24f.c110.2210 auto-configured  ctc-oam-oper 861         531   
+  1970-04-04 18:42:47 1970-04-04 18:28:38 power-off         0  .19:51:17
+EPON0/4:49       00d5.9eb2.3d56 auto-configured  ctc-oam-oper 554         342   
+  1970-04-04 18:42:35 1970-04-04 18:28:38 power-off         0  .19:51:29
+
+DORICHOR-BABU#
+
+## show epon inactive-onu   [OK 5645 chars 3246ms]
+Interface EPON0/1 has bound 10 inactive ONUs:
+IntfName         MAC Address    Status           LastRegTime         LastDeregTi
+me       LastDeregReason   Absenttime  
+---------------- -------------- ---------------- ------------------- -----------
+-------- ----------------- ------------
+EPON0/1:39       4cf9.b11a.f3a4 lost             1970-01-09 03:33:30 1970-01-09 
+20:28:18 wire-down         85 .18:06:01
+EPON0/1:40       a07e.1117.0418 deregistered     1970-03-10 06:20:18 1970-03-10 
+06:40:34 wire-down         26 .07:53:46
+EPON0/1:44       70a5.6a0a.fd80 lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:45       a07d.0801.0b92 lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:46       bc3f.8f32.277c lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:48       e868.1906.24c7 lost             1970-01-24 18:59:57 1970-01-24 
+19:02:43 wire-down         70 .19:31:36
+EPON0/1:50       e42d.7b9f.d25f lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:51       a28b.1124.5850 lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:52       a008.6f55.a9b1 lost             N/A                 1970-01-01 
+00:00:44 unknow            94 .14:33:35
+EPON0/1:59       a24f.a205.c198 lost             1970-02-04 04:25:01 1970-02-04 
+04:27:27 wire-down         60 .10:06:53
+
+Interface EPON0/2 has bound 3 inactive ONUs:
+IntfName         MAC Address    Status           LastRegTime         LastDeregTi
+me       LastDeregReason   Absenttime  
+---------------- -------------- ---------------- ------------------- -----------
+-------- ----------------- ------------
+EPON0/2:10       a24e.0511.3980 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/2:22       00d3.9e70.47b2 lost             1970-02-22 02:52:04 1970-02-22 
+04:00:05 wire-down         42 .10:34:15
+EPON0/2:30       a24f.0615.1330 lost             1970-03-02 22:57:20 1970-03-02 
+23:03:35 power-off         33 .15:30:44
+
+Interface EPON0/3 has bound 6 inactive ONUs:
+IntfName         MAC Address    Status           LastRegTime         LastDeregTi
+me       LastDeregReason   Absenttime  
+---------------- -------------- ---------------- ------------------- -----------
+-------- ----------------- ------------
+EPON0/3:1        a24e.0921.85a0 lost             1970-01-08 19:58:56 1970-01-08 
+20:19:14 wire-down         86 .18:15:05
+EPON0/3:7        e0e8.e6de.53b9 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/3:9        c07e.40a9.2164 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/3:10       a07d.0801.6fac lost             1970-01-25 04:39:36 1970-01-25 
+22:22:05 power-off         69 .16:12:14
+EPON0/3:20       1809.d102.9ba1 lost             1970-01-16 07:54:34 1970-01-16 
+07:57:58 power-off         79 .06:36:22
+EPON0/3:26       2cac.2bbd.ad2b lost             1970-02-13 05:24:17 1970-02-13 
+05:37:39 power-off         51 .08:56:41
+
+Interface EPON0/4 has bound 18 inactive ONUs:
+IntfName         MAC Address    Status           LastRegTime         LastDeregTi
+me       LastDeregReason   Absenttime  
+---------------- -------------- ---------------- ------------------- -----------
+-------- ----------------- ------------
+EPON0/4:1        8866.394d.41ef lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/4:2        a23d.1119.67c0 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/4:3        0011.410a.139d lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/4:4        38d4.a57b.632f lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:35
+EPON0/4:6        a07d.0801.7bac lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:7        a07d.0801.8146 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:8        00d3.9e67.3524 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:9        a23d.1022.6910 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:10       a07e.1117.024a lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:11       1809.d102.8b89 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:12       1809.d218.5321 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:13       1809.d218.6539 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:14       fce3.3c73.a4e0 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:15       00d5.9f5e.19f8 lost             N/A                 1970-01-01 
+00:00:45 unknow            94 .14:33:34
+EPON0/4:31       c07e.40a6.acf4 deregistered     1970-03-22 23:28:26 1970-03-23 
+06:34:40 wire-down         13 .07:59:40
+EPON0/4:44       c07e.40b3.d004 lost             1970-01-07 05:46:47 1970-01-07 
+05:47:37 power-off         88 .08:46:43
+EPON0/4:45       98c7.a435.3960 lost             1970-01-07 05:48:46 1970-01-07 
+05:49:09 wire-down         88 .08:45:11
+EPON0/4:46       00d5.9f3b.fbba deregistered     1970-03-12 05:51:32 1970-03-12 
+07:55:28 power-off         24 .06:38:52
+
+DORICHOR-BABU#
+
+## show epon onu-information   [OK 22761 chars 16380ms]
+Interface EPON0/1 has registered 64 ONUs:
+IntfName         VendorID ModelID    MAC Address    Description                 
+    BindType Status           Dereg Reason     
+---------------- -------- ---------- -------------- ----------------------------
+--- -------- ---------------- -----------------
+EPON0/1:1        CDTC     11AF       d05f.af88.e690 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:2        EPON     ML-E       00d3.9eb5.1800 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:3        ZTE      F401       a07d.0818.004f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:4        HWTC     010T       38d4.a598.1a6f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:5        HWTC     010H       c07e.40a9.2132 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:6        XDBC     XPON       8246.6252.7a80 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:7        HWTC     120C       d4f9.a147.6643 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:8        HWTC     010T       38d4.a592.3a8f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:9        SMA      EPON       a07e.0901.84b0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:10       HWTC     120C       30f3.35ae.4fea N/A                         
+    static   auto-configured  N/A              
+EPON0/1:11       HWTC     120C       a28b.1127.51b0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:12       HWTC      ONU       a24d.0907.3550 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:13       XPON      ONU       a28d.1229.5f50 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:14       SMA      EPON       a07f.0718.2ce0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:15       HWTC     EPON       a23d.1022.41e0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:16       HWTC     ONU        00d3.9e6e.febe N/A                         
+    static   auto-configured  N/A              
+EPON0/1:17       HWTC     ONU        00d3.9e73.4d2e N/A                         
+    static   auto-configured  N/A              
+EPON0/1:18       XDK      E801       c07e.40a3.551a N/A                         
+    static   auto-configured  N/A              
+EPON0/1:19       HWTC     ONU        00d3.9e6e.fec4 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:20       FTTH     XPON       a68f.1202.0dd4 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:21       HWTC     ONU        00d3.9ef0.9312 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:22       HWTC     010T       e42d.7b3a.f21f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:23       HWTC     010T       38d4.a593.f95f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:24       HWTC     ONU        00d5.9e60.e3b8 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:25       HWTC     EPON       bc3f.8fc3.b1f0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:26       HWTC     010T       38d4.a57a.a10f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:27       XDK      E801       c07e.40a3.5529 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:28       HWTC     EPON       a23d.1022.06f0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:29       HWTC     HG80       e4a8.b604.4bc2 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:30       XDK      E801       c07e.40a3.58e8 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:31       HWTC     ONU        00d5.9f71.0fe0 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:32       HWTC     HG83       e8bd.d17e.37f2 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:33       HWTC     HG80       e4a8.b604.bb8f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:34       ZTE      EPON       a07e.0622.01b4 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:35       HWTC     EPON       bc3f.8f2b.fdc6 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:36       ZTE      1GE-       c07e.40b8.e65f N/A                         
+    static   auto-configured  N/A              
+EPON0/1:37       HWTC     321R       b415.13f0.6f27 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:38       HWTC     EPON       bc3f.8f2e.aa1d N/A                         
+    static   auto-configured  N/A              
+EPON0/1:39       HWTC     120C       4cf9.b11a.f3a4 N/A                         
+    static   lost             wire-down        
+EPON0/1:40       ZTE      EPON       a07e.1117.0418 N/A                         
+    static   deregistered     wire-down        
+EPON0/1:41       FTTH     EPON       a07d.0801.0b8c N/A                         
+    static   auto-configured  N/A              
+EPON0/1:42       HWTC      ONU       8246.3260.3630 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:43       FTTH     EPON       a07d.1021.07de N/A                         
+    static   auto-configured  N/A              
+EPON0/1:44       ----     0x00000000 70a5.6a0a.fd80 N/A                         
+    static   lost             unknow           
+EPON0/1:45       ----     0x00000000 a07d.0801.0b92 N/A                         
+    static   lost             unknow           
+EPON0/1:46       ----     0x00000000 bc3f.8f32.277c N/A                         
+    static   lost             unknow           
+EPON0/1:47       EPON     EP0N       00d3.9e73.ec04 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:48       HWTC     EPON       e868.1906.24c7 N/A                         
+    static   lost             wire-down        
+EPON0/1:49       SMA      EPON       a23e.0910.4e90 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:50       ----     0x00000000 e42d.7b9f.d25f N/A                         
+    static   lost             unknow           
+EPON0/1:51       ----     0x00000000 a28b.1124.5850 N/A                         
+    static   lost             unknow           
+EPON0/1:52       ----     0x00000000 a008.6f55.a9b1 N/A                         
+    static   lost             unknow           
+EPON0/1:53       EDBC      ONU       a23d.1107.5420 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:54       EDBC     EPON       a23e.071a.7670 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:55       HWTC     ONU        00d3.9ec6.15e8 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:56       HWTC     ONU        00d3.9e6f.082a N/A                         
+    static   auto-configured  N/A              
+EPON0/1:57       HWTC     310M       f898.b9e9.39d1 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:58       HWTC     ONU        00d5.9e60.fe3a N/A                         
+    static   auto-configured  N/A              
+EPON0/1:59       HWTC     XPON       a24f.a205.c198 N/A                         
+    static   lost             wire-down        
+EPON0/1:60       ZTE      EPON       00d3.9f70.d0bc N/A                         
+    static   auto-configured  N/A              
+EPON0/1:61       HWTC     HG1        c83a.357b.1300 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:62       HWTC     342R       4455.b174.2997 N/A                         
+    static   auto-configured  N/A              
+EPON0/1:63       ZTE      1GE        f4b8.c535.498d N/A                         
+    static   auto-configured  N/A              
+EPON0/1:64       HWTC     EPON       98c7.a434.efba N/A                         
+    static   auto-configured  N/A              
+
+Interface EPON0/2 has registered 30 ONUs:
+IntfName         VendorID ModelID    MAC Address    Description                 
+    BindType Status           Dereg Reason     
+---------------- -------- ---------- -------------- ----------------------------
+--- -------- ---------------- -----------------
+EPON0/2:1        FTTH     WM-8       1809.d102.62d1 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:2        FTTH     WM-8       1809.d102.6921 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:3        HWTC     010T       e42d.7b3a.cb1f N/A                         
+    static   auto-configured  N/A              
+EPON0/2:4        HWTC     120C       78d7.52cf.a563 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:5        HWTC     240F       e42d.7b9f.d28f N/A                         
+    static   auto-configured  N/A              
+EPON0/2:6        FTTH     EPON       a07d.0801.0c40 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:7        FTTH     EPON       a07d.0801.706c N/A                         
+    static   auto-configured  N/A              
+EPON0/2:8        HWTC     120C       a28b.1123.9920 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:9        HWTC     ONU        00d3.9e6e.feb8 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:10       ----     0x00000000 a24e.0511.3980 N/A                         
+    static   lost             unknow           
+EPON0/2:11       XDBC     XPON       a24e.0511.39f0 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:12       HWTC     010H       4862.a460.4a74 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:13       FTTH     WM-8       1809.d218.8109 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:14       FTTH     WM-8       1809.d218.7749 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:15       FTTH     WM-8       1809.d102.0cd1 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:16       FTTH     WM-8       1809.d218.61d1 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:17       HWTC     240F       80d4.a552.e20f N/A                         
+    static   auto-configured  N/A              
+EPON0/2:18       HWTC     XPON       a24f.a203.9098 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:19       FTTH     EPON       a07d.0821.a564 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:20       EPON     EPON       00d3.9e74.cef0 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:21       HWTC     EPON       bc3f.8fc7.23d3 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:22       EPON     EPON       00d3.9e70.47b2 N/A                         
+    static   lost             wire-down        
+EPON0/2:23       FTTH     WM-8       1809.d102.9a81 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:24       VSOL     D401       4c46.d1b1.2625 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:25       XPON     EPON       98c7.a42a.1654 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:26       BDCM     6014       9845.62d7.41ad N/A                         
+    static   auto-configured  N/A              
+EPON0/2:27       HWTC     HG1        c83a.357b.67e8 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:28       SMA      EPON       a07f.b160.7590 N/A                         
+    static   auto-configured  N/A              
+EPON0/2:29       HWTC     ONU        00d5.9ec4.363c N/A                         
+    static   auto-configured  N/A              
+EPON0/2:30       HWTC      ONU       a24f.0615.1330 N/A                         
+    static   lost             power-off        
+
+Interface EPON0/3 has registered 24 ONUs:
+IntfName         VendorID ModelID    MAC Address    Description                 
+    BindType Status           Dereg Reason     
+---------------- -------- ---------- -------------- ----------------------------
+--- -------- ---------------- -----------------
+EPON0/3:1        XDBC     XPON       a24e.0921.85a0 N/A                         
+    static   lost             wire-down        
+EPON0/3:2        EDBC     EPON       a23e.0317.0ca0 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:3        ZTE      F401       c07e.40af.5b33 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:4        HWTC     120C       70a8.e39d.d635 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:5        HWTC     310M       e435.c882.a936 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:6        ZTE      110E       8066.290a.d8ac N/A                         
+    static   auto-configured  N/A              
+EPON0/3:7        ----     0x00000000 e0e8.e6de.53b9 N/A                         
+    static   lost             unknow           
+EPON0/3:8        HWTC     010T       38d4.a590.332f N/A                         
+    static   auto-configured  N/A              
+EPON0/3:9        ----     0x00000000 c07e.40a9.2164 N/A                         
+    static   lost             unknow           
+EPON0/3:10       FTTH     EPON       a07d.0801.6fac N/A                         
+    static   lost             power-off        
+EPON0/3:11       XDBC     XPON       a24e.0511.3ab0 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:12       HWTC     EPON       5493.5921.ec70 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:13       FTTH     WM-8       1809.d218.2749 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:14       FTTH     WM-8       1809.d218.10c9 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:15       FTTH     WM-8       1809.d218.3389 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:16       HWTC     ONU        00d5.9f5e.1956 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:17       HWTC     ONU        00d3.9ec6.164e N/A                         
+    static   auto-configured  N/A              
+EPON0/3:18       HWTC     310M       f098.3814.8b0d N/A                         
+    static   auto-configured  N/A              
+EPON0/3:19       MGEG     EPON       344e.fa02.9035 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:20       FTTH     WM-8       1809.d102.9ba1 N/A                         
+    static   lost             power-off        
+EPON0/3:22       FTTH     XPON       a68f.1202.0e10 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:24       HWTC     XPON       a68f.1202.1212 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:25       HWTC     XPON       a68f.1202.1278 N/A                         
+    static   auto-configured  N/A              
+EPON0/3:26       HWTC     120C       2cac.2bbd.ad2b N/A                         
+    static   lost             power-off        
+
+Interface EPON0/4 has registered 49 ONUs:
+IntfName         VendorID ModelID    MAC Address    Description                 
+    BindType Status           Dereg Reason     
+---------------- -------- ---------- -------------- ----------------------------
+--- -------- ---------------- -----------------
+EPON0/4:1        ----     0x00000000 8866.394d.41ef N/A                         
+    static   lost             unknow           
+EPON0/4:2        ----     0x00000000 a23d.1119.67c0 N/A                         
+    static   lost             unknow           
+EPON0/4:3        ----     0x00000000 0011.410a.139d N/A                         
+    static   lost             unknow           
+EPON0/4:4        ----     0x00000000 38d4.a57b.632f N/A                         
+    static   lost             unknow           
+EPON0/4:5        HWTC     ONU        00d3.9ef0.9318 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:6        ----     0x00000000 a07d.0801.7bac N/A                         
+    static   lost             unknow           
+EPON0/4:7        ----     0x00000000 a07d.0801.8146 N/A                         
+    static   lost             unknow           
+EPON0/4:8        ----     0x00000000 00d3.9e67.3524 N/A                         
+    static   lost             unknow           
+EPON0/4:9        ----     0x00000000 a23d.1022.6910 N/A                         
+    static   lost             unknow           
+EPON0/4:10       ----     0x00000000 a07e.1117.024a N/A                         
+    static   lost             unknow           
+EPON0/4:11       ----     0x00000000 1809.d102.8b89 N/A                         
+    static   lost             unknow           
+EPON0/4:12       ----     0x00000000 1809.d218.5321 N/A                         
+    static   lost             unknow           
+EPON0/4:13       ----     0x00000000 1809.d218.6539 N/A                         
+    static   lost             unknow           
+EPON0/4:14       ----     0x00000000 fce3.3c73.a4e0 N/A                         
+    static   lost             unknow           
+EPON0/4:15       ----     0x00000000 00d5.9f5e.19f8 N/A                         
+    static   lost             unknow           
+EPON0/4:16       XDBC     XPON       a24f.0711.6280 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:17       HWTC     ONU        00d3.9ec6.1654 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:18       HWTC     HG80       4c64.f5a6.07df N/A                         
+    static   auto-configured  N/A              
+EPON0/4:19       HWTC     EPON       bc3f.8f03.791d N/A                         
+    static   auto-configured  N/A              
+EPON0/4:20       SMA      EPON       a07e.122a.abf6 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:21       XPON     EPON       98c7.a42a.22fa N/A                         
+    static   auto-configured  N/A              
+EPON0/4:22       HWTC     ONU        5493.5923.a396 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:23       HWTC     120C       688f.8490.2943 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:24       HWTC     010H       0011.411b.27ce N/A                         
+    static   auto-configured  N/A              
+EPON0/4:25       HWTC     010H       c07e.40a9.1b74 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:26       SMA      EPON       a07e.122a.8b5c N/A                         
+    static   auto-configured  N/A              
+EPON0/4:27       EPON     EPON       00d3.9e9b.2088 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:28       BTPT     BT-1       60d2.dd14.f031 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:29       HWTC     120C       4cf9.b122.e768 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:30       BDCM     6013       8479.73ed.19a0 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:31       ----     0x00000000 c07e.40a6.acf4 N/A                         
+    static   deregistered     wire-down        
+EPON0/4:32       HWTC     010H       249e.abe2.e77f N/A                         
+    static   auto-configured  N/A              
+EPON0/4:33       HWTC     010T       38d4.a57b.634f N/A                         
+    static   auto-configured  N/A              
+EPON0/4:34       HWTC     010H       0011.4126.e9c5 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:35       HWTC     HG80       e4a8.b604.001e N/A                         
+    static   auto-configured  N/A              
+EPON0/4:36       HWTC     ONU        00d5.9f5e.189c N/A                         
+    static   auto-configured  N/A              
+EPON0/4:37       HWTC     120C       4cf9.b1e7.93b4 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:38       HWTC     HG83       9404.9cba.ed02 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:39       XDBC      ONU       a24d.0620.bd20 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:40       HWTC     120C       2cad.ccbd.aecc N/A                         
+    static   auto-configured  N/A              
+EPON0/4:41       HWTC     2254       00d5.9f3b.fd3a N/A                         
+    static   auto-configured  N/A              
+EPON0/4:42       VSOL     D401       4c46.d1b0.e4a5 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:43       HWTC     010T       38d4.a57a.a5bf N/A                         
+    static   auto-configured  N/A              
+EPON0/4:44       ZTE      F401       c07e.40b3.d004 N/A                         
+    static   lost             power-off        
+EPON0/4:45       HWTC     EPON       98c7.a435.3960 N/A                         
+    static   lost             wire-down        
+EPON0/4:46       HWTC     2254       00d5.9f3b.fbba N/A                         
+    static   deregistered     power-off        
+EPON0/4:47       XDBC     XPON       a24e.0924.c010 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:48       XDBC     1GE        a24f.c110.2210 N/A                         
+    static   auto-configured  N/A              
+EPON0/4:49       HWTC     ONU        00d5.9eb2.3d56 N/A                         
+    static   auto-configured  N/A              
+
+DORICHOR-BABU#
+
+## show epon interface-statistic   [OK 36 chars 264ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show epon onu-version   [OK 36 chars 260ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show gpon onu-information   [OK 36 chars 272ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show gpon onu-state   [OK 36 chars 282ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show gpon active-onu   [OK 36 chars 270ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show mac address-table   [OK 9398 chars 9501ms]
+Mac Address Table (Total 228)
+------------------------------------------
+
+Vlan    Mac Address       Type       Ports
+----    -----------       ----       -----
+All	0055.b14a.c77e	  STATIC     CPU
+1	a07e.1117.024b	  DYNAMIC    g0/1
+1	ecb9.310f.ee51	  DYNAMIC    g0/1
+1	4cd7.c813.2731	  DYNAMIC    g0/1
+1	9825.4aaa.1e87	  DYNAMIC    g0/5
+1	bce0.018c.73e8	  DYNAMIC    g0/6
+1	e89f.80e8.c9e3	  DYNAMIC    g0/1
+1	48a9.8ac2.3f22	  DYNAMIC    g0/1
+1	ac15.a2ab.7983	  DYNAMIC    g0/1
+1	a24f.a200.1ee0	  DYNAMIC    g0/1
+1	8076.4150.6b31	  DYNAMIC    g0/1
+1	a68f.1202.172c	  DYNAMIC    g0/1
+1	a68f.1202.0e20	  DYNAMIC    g0/1
+1	a24f.a205.c190	  DYNAMIC    g0/1
+1	a07d.1220.11d1	  DYNAMIC    g0/1
+1	e0e8.e63c.98fd	  DYNAMIC    g0/1
+1	ac15.a2e8.c847	  DYNAMIC    g0/1
+1	98de.d0a3.a105	  DYNAMIC    g0/1
+1	a24f.a202.d090	  DYNAMIC    g0/1
+1	a24f.a200.1150	  DYNAMIC    g0/1
+1	a07e.0919.0983	  DYNAMIC    g0/1
+1	d832.1473.3837	  DYNAMIC    epon0/1:29
+1	a07f.0718.2ce1	  DYNAMIC    epon0/1:14
+1	ecb9.3120.afe1	  DYNAMIC    epon0/1:30
+1	58d9.d576.63e8	  DYNAMIC    epon0/1:47
+1	80af.caef.5492	  DYNAMIC    epon0/1:58
+1	c0c9.e335.f827	  DYNAMIC    epon0/1:60
+1	e01c.fca9.6287	  DYNAMIC    epon0/1:38
+1	cc2d.219e.fc2f	  DYNAMIC    epon0/1:43
+1	ac15.a2ab.77a6	  DYNAMIC    epon0/1:17
+1	0c0e.76a1.ad77	  DYNAMIC    epon0/1:18
+1	d832.1437.0947	  DYNAMIC    epon0/1:55
+1	0495.e63b.53c7	  DYNAMIC    epon0/1:24
+1	500f.f5dc.5b78	  DYNAMIC    epon0/1:25
+1	d832.1455.e10f	  DYNAMIC    epon0/1:4
+1	0c0e.769f.8e7f	  DYNAMIC    epon0/1:11
+1	f0b4.d23f.3d9b	  DYNAMIC    epon0/1:7
+1	d832.1475.c9ef	  DYNAMIC    epon0/1:20
+1	b83a.0841.1597	  DYNAMIC    epon0/1:5
+1	cc2d.2134.67f8	  DYNAMIC    epon0/1:62
+1	809f.e40b.6f2f	  DYNAMIC    epon0/1:17
+1	f0b4.d23e.0c43	  DYNAMIC    epon0/1:12
+1	0495.e63b.6417	  DYNAMIC    epon0/1:34
+1	cc2d.21ef.b9e7	  DYNAMIC    epon0/1:16
+1	cc2d.21f3.ea7f	  DYNAMIC    epon0/1:28
+1	e01c.fca9.e2fb	  DYNAMIC    epon0/1:27
+1	58d9.d597.e8d0	  DYNAMIC    epon0/1:33
+1	0840.f397.84df	  DYNAMIC    epon0/1:19
+1	105a.958f.f7c1	  DYNAMIC    epon0/1:9
+1	d832.1465.e1f8	  DYNAMIC    epon0/1:28
+1	cc2d.21f0.3cb7	  DYNAMIC    epon0/1:9
+1	00eb.d8fa.6e8d	  DYNAMIC    epon0/1:26
+1	d832.141e.f780	  DYNAMIC    epon0/1:53
+1	0c0e.76a1.9793	  DYNAMIC    epon0/1:28
+1	a829.dc0c.f6cb	  DYNAMIC    epon0/1:15
+1	809f.e466.9e6f	  DYNAMIC    epon0/1:63
+1	58d9.d527.9db8	  DYNAMIC    epon0/1:12
+1	d832.1476.614f	  DYNAMIC    epon0/1:16
+1	500f.f53d.6839	  DYNAMIC    epon0/1:6
+1	bce0.01cd.e97e	  DYNAMIC    epon0/1:23
+1	0840.f37c.0489	  DYNAMIC    epon0/1:1
+1	b83a.0845.7be7	  DYNAMIC    epon0/1:20
+1	e01c.fca5.4c9f	  DYNAMIC    epon0/1:25
+1	cc2d.2176.ddf8	  DYNAMIC    epon0/1:62
+1	80af.caee.9326	  DYNAMIC    epon0/1:58
+1	0495.e63b.53df	  DYNAMIC    epon0/1:56
+1	80af.caba.2133	  DYNAMIC    epon0/1:55
+1	500f.f5e8.f1e0	  DYNAMIC    epon0/1:33
+1	b83a.0841.925f	  DYNAMIC    epon0/1:13
+1	3c84.6a19.09fd	  DYNAMIC    epon0/1:32
+1	500f.f5dc.5b68	  DYNAMIC    epon0/1:47
+1	9c9d.7eed.1a80	  DYNAMIC    epon0/1:62
+1	cc2d.21f0.33f7	  DYNAMIC    epon0/1:20
+1	5ce9.31e4.490f	  DYNAMIC    epon0/1:3
+1	0840.f3fa.9818	  DYNAMIC    epon0/1:60
+1	00eb.d892.1edd	  DYNAMIC    epon0/1:10
+1	1c3b.f38b.4e93	  DYNAMIC    epon0/1:21
+1	788c.b525.e065	  DYNAMIC    epon0/1:41
+1	d832.1457.59af	  DYNAMIC    epon0/1:34
+1	809f.e427.e077	  DYNAMIC    epon0/1:21
+1	4822.548a.0e9d	  DYNAMIC    epon0/1:35
+1	d832.1475.ca2f	  DYNAMIC    epon0/1:14
+1	58d9.d580.61c8	  DYNAMIC    epon0/1:25
+1	e01c.fca4.e1bb	  DYNAMIC    epon0/1:2
+1	d832.1473.890f	  DYNAMIC    epon0/1:35
+1	d832.14a3.266f	  DYNAMIC    epon0/1:21
+1	d832.14f3.bfe8	  DYNAMIC    epon0/1:38
+1	0495.e6ed.b44f	  DYNAMIC    epon0/1:29
+1	0c0e.76a1.1ebf	  DYNAMIC    epon0/1:7
+1	d832.1467.2ad8	  DYNAMIC    epon0/1:38
+1	e01c.fca9.62ff	  DYNAMIC    epon0/1:37
+1	cc2d.21b5.53e8	  DYNAMIC    epon0/1:19
+1	105a.958f.f818	  DYNAMIC    epon0/1:34
+1	0c0e.76a0.a863	  DYNAMIC    epon0/1:49
+1	9825.4a9b.2165	  DYNAMIC    epon0/1:60
+1	0495.e63b.53bf	  DYNAMIC    epon0/1:57
+1	b83a.0841.ba87	  DYNAMIC    epon0/1:36
+1	ec75.0cad.1861	  DYNAMIC    epon0/1:31
+1	0840.f39b.9000	  DYNAMIC    epon0/1:8
+1	5c62.8b78.3806	  DYNAMIC    epon0/1:60
+1	cc2d.215a.301f	  DYNAMIC    epon0/1:60
+1	6c4c.bc8f.013e	  DYNAMIC    epon0/1:24
+1	503d.d13c.1885	  DYNAMIC    epon0/1:64
+1	500f.f5ed.e990	  DYNAMIC    epon0/1:35
+1	e01c.fca5.bf6b	  DYNAMIC    epon0/1:25
+1	809f.e403.8399	  DYNAMIC    epon0/1:20
+1	e01c.fca9.e44f	  DYNAMIC    epon0/1:2
+1	0495.e63b.6427	  DYNAMIC    epon0/1:42
+1	6c4c.bc37.5025	  DYNAMIC    epon0/1:42
+1	3016.9d3b.5933	  DYNAMIC    epon0/1:54
+1	b83a.087e.4abf	  DYNAMIC    epon0/1:18
+1	cc2d.211d.91ff	  DYNAMIC    epon0/1:61
+1	0c0e.76a0.a943	  DYNAMIC    epon0/1:18
+1	58d9.d536.07a8	  DYNAMIC    epon0/1:28
+1	e01c.fca5.49b7	  DYNAMIC    epon0/1:22
+1	58d9.d552.1be8	  DYNAMIC    epon0/2:15
+1	58d9.d525.0878	  DYNAMIC    epon0/2:2
+1	500f.f5d2.4c5f	  DYNAMIC    epon0/2:14
+1	d832.1445.7418	  DYNAMIC    epon0/2:23
+1	b83a.0863.5f78	  DYNAMIC    epon0/2:15
+1	0840.f37a.5737	  DYNAMIC    epon0/2:9
+1	0840.f3a2.1cb8	  DYNAMIC    epon0/2:26
+1	58d9.d518.aaf0	  DYNAMIC    epon0/2:27
+1	3c64.cf7a.024f	  DYNAMIC    epon0/2:5
+1	cc2d.2174.3f77	  DYNAMIC    epon0/2:6
+1	0c0e.769f.b807	  DYNAMIC    epon0/2:13
+1	cc2d.2136.f79f	  DYNAMIC    epon0/2:6
+1	b83a.0863.5f80	  DYNAMIC    epon0/2:21
+1	58d9.d525.2f58	  DYNAMIC    epon0/2:17
+1	500f.f5db.4080	  DYNAMIC    epon0/2:8
+1	788c.b576.f8d1	  DYNAMIC    epon0/2:29
+1	b83a.0863.5f68	  DYNAMIC    epon0/2:11
+1	cc2d.21ef.fe1f	  DYNAMIC    epon0/2:16
+1	809f.e4e1.1ef7	  DYNAMIC    epon0/2:29
+1	0840.f397.48d7	  DYNAMIC    epon0/2:21
+1	0c0e.76a1.86af	  DYNAMIC    epon0/2:9
+1	4c46.d1b1.2626	  DYNAMIC    epon0/2:24
+1	cc2d.21f0.16df	  DYNAMIC    epon0/2:20
+1	d832.14de.ff2f	  DYNAMIC    epon0/2:19
+1	58d9.d597.e900	  DYNAMIC    epon0/2:17
+1	d832.1476.173f	  DYNAMIC    epon0/2:3
+1	e01c.fca9.e3cb	  DYNAMIC    epon0/2:5
+1	0840.f394.d987	  DYNAMIC    epon0/2:6
+1	1c61.b46a.ed04	  DYNAMIC    epon0/2:1
+1	b8fb.b37d.eede	  DYNAMIC    epon0/2:18
+1	d832.1466.00a0	  DYNAMIC    epon0/2:12
+1	809f.e42b.50af	  DYNAMIC    epon0/2:21
+1	58d9.d505.9af0	  DYNAMIC    epon0/2:15
+1	a07f.b160.7591	  DYNAMIC    epon0/2:28
+1	500f.f5db.40d8	  DYNAMIC    epon0/2:25
+1	088a.f1fc.dc89	  DYNAMIC    epon0/2:28
+1	80af.caba.9c4f	  DYNAMIC    epon0/2:4
+1	809f.e449.b59f	  DYNAMIC    epon0/2:6
+1	d832.14cc.528f	  DYNAMIC    epon0/2:8
+1	809f.e409.1d88	  DYNAMIC    epon0/2:6
+1	e01c.fca4.09e7	  DYNAMIC    epon0/2:24
+1	c471.5425.1009	  DYNAMIC    epon0/2:7
+1	d832.1406.bda0	  DYNAMIC    epon0/3:13
+1	58d9.d518.ab08	  DYNAMIC    epon0/3:24
+1	40ed.0032.6871	  DYNAMIC    epon0/3:6
+1	d832.14a2.8e98	  DYNAMIC    epon0/3:2
+1	d832.143e.55e0	  DYNAMIC    epon0/3:25
+1	cc2d.21ef.fed7	  DYNAMIC    epon0/3:6
+1	d832.14e4.d927	  DYNAMIC    epon0/3:12
+1	b83a.081c.71b0	  DYNAMIC    epon0/3:22
+1	58d9.d553.8528	  DYNAMIC    epon0/3:15
+1	500f.f5ad.6e2f	  DYNAMIC    epon0/3:6
+1	6015.6f99.7e70	  DYNAMIC    epon0/3:24
+1	0840.f3ee.7c0f	  DYNAMIC    epon0/3:25
+1	58d9.d505.9b20	  DYNAMIC    epon0/3:25
+1	0840.f378.1ac7	  DYNAMIC    epon0/3:17
+1	b83a.0863.5f60	  DYNAMIC    epon0/3:22
+1	b83a.0866.bb70	  DYNAMIC    epon0/3:11
+1	e426.8bf4.7a61	  DYNAMIC    epon0/3:14
+1	84d8.1bc8.dd49	  DYNAMIC    epon0/3:16
+1	d832.1467.6568	  DYNAMIC    epon0/3:3
+1	809f.e4af.e35f	  DYNAMIC    epon0/3:22
+1	cc2d.211d.91df	  DYNAMIC    epon0/3:18
+1	b83a.082a.7467	  DYNAMIC    epon0/3:4
+1	809f.e466.9d8f	  DYNAMIC    epon0/3:19
+1	58d9.d552.1bf8	  DYNAMIC    epon0/3:22
+1	0840.f3b2.272f	  DYNAMIC    epon0/3:18
+1	58d9.d525.2ca0	  DYNAMIC    epon0/3:6
+1	d832.1471.f557	  DYNAMIC    epon0/3:8
+1	0c0e.76a1.9367	  DYNAMIC    epon0/3:6
+1	b83a.082b.3a87	  DYNAMIC    epon0/3:4
+1	b83a.0840.a54f	  DYNAMIC    epon0/3:5
+1	500f.f5ab.6b60	  DYNAMIC    epon0/4:43
+1	ecb9.314d.3564	  DYNAMIC    epon0/4:24
+1	d832.1406.6c58	  DYNAMIC    epon0/4:35
+1	500f.f5b4.8898	  DYNAMIC    epon0/4:37
+1	80af.caba.edbf	  DYNAMIC    epon0/4:35
+1	f0b4.d23f.3dcf	  DYNAMIC    epon0/4:43
+1	a07e.122a.abf7	  DYNAMIC    epon0/4:20
+1	3c84.6adf.1251	  DYNAMIC    epon0/4:42
+1	d832.1486.e600	  DYNAMIC    epon0/4:18
+1	7cf1.7e5e.261e	  DYNAMIC    epon0/4:17
+1	b83a.0893.234f	  DYNAMIC    epon0/4:36
+1	cc2d.21f0.3a2f	  DYNAMIC    epon0/4:29
+1	00eb.d892.2321	  DYNAMIC    epon0/4:49
+1	6032.b1df.8c6b	  DYNAMIC    epon0/4:23
+1	4c46.d1b0.e4a6	  DYNAMIC    epon0/4:42
+1	58d9.d597.e8f0	  DYNAMIC    epon0/4:16
+1	cc2d.2165.d0e7	  DYNAMIC    epon0/4:38
+1	58d9.d59b.b380	  DYNAMIC    epon0/4:19
+1	9c53.22e8.b1d5	  DYNAMIC    epon0/4:19
+1	04ba.d610.54db	  DYNAMIC    epon0/4:30
+1	500f.f5eb.f398	  DYNAMIC    epon0/4:40
+1	e01c.fca5.4c37	  DYNAMIC    epon0/4:18
+1	dc62.79e2.c369	  DYNAMIC    epon0/4:47
+1	e01c.fca5.cf9b	  DYNAMIC    epon0/4:43
+1	e01c.fca6.13f7	  DYNAMIC    epon0/4:29
+1	58d9.d518.aae0	  DYNAMIC    epon0/4:48
+1	d832.14a6.09f9	  DYNAMIC    epon0/4:25
+1	80af.caee.fa5a	  DYNAMIC    epon0/4:5
+1	0c0e.769f.8e6f	  DYNAMIC    epon0/4:27
+1	a07e.122a.8b5d	  DYNAMIC    epon0/4:26
+1	809f.e409.2ec8	  DYNAMIC    epon0/4:21
+1	d832.14df.49cf	  DYNAMIC    epon0/4:22
+1	809f.e437.647f	  DYNAMIC    epon0/4:20
+1	809f.e466.e57f	  DYNAMIC    epon0/4:41
+1	d832.1467.2a90	  DYNAMIC    epon0/4:26
+1	d40d.ab3e.0c19	  DYNAMIC    epon0/4:19
+1	500f.f5ba.dca7	  DYNAMIC    epon0/4:39
+1	500f.f58f.0c30	  DYNAMIC    epon0/4:37
+1	500f.f5ad.70cf	  DYNAMIC    epon0/4:34
+1	500f.f57b.2410	  DYNAMIC    epon0/4:33
+1	58d9.d530.088f	  DYNAMIC    epon0/4:28
+1	d832.14a3.1a0f	  DYNAMIC    epon0/4:32
+DORICHOR-BABU#
+
+## show mac-address-table   [OK 36 chars 265ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+# পাওয়া ONU: epon=epon0/1:1,epon0/1:2 gpon=-  PON পোর্ট: epon0/1,epon0/2
+
+## show epon interface epon0/1:1 onu basic-information   [OK 36 chars 272ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show epon interface epon0/1:1 onu ctc optical-transceiver-diagnosis   [OK 472 chars 281ms]
+show epon interface epon0/1:1 onu ctc optical-transceiver-diagnos                                                                 interface epon0/1:1 onu ctc optical-transceiver-diagnosis
+ operating temperature(degree): 27
+ supply voltage(V): 3.3
+ bias current(mA): 10.8
+ transmitted power(DBm): 2.0
+ received power(DBm): -12.3
+DORICHOR-BABU#
+
+## show epon optical-transceiver-diagnosis interface epon0/1:1   [OK 97 chars 732ms]
+interface    RxPower(dBm)
+-----------  --------------
+epon0/1:1    -22.8          
+DORICHOR-BABU#
+
+## show epon interface epon0/1:1 onu ctc basic-info   [OK 699 chars 734ms]
+ONU Vender ID       : CDTC
+ONU MODEL ID        : 11AF
+ONU EXT MODEL ID    : FD511G-X-F680
+ONU ID              : d05f.af88.e690
+Hardware Version    : F680.1B 
+Software Version    : V3.3.8          
+Firmware Version    : 0x1002
+Chipset Vendor ID   :   (0x007f)
+Chipset MODEL ID    : 0xf501
+Chipset Revision    : 15
+Chipset Date        : 20/06/20
+Onu type            : SFU
+Support multillid   : Not supported
+Protection type     : Not supported
+Number of Pon       : 1
+Number of slot      : 0
+Support 1 types of port:
+ Number of GE port   : 1
+ Bitmap of GE port   : 1
+Number of US Queues : 8
+QueueMax per US Port: 8
+Number of DS Queues : 8
+QueueMax per DS Port: 8
+Battery Backup      : 0
+DORICHOR-BABU#
+
+## show interface epon0/1:1   [OK 1116 chars 266ms]
+EPON0/1:1 is up, line protocol is up
+  protocolstatus upTimes 473, downTimes 472, last transition 1970-4-4 18:42:54
+  Ifindex is 122, unique port number is 7
+  Hardware is Giga-LLID, address is 0055.b14a.c785 (bia 0055.b14a.c785)
+  MTU 1500 bytes, BW 1000000 kbit, DLY 2000 usec
+  Encapsulation ARPA
+  Flow-Control Off
+  5 minutes input rate 214 bits/sec, 0 packets/sec
+  5 minutes output rate 130 bits/sec, 0 packets/sec
+     Received 160690142 packets, 53824418778 bytes
+     1337 broadcasts, 0 multicasts
+     0 discard, 0 error
+     Transmitted 603456580 packets, 743711735867 bytes
+     0 broadcasts, 0 multicasts
+     0 discard
+     Received oam 71091 frames
+     71073 information, 0 unique, 0 duplicate
+     0 request, 0 response, 18 specific
+     0 unsupported, 0 loop-control, 0 lost
+     Transmitted oam 72112 frames
+     72094 information, 0 unique, 0 duplicate
+     0 request, 0 response, 18 specific
+     0 unsupported, 0 loop-control
+     Received mpcp 6756757511 frames
+     0 request, 473 ack, 6756757038 report
+     Transmitted mpcp 6757227097 frames
+     6757227097 gate, 0 register
+DORICHOR-BABU#
+
+## show mac address-table interface epon0/1:1   [OK 212 chars 266ms]
+Mac Address Table (Total 1)
+------------------------------------------
+
+Vlan    Mac Address       Type       Ports
+----    -----------       ----       -----
+1	0840.f37c.0489	  DYNAMIC    epon0/1:1
+DORICHOR-BABU#
+
+## show epon interface epon0/1:2 onu basic-information   [OK 36 chars 266ms]
+^
+Too many parameters
+DORICHOR-BABU#
+
+## show epon interface epon0/1:2 onu ctc optical-transceiver-diagnosis   [OK 471 chars 265ms]
+show epon interface epon0/1:2 onu ctc optical-transceiver-diagnos                                                                 interface epon0/1:2 onu ctc optical-transceiver-diagnosis
+ operating temperature(degree): 32
+ supply voltage(V): 3.2
+ bias current(mA): 6.8
+ transmitted power(DBm): 2.5
+ received power(DBm): -17.7
+DORICHOR-BABU#
+
+## show epon optical-transceiver-diagnosis interface epon0/1:2   [OK 97 chars 733ms]
+interface    RxPower(dBm)
+-----------  --------------
+epon0/1:2    -22.8          
+DORICHOR-BABU#
+
+## show epon interface epon0/1:2 onu ctc basic-info   [OK 699 chars 748ms]
+ONU Vender ID       : EPON
+ONU MODEL ID        : ML-E
+ONU EXT MODEL ID    : ML-E801ZB
+ONU ID              : 00d3.9eb5.1800
+Hardware Version    : V1.0    
+Software Version    : SFUV1.0.0B06    
+Firmware Version    : 0x010101
+Chipset Vendor ID   :   (0x038c)
+Chipset MODEL ID    : 0x9110
+Chipset Revision    : 40
+Chipset Date        : 14/01/01
+Onu type            : SFU
+Support multillid   : Not supported
+Protection type     : Not supported
+Number of Pon       : 1
+Number of slot      : 0
+Support 5 types of port:
+ Number of GE port   : 1
+ Bitmap of GE port   : 1-4
+Number of US Queues : 4
+QueueMax per US Port: 4
+Number of DS Queues : 4
+QueueMax per DS Port: 4
+Battery Backup      : 0
+DORICHOR-BABU#
+
+## show interface epon0/1:2   [OK 1134 chars 259ms]
+EPON0/1:2 is up, line protocol is up
+  protocolstatus upTimes 33, downTimes 32, last transition 1970-3-31 22:30:59
+  Ifindex is 123, unique port number is 7
+  Hardware is Giga-LLID, address is 0055.b14a.c785 (bia 0055.b14a.c785)
+  MTU 1500 bytes, BW 1000000 kbit, DLY 2000 usec
+  Encapsulation ARPA
+  Flow-Control Off
+  5 minutes input rate 29534 bits/sec, 19 packets/sec
+  5 minutes output rate 1626873 bits/sec, 160 packets/sec
+     Received 768136401 packets, 220401298074 bytes
+     19829 broadcasts, 1937 multicasts
+     2 discard, 2 error
+     Transmitted 2407125050 packets, 2969115505952 bytes
+     0 broadcasts, 0 multicasts
+     0 discard
+     Received oam 406715 frames
+     406699 information, 0 unique, 0 duplicate
+     0 request, 0 response, 16 specific
+     0 unsupported, 0 loop-control, 0 lost
+     Transmitted oam 406717 frames
+     406699 information, 0 unique, 0 duplicate
+     0 request, 0 response, 18 specific
+     0 unsupported, 0 loop-control
+     Received mpcp 8319793612 frames
+     0 request, 33 ack, 8319793579 report
+     Transmitted mpcp 8319829248 frames
+     8319829248 gate, 0 register
+DORICHOR-BABU#
+
+## show mac address-table interface epon0/1:2   [OK 252 chars 275ms]
+Mac Address Table (Total 2)
+------------------------------------------
+
+Vlan    Mac Address       Type       Ports
+----    -----------       ----       -----
+1	e01c.fca4.e1bb	  DYNAMIC    epon0/1:2
+1	e01c.fca9.e44f	  DYNAMIC    epon0/1:2
+DORICHOR-BABU#
+
+## show interface epon0/1   [OK 1435 chars 579ms]
+EPON0/1 is up, line protocol is up
+  protocolstatus upTimes 1, downTimes 0, last transition 1970-1-1 0:0:46
+  Ifindex is 15, unique port number is 7
+  Hardware is Giga-PON, address is 0055.b14a.c785 (bia 0055.b14a.c785)
+  MTU 1500 bytes, BW 1000000 kbit, DLY 2000 usec
+  Encapsulation ARPA
+  Flow-Control Off
+  PON-Transceiver Present
+  5 minutes input rate 2139842 bits/sec, 1378 packets/sec
+  5 minutes output rate 26921114 bits/sec, 2611 packets/sec
+  Real time input rate 0%, 1914067 bits/sec, 1092 packets/sec
+  Real time output rate 2%, 27495748 bits/sec, 2665 packets/sec
+  peak input rate 184979056 bits/sec, Apr  3 10:28:29 
+  peak input rate 63236 packets/sec, Jan 11 18:11:56 
+  peak output rate 449393608 bits/sec, Jan  5 02:33:29 
+  peak output rate 44401 packets/sec, Mar 30 01:51:02 
+     Received 29945334717 packets, 9378083413439 bytes
+     387760 broadcasts, 621184 multicasts
+     3933 discard, 3933 error, 7433 PAUSE
+     149 align, 3784 FCS, 546 runt
+     0 jabber, 37 oversize, 0 undersize
+     Transmitted 81755995393 packets, 99069069100905 bytes
+     1171507 broadcasts, 2288315 multicasts
+     0 discard, 0 error, 0 PAUSE
+     Received mpcp 367906556704 frames
+     2392 bcast-error, 76690 bcast-request, 0 unknown
+     0 request, 38194 ack, 367906441820 report
+     Transmitted mpcp 367961038640 frames
+     16347025 discovery window
+     367944647039 gate, 704 register, 43872 bcast-register
+DORICHOR-BABU#
+
+## show epon interface epon0/1 onu   [UNSUPPORTED 34 chars 265ms]
+^
+Parameter invalid
+DORICHOR-BABU#
+
+## show interface epon0/2   [OK 1438 chars 417ms]
+EPON0/2 is up, line protocol is up
+  protocolstatus upTimes 1, downTimes 0, last transition 1970-1-1 0:0:46
+  Ifindex is 16, unique port number is 8
+  Hardware is Giga-PON, address is 0055.b14a.c786 (bia 0055.b14a.c786)
+  MTU 1500 bytes, BW 1000000 kbit, DLY 2000 usec
+  Encapsulation ARPA
+  Flow-Control Off
+  PON-Transceiver Present
+  5 minutes input rate 325757 bits/sec, 185 packets/sec
+  5 minutes output rate 3489713 bits/sec, 425 packets/sec
+  Real time input rate 0%, 774251 bits/sec, 230 packets/sec
+  Real time output rate 0%, 1468894 bits/sec, 263 packets/sec
+  peak input rate 129366448 bits/sec, Feb 20 01:42:57 
+  peak input rate 26343 packets/sec, Jan 14 05:10:23 
+  peak output rate 289854144 bits/sec, Feb 11 05:43:28 
+  peak output rate 27875 packets/sec, Jan  7 07:05:17 
+     Received 14285730490 packets, 4180007202121 bytes
+     81047 broadcasts, 228219 multicasts
+     11355142 discard, 11355142 error, 0 PAUSE
+     332485 align, 11022657 FCS, 49840 runt
+     0 jabber, 1 oversize, 0 undersize
+     Transmitted 38909480797 packets, 47540216029869 bytes
+     1171507 broadcasts, 2288316 multicasts
+     0 discard, 0 error, 0 PAUSE
+     Received mpcp 188025989417 frames
+     779 bcast-error, 15213 bcast-request, 0 unknown
+     0 request, 12941 ack, 188025961263 report
+     Transmitted mpcp 188138235321 frames
+     16347669 discovery window
+     188121872160 gate, 505 register, 14987 bcast-register
+DORICHOR-BABU#
+
+## show epon interface epon0/2 onu   [UNSUPPORTED 34 chars 265ms]
+^
+Parameter invalid
+DORICHOR-BABU#

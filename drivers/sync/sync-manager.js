@@ -21,10 +21,7 @@ const { normalizeMac } = require("./core/sync-normalizer");
 const VENDORS = {
     ecom: () => require("./vendors/ecom/sync"),
     cdata: () => require("./vendors/cdata/sync"),
-    hioso: () => require("./vendors/hioso/sync"),
-    hsgq: () => require("./vendors/hsgq/sync"),
-    vsol: () => require("./vendors/vsol/sync"),
-    zteepon: () => require("./vendors/zte-epon/sync")
+    bdcom: () => require("./vendors/bdcom/sync")
 };
 
 const running = new Set();
@@ -42,10 +39,7 @@ function vendorKey(olt) {
 
     if (key.startsWith("ecom")) return "ecom";
     if (key.startsWith("cdata")) return "cdata";
-    if (key.startsWith("hioso")) return "hioso";
-    if (key.startsWith("hsgq")) return "hsgq";
-    if (key.startsWith("vsol")) return "vsol";
-    if (key.startsWith("zte")) return "zteepon";
+    if (key.startsWith("bdcom")) return "bdcom";
 
     return key;
 }
@@ -526,15 +520,6 @@ async function syncCustomers(pool, olt, { dryRun = false } = {}) {
     });
 }
 
-async function syncCustomerMapping(pool, olt) {
-    loadVendor(olt);
-    return exclusive(
-        olt.id,
-        () => require('../services/olt-sync.service')
-            .syncCustomerMapping(pool, olt)
-    );
-}
-
 async function syncOnuHardware(pool, olt) {
     const vendor = loadVendor(olt);
 
@@ -544,21 +529,7 @@ async function syncOnuHardware(pool, olt) {
     );
 }
 
-/* One ONU (OLT Users row button). Same per-OLT lock as the full sync. */
-async function syncOnu(pool, olt, onuId) {
-    loadVendor(olt); // unsupported vendors fail early
-
-    return exclusive(
-        olt.id,
-        () => require("../services/olt-sync.service")
-            .syncOneOnu(pool, olt, onuId)
-    );
-}
-
-
 module.exports = {
     syncCustomers,
-    syncCustomerMapping,
-    syncOnuHardware,
-    syncOnu
+    syncOnuHardware
 };
