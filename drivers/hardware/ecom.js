@@ -928,14 +928,10 @@ class EcomDriver {
             await this.detectModel();
         }
 
-        if (this.model !== "E08EP-4S+") {
-            return empty(
-                "Learned-MAC command not verified for model: " +
-                (this.model || "Unknown")
-            );
-        }
-
-        // The verified command is run in configuration mode.
+        // Try the configured/default read-only command on every ECOM
+        // model. Firmware-specific command failures are collected by the
+        // learned-MAC adapter and do not interrupt ONU hardware sync.
+        // E08EP-4S+ is the model on which the default command was verified.
         await this.enterConfig();
 
         return collectEcomLearnedMacs(this, onuRows);
