@@ -469,7 +469,10 @@
                     const failed =
                         !response.ok || data.success === false;
 
-                    if (failed) {
+                    // Filter/search requests are normally GET requests. Do not
+                    // show an error toast for a user-triggered GET; keep GET
+                    // errors from background/page-load requests visible.
+                    if (failed && !(method === "GET" && isUserAction)) {
                         if (window.AppToast) {
                             const message =
                                 data.message ||
