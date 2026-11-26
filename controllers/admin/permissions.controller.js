@@ -21,6 +21,8 @@ const SYSTEM_PERMISSIONS = {
     without_mikrotik_customer_minus_balance:
         "Without MikroTik Customer Minus Balance",
     customer_portal: "Customer Portal",
+    support_ticket_view: "Support Ticket View",
+    support_ticket_manage: "Support Ticket Manage",
 
     mikrotik_add: "MikroTik Add",
     mikrotik_delete: "MikroTik Delete",
