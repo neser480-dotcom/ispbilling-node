@@ -10,6 +10,10 @@ const {
     collectPppSessions,
     loadMikrotikService
 } = require("../../drivers/services/ppp-sessions");
+const {
+    driverFor,
+    disconnectDriver
+} = require("../../drivers/services/olt-sync.service");
 
 /*
 |--------------------------------------------------------------------------
@@ -943,15 +947,55 @@ ppp = await collectPppSessions(
             ppp.errors.push(pppError.message);
         }
 
+        // Read vendor learned-MAC evidence so PPPoE caller-id MACs can
+        // be attributed to the correct ONU (including switch/bridge ONUs).
+        // Vendors without a verified collector still use exact ONU-MAC matches.
+        let learned = {
+            supported: false,
+            entries: [],
+            errors: []
+        };
+        let mappingDriver = null;
+
+        try {
+            mappingDriver = driverFor(olt);
+
+            if (typeof mappingDriver.getLearnedMacs === "function") {
+                await mappingDriver.connect();
+
+                if (typeof mappingDriver.detectModel === "function") {
+                    await mappingDriver.detectModel();
+                }
+
+                const onuRows = await mappingDriver.getONUList();
+
+                if (Array.isArray(onuRows) && onuRows.length) {
+                    learned = await mappingDriver.getLearnedMacs(onuRows);
+                } else {
+                    learned.errors.push("OLT returned no ONU rows for learned-MAC mapping.");
+                }
+            }
+        } catch (mappingError) {
+            learned.errors = [
+                ...(learned.errors || []),
+                mappingError.message || String(mappingError)
+            ];
+        } finally {
+            await disconnectDriver(mappingDriver).catch(() => {});
+        }
+
         const result = await autoMapOnus(getPool(), {
             companyId: olt.company_id,
             oltId: id,
             dryRun,
+            entries: learned.entries || [],
             sessions: ppp.sessions
         });
 
         result.pppSessions = ppp.sessions.length;
         result.pppErrors = (ppp.errors || []).slice(0, 10);
+        result.learnedMacsSupported = learned.supported === true;
+        result.learnedMacErrors = (learned.errors || []).slice(0, 10);
 
         return res.json({
             success: true,
