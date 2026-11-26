@@ -22,6 +22,9 @@ const { syncOneOnu } = require("../services/olt-sync.service");
 const VENDORS = {
     ecom: () => require("./vendors/ecom/sync"),
     cdata: () => require("./vendors/cdata/sync"),
+    hioso: () => require("./vendors/hioso/sync"),
+    hsgq: () => require("./vendors/hsgq/sync"),
+    zteepon: () => require("./vendors/zte-epon/sync"),
     bdcom: () => require("./vendors/bdcom/sync"),
     vsol: () => require("./vendors/vsol/sync")
 };
@@ -41,6 +44,9 @@ function vendorKey(olt) {
 
     if (key.startsWith("ecom")) return "ecom";
     if (key.startsWith("cdata")) return "cdata";
+    if (key.startsWith("hioso")) return "hioso";
+    if (key.startsWith("hsgq")) return "hsgq";
+    if (key.startsWith("zte")) return "zteepon";
     if (key.startsWith("bdcom")) return "bdcom";
 
     return key;
