@@ -89,8 +89,8 @@
         let lastActionModal = null;
 
         const ACTION_MODAL_SELECTOR =
-            ".modal.show, [role='dialog'][aria-modal='true'], dialog[open], " +
-            ".offcanvas.show, [data-modal-root].is-open, .custom-modal.is-open";
+            ".modal, [role='dialog'], dialog[open], .offcanvas, " +
+            "[data-modal-root], .custom-modal, .popup.show, .popup.active";
 
         function findActionModal(target) {
             if (!target || typeof target.closest !== "function") return null;
@@ -162,7 +162,11 @@
         }, true);
 
         document.addEventListener("submit", function (event) {
-            rememberUserAction(event.target);
+            // Bind the active dialog to the submitted form, including Enter/programmatic submits.
+            const form = event.target;
+            const modal = form && form.closest ? findActionModal(form) : null;
+            if (modal) lastActionModal = modal;
+            rememberUserAction(form);
         }, true);
 
         // Handle plain same-origin POST forms centrally. Forms already handled
@@ -319,7 +323,7 @@
                                     : "অনুরোধটি সম্পন্ন হয়নি।");
                             window.AppToast.error(message);
                         }
-                    } else if (isMutation && isUserAction) {
+                    } else if (isMutation && (isUserAction || !!lastActionModal)) {
                         if (window.AppToast) {
                             window.AppToast.success(
                                 data.message || "কাজটি সফলভাবে সম্পন্ন হয়েছে।"
