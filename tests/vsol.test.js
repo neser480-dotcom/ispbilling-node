@@ -72,9 +72,9 @@ await ok("N/A optical values become null, never 0", async () => {
 });
 
 // ---- fake VSOL telnet server (login, enable, --More-- paging, IAC) ----
-function fakeOlt({ failLogin = false } = {}) {
+function fakeOlt({ failLogin = false, modal = false } = {}) {
     const server = net.createServer(socket => {
-        let state = "login", buf = "";
+        let state = "login", buf = "", mode = "";
         socket.write(Buffer.from([255, 253, 1, 255, 251, 3]));            // IAC DO ECHO, IAC WILL SGA
         socket.write("\r\nHello, this is epon olt platform (version 1.00).\r\nUser Access Verification\r\nLogin: ");
         socket.on("data", d => {
@@ -88,6 +88,14 @@ function fakeOlt({ failLogin = false } = {}) {
                     if (failLogin || line !== "secret") { socket.write("\r\nAuthentication failed\r\nLogin: "); state = "login"; }
                     else { state = "user"; socket.write("\r\nepon-olt>"); }
                 }
+                else if (modal && line === "show running-config") socket.write(`${line}\r\ninterface epon 0/1\r\ninterface epon 0/2\r\nepon-olt#`);
+                else if (modal && line === "configure terminal") socket.write(`${line}\r\nepon-olt(config)#`);
+                else if (modal && /^interface epon /.test(line)) { mode = line.split(" ")[2]; socket.write(`${line}\r\nepon-olt(config-pon-${mode})#`); }
+                else if (modal && line === "end") { mode = ""; socket.write(`${line}\r\nepon-olt#`); }
+                else if (modal && !mode && /^show onu /.test(line)) socket.write(`${line}\r\n% Unknown command\r\nepon-olt#`);
+                else if (modal && mode === "0/2" && /^show onu /.test(line)) socket.write(`${line}\r\nepon-olt(config-pon-${mode})#`);
+                else if (modal && mode && line === "show onu status all") socket.write(`${line}\r\nONU-ID      Status    MAC Address         Distance(m) RTT(TQ)\r\nEPON${mode}:1   online    a2:3d:09:21:26:e0    79           144\r\nepon-olt(config-pon-${mode})#`);
+                else if (modal && mode) socket.write(`${line}\r\nepon-olt(config-pon-${mode})#`);
                 else if (line === "enable") { state = "priv"; socket.write("enable\r\nepon-olt#"); }
                 else if (line === "show onu status all") socket.write(`${line}\r\n${STATUS.replace(/\n/g, "\r\n")}\r\nepon-olt#`);
                 else if (line === "show onu opm-diag") {
@@ -118,6 +126,18 @@ await ok("driver: login+enable, IAC ignored, paging, merges three commands", asy
         assert.strictEqual(rows.find(r => r.ont_id === 12).rx_power, -20.09);   // line after --More--
         assert.strictEqual(rows.find(r => r.ont_id === 12).model_id, "D701");
         assert.deepStrictEqual(d.opticalErrors, []);
+    } finally { d.disconnect(); server.close(); }
+});
+
+await ok("driver: firmware that only accepts show onu inside interface epon -> per-PON fallback", async () => {
+    const server = await fakeOlt({ modal: true });
+    const d = new VsolDriver({ ip: "127.0.0.1", port: server.address().port, username: "admin", password: "secret", timeout: 8000 });
+    try {
+        const rows = await d.getONUList();
+        assert.strictEqual(rows.length, 1);
+        assert.strictEqual(rows[0].pon, "epon0/1");
+        assert.strictEqual(rows[0].status, "online");
+        assert.strictEqual(rows[0].onu_mac, "A2:3D:09:21:26:E0");
     } finally { d.disconnect(); server.close(); }
 });
 

@@ -646,19 +646,54 @@ class VsolDriver {
         return all;
     }
 
+    /* PON ports from "show running-config" (interface epon F/S); 0/1-0/4 if unreadable. */
+    async discoverPons() {
+        let found = [];
+
+        try {
+            const cfg = stripAnsi(await this.command("show running-config", 30000));
+            found = [...cfg.matchAll(/^\s*interface\s+epon\s+(\d+\/\d+)\s*$/gim)].map(m => m[1]);
+        } catch (error) {
+            /* fall through to default */
+        }
+
+        found = [...new Set(found)];
+
+        return found.length ? found : ["0/1", "0/2", "0/3", "0/4"];
+    }
+
     async getONUs() {
         this.opticalErrors = [];
 
         await this.connect();
 
         const statusOutput = await this.command("show onu status all", 40000);
-        const statusRows = parseOnuStatus(statusOutput);
+        let statusRows = parseOnuStatus(statusOutput);
 
+        // Some firmware only accepts the ONU show commands inside
+        // "configure terminal" -> "interface epon F/S". Read PON by PON then.
         if (!statusRows.length && /invalid|unknown|incomplete|error|ambiguous/i.test(statusOutput)) {
-            throw new Error(
-                "V-SOL OLT did not accept 'show onu status all': " +
-                stripAnsi(statusOutput).trim().slice(0, 200)
-            );
+            const pons = await this.discoverPons();
+
+            for (const fs of pons) {
+                try {
+                    await this.command("configure terminal", 8000);
+                    await this.command(`interface epon ${fs}`, 8000);
+                    statusRows.push(...parseOnuStatus(await this.command("show onu status all", 40000)));
+                } catch (error) {
+                    this.opticalErrors.push(`status ${fs}: ${error.message}`);
+                } finally {
+                    await this.command("end", 8000).catch(() => {});
+                }
+            }
+
+            if (!statusRows.length) {
+                throw new Error(
+                    "V-SOL OLT did not accept 'show onu status all' (global or per-PON " +
+                    pons.join(", ") + "): " +
+                    stripAnsi(statusOutput).trim().slice(0, 200)
+                );
+            }
         }
 
         const fsList = [...new Set(statusRows.map(r => r.f_s))];
