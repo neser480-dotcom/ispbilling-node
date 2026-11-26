@@ -75,6 +75,13 @@ router.post("/items", async (req, res) => {
             return res.status(400).json({ success: false, message: "Bandwidth name is required." });
         }
 
+        const [duplicates] = await db.query(
+            `SELECT id FROM bandwidth_items WHERE company_id = ?
+             AND LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1`,
+            [companyId, name]
+        );
+        if (duplicates.length) return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই Bandwidth নাম আগে থেকেই আছে।" });
+
         const [result] = await db.query(
             `INSERT INTO bandwidth_items (company_id, name, category, unit_rate, unit, status)
              VALUES (?, ?, ?, ?, ?, ?)`,
@@ -112,6 +119,13 @@ router.put("/items/:id", async (req, res) => {
         if (!name) {
             return res.status(400).json({ success: false, message: "Bandwidth name is required." });
         }
+
+        const [duplicates] = await db.query(
+            `SELECT id FROM bandwidth_items WHERE company_id = ? AND id <> ?
+             AND LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1`,
+            [companyId, id, name]
+        );
+        if (duplicates.length) return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই Bandwidth নাম আগে থেকেই আছে।" });
 
         const [result] = await db.query(
             `UPDATE bandwidth_items
@@ -259,6 +273,21 @@ router.post("/resellers", async (req, res) => {
             if (!bwRows.length) {
                 return res.status(404).json({ success: false, message: "Selected bandwidth item not found." });
             }
+        }
+
+        const [duplicates] = await db.query(
+            `SELECT id, reseller_name, phone FROM bandwidth_resellers
+             WHERE company_id = ?
+               AND (LOWER(TRIM(reseller_name)) = LOWER(TRIM(?))
+                    OR (? IS NOT NULL AND TRIM(phone) = TRIM(?)))
+             LIMIT 10`,
+            [companyId, resellerName, phone, phone]
+        );
+        if (duplicates.some(row => String(row.reseller_name || "").trim().toLowerCase() === resellerName.toLowerCase())) {
+            return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই Bandwidth reseller নাম আগে থেকেই আছে।" });
+        }
+        if (phone && duplicates.some(row => String(row.phone || "").trim() === phone)) {
+            return res.status(409).json({ success: false, message: "এই ISP অ্যাকাউন্টে এই ফোন নম্বরের Bandwidth reseller আগে থেকেই আছে।" });
         }
 
         const [result] = await db.query(
