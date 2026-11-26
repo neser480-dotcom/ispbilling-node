@@ -867,16 +867,25 @@ app.use(
 */
 app.use("/api/ai-help", requireSoftwareBilling, aiHelpRoutes);
 
-app.get("/ai-help/settings", requireSoftwareBilling, (req, res) => {
-    return res.sendFile(
-        path.join(__dirname, "views", "ai-help", "settings.html")
-    );
-});
-app.get("/ai-help", requireSoftwareBilling, (req, res) => {
-    return res.sendFile(
-        path.join(__dirname, "views", "ai-help", "chat.html")
-    );
-});
+app.get(
+    "/ai-help/settings",
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(__dirname, "views", "ai-help", "settings.html")
+        );
+    }
+);
+
+app.get(
+    ["/ai-help", "/ai-help/chat"],
+    requireSoftwareBilling,
+    (req, res) => {
+        return res.sendFile(
+            path.join(__dirname, "views", "ai-help", "chat.html")
+        );
+    }
+);
 /*
 |--------------------------------------------------------------------------
 | PUBLIC WEBSITE & LOGIN PAGE
