@@ -1688,7 +1688,11 @@ async function syncSelectedOlt(button, targetOltId) {
     );
 
     if (!targetOlt) {
-        showMessage("নির্বাচিত OLT পাওয়া যায়নি।", "error");
+        if (window.AppToast) {
+            window.AppToast.error("নির্বাচিত OLT পাওয়া যায়নি।");
+        } else {
+            showMessage("নির্বাচিত OLT পাওয়া যায়নি।", "error");
+        }
         return;
     }
 
@@ -1710,21 +1714,27 @@ async function syncSelectedOlt(button, targetOltId) {
 
         const details = result.data || {};
 
-        showMessage(
+        const syncMessage =
             `${result.message || "ONU synchronization completed."} ` +
             `Inserted: ${details.inserted ?? 0}, ` +
             `Updated: ${details.updated ?? 0}, ` +
             `Skipped: ${details.skipped ?? 0}.` +
-            mappingSummary(details.mapping),
-            "success"
-        );
+            mappingSummary(details.mapping);
+
+        if (window.AppToast) {
+            window.AppToast.success(syncMessage);
+        } else {
+            showMessage(syncMessage, "success");
+        }
 
         await loadOnus(true);
     } catch (error) {
-        showMessage(
-            error.message || "ONU synchronization failed.",
-            "error"
-        );
+        const syncError = error.message || "ONU synchronization failed.";
+        if (window.AppToast) {
+            window.AppToast.error(syncError);
+        } else {
+            showMessage(syncError, "error");
+        }
     } finally {
         syncing = false;
         refreshButton.disabled = false;
