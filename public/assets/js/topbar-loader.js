@@ -129,7 +129,7 @@
 
             if (
                 url.origin !== window.location.origin ||
-                /^\\/(?:login|logout|auth)(?:\\/|$)/i.test(url.pathname)
+                /^\/(?:login|logout|auth)(?:\/|$)/i.test(url.pathname)
             ) return;
 
             // A page-level submit handler that already called preventDefault()
