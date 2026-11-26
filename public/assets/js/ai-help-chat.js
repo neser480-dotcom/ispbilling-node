@@ -168,13 +168,78 @@ document.addEventListener("DOMContentLoaded", () => {
         return data.answer;
     }
 
-    function speak(text) {
+    function getSpeechVoices() {
+        return synthesisSupported ? window.speechSynthesis.getVoices() : [];
+    }
+
+    function waitForSpeechVoices() {
+        const existing = getSpeechVoices();
+        if (existing.length) return Promise.resolve(existing);
+
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+                clearTimeout(timeoutId);
+                resolve(getSpeechVoices());
+            };
+            const onVoicesChanged = () => finish();
+            const timeoutId = setTimeout(finish, 1200);
+            window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
+        });
+    }
+
+    function chooseSpeechVoice(voices, language) {
+        const normalized = String(language || "").toLowerCase();
+        if (normalized.startsWith("bn")) {
+            const bengali = voices.filter(voice => /^bn([_-]|$)/i.test(voice.lang || "") ||
+                /bengali|bangla/i.test(voice.name || ""));
+            return bengali.find(voice => /^bn[-_]bd$/i.test(voice.lang || "")) ||
+                bengali.find(voice => /^bn[-_]in$/i.test(voice.lang || "")) ||
+                bengali[0] || null;
+        }
+
+        return voices.find(voice => String(voice.lang || "").toLowerCase() === normalized) ||
+            voices.find(voice => String(voice.lang || "").toLowerCase().startsWith(normalized.split("-")[0])) ||
+            null;
+    }
+
+    function cleanSpeechText(value) {
+        return String(value || "")
+            .replace(/https?:\/\/\S+/gi, "")
+            .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+            .replace(/\u0060{3}[\s\S]*?\u0060{3}/g, " ")
+            .replace(/[*_#\u0060~>|]/g, " ")
+            .replace(/^\s*[-+•]\s*/gm, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+    }
+
+    async function speak(text) {
         if (!voiceOutputEnabled || !synthesisSupported || !text) return;
         stopSpeaking();
-        const utterance = new SpeechSynthesisUtterance(String(text));
-        utterance.lang = /[\u0980-\u09FF]/.test(text) ? "bn-BD" : "en-US";
-        utterance.rate = 1;
+
+        const speechText = cleanSpeechText(text);
+        if (!speechText) return;
+
+        const isBengali = /[\u0980-\u09FF]/.test(speechText);
+        const language = isBengali ? "bn-BD" : "en-US";
+        const voices = await waitForSpeechVoices();
+        const voice = chooseSpeechVoice(voices, language);
+
+        if (isBengali && !voice) {
+            setVoiceState("", "বাংলা ভয়েস পাওয়া যায়নি। ফোনে Google Speech Services-এর Bengali voice ইনস্টল করুন।");
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(speechText);
+        utterance.lang = voice ? voice.lang : language;
+        if (voice) utterance.voice = voice;
+        utterance.rate = isBengali ? 0.86 : 0.9;
         utterance.pitch = 1;
+        utterance.volume = 1;
         utterance.onstart = () => {
             speaking = true;
             setVoiceState("speaking", "উত্তর শোনাচ্ছি...");
