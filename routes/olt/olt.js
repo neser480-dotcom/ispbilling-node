@@ -34,10 +34,10 @@ router.delete("/:id", controller.remove);
 // Test actual OLT connection
 router.post("/:id/check", controller.check);
 
-// OLT List page: customer + ONU mapping sync (add ?dry_run=1 to preview)
+// OLT List page: live ONU learned-MAC + PPPoE customer mapping only.
 router.post("/:id/sync/customers", controller.syncCustomers);
 
-// OLT Users page: ONU hardware / optical sync
+// OLT Users page: all ONU hardware / optical fields sync only.
 router.post("/:id/sync/onu", controller.syncOnuHardware);
 
 // Old endpoint, kept for compatibility (same as /sync/onu)
