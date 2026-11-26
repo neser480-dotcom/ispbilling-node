@@ -19,7 +19,7 @@ function requireAuth(req, res, next) {
 function getCompanyId(req) { return Number(req.session.company_id || 0); }
 
 async function getTicketScope(req) {
- const role = String(req.session.role || '').trim().toLowerCase().replace(/[\\s_-]+/g, '');
+ const role = String(req.session.role || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
  if (['superadmin','admin','companyadmin','owner','manager'].includes(role)) return { sql: '', params: [] };
  if (['staff','employee','collector'].includes(role)) return { sql: ' AND t.staff_id = ?', params: [Number(req.session.user_id)] };
  if (role === 'reseller') {
