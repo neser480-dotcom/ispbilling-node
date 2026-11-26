@@ -23,7 +23,7 @@ async function getTicketScope(req) {
  if (['superadmin','admin','companyadmin','owner','manager'].includes(role)) return { sql: '', params: [] };
  if (['staff','employee','collector'].includes(role)) return { sql: ' AND t.staff_id = ?', params: [Number(req.session.user_id)] };
  if (role === 'reseller') {
-  const [rows] = await db.query('SELECT r.id FROM resellers r INNER JOIN users u ON u.mobile = r.mobile AND u.company_id = r.company_id WHERE u.id = ? AND r.company_id = ? AND LOWER(u.role) = 'reseller' LIMIT 1', [Number(req.session.user_id), getCompanyId(req)]);
+  const [rows] = await db.query("SELECT r.id FROM resellers r INNER JOIN users u ON u.mobile = r.mobile AND u.company_id = r.company_id WHERE u.id = ? AND r.company_id = ? AND LOWER(u.role) = 'reseller' LIMIT 1", [Number(req.session.user_id), getCompanyId(req)]);
   if (!rows.length) return { sql: ' AND 1 = 0', params: [] };
   return { sql: ' AND t.customer_id IN (SELECT c.id FROM customers c WHERE c.reseller_id = ? AND c.company_id = ?)', params: [Number(rows[0].id), getCompanyId(req)] };
  }
@@ -48,6 +48,7 @@ router.use(requireAuth);
 */
 router.get("/categories", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_ticket_view")) return;
         const companyId = getCompanyId(req);
         const search = String(req.query.search || "").trim();
 
@@ -74,6 +75,7 @@ router.get("/categories", async (req, res, next) => {
 
 router.post("/categories", async (req, res, next) => {
     try {
+        if (!await ticketPermission(req, res, "support_ticket_manage")) return;
         const companyId = getCompanyId(req);
         const name = String(req.body.name || "").trim();
 
