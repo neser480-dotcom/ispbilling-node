@@ -33,7 +33,9 @@
 
     function repairMojibake(value) {
         const input = String(value || "");
-        if (!/(?:Ã.|Â.|â€|ðŸ)/.test(input)) return input;
+        const mojibakePattern = /(?:Ã.|Â.|â€|ðŸ|à¦|à§)/g;
+        if (!mojibakePattern.test(input)) return input;
+        mojibakePattern.lastIndex = 0;
 
         // Recover UTF-8 bytes that were incorrectly decoded as Latin-1/Windows-1252.
         const windows1252 = {
@@ -56,8 +58,8 @@
             }
 
             const decoded = new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(bytes));
-            const markersBefore = (input.match(/(?:Ã.|Â.|â€|ðŸ)/g) || []).length;
-            const markersAfter = (decoded.match(/(?:Ã.|Â.|â€|ðŸ)/g) || []).length;
+            const markersBefore = (input.match(mojibakePattern) || []).length;
+            const markersAfter = (decoded.match(mojibakePattern) || []).length;
             return decoded && markersAfter < markersBefore ? decoded : input;
         } catch (_) {
             // Invalid or incomplete byte sequences cannot be repaired safely.
