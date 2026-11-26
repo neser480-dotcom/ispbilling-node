@@ -474,23 +474,26 @@ async function rechargeCustomer({
          */
         const [rows] = await conn.query(
             `SELECT
-                id,
-                customer_id,
-                name,
-                phone,
-                monthly_bill,
-                balance,
-                status,
-                payment_status,
-                promise_date,
-                billing_cycle,
-                pppoe_username,
-                mikrotik_id,
-                company_id
-             FROM customers
-             WHERE id = ?
-               AND company_id = ?
-               AND deleted_at IS NULL
+                c.id,
+                c.customer_id,
+                c.name,
+                c.phone,
+                COALESCE(NULLIF(c.monthly_bill, 0), mp.price, 0) AS monthly_bill,
+                c.balance,
+                c.status,
+                c.payment_status,
+                c.promise_date,
+                c.billing_cycle,
+                c.pppoe_username,
+                c.mikrotik_id,
+                c.company_id
+             FROM customers c
+             LEFT JOIN mikrotik_packages mp
+                ON mp.id = c.package_id
+               AND mp.company_id = c.company_id
+             WHERE c.id = ?
+               AND c.company_id = ?
+               AND c.deleted_at IS NULL
              LIMIT 1
              FOR UPDATE`,
             [customerDbId, companyId]
@@ -1354,21 +1357,24 @@ async function rechargeFragment({ user, id }) {
 
     const [rows] = await db.query(
         `SELECT
-            id,
-            customer_id,
-            name,
-            phone,
-            pppoe_username,
-            monthly_bill,
-            billing_cycle,
-            payment_status,
-            promise_date,
-            status,
-            balance
-         FROM customers
-         WHERE id = ?
-           AND company_id = ?
-           AND deleted_at IS NULL
+            c.id,
+            c.customer_id,
+            c.name,
+            c.phone,
+            c.pppoe_username,
+            COALESCE(NULLIF(c.monthly_bill, 0), mp.price, 0) AS monthly_bill,
+            c.billing_cycle,
+            c.payment_status,
+            c.promise_date,
+            c.status,
+            c.balance
+         FROM customers c
+         LEFT JOIN mikrotik_packages mp
+            ON mp.id = c.package_id
+           AND mp.company_id = c.company_id
+         WHERE c.id = ?
+           AND c.company_id = ?
+           AND c.deleted_at IS NULL
          LIMIT 1`,
         [customerId, companyId]
     );
