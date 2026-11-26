@@ -773,7 +773,7 @@ router.post("/chat", async (req, res) => {
                 "[Category: " + item.category + "]\\n[Article: " +
                 item.title + "]\\n" + item.content
             ),
-            legacyKb[0]?.knowledge
+            !kb.length && legacyKb[0]?.knowledge
                 ? "[Legacy Knowledge Base]\\n" + legacyKb[0].knowledge
                 : ""
         ].filter(Boolean).join("\\n\\n---\\n\\n").slice(0, 50000);
