@@ -361,7 +361,7 @@
                 const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
                 const isUserAction = lastUserActionAt > 0 && Date.now() - lastUserActionAt < 10000;
 
-                if (isMutation && isUserAction) {
+                if (isMutation && (isUserAction || !!lastActionModal)) {
                     xhr.addEventListener("loadend", function () {
                         try {
                             const url = new URL(requestUrl, window.location.href);
