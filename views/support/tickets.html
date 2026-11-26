@@ -415,11 +415,12 @@
                     <td>${new Date(r.created_at).toLocaleString()}</td>
                     <td>
                         <div class="d-flex justify-content-center gap-1">
-                            <select class="form-select form-select-sm" style="width: 112px;" onchange="updateTicketStatus(${r.id}, this.value)">
+                            <select class="form-select form-select-sm" style="width: 112px;" id="ticketStatus-${r.id}">
                                 <option value="Pending" ${r.status === "Pending" ? "selected" : ""}>Pending</option>
                                 <option value="Process" ${r.status === "Process" ? "selected" : ""}>Process</option>
                                 <option value="Completed" ${r.status === "Completed" ? "selected" : ""}>Completed</option>
                             </select>
+                            <button class="btn btn-sm btn-primary" onclick="submitTicketStatus(${r.id})" title="Submit Status">Submit</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteTicket(${r.id})" title="Delete"><i class="fa fa-trash"></i></button>
                         </div>
                     </td>
@@ -459,7 +460,8 @@
             }
         });
 
-        async function updateTicketStatus(id, status) {
+        async function submitTicketStatus(id) {
+            const status = document.getElementById(`ticketStatus-${id}`).value;
             const token = await getCsrf();
             await fetch(`/api/support/tickets/${id}/status`, {
                 method: "PATCH",
