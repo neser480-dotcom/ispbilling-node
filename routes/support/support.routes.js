@@ -103,7 +103,7 @@ router.post("/categories", async (req, res, next) => {
 
 router.delete("/categories/:id", async (req, res, next) => {
     try {
-        if (!await ticketPermission(req, res, "support_ticket_manage")) return;
+        if (!await ticketPermission(req, res, "support_category_manage", "support_ticket_manage")) return;
         const companyId = getCompanyId(req);
         const id = Number(req.params.id);
 
