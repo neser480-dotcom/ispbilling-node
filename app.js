@@ -40,6 +40,7 @@ const websiteSupportRoutes = require("./routes/public/website-support.routes");
 const supportNumbersRoutes = require("./routes/super-admin/support-numbers.routes");
 const bandwidthRoutes = require("./routes/bandwidth/bandwidth.routes");
 const resellerPortalRoutes = require("./routes/reseller/reseller-portal.routes");
+const aiHelpRoutes = require("./routes/ai-help/ai-help.routes");
 /*
 |--------------------------------------------------------------------------
 | staff routes|--------------------------------------------------------------------------
@@ -859,6 +860,23 @@ app.use(
     managerRoutes
 );
 
+/*
+|--------------------------------------------------------------------------
+|ai-help
+|--------------------------------------------------------------------------
+*/
+app.use("/api/ai-help", requireSoftwareBilling, aiHelpRoutes);
+
+app.get("/ai-help/settings", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(
+        path.join(__dirname, "views", "ai-help", "settings.html")
+    );
+});
+app.get("/ai-help", requireSoftwareBilling, (req, res) => {
+    return res.sendFile(
+        path.join(__dirname, "views", "ai-help", "chat.html")
+    );
+});
 /*
 |--------------------------------------------------------------------------
 | PUBLIC WEBSITE & LOGIN PAGE
