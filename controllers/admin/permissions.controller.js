@@ -403,7 +403,7 @@ exports.update = async (req, res) => {
         );
 
         /*
-        | Save all 48 permissions.
+        | Save all registered permissions.
         | allowed = 1/0
         */
 
