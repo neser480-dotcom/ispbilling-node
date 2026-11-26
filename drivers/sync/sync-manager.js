@@ -524,6 +524,15 @@ async function syncCustomers(pool, olt, { dryRun = false } = {}) {
     });
 }
 
+async function syncCustomerMapping(pool, olt) {
+    loadVendor(olt);
+    return exclusive(
+        olt.id,
+        () => require('../services/olt-sync.service')
+            .syncCustomerMapping(pool, olt)
+    );
+}
+
 async function syncOnuHardware(pool, olt) {
     const vendor = loadVendor(olt);
 
@@ -547,6 +556,7 @@ async function syncOnu(pool, olt, onuId) {
 
 module.exports = {
     syncCustomers,
+    syncCustomerMapping,
     syncOnuHardware,
     syncOnu
 };
