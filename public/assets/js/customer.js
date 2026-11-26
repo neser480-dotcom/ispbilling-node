@@ -2615,9 +2615,32 @@ formData.set("csrf_token", csrfToken);
 |--------------------------------------------------------------------------
 */
 function customerAdvancedFilters(params) {
+
+    // Preserve reseller filter from current page URL.
+    const pageParams = new URLSearchParams(
+        window.location.search
+    );
+
+    const reseller = pageParams.get("reseller");
+    const resellerId = pageParams.get("reseller_id");
+
+    if (reseller) {
+        params.set("reseller", reseller);
+    }
+
+    if (resellerId) {
+        params.set("reseller_id", resellerId);
+    }
+
     document.querySelectorAll("[data-cf]").forEach(function (el) {
-        const key = String(el.getAttribute("data-cf") || "").trim();
-        const value = String(el.value || "").trim();
+
+        const key = String(
+            el.getAttribute("data-cf") || ""
+        ).trim();
+
+        const value = String(
+            el.value || ""
+        ).trim();
 
         if (key && value !== "") {
             params.set(key, value);
