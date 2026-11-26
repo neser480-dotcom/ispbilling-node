@@ -145,6 +145,9 @@ class CDataDriver extends CDataTelnetBase {
             }
 
             for (let pon = 1; pon <= this.ponPorts; pon++) {
+                // Single-ONU sync: only the target PON is read (this.onlyPon).
+                if (this.onlyPon && !this.onlyPon.has(pon)) continue;
+
                 let basicOutput = "";
                 let opticalOutput = "";
 
@@ -459,6 +462,20 @@ console.log(
     | COMPATIBILITY METHODS
     |--------------------------------------------------------------------------
     */
+
+    // One ONU: read only the PON it is on; the caller picks it by MAC.
+    async getONU(target = {}) {
+        this.onlyPon =
+            Number.isInteger(target.pon) && target.pon > 0
+                ? new Set([target.pon])
+                : null;
+
+        try {
+            return await this.getONUList();
+        } finally {
+            this.onlyPon = null;
+        }
+    }
 
     async getONUList() {
         const data = await this.getONUs();

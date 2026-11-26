@@ -383,10 +383,21 @@ class HiosoDriver {
         return result;
     }
 
-    async getONUList() {
+    // One ONU: walk only its PON (target.pon), not the whole OLT.
+    async getONU(target = {}) {
+        return this.getONUList({
+            onlyPon: Number.isInteger(target.pon) && target.pon > 0
+                ? target.pon
+                : null
+        });
+    }
+
+    async getONUList(options = {}) {
         this.opticalErrors = [];
 
-        const ports = await this.ponNumbers();
+        const ports = options.onlyPon
+            ? [options.onlyPon]
+            : await this.ponNumbers();
         const macTable = await this.table(OID.onuMac, ports, "mac");
 
         const registered = [];

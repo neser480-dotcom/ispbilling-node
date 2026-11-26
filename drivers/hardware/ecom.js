@@ -798,6 +798,9 @@ class EcomDriver {
         const ports = new Map(); // f_s -> Set(pon)
 
         for (const row of rows) {
+            // Single-ONU sync: only the target PON is read (this.onlyPon).
+            if (this.onlyPon && !this.onlyPon.has(row.pon)) continue;
+
             if (!ports.has(row.f_s)) ports.set(row.f_s, new Set());
             ports.get(row.f_s).add(row.pon);
         }
@@ -879,6 +882,24 @@ class EcomDriver {
 
     async getONUList() {
         return this.getONUs();
+    }
+
+    /*
+    | One ONU: the same verified commands, but optical/basic info is read
+    | only for the PON the ONU is on (target.pon). Returns the rows read;
+    | the caller picks its ONU by MAC.
+    */
+    async getONU(target = {}) {
+        this.onlyPon =
+            Number.isInteger(target.pon) && target.pon > 0
+                ? new Set([target.pon])
+                : null;
+
+        try {
+            return await this.getONUs();
+        } finally {
+            this.onlyPon = null;
+        }
     }
 
     async getSystemInfo() {

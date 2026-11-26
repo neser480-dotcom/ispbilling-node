@@ -19,6 +19,10 @@ const controller = require("../../controllers/olt/olt.controller");
 // OLT list + search
 router.get("/", controller.list);
 
+// ONUs whose OLT was deleted (kept until deleted by hand). Must stay above the /:id routes.
+router.get("/deleted/onus", controller.listDeletedOltOnus);
+router.delete("/deleted/onus/:onuId", controller.deleteDeletedOltOnu);
+
 // OLT details
 router.get("/:id/details", controller.details);
 
@@ -48,6 +52,9 @@ router.post("/:id/auto-map", controller.autoMap);
 
 // OLT Users / ONU list
 router.get("/:id/onus", controller.listOnus);
+
+// Sync ONE ONU (OLT Users row button): only that ONU is read and updated
+router.post("/:id/onus/:onuId/sync", controller.syncOneOnu);
 
 // ONU customer mapping
 router.get("/:id/customers/search", controller.searchCustomers);

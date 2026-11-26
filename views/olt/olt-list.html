@@ -64,6 +64,47 @@
 
     .olt-btn:hover { background: #eaf3ff; }
 
+    .olt-btn.olt-btn-text {
+      width: auto;
+      padding: 0 14px;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* ---------- Sync in progress: icon turns smoothly, soft ring pulses ---------- */
+    @keyframes olt-spin { to { transform: rotate(360deg); } }
+
+    @keyframes olt-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(31, 111, 224, .28); }
+      50%      { box-shadow: 0 0 0 5px rgba(31, 111, 224, 0); }
+    }
+
+    .olt-act.is-syncing i,
+    .olt-btn.is-syncing i {
+      display: inline-block;
+      transform-origin: 50% 50%;
+      animation: olt-spin .9s linear infinite;
+    }
+
+    .olt-act.is-syncing,
+    .olt-btn.is-syncing {
+      background: #eaf3ff;
+      cursor: progress;
+      animation: olt-pulse 1.4s ease-in-out infinite;
+    }
+
+    .olt-act.is-syncing:disabled,
+    .olt-btn.is-syncing:disabled { opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .olt-act.is-syncing i,
+      .olt-btn.is-syncing i { animation-duration: 2.4s; }
+      .olt-act.is-syncing,
+      .olt-btn.is-syncing { animation: none; }
+    }
+
     /* ---------- White card ---------- */
     .olt-card {
       background: #fff;
@@ -430,8 +471,10 @@
           <button type="button" class="olt-btn" id="addOltBtn" title="Add OLT">
             <i class="fa-solid fa-plus"></i>
           </button>
-          <button type="button" class="olt-btn" id="reloadTopBtn" title="Reload">
+          <button type="button" class="olt-btn olt-btn-text" id="syncAllBtn"
+            title="সব OLT সিংক: কাস্টমার ও ম্যাপিং, একটা একটা করে">
             <i class="fa-solid fa-arrows-rotate"></i>
+            <span id="syncAllLabel">All Sync</span>
           </button>
         </div>
       </div>
@@ -621,6 +664,8 @@
   let sortDir = 1;
 
   const busyActions = new Set();
+  const syncingIds = new Set();   // OLT ids whose customer sync is running now
+  let syncAllRunning = false;
 
   const yearEl = document.getElementById("oltYear");
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
@@ -998,6 +1043,9 @@
     }
 
     tableBody.innerHTML = filtered.map(function (olt, index) {
+      const rowSyncing = syncingIds.has(olt.id);
+      const rowWaiting = syncAllRunning && !rowSyncing;
+
       return `
         <tr data-olt-id="${olt.id}">
           <td>${index + 1}</td>
@@ -1016,9 +1064,11 @@
                 <i class="fa-solid fa-plug"></i>
               </button>
 
-              <button type="button" class="olt-act outline"
+              <button type="button"
+                class="olt-act outline${rowSyncing ? " is-syncing" : ""}"
                 data-action="sync-customers" data-id="${olt.id}"
-                title="Sync Customers &amp; Mapping">
+                ${rowSyncing || rowWaiting ? "disabled" : ""}
+                title="${rowSyncing ? "Syncing..." : "Sync Customers &amp; Mapping"}">
                 <i class="fa-solid fa-arrows-rotate"></i>
               </button>
 
@@ -1267,9 +1317,23 @@
       return;
     }
 
+    if (action === "sync-customers" && syncAllRunning) {
+      showMessage(
+        "All OLT sync চলছে। শেষ হওয়া পর্যন্ত অপেক্ষা করো।",
+        "info"
+      );
+      return;
+    }
+
     busyActions.add(id);
 
     if (button) button.disabled = true;
+
+    if (action === "sync-customers") {
+      syncingIds.add(id);
+
+      if (button) button.classList.add("is-syncing");
+    }
 
     try {
       const token = await getCsrfToken();
@@ -1304,6 +1368,10 @@
         );
       }
 
+      syncingIds.delete(id);
+
+      if (button) button.classList.remove("is-syncing");
+
       showMessage(
         result.message || "Action completed successfully.",
         "success"
@@ -1317,8 +1385,99 @@
       );
     } finally {
       busyActions.delete(id);
-      if (button) button.disabled = false;
+      syncingIds.delete(id);
+
+      if (button) {
+        button.disabled = false;
+        button.classList.remove("is-syncing");
+      }
     }
+  }
+
+  /* ---------- All OLT sync: customers & mapping, ONE OLT AT A TIME ---------- */
+  function setSyncAllButton(running, done, total) {
+    const button = document.getElementById("syncAllBtn");
+    const label = document.getElementById("syncAllLabel");
+
+    button.disabled = running;
+    button.classList.toggle("is-syncing", running);
+    label.textContent = running
+      ? done + "/" + total
+      : "All Sync";
+  }
+
+  async function syncAllOlts() {
+    if (syncAllRunning || loading || busyActions.size) return;
+
+    const targets = oltRecords.slice();
+
+    if (!targets.length) {
+      showMessage("সিংক করার মতো কোনো OLT নেই।", "warning");
+      return;
+    }
+
+    syncAllRunning = true;
+
+    let done = 0;
+    let succeeded = 0;
+    const failed = [];
+
+    setSyncAllButton(true, done, targets.length);
+
+    try {
+      for (const olt of targets) {
+        busyActions.add(olt.id);
+        syncingIds.add(olt.id);
+        renderTable();
+
+        try {
+          const token = await getCsrfToken();
+
+          await apiRequest("/api/olt/" + olt.id + "/sync/customers", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": token
+            },
+            body: JSON.stringify({ csrf_token: token })
+          });
+
+          succeeded++;
+        } catch (error) {
+          failed.push({
+            name: olt.name || ("OLT " + olt.id),
+            message: error.message || "failed"
+          });
+        } finally {
+          busyActions.delete(olt.id);
+          syncingIds.delete(olt.id);
+          done++;
+          setSyncAllButton(true, done, targets.length);
+          renderTable();
+        }
+      }
+    } finally {
+      syncAllRunning = false;
+      setSyncAllButton(false);
+    }
+
+    if (!failed.length) {
+      showMessage(
+        succeeded + "টা OLT-র কাস্টমার সিংক সম্পন্ন।",
+        "success"
+      );
+    } else {
+      showMessage(
+        succeeded + "টা সফল, " + failed.length + "টা ব্যর্থ: " +
+          failed.slice(0, 3).map(function (item) {
+            return item.name + " (" + item.message + ")";
+          }).join("; ") +
+          (failed.length > 3 ? " ..." : ""),
+        "warning"
+      );
+    }
+
+    await loadOlts();
   }
 
   document.getElementById("addOltBtn")
@@ -1327,8 +1486,8 @@
   document.getElementById("refreshTopBtn")
     .addEventListener("click", loadOlts);
 
-  document.getElementById("reloadTopBtn")
-    .addEventListener("click", loadOlts);
+  document.getElementById("syncAllBtn")
+    .addEventListener("click", syncAllOlts);
 
   document.getElementById("toggleOltPassword")
     .addEventListener("click", function () {

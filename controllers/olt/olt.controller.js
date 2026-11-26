@@ -598,6 +598,62 @@ exports.update = async (req, res) => {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| ONUs OF DELETED OLTs
+|--------------------------------------------------------------------------
+| Deleting an OLT keeps its ONU rows and customer mappings. The OLT row is
+| gone, so the company of those ONUs would be lost: deleted_olts remembers
+| (olt_id, company_id, name) so the ONUs can still be listed to the right
+| company on the OLT Users page, and removed by hand (one ONU at a time).
+|--------------------------------------------------------------------------
+*/
+
+let deletedOltTableReady = false;
+
+async function ensureDeletedOltTable() {
+    if (deletedOltTableReady) return;
+
+    const pool = getPool();
+
+    await pool.execute(
+        `CREATE TABLE IF NOT EXISTS deleted_olts (
+            olt_id INT NOT NULL,
+            company_id INT NOT NULL,
+            name VARCHAR(150) NULL,
+            vendor VARCHAR(50) NULL,
+            deleted_at DATETIME NOT NULL,
+            PRIMARY KEY (olt_id, company_id),
+            KEY idx_deleted_olts_company (company_id)
+        )`
+    );
+
+    /*
+     * ONUs whose OLT was deleted before this table existed: their company is
+     * still known from the mapping tables. Optional tables are skipped.
+     */
+    for (const table of ["onu_user_mapping", "onu_customer_links"]) {
+        try {
+            await pool.execute(
+                `INSERT IGNORE INTO deleted_olts
+                    (olt_id, company_id, name, vendor, deleted_at)
+                 SELECT m.olt_id, m.company_id, NULL, NULL, NOW()
+                   FROM ${table} AS m
+                  WHERE NOT EXISTS (
+                        SELECT 1 FROM olts AS ol WHERE ol.id = m.olt_id
+                  )
+                  GROUP BY m.olt_id, m.company_id`
+            );
+        } catch (error) {
+            if (error.code !== "ER_NO_SUCH_TABLE") {
+                console.error("[OLT] deleted_olts backfill", error.message);
+            }
+        }
+    }
+
+    deletedOltTableReady = true;
+}
+
 exports.remove = async (req, res) => {
     let connection;
 
@@ -614,6 +670,9 @@ exports.remove = async (req, res) => {
             );
         }
 
+        // DDL commits implicitly, so the table is made before the transaction.
+        await ensureDeletedOltTable();
+
         connection = await getPool().getConnection();
         await connection.beginTransaction();
 
@@ -626,6 +685,19 @@ exports.remove = async (req, res) => {
             "SELECT COUNT(*) AS total FROM onu WHERE olt_id = ?",
             [id]
         );
+
+        if (Number(kept.total) > 0) {
+            await connection.execute(
+                `INSERT INTO deleted_olts
+                    (olt_id, company_id, name, vendor, deleted_at)
+                 VALUES (?, ?, ?, ?, NOW())
+                 ON DUPLICATE KEY UPDATE
+                    name = VALUES(name),
+                    vendor = VALUES(vendor),
+                    deleted_at = NOW()`,
+                [id, olt.company_id, olt.name || null, olt.vendor || null]
+            );
+        }
 
         await connection.execute(
             `DELETE ol
@@ -871,6 +943,26 @@ exports.syncOnuHardware = async (req, res) => {
 };
 
 // Old endpoint (POST /:id/sync) keeps working as ONU hardware sync.
+/* One ONU: POST /api/olt/:id/onus/:onuId/sync (OLT Users row button). */
+exports.syncOneOnu = async (req, res) => {
+    try {
+        verifyMappingCsrf(req);
+
+        const id = validId(req.params.id);
+        const onuId = validId(req.params.onuId);
+        const olt = await findOlt(req, id);
+        const result = await syncManager.syncOnu(getPool(), olt, onuId);
+
+        return res.json({
+            success: true,
+            message: "ONU synchronization completed.",
+            data: result
+        });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
+
 exports.sync = exports.syncOnuHardware;
 
 /*
@@ -934,6 +1026,209 @@ ppp = await collectPppSessions(
 | GET /api/olt/:id/onus
 |--------------------------------------------------------------------------
 */
+
+/* GET /api/olt/deleted/onus : ONUs whose OLT was deleted (own company only). */
+exports.listDeletedOltOnus = async (req, res) => {
+    try {
+        await ensureDeletedOltTable();
+
+        const scope = scopeSql(req, "d");
+
+        const [rows] = await getPool().execute(
+            `SELECT
+                o.id,
+                o.olt_id,
+
+                CASE
+                    WHEN c.id IS NOT NULL THEN
+                        COALESCE(
+                            NULLIF(TRIM(c.name), ''),
+                            NULLIF(TRIM(c.customer_id), ''),
+                            'Customer name unavailable'
+                        )
+                    ELSE 'Customer not linked'
+                END AS name,
+
+                COALESCE(NULLIF(TRIM(o.ip_address), ''), '') AS ip_address,
+
+                COALESCE(
+                    NULLIF(TRIM(o.onu_mac), ''),
+                    NULLIF(TRIM(o.mac_address), ''),
+                    ''
+                ) AS mac,
+
+                o.onu_sn AS serial,
+                o.customer_id AS onu_customer_id,
+
+                um.id AS mapping_id,
+                um.customer_id AS mapping_customer_id,
+
+                c.id AS matched_customer_id,
+                c.customer_id AS customer_code,
+                c.name AS customer_name,
+                c.phone AS customer_phone,
+                c.onu_mac AS customer_onu_mac,
+                c.pppoe_username,
+
+                COALESCE(NULLIF(TRIM(o.olt_name), ''), d.name, '') AS olt_name,
+
+                o.pon,
+                o.port,
+                '' AS status,
+                o.rx_power,
+                o.tx_power,
+                o.distance,
+                o.bias_current,
+                o.voltage,
+                o.temperature,
+
+                COALESCE(o.last_update, o.updated_at, o.last_seen) AS last_update,
+
+                1 AS olt_deleted,
+                d.deleted_at AS olt_deleted_at
+
+             FROM onu AS o
+
+             JOIN deleted_olts AS d
+               ON d.olt_id = o.olt_id
+
+             LEFT JOIN onu_user_mapping AS um
+               ON um.onu_id = o.id
+              AND um.olt_id = o.olt_id
+              AND um.company_id = d.company_id
+
+             LEFT JOIN customers AS c
+               ON c.company_id = d.company_id
+              AND (
+                    (
+                        um.id IS NOT NULL
+                        AND um.customer_id IS NOT NULL
+                        AND c.id = um.customer_id
+                    )
+                    OR (
+                        um.id IS NULL
+                        AND c.id = o.customer_id
+                    )
+              )
+
+            WHERE NOT EXISTS (
+                    SELECT 1 FROM olts AS ol WHERE ol.id = o.olt_id
+                  )
+              ${scope.sql}
+
+            ORDER BY d.deleted_at DESC, o.id`,
+            [...scope.params]
+        );
+
+        return res.json({ success: true, data: rows });
+    } catch (error) {
+        return jsonError(res, error);
+    }
+};
+
+/*
+ * DELETE /api/olt/deleted/onus/:onuId : manual delete of ONE ONU whose OLT
+ * is already deleted. Its own mapping rows go with it; customers stay.
+ */
+exports.deleteDeletedOltOnu = async (req, res) => {
+    let connection;
+
+    try {
+        verifyMappingCsrf(req);
+
+        const onuId = validId(req.params.onuId);
+
+        if (
+            req.body?.confirm !== true &&
+            req.body?.confirm !== "true"
+        ) {
+            throw new OltError("Confirm deletion by sending confirm: true.");
+        }
+
+        await ensureDeletedOltTable();
+
+        const scope = scopeSql(req, "d");
+
+        connection = await getPool().getConnection();
+        await connection.beginTransaction();
+
+        const [found] = await connection.execute(
+            `SELECT o.id, o.olt_id, d.company_id
+               FROM onu AS o
+               JOIN deleted_olts AS d
+                 ON d.olt_id = o.olt_id
+              WHERE o.id = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM olts AS ol WHERE ol.id = o.olt_id
+                )
+                ${scope.sql}
+              LIMIT 1`,
+            [onuId, ...scope.params]
+        );
+
+        if (!found.length) {
+            throw new OltError(
+                "ONU not found among ONUs of deleted OLTs.",
+                404
+            );
+        }
+
+        const { olt_id: oltId, company_id: companyId } = found[0];
+
+        for (const table of [
+            "onu_user_mapping",
+            "onu_customer_links",
+            "onu_ppp_info"
+        ]) {
+            try {
+                await connection.execute(
+                    `DELETE FROM ${table}
+                      WHERE onu_id = ?
+                        AND olt_id = ?
+                        AND company_id = ?`,
+                    [onuId, oltId, companyId]
+                );
+            } catch (error) {
+                if (error.code !== "ER_NO_SUCH_TABLE") {
+                    throw error;
+                }
+            }
+        }
+
+        await connection.execute(
+            "DELETE FROM onu WHERE id = ? AND olt_id = ?",
+            [onuId, oltId]
+        );
+
+        // Last ONU of that deleted OLT gone: forget the OLT record too.
+        await connection.execute(
+            `DELETE FROM deleted_olts
+              WHERE olt_id = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM onu WHERE olt_id = ?
+                )`,
+            [oltId, oltId]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            success: true,
+            message: "ONU deleted.",
+            data: { onu_id: onuId, olt_id: oltId }
+        });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback().catch(() => {});
+        }
+
+        return jsonError(res, error);
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
 
 exports.listOnus = async (req, res) => {
     try {

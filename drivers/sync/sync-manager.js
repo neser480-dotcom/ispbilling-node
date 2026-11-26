@@ -533,7 +533,19 @@ async function syncOnuHardware(pool, olt) {
     );
 }
 
+/* One ONU (OLT Users row button). Same per-OLT lock as the full sync. */
+async function syncOnu(pool, olt, onuId) {
+    loadVendor(olt); // unsupported vendors fail early
+
+    return exclusive(
+        olt.id,
+        () => require("../services/olt-sync.service")
+            .syncOneOnu(pool, olt, onuId)
+    );
+}
+
 module.exports = {
     syncCustomers,
-    syncOnuHardware
+    syncOnuHardware,
+    syncOnu
 };
