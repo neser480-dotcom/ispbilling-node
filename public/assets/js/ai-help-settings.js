@@ -1,4 +1,3 @@
-
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -6,9 +5,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const enabled = document.getElementById("aiEnabled");
     const apiKey = document.getElementById("apiKey");
     const model = document.getElementById("aiModel");
+    const knowledge = document.getElementById("aiKnowledge");
     const message = document.getElementById("settingsMessage");
+    const saveButton = document.getElementById("saveAiSettings");
+    const knowledgeCount = document.getElementById("knowledgeCount");
 
-    if (!form || !enabled || !apiKey || !model || !message) {
+    if (!form || !enabled || !apiKey || !model || !knowledge || !message) {
         return;
     }
 
@@ -21,15 +23,18 @@ document.addEventListener("DOMContentLoaded", () => {
             : "ai-message ai-message-error";
     }
 
+    function updateKnowledgeCount() {
+        if (knowledgeCount) {
+            knowledgeCount.textContent = knowledge.value.length + " / 30000";
+        }
+    }
+
     async function getCsrfToken() {
         const response = await fetch("/api/csrf-token", {
             method: "GET",
             credentials: "same-origin",
-            headers: {
-                "Accept": "application/json"
-            }
+            headers: { "Accept": "application/json" }
         });
-
         const data = await response.json();
 
         if (!response.ok || !data.success || !data.csrf_token) {
@@ -42,9 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadSettings() {
         try {
             const response = await fetch("/api/ai-help/settings", {
-                credentials: "same-origin"
+                credentials: "same-origin",
+                headers: { "Accept": "application/json" }
             });
-
             const data = await response.json();
 
             if (!response.ok || !data.success) {
@@ -52,44 +57,49 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             enabled.value = data.settings.enabled ? "1" : "0";
-
             model.value = data.settings.model || "openai/gpt-oss-120b";
-
+            knowledge.value = data.knowledge || "";
             apiKey.value = "";
 
             apiKey.placeholder = data.settings.key_configured
                 ? "Groq API Key already saved. Leave blank to keep it."
                 : "Enter Groq API Key";
 
+            const usage = data.usage || {};
+            document.getElementById("usageMessages").textContent =
+                Number(usage.messages || 0).toLocaleString();
+            document.getElementById("usageConversations").textContent =
+                Number(usage.conversations || 0).toLocaleString();
+            document.getElementById("usageTokens").textContent =
+                Number(usage.tokens || 0).toLocaleString();
+
+            updateKnowledgeCount();
+
             showMessage(
                 data.settings.key_configured
-                    ? "Settings loaded. Groq API Key is already configured."
-                    : "Settings loaded. Please enter your Groq API Key.",
+                    ? "Settings and Knowledge Base loaded. The saved API key is protected."
+                    : "Settings loaded. Add a Groq API Key to enable AI Help.",
                 true
             );
-
         } catch (error) {
-            showMessage(error.message);
+            showMessage(error.message || "Unable to load settings.");
         }
     }
 
+    knowledge.addEventListener("input", updateKnowledgeCount);
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
-
         if (saving) return;
 
         saving = true;
-
-        const button = form.querySelector('button[type="submit"]');
-
-        if (button) {
-            button.disabled = true;
-            button.textContent = "Saving...";
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = "Saving...";
         }
 
         try {
             const csrfToken = await getCsrfToken();
-
             const response = await fetch("/api/ai-help/settings", {
                 method: "PUT",
                 credentials: "same-origin",
@@ -99,35 +109,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 body: JSON.stringify({
                     enabled: enabled.value === "1",
-                    model: model.value.trim(),
-                    api_key: apiKey.value.trim()
+                    model: model.value,
+                    api_key: apiKey.value.trim(),
+                    knowledge: knowledge.value
                 })
             });
 
             const data = await response.json();
-
             if (!response.ok || !data.success) {
                 throw new Error(data.message || "Unable to save settings.");
             }
 
             apiKey.value = "";
-
-            showMessage(
-                data.message || "Settings saved successfully.",
-                true
-            );
-
+            showMessage(data.message || "Settings saved successfully.", true);
             await loadSettings();
-
         } catch (error) {
-            showMessage(error.message);
-
+            showMessage(error.message || "Unable to save settings.");
         } finally {
             saving = false;
-
-            if (button) {
-                button.disabled = false;
-                button.textContent = "Save Settings";
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = "Save Settings";
             }
         }
     });
