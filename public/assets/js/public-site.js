@@ -190,11 +190,29 @@
     var logins = list(site.login_links).filter(function (l) { return l && l.label && l.url; });
     logins.forEach(function (l) { nav.append(h("li", {}, h("a", { href: l.url, "class": "nav-login", text: l.label }))); });
     secs.filter(function (s) { return s.nav_label && !(logins.length && s.type === "hero"); }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
-    var toggle = h("button", { "class": "menu-toggle", "aria-label": "Menu", text: "☰" });
-    toggle.onclick = function () { nav.classList.toggle("active"); };
-    nav.onclick = function () { nav.classList.remove("active"); };
+    var toggle = h("button", { "class": "menu-toggle", "type": "button", "aria-label": "মেনু খুলুন", "aria-expanded": "false", text: "☰" });
+    toggle.onclick = function () {
+      var open = nav.classList.toggle("active");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "মেনু বন্ধ করুন" : "মেনু খুলুন");
+      toggle.textContent = open ? "×" : "☰";
+    };
+    nav.onclick = function () { nav.classList.remove("active"); toggle.setAttribute("aria-expanded", "false"); toggle.textContent = "☰"; };
+    var theme = h("button", { "class": "theme-toggle", "type": "button", "aria-label": "ডার্ক মোড চালু করুন", title: "থিম পরিবর্তন", text: "☾" });
+    var savedTheme = "";
+    try { savedTheme = localStorage.getItem("amaderbill_public_theme") || ""; } catch (_) {}
+    var preferredDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    function setTheme(mode) {
+      var dark = mode === "dark";
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+      theme.textContent = dark ? "☀" : "☾";
+      theme.setAttribute("aria-label", dark ? "লাইট মোড চালু করুন" : "ডার্ক মোড চালু করুন");
+      try { localStorage.setItem("amaderbill_public_theme", dark ? "dark" : "light"); } catch (_) {}
+    }
+    setTheme(savedTheme || (preferredDark ? "dark" : "light"));
+    theme.onclick = function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); };
     var header = h("header", { "class": "header" }, h("div", { "class": "container navbar" }, logo, nav,
-      h("div", { "class": "nav-actions" }, logins.length ? null : btn(site.login_label || "লগইন", site.login_url || "#"), toggle)));
+      h("div", { "class": "nav-actions" }, logins.length ? null : btn(site.login_label || "লগইন", site.login_url || "https://app.amaderbill.com"), theme, toggle)));
 
     var main = h("main", {}); secs.forEach(function (s) { main.append(R[s.type](s)); });
 
@@ -213,6 +231,41 @@
       h("div", { "class": "footer-bottom" }, h("p", { text: f.copyright }))));
 
     document.getElementById("app").replaceChildren(header, main, footer);
+
+    /* Reveal content as it enters the viewport; gracefully falls back without IntersectionObserver. */
+    var revealTargets = Array.prototype.slice.call(document.querySelectorAll(
+      "main > .section, main > .hero, .feature-card, .price-card, .team-card, .app-card, .testi-card, .faq-item, .gallery-item"
+    ));
+    if ("IntersectionObserver" in window && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); }
+        });
+      }, { threshold: 0.12, rootMargin: "0px 0px -35px 0px" });
+      revealTargets.forEach(function (el) { el.classList.add("reveal"); observer.observe(el); });
+    } else {
+      revealTargets.forEach(function (el) { el.classList.add("is-visible"); });
+    }
+
+    /* CMS-managed active promotions appear automatically below the navigation. */
+    fetch(BASE + "/api/app-download/promotions", { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        var promos = list(r && r.success && r.promotions);
+        if (!promos.length) return;
+        var p = promos[0];
+        var inner = h("div", { "class": "promo-inner" });
+        if (p.banner_url) inner.append(h("img", { src: p.banner_url, alt: p.title || "প্রমোশন", loading: "lazy" }));
+        inner.append(h("div", { "class": "promo-copy" }, h("strong", { text: p.title }), p.message && h("p", { text: p.message })));
+        if (p.button_text && p.button_link) inner.append(btn(p.button_text, p.button_link));
+        var strip = h("aside", { "class": "promo-strip", "aria-label": "বিশেষ অফার" }, inner);
+        header.after(strip);
+      })
+      .catch(function (e) { console.warn("[Website] Promotion unavailable:", e); });
+
+    var scrollHeader = function () { header.classList.toggle("is-scrolled", window.scrollY > 12); };
+    window.addEventListener("scroll", scrollHeader, { passive: true });
+    scrollHeader();
     if (location.hash) { var t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
   }
 
