@@ -54,9 +54,22 @@ function walk(dir, output) {
 }
 
 function sanitizeSource(source) {
-    return String(source || "")
-        .split(/\r?\n/)
-        .filter(line => !SENSITIVE_LINE.test(line))
+    const lines = String(source || "").split(/\r?\n/);
+    const blocked = new Set();
+
+    // Remove credential declarations and nearby continuation lines too
+    // (for example, a multi-line SESSION_SECRET fallback expression).
+    lines.forEach((line, index) => {
+        if (SENSITIVE_LINE.test(line) || SECRET_VALUE.test(line)) {
+            for (let offset = -2; offset <= 2; offset++) {
+                const target = index + offset;
+                if (target >= 0 && target < lines.length) blocked.add(target);
+            }
+        }
+    });
+
+    return lines
+        .filter((line, index) => !blocked.has(index))
         .map(line => line.replace(SECRET_VALUE, "[REDACTED SECRET]"))
         .join("\n")
         .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "[inline script omitted from page markup]")
