@@ -73,7 +73,73 @@
 
     /*
     |--------------------------------------------------------------------------
-    | 2. CENTRAL API ERROR TOAST
+    | 2. USE TOAST INSTEAD OF DUPLICATE NOTIFICATION DIALOGS
+    |--------------------------------------------------------------------------
+    */
+
+    function installToastOnlyNotifications() {
+        if (window.__ispToastOnlyNotificationsInstalled) return;
+        window.__ispToastOnlyNotificationsInstalled = true;
+
+        // Replace browser alert popups with the existing toast UI.
+        if (!window.__ispNativeAlert) window.__ispNativeAlert = window.alert.bind(window);
+        window.alert = function (message) {
+            if (window.AppToast) window.AppToast.info(String(message || "তথ্য"));
+        };
+
+        // SweetAlert notification-only dialogs become toasts. Keep confirmation,
+        // input and choice dialogs intact so Delete/Disconnect actions remain safe.
+        function patchSweetAlert() {
+            const swal = window.Swal;
+            if (!swal || typeof swal.fire !== "function" || swal.__ispToastWrapped) return;
+
+            const originalFire = swal.fire.bind(swal);
+            swal.fire = function (options, ...rest) {
+                const config = options && typeof options === "object" ? options : null;
+                const icon = config && String(config.icon || "").toLowerCase();
+                const isNotification = ["success", "error", "warning", "info"].includes(icon) &&
+                    !config.showCancelButton &&
+                    !config.showDenyButton &&
+                    !config.input &&
+                    !config.inputOptions;
+
+                if (isNotification && window.AppToast) {
+                    const message = config.text || config.title || config.html || "কাজ সম্পন্ন হয়েছে।";
+                    window.AppToast[icon](String(message).replace(/<[^>]*>/g, " ").trim());
+                    return Promise.resolve({
+                        isConfirmed: true,
+                        isDenied: false,
+                        isDismissed: false,
+                        value: true
+                    });
+                }
+
+                return originalFire(options, ...rest);
+            };
+
+            try {
+                Object.defineProperty(swal, "__ispToastWrapped", { value: true });
+            } catch (_) {
+                swal.__ispToastWrapped = true;
+            }
+        }
+
+        patchSweetAlert();
+
+        // SweetAlert2 may be loaded after this shared loader on some pages.
+        let attempts = 0;
+        const timer = window.setInterval(function () {
+            patchSweetAlert();
+            attempts += 1;
+            if ((window.Swal && window.Swal.__ispToastWrapped) || attempts >= 40) {
+                window.clearInterval(timer);
+            }
+        }, 100);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3. CENTRAL API ERROR TOAST
     |--------------------------------------------------------------------------
     */
 
@@ -504,6 +570,7 @@
     async function initialize() {
         await loadAppToast();
 
+        installToastOnlyNotifications();
         installFetchErrorHandler();
 
         loadThemeColors();
