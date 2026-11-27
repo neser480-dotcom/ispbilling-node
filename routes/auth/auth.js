@@ -1589,6 +1589,10 @@ function createMailTransport() {
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT || 587),
         secure: process.env.SMTP_SECURE === "true",
+        // Fail quickly when the VPS or provider blocks outbound SMTP.
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
@@ -1730,7 +1734,12 @@ router.post("/forgot-password/send-otp", async (req, res) => {
         return res.json(genericResponse);
 
     } catch (error) {
-        console.error("Forgot password OTP error:", error);
+        console.error(
+            "Forgot password OTP error:",
+            error.code || "",
+            error.responseCode || "",
+            error.message
+        );
 
         return res.status(500).json({
             success: false,
