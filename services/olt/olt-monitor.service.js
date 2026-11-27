@@ -1483,14 +1483,14 @@ function parseVsolFan(output) {
 function parseVsolSfpOptical(output, fs) {
     const text = cleanOutput(output);
     const tempMatch = text.match(
-        /(?:Temp(?:erature|perature)?|Temperature)\\s*[:=]\\s*(-?\\d+(?:\\.\\d+)?)/i
+        /(?:Temp(?:erature|perature)?|Temperature)\s*[:=]\s*(-?\d+(?:\.\d+)?)/i
     );
     const txMatch = text.match(
-        /(?:Transmit|TX)\\s*Power\\s*[:=]\\s*[+-]?\\d+(?:\\.\\d+)?\\s*(?:uW|mW|W)?\\s*\\(\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*dBm\\s*\\)/i
+        /(?:Transmit|TX)\s*Power\s*[:=]\s*[+-]?\d+(?:\.\d+)?\s*(?:uW|mW|W)?\s*\(\s*([+-]?\d+(?:\.\d+)?)\s*dBm\s*\)/i
     );
     const temp = tempMatch ? Number(tempMatch[1]) : null;
     const voltage = parseValue(text, ["Voltage"]);
-    const bias = parseValue(text, ["Bias\\\\s*Current", "Bias\\\\s*current"]);
+    const bias = parseValue(text, ["Bias\\s*Current", "Bias\\s*current"]);
     const tx = txMatch ? Number(txMatch[1]) : null;
     const missing_fields = [
         ...(tx === null ? ["tx"] : []),
@@ -1501,7 +1501,7 @@ function parseVsolSfpOptical(output, fs) {
 
     return {
         id: String(fs),
-        name: `PON ${String(fs).split("/").pop()}`,
+        name: \`PON \${String(fs).split("/") .pop()}\`,
         tx,
         rx: null,
         bias,
