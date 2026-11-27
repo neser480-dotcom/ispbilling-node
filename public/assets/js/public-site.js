@@ -232,7 +232,8 @@
     list(f.links).forEach(function (l) { imp.append(h("li", {}, h("a", { href: l.url, text: l.label }))); });
     var cl = h("ul", { "class": "footer-links" });
     if (contact.email) cl.append(h("li", {}, h("a", { href: "mailto:" + contact.email, text: contact.email })));
-    cl.append(h("li", {}, h("a", { href: "tel:01936516717", text: contact.phone || "01936516717" })));
+    cl.append(h("li", {}, h("a", { href: "tel:01627078607", text: "01627078607" })));
+    cl.append(h("li", {}, h("a", { href: "tel:01936516717", text: "01936516717" })));
     cl.append(h("li", {}, h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", text: "WhatsApp: " + (contact.whatsapp || "01627078607") })));
     cl.append(h("li", {}, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", text: "Facebook পেজ" })));
     var footer = h("footer", { "class": "footer" }, h("div", { "class": "container" },
@@ -241,6 +242,54 @@
       h("div", { "class": "footer-bottom" }, h("p", { text: "© IRFAN IT - 2026" }), h("div", { "class": "footer-social" }, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", "aria-label": "Facebook", text: "f" }), h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", "aria-label": "WhatsApp", text: "◉" })) )));
 
     document.getElementById("app").replaceChildren(header, main, footer);
+
+// Three selectable visual designs; CMS sections and live data are rendered once and preserved.
+var preview = h("div", { "class": "design-preview-bar" },
+  h("div", { "class": "design-preview-note", text: "অটো-রোটেশন চালু · প্রতিদিন ডিজাইন পরিবর্তন হবে · " }),
+  h("div", { "class": "design-preview-actions" },
+    [1,2,3].map(function(n){
+      var b = h("button", { type: "button", text: ["Classic Light","Royal Blue","Orange Accent"][n-1] });
+      b.onclick = function(){ applyDesign(n, true); };
+      b.setAttribute("data-design-button", String(n));
+      return b;
+    })
+  )
+);
+var topbar = h("div", { "class": "public-topbar" },
+  h("div", { "class": "container public-topbar-inner" },
+    h("div", { "class": "public-topbar-contact" },
+      h("a", { href: "tel:01627078607", text: "☎ 01627078607" }),
+      h("a", { href: "tel:01936516717", text: "☎ 01936516717" }),
+      contact.email && h("a", { href: "mailto:" + contact.email, text: contact.email })
+    ),
+    h("div", { "class": "public-topbar-social" },
+      h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", text: "WhatsApp" }),
+      h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", text: "Facebook" })
+    )
+  )
+);
+document.getElementById("app").prepend(topbar, preview);
+function applyDesign(n, manual) {
+  n = Math.max(1, Math.min(3, Number(n) || 1));
+  document.body.setAttribute("data-design", String(n));
+  preview.querySelectorAll("button").forEach(function(b){
+    var active = b.getAttribute("data-design-button") === String(n);
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  var note = preview.querySelector(".design-preview-note");
+  note.textContent = "অটো-রোটেশন চালু · প্রতিদিন ডিজাইন পরিবর্তন হবে · সক্রিয়: ডিজাইন " + n;
+  if (manual) {
+    try { sessionStorage.setItem("amaderbill_design_override", String(n)); } catch (_) {}
+  }
+}
+var dailyDesign = (Math.floor(Date.now() / 86400000) % 3) + 1;
+var chosenDesign = dailyDesign;
+try {
+  var override = Number(sessionStorage.getItem("amaderbill_design_override"));
+  if (override >= 1 && override <= 3) chosenDesign = override;
+} catch (_) {}
+applyDesign(chosenDesign, false);
 
     /* Reveal content as it enters the viewport; gracefully falls back without IntersectionObserver. */
     var revealTargets = Array.prototype.slice.call(document.querySelectorAll(
