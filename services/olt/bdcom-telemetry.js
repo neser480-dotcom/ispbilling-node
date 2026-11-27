@@ -266,8 +266,80 @@ function unavailablePort(id, status = "unavailable") {
     };
 }
 
-async function firstUsable(driver, commands, parser, warnings, label) {
+/*
+| Ask the OLT itself which sub-commands exist: send "<base> ?" and read the
+| help list ("usage   Show memory usage" -> usage). Verified syntax is not
+| known for this model, so this lets the app find it on the live device.
+*/
+function parseHelpWords(output, base) {
+    const baseWords = base.toLowerCase().split(/\s+/);
+
+    return [
+        ...new Set(
+            clean(output)
+                .split("\n")
+                .map(line => line.trim())
+                .filter(line =>
+                    line &&
+                    !/^<cr>|^\^|incomplete|invalid|unknown|too many|ambiguous/i.test(line) &&
+                    !line.toLowerCase().startsWith(baseWords.join(" "))
+                )
+                .map(line => (line.match(/^([a-z][\w-]*)(?:\s+\S|\s*$)/) || [])[1])
+                .filter(Boolean)
+                .filter(word => !baseWords.includes(word.toLowerCase()))
+        )
+    ].slice(0, 8);
+}
+
+async function discoverCommands(driver, base, warnings) {
+    try {
+        const help = await driver.command(`${base} ?`, 12000);
+        const words = parseHelpWords(help, base);
+
+        if (words.length) {
+            warnings.push(`${base} ? offers: ${words.join(", ")}`);
+        }
+
+        return words.map(word => `${base} ${word}`);
+    } catch (error) {
+        warnings.push(
+            `${base} ?: ${String(error?.message || "failed").slice(0, 80)}`
+        );
+
+        return [];
+    }
+}
+
+async function firstUsable(driver, commands, parser, warnings, label, discoverBase) {
+    const tried = [];
+
+    for (let pass = 0; pass < 2; pass++) {
+        let list = commands;
+
+        if (pass === 1) {
+            if (!discoverBase) break;
+
+            list = (await discoverCommands(driver, discoverBase, warnings))
+                .filter(command => !tried.includes(command));
+        }
+
+        const found = await tryCommands(driver, list, parser, warnings, tried);
+
+        if (found) return found;
+    }
+
+    warnings.push(
+        `${label}: no supported command found on this BDCOM model ` +
+        `(tried: ${tried.join(", ")}).`
+    );
+
+    return "";
+}
+
+async function tryCommands(driver, commands, parser, warnings, tried) {
     for (const command of commands) {
+        tried.push(command);
+
         try {
             const output = await driver.command(command, 12000);
 
@@ -280,11 +352,6 @@ async function firstUsable(driver, commands, parser, warnings, label) {
             );
         }
     }
-
-    warnings.push(
-        `${label}: no supported command found on this BDCOM model ` +
-        `(tried: ${commands.join(", ")}).`
-    );
 
     return "";
 }
@@ -318,11 +385,11 @@ async function readBdcomLive(olt, config) {
         }
 
         outputs.cpu = await firstUsable(
-            driver, CPU_COMMANDS, parseCpu, warnings, "CPU"
+            driver, CPU_COMMANDS, parseCpu, warnings, "CPU", "show cpu"
         );
 
         outputs.memory = await firstUsable(
-            driver, MEMORY_COMMANDS, parseMemory, warnings, "Memory"
+            driver, MEMORY_COMMANDS, parseMemory, warnings, "Memory", "show memory"
         );
 
         system = parseBdcomSystem(outputs, olt);
@@ -368,6 +435,7 @@ module.exports = {
     parsePower,
     parseCpu,
     parseMemory,
+    parseHelpWords,
     formatUptime,
     BDCOM_PON_PORTS
 };

@@ -27,7 +27,7 @@ if (!ip || !username) {
 }
 
 // নিরাপত্তা: শুধু show কমান্ড চলবে।
-const isShow = (c) => /^show\s/i.test(c.trim());
+const isShow = (c) => /^show\s/i.test(c.trim()); // "show ... ?" is help only, still read-only
 
 // BDCOM মডেলভেদে কমান্ড আলাদা (EPON: P3310/P3608/P3616..., GPON: GP3600...)। যেটা চলে না সেটা শুধু "ERR" লিখে যাবে।
 const BASE = [
@@ -43,6 +43,13 @@ const BASE = [
     "show memory summary",
     "show system",
     "show uptime",
+    // help ("?") lists: show which sub-commands this OLT really has
+    "show memory ?",
+    "show cpu ?",
+    "show epon ?",
+    "show interface epon0/1 ?",
+    "show transceiver ?",
+    "show system ?",
     "show temperature",
     "show fan",
     "show power",

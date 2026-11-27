@@ -74,3 +74,11 @@ test('vendor detection', () => {
     assert.equal(t.isBdcom({ vendor: 'BD-COM EPON' }), true);
     assert.equal(t.isBdcom({ vendor: 'ecom' }), false);
 });
+
+test('help parser extracts sub-commands from a "?" listing', () => {
+    const words = t.parseHelpWords(
+        ` usage      Display memory usage\n statistics Memory statistics\n <cr>\nOLT#show memory \nIncomplete command\nOLT#`,
+        'show memory'
+    );
+    assert.deepEqual(words, ['usage', 'statistics']);
+});
