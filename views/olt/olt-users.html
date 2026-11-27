@@ -1491,7 +1491,7 @@ function renderRows() {
         const onuKey = user.onuId ? (user.oltId + ":" + user.onuId) : "";
         const isFirstOnu = Boolean(onuKey && !renderedOnus.has(onuKey));
         const showSync = Boolean(isFirstOnu && !user.customerOnly && !user.oltDeleted);
-        const showDelete = Boolean(isFirstOnu && !user.customerOnly);
+        const showDelete = Boolean(isFirstOnu && !user.customerOnly && user.oltDeleted);
         if (showSync || showDelete) renderedOnus.add(onuKey);
 
         return "<tr>" + columns.map(([key]) =>
