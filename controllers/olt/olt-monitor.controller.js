@@ -671,7 +671,7 @@ function supportsLiveRead(olt) {
     return (
         Number(olt.id) === 43 ||
         Number(olt.id) === 45 ||
-        /cdata|c-data|e1204es|ecom|e08ep|bd[\s_-]*com/i.test(identity)
+        /v[-\s]?sol|cdata|c-data|e1204es|ecom|e08ep|bd[\s_-]*com/i.test(identity)
     );
 }
 
