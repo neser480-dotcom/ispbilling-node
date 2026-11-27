@@ -245,6 +245,36 @@ class BdcomDriver extends EcomDriver {
         this.opticalErrors = [];
     }
 
+    /*
+    | Log out politely. BDCOM OLTs have only a few Telnet (VTY) lines; a bare
+    | socket.destroy() can leave the line busy until the idle timeout, after
+    | which new logins are refused (ECONNREFUSED). Send "exit", then close.
+    */
+    disconnect() {
+        const socket = this.socket;
+        const wasLoggedIn = this.loggedIn;
+
+        this.socket = null;
+        this.loggedIn = false;
+        this.prompt = "";
+        this.buffer = "";
+
+        if (!socket || socket.destroyed) return;
+
+        try {
+            if (wasLoggedIn) socket.write("exit\r\n");
+            socket.end();
+        } catch (_) {
+            // fall through to destroy
+        }
+
+        const timer = setTimeout(() => {
+            if (!socket.destroyed) socket.destroy();
+        }, 800);
+
+        if (timer.unref) timer.unref();
+    }
+
     async detectModel() {
         const output = await this.command("show version", 15000);
 
