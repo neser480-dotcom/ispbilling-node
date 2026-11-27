@@ -911,6 +911,7 @@ exports.live = async function (req, res, next) {
             },
             source: "live_olt_ddm",
             ports: livePorts,
+            sfpPorts: Array.isArray(result.sfpPorts) ? result.sfpPorts : [],
             system: result.system,
             modules: Array.isArray(result.modules) ? result.modules : [],
             onuOptical: buildOnuOpticalAverages(onuRows, (result.ports || []).map(port => port.id)),
