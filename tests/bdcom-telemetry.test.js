@@ -1,0 +1,76 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const t = require('../services/olt/bdcom-telemetry');
+const { buildDerivedEvents } = require('../services/olt/olt-monitor.service');
+
+// Verbatim from a real BDCOM P3310D probe (2026-11-26).
+const VERSION = `BDCOM(tm) P3310D Software, Version 10.1.0F Build 103950
+Copyright by Shanghai Baud Data Communication CO. LTD.
+ROM: System Bootstrap, Version 0.4.2, Serial num:00325017791
+hardware version:A
+Base ethernet MAC Address: 00:55:b1:4a:c7:7e
+DORICHOR-BABU uptime is 94:14:33:42, The current time: 1970-4-5 14:33:42
+DORICHOR-BABU#`;
+
+const TEMP = `upper temperature threshold is 75 degree
+ low temperature threshold is -15 degree
+ current temperature is 50 degree
+ Status:Normal
+
+DORICHOR-BABU#`;
+
+const FAN = `FAN_NUMBER\t  STATUS
+               1\t running
+               2\t running
+DORICHOR-BABU#`;
+
+const POWER = `POWER_NUMBER\t  STATUS
+               1\t      on
+DORICHOR-BABU#`;
+
+test('system telemetry from real show outputs', () => {
+    const s = t.parseBdcomSystem({ version: VERSION, temperature: TEMP, fan: FAN, power: POWER }, {});
+    assert.equal(s.model, 'P3310D');
+    assert.equal(s.firmware, '10.1.0F Build 103950');
+    assert.equal(s.serial, '00325017791');
+    assert.equal(s.deviceMac, '00:55:b1:4a:c7:7e');
+    assert.equal(s.uptime, '94d 14h 33m 42s');
+    assert.equal(s.temperatureC, 50);
+    assert.equal(s.temperatureHighC, 75);
+    assert.equal(s.temperatureStatus, 'Normal');
+    assert.equal(s.fan.fans.length, 2);
+    assert.equal(s.fan.fans[0].status, 'Normal');
+    assert.equal(s.powerSlots[0].working, true);
+    assert.equal(s.cpuUtilizationPercent, null);
+    assert.equal(s.memoryUtilizationPercent, null);
+});
+
+test('healthy BDCOM produces no false alarm events', () => {
+    const s = t.parseBdcomSystem({ version: VERSION, temperature: TEMP, fan: FAN, power: POWER }, {});
+    assert.deepEqual(buildDerivedEvents(s, []), []);
+});
+
+test('failed fan and power are reported', () => {
+    const s = t.parseBdcomSystem({
+        version: VERSION, temperature: TEMP,
+        fan: 'FAN_NUMBER STATUS\n 1  stopped\n 2  running', power: 'POWER_NUMBER STATUS\n 1  off'
+    }, {});
+    const ev = buildDerivedEvents(s, []);
+    assert.equal(ev.length, 2);
+});
+
+test('CPU / memory parsers tolerate unknown or error output', () => {
+    assert.equal(t.parseCpu('^\nToo many parameters\nOLT#'), null);
+    assert.equal(t.parseMemory('Incomplete command\nOLT#'), null);
+    assert.equal(t.parseCpu('CPU utilization for five seconds: 7%; one minute: 6%; five minutes: 5%').percent, 7);
+    assert.equal(t.parseMemory('Total: 131072 Used: 65536 Free: 65536').percent, 50);
+});
+
+test('vendor detection', () => {
+    assert.equal(t.isBdcom({ vendor: 'BDCOM' }), true);
+    assert.equal(t.isBdcom({ vendor: 'BD-COM EPON' }), true);
+    assert.equal(t.isBdcom({ vendor: 'ecom' }), false);
+});

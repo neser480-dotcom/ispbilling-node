@@ -2,6 +2,7 @@
 
 const { EcomDriver } = require("../../drivers/hardware/ecom");
 const { CDataDriver } = require("../../drivers/hardware/cdata");
+const bdcomTelemetry = require("./bdcom-telemetry");
 
 const PON_PORTS = [
     "0/1/1", "0/1/2", "0/1/3", "0/1/4",
@@ -1436,6 +1437,10 @@ async function readEcomLiveDdm(olt) {
 */
 
 async function readLiveDdm(olt) {
+    if (bdcomTelemetry.isBdcom(olt)) {
+        return bdcomTelemetry.readBdcomLive(olt, buildDriverConfig(olt));
+    }
+
     if (isCData(olt)) {
         return readCDataLiveDdm(olt);
     }
