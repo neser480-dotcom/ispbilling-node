@@ -47,9 +47,18 @@
       if (d.highlight) t.append(h("strong", { text: d.highlight }));
       var btns = h("div", { "class": "hero-buttons" });
       list(d.buttons).forEach(function (b) { btns.append(btn(b.label, b.url, b.style)); });
-      var visual = d.image
-        ? h("div", { "class": "hero-visual" }, h("img", { src: d.image, alt: d.title || "", style: "max-width:100%;border-radius:16px" }))
-        : null;
+      var preview = h("div", { "class": "product-preview", "aria-label": "AmaderBill ড্যাশবোর্ড প্রিভিউ" },
+        h("div", { "class": "preview-window" },
+          h("div", { "class": "preview-bar" }, h("div", { "class": "preview-brand" }, h("span", { "class": "preview-brand-mark", text: "A" }), h("strong", { text: "AmaderBill" })), h("span", { "class": "preview-live" }, h("i", {}), "লাইভ ড্যাশবোর্ড")),
+          h("div", { "class": "preview-body" },
+            h("aside", { "class": "preview-sidebar" }, h("span", { "class": "preview-side-logo", text: "AB" }), h("i", {}), h("i", {}), h("i", {}), h("i", {}), h("i", {})),
+            h("div", { "class": "preview-main" }, h("div", { "class": "preview-welcome" }, h("div", {}, h("small", { text: "স্বাগতম" }), h("strong", { text: "আপনার ISP ব্যবসা, এখন আরও সহজ" })), h("span", { text: "● Online" })),
+              h("div", { "class": "preview-stats" }, h("div", {}, h("small", { text: "মোট গ্রাহক" }), h("strong", { text: "১,২৫০" }), h("span", { text: "↗ ১২.৮%" })), h("div", {}, h("small", { text: "অনলাইন" }), h("strong", { text: "১,০৮৬" }), h("span", { text: "● Live" })), h("div", {}, h("small", { text: "মাসিক আয়" }), h("strong", { text: "৳ ২.৪৫ লাখ" }), h("span", { text: "↗ ৮.৪%" }))),
+              h("div", { "class": "preview-chart" }, h("div", { "class": "preview-chart-head" }, h("strong", { text: "আয়ের সারসংক্ষেপ" }), h("small", { text: "শেষ ৭ দিন" })), h("div", { "class": "preview-chart-bars" }, ...[34,55,43,72,52,88,66].map(function(v){return h("i",{style:"--bar:"+v+"%"});})))))),
+        h("div", { "class": "preview-phone" }, h("div", { "class": "phone-speaker" }), h("div", { "class": "phone-screen" }, h("span", { "class": "phone-mark", text: "A" }), h("small", { text: "AmaderBill" }), h("strong", { text: "হ্যালো! 👋" }), h("p", { text: "আপনার বিল ও সংযোগ এক জায়গায়" }), h("div", { "class": "phone-bill" }, h("small", { text: "চলতি মাসের বিল" }), h("strong", { text: "৳ ৫০০" }), h("span", { text: "পরিশোধ করুন →" })), h("div", { "class": "phone-status" }, h("i", {}), "সংযোগ সচল"))));
+      var visual = h("div", { "class": "hero-visual" }, d.image
+        ? h("img", { src: d.image, alt: d.title || "", style: "max-width:100%;border-radius:22px" })
+        : preview);
       return h("section", { "class": "hero", id: s.id }, h("div", { "class": "container hero-grid" },
         h("div", {}, d.label && h("span", { "class": "hero-label", text: d.label }), t, h("p", { "class": "hero-description", text: d.description }), btns), visual));
     },
@@ -223,12 +232,13 @@
     list(f.links).forEach(function (l) { imp.append(h("li", {}, h("a", { href: l.url, text: l.label }))); });
     var cl = h("ul", { "class": "footer-links" });
     if (contact.email) cl.append(h("li", {}, h("a", { href: "mailto:" + contact.email, text: contact.email })));
-    if (contact.phone) cl.append(h("li", { text: "ফোন: " + contact.phone }));
-    if (contact.whatsapp) cl.append(h("li", { text: "WhatsApp: " + contact.whatsapp }));
+    cl.append(h("li", {}, h("a", { href: "tel:01936516717", text: contact.phone || "01936516717" })));
+    cl.append(h("li", {}, h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", text: "WhatsApp: " + (contact.whatsapp || "01627078607") })));
+    cl.append(h("li", {}, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", text: "Facebook পেজ" })));
     var footer = h("footer", { "class": "footer" }, h("div", { "class": "container" },
       h("div", { "class": "footer-grid" }, h("div", {}, h("h3", { text: site.name }), h("p", { text: f.description })),
         h("div", {}, h("h3", { text: "দ্রুত লিংক" }), quick), h("div", {}, h("h3", { text: "গুরুত্বপূর্ণ" }), imp), h("div", {}, h("h3", { text: "যোগাযোগ" }), cl)),
-      h("div", { "class": "footer-bottom" }, h("p", { text: f.copyright }))));
+      h("div", { "class": "footer-bottom" }, h("p", { text: "© IRFAN IT - 2026" }), h("div", { "class": "footer-social" }, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", "aria-label": "Facebook", text: "f" }), h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", "aria-label": "WhatsApp", text: "◉" })) )));
 
     document.getElementById("app").replaceChildren(header, main, footer);
 
