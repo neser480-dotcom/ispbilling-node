@@ -1566,7 +1566,7 @@ async function readVsolLiveDdm(olt) {
             try {
                 const output = await driver.command(command, 12000);
                 systemOutputs[key] = output;
-                if (/unknown command|invalid command|ambiguous command/i.test(output)) warnings.push(`${command}: ${stripAnsi(output).trim().slice(0, 140)}`);
+                if (/unknown command|invalid command|ambiguous command/i.test(output)) warnings.push(`${command}: ${cleanOutput(output).trim().slice(0, 140)}`);
             } catch (error) {
                 systemOutputs[key] = "";
                 warnings.push(`${command}: ${String(error?.message || "command failed").slice(0, 140)}`);
