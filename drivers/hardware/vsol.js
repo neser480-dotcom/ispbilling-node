@@ -250,7 +250,8 @@ class VsolDriver {
         this.port = Number(config.port || 23);
         this.username = config.username || config.user || "";
         this.password = config.password || "";
-        this.timeout = Math.max(3000, Number(config.timeout || 12000));
+        // OLT config stores timeout in seconds (for example, 12); socket timers use milliseconds.
+        this.timeout = Math.max(3000, Number(config.timeout || 12) * 1000);
         this.model = String(config.model || "");
         this.vendor = "VSOL";
 
