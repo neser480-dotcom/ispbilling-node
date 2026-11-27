@@ -297,6 +297,7 @@ async function getLiveForOlt(olt) {
             ports: Array.isArray(result?.ports) ? result.ports : [],
             system: result?.system || null,
             events: Array.isArray(result?.events) ? result.events : [],
+            modules: Array.isArray(result?.modules) ? result.modules : [],
             warnings: Array.isArray(result?.warnings) ? result.warnings : []
         };
     } catch (error) {
@@ -459,6 +460,7 @@ async function getSelectedOltData(olt, counts, onuRows) {
         ports,
         warnings,
         systemStatus,
+        modules: Array.isArray(live.modules) ? live.modules : [],
         totalOnu: counts.total,
         onlineOnu: counts.online,
         offlineOnu: counts.offline
