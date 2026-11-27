@@ -479,7 +479,10 @@ async function readBdcomLive(olt, config) {
                 if (ddm) {
                     ports[i] = ddmPort(id, ddm);
                 } else {
-                    warnings.push(`PON ${id}: optical diagnosis returned no data.`);
+                    warnings.push(
+                        `PON ${id}: optical diagnosis not parsed (${clean(output).length} chars): ` +
+                        clean(output).slice(0, 160).replace(/\s+/g, " ")
+                    );
                 }
             } catch (error) {
                 warnings.push(
