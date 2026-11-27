@@ -394,19 +394,19 @@ exports.list = async (req, res) => {
             `SELECT
                 o.olt_id AS id,
                 COALESCE(
-                    MAX(NULLIF(TRIM(o.olt_name), "")),
-                    CONCAT("Deleted OLT #", o.olt_id)
+                    MAX(NULLIF(TRIM(o.olt_name), '')),
+                    CONCAT('Deleted OLT #', o.olt_id)
                 ) AS name,
-                "deleted" AS vendor,
-                "" AS ip,
+                'deleted' AS vendor,
+                '' AS ip,
                 0 AS port,
                 0 AS pon_ports,
-                "deleted" AS status,
-                COALESCE(MAX(o.olt_deleted_at), "orphaned") AS deleted_at,
+                'deleted' AS status,
+                COALESCE(MAX(o.olt_deleted_at), 'orphaned') AS deleted_at,
                 COUNT(*) AS onu_total,
                 SUM(
                     CASE
-                        WHEN LOWER(COALESCE(o.status, "")) IN
+                        WHEN LOWER(COALESCE(o.status, '')) IN
                             ("online", "up", "connected", "active", "1")
                         THEN 1 ELSE 0
                     END
@@ -1092,9 +1092,9 @@ exports.listOnus = async (req, res) => {
                     o.id,
                     o.olt_id,
                     o.company_id,
-                    "Customer not linked" AS name,
-                    COALESCE(NULLIF(TRIM(o.ip_address), ""), "") AS ip_address,
-                    COALESCE(NULLIF(TRIM(o.onu_mac), ""), NULLIF(TRIM(o.mac_address), ""), "") AS mac,
+                    'Customer not linked' AS name,
+                    COALESCE(NULLIF(TRIM(o.ip_address), ''), "") AS ip_address,
+                    COALESCE(NULLIF(TRIM(o.onu_mac), ''), NULLIF(TRIM(o.mac_address), ''), "") AS mac,
                     o.onu_sn AS serial,
                     o.customer_id AS onu_customer_id,
                     NULL AS mapping_id,
@@ -1105,7 +1105,7 @@ exports.listOnus = async (req, res) => {
                     NULL AS customer_phone,
                     NULL AS customer_onu_mac,
                     NULL AS pppoe_username,
-                    COALESCE(NULLIF(TRIM(o.olt_name), ""), CONCAT("Deleted OLT #", o.olt_id)) AS olt_name,
+                    COALESCE(NULLIF(TRIM(o.olt_name), ''), CONCAT('Deleted OLT #', o.olt_id)) AS olt_name,
                     o.pon,
                     o.port,
                     o.status,
