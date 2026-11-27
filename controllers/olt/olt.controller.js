@@ -1448,6 +1448,91 @@ exports.listOnus = async (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
+| DELETE /api/olt/:id/onus/:onuId
+|--------------------------------------------------------------------------
+| Remove one ONU and only its ONU-related mapping rows. Customer records
+| are never deleted. Works for active or soft-deleted OLTs.
+|--------------------------------------------------------------------------
+*/
+
+exports.deleteOnu = async (req, res) => {
+    let connection;
+
+    try {
+        verifyMappingCsrf(req);
+
+        const oltId = validId(req.params.id);
+        const onuId = validId(req.params.onuId);
+        const olt = await findOlt(req, oltId, { includeDeleted: true });
+
+        connection = await getPool().getConnection();
+        await connection.beginTransaction();
+
+        const [onus] = await connection.execute(
+            `SELECT id
+               FROM onu
+              WHERE id = ?
+                AND olt_id = ?
+              LIMIT 1`,
+            [onuId, oltId]
+        );
+
+        if (!onus.length) {
+            throw new OltError("ONU not found on this OLT.", 404);
+        }
+
+        const mappingTables = [
+            "onu_user_mapping",
+            "onu_customer_links",
+            "onu_ppp_info",
+            "onu_ppp_info_history"
+        ];
+
+        for (const table of mappingTables) {
+            try {
+                await connection.execute(
+                    `DELETE FROM ${table}
+                      WHERE company_id = ?
+                        AND olt_id = ?
+                        AND onu_id = ?`,
+                    [olt.company_id, oltId, onuId]
+                );
+            } catch (error) {
+                if (!error || error.code !== "ER_NO_SUCH_TABLE") {
+                    throw error;
+                }
+            }
+        }
+
+        await connection.execute(
+            `DELETE FROM onu
+              WHERE id = ?
+                AND olt_id = ?`,
+            [onuId, oltId]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            success: true,
+            message: "ONU and its mapping records deleted.",
+            data: { olt_id: oltId, onu_id: onuId }
+        });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback().catch(() => {});
+        }
+
+        return jsonError(res, error);
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
 | GET /api/olt/:id/customers/search?q=
 |--------------------------------------------------------------------------
 */
