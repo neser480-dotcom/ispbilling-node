@@ -280,8 +280,9 @@ async function getLiveForOlt(olt) {
 
     // "BDCOM", "bd com", "BD-COM EPON" ...
     const isBdcom = /bd[\s_-]*com/i.test(identity);
+    const isVsol = /v[-\s]?sol|vsol/i.test(identity);
 
-    if (!isCData && !isEcom && !isBdcom) {
+    if (!isCData && !isEcom && !isBdcom && !isVsol) {
         return {
             ports: [],
             system: null,
@@ -564,8 +565,12 @@ function refreshSnapshot(olt) {
         try {
             const result = await getLiveForOlt(olt);
 
-            // system is null when the OLT could not be reached/read.
-            if (!result.system) {
+            // Some vendors (including VSOL) provide valid PON/ONU
+            // optical data without system telemetry.
+            const hasPortData =
+                Array.isArray(result.ports) && result.ports.length > 0;
+
+            if (!result.system && !hasPortData) {
                 attempts.set(id, {
                     at: started,
                     error: (result.warnings && result.warnings[0]) ||
