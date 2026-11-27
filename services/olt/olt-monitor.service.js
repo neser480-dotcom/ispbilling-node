@@ -1486,10 +1486,11 @@ function parseVsolPonOptical(output, fs) {
     const txDbm = read(/Transmit Power\s*:\s*[\d.]+\s*uW\s*\(\s*(-?[\d.]+)\s*dBm\s*\)/i);
     const voltage = read(/Voltage\s*:\s*(-?[\d.]+)\s*V/i);
     const bias = read(/Bias Current\s*:\s*(-?[\d.]+)\s*mA/i);
+    const temp = read(/Temp(?:p)?erature\s*:\s*(-?[\d.]+)/i);
     const txAvailable = txDbm !== null || (txUw !== null && txUw > 0);
     return {
         id: "epon" + fs, name: "PON " + fs.split("/").pop(),
-        temp: read(/Temp(?:p)?erature\s*:\s*(-?[\d.]+)/i),
+        temp,
         voltage,
         bias,
         tx: txDbm !== null ? txDbm : (txUw !== null && txUw > 0 ? Number((10 * Math.log10(txUw / 1000)).toFixed(2)) : null),
