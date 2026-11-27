@@ -13,9 +13,13 @@
 |
 |   show cpu          "CPU utilization for one second: 10%; one minute: 14%; ..."
 |   show memory region "Memory utilization 61%(Image 21%, Region 23%, ...)"
-|   show epon optical-transceiver-diagnosis interface epon0/N
-|                     PON SFP temperature / voltage / current(bias) / TxPower,
-|                     plus the OLT-side RxPower of every ONU on that port.
+|   show epon interface epon0/P:N onu ctc optical-transceiver-diagnosis
+|                     verified ONU-side CTC temperature / voltage / bias /
+|                     TxPower / RxPower. Monitoring averages online ONU
+|                     readings by PON; these are NOT PON SFP readings.
+|
+| The PON-level optical-transceiver-diagnosis command is not used because
+| this P3310D timed out on PON 1/2 and returned duplicate Rx values.
 |
 | If a command is rejected on another BDCOM model, the app asks the OLT for
 | its help list ("show memory ?") and tries what it offers; a miss only adds
@@ -529,6 +533,15 @@ async function readBdcomLive(olt, config) {
         } catch (error) {
             warnings.push(
                 `ONU optical collection: ${String(error?.message || "failed").slice(0, 140)}`
+            );
+        }
+
+        if (opticalOnus.some(row =>
+            [row.temperature, row.voltage, row.bias_current, row.tx_power, row.rx_power]
+                .some(value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)))
+        )) {
+            warnings.push(
+                "BDCOM PON optical values are averages of online ONU CTC readings, not PON SFP DDM."
             );
         }
 
