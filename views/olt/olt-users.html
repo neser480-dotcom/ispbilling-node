@@ -1934,7 +1934,65 @@ async function syncSingleOnu(oltId, onuId) {
     }
 }
 
+async function deleteSingleOnu(oltId, onuId) {
+    if (loading || syncing || deletingOnuKey) return;
+
+    const key = oltId + ":" + onuId;
+    const target = users.find(user =>
+        !user.customerOnly &&
+        String(user.oltId) === String(oltId) &&
+        String(user.onuId) === String(onuId)
+    );
+
+    const oltLabel = target
+        ? target.oltPort || ("OLT #" + oltId)
+        : ("OLT #" + oltId);
+
+    if (!window.confirm(
+        "Delete ONU #" + onuId + " from " + oltLabel +
+        " and its mapping records? Customer records will not be deleted."
+    )) {
+        return;
+    }
+
+    deletingOnuKey = key;
+    refreshButton.disabled = true;
+    clearMessage();
+    renderRows();
+
+    try {
+        await apiDelete(
+            "/api/olt/" + encodeURIComponent(oltId) +
+            "/onus/" + encodeURIComponent(onuId)
+        );
+
+        await loadOnus(true);
+        showMessage(
+            "ONU #" + onuId + " and its mapping records deleted. Customer data was kept.",
+            "success"
+        );
+    } catch (error) {
+        showMessage(
+            error.message || ("ONU #" + onuId + " delete failed."),
+            "error"
+        );
+    } finally {
+        deletingOnuKey = "";
+        refreshButton.disabled = false;
+        renderRows();
+    }
+}
+
 body.addEventListener("click", async event => {
+    const deleteButton = event.target.closest("[data-onu-delete]");
+    if (deleteButton) {
+        const parts = String(deleteButton.dataset.onuDelete || "").split(":");
+        if (parts.length === 2 && parts[0] && parts[1]) {
+            await deleteSingleOnu(parts[0], parts[1]);
+        }
+        return;
+    }
+
     const syncButton = event.target.closest("[data-onu-sync]");
     if (syncButton) {
         const parts = String(syncButton.dataset.onuSync || "").split(":");
