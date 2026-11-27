@@ -488,11 +488,11 @@
                 kv("PON Port", `PON ${pon.n}`),
                 kv("OLT Port ID", pon.id || "N/A"),
                 kv("Status", pon.status),
-                kv("TX Power", `${pon.tx} dBm`),
-                kv("RX Power", `${pon.rx} dBm`),
-                kv("Bias Current", `${pon.bias} mA`),
-                kv("Temperature", `${pon.temp} °C`),
-                kv("Voltage", `${pon.voltage} V`),
+                kv("Avg ONU TX Power", `${pon.tx} dBm`),
+                kv("Avg ONU RX Power", `${pon.rx} dBm`),
+                kv("Avg ONU Bias Current", `${pon.bias} mA`),
+                kv("Avg ONU Temperature", `${pon.temp} °C`),
+                kv("Avg ONU Voltage", `${pon.voltage} V`),
                 kv(
                     "ONUs Online / Total",
                     pon.onlineOnu === null
