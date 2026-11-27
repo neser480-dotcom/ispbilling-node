@@ -280,7 +280,7 @@ async function getLiveForOlt(olt) {
 
     // "BDCOM", "bd com", "BD-COM EPON" ...
     const isBdcom = /bd[\s_-]*com/i.test(identity);
-    const isVsol = /v[-\s]?sol|vsol/i.test(identity);
+        const isVsol = /v[-\s]?sol|vsol/i.test(
 
     if (!isCData && !isEcom && !isBdcom && !isVsol) {
         return {
