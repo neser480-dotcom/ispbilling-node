@@ -82,3 +82,10 @@ test('help parser extracts sub-commands from a "?" listing', () => {
     );
     assert.deepEqual(words, ['usage', 'statistics']);
 });
+
+test('real "show cpu" output of a P3310D', () => {
+    const c = t.parseCpu(`CPU utilization for one second: 10%; one minute: 14%; five minutes: 12%
+CPU MAX utilization: 100%(1970-1-1 3:41:22)
+DORICHOR-BABU#`);
+    assert.deepEqual(c, { percent: 10, oneMinute: 14, fiveMinutes: 12 });
+});

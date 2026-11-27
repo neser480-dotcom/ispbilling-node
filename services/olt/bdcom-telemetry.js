@@ -143,7 +143,8 @@ function parseCpu(text) {
 
     if (!t || ERROR_OUTPUT.test(t)) return null;
 
-    const five = t.match(/five\s+seconds?[^0-9\n]*(\d+(?:\.\d+)?)\s*%/i);
+    // real P3310D: "CPU utilization for one second: 10%; one minute: 14%; five minutes: 12%"
+    const five = t.match(/(?:five|one)\s+seconds?[^0-9\n]*(\d+(?:\.\d+)?)\s*%/i);
     const one = t.match(/one\s+minute[^0-9\n]*(\d+(?:\.\d+)?)\s*%/i);
     const fiveMin = t.match(/five\s+minutes?[^0-9\n]*(\d+(?:\.\d+)?)\s*%/i);
     const any = t.match(/(?:cpu|usage|utili[sz]ation)[^0-9\n%]*(\d+(?:\.\d+)?)\s*%/i);
