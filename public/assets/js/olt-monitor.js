@@ -176,6 +176,10 @@
 
         const id = String(port.id ?? port.pon ?? "").trim();
 
+        // VSOL EPON ports: epon0/1 to epon0/4
+        const vsol = id.match(/^epon\d+\/([1-4])$/i);
+        if (vsol) return Number(vsol[1]);
+
         // C-Data OLT43: 0/0/1 to 0/0/4
         const cdata = id.match(/^0\/0\/([1-4])$/);
 
