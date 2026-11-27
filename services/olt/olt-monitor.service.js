@@ -1494,15 +1494,16 @@ function parseVsolPonOptical(output, fs) {
         bias,
         tx: txDbm !== null ? txDbm : (txUw !== null && txUw > 0 ? Number((10 * Math.log10(txUw / 1000)).toFixed(2)) : null),
         rx: null,
-        // This VSOL command does not report SFP RX or temperature on this model.
+        // This VSOL command reports SFP temperature, but does not report SFP RX.
         // Determine health from the fields it actually supplies.
-        status: [voltage, bias, txAvailable].every(value => value !== null && value !== false) ? "ok" : "partial",
+        status: [temp, voltage, bias, txAvailable].every(value => value !== null && value !== false) ? "ok" : "partial",
         missing_fields: [
+            ...(temp === null ? ["temp"] : []),
             ...(voltage === null ? ["voltage"] : []),
             ...(bias === null ? ["bias"] : []),
             ...(txAvailable ? [] : ["tx"])
         ],
-        detail: "SFP RX and temperature are not reported by this VSOL command.",
+        detail: "SFP RX is not reported by this VSOL command; SFP temperature is available.",
         reading_source: "pon_sfp_ddm"
     };
 }
