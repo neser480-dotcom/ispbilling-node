@@ -597,7 +597,7 @@ const columns = [
     ["environment", "Voltage & Temperature"],
     ["mapping", "ONU"],
     ["lastUpdate", "Last update"],
-    ["action", "Sync"]
+    ["action", "Actions"]
 ];
 
 let users = [];
@@ -608,6 +608,7 @@ let oltList = [];
 let loading = false;
 let syncing = false;
 let syncingOnuId = "";
+let deletingOnuKey = "";
 let mappingBusy = false;
 
 /* Pagination */
@@ -979,6 +980,7 @@ function normalizeOnu(row, olt) {
         id: row.id,
         onuId: row.id,
         oltId: String(row.olt_id || olt.id),
+        oltDeleted: Boolean(olt.deleted_at),
         displayId: customerCode,
         customerName,
         customerLinked,
@@ -1165,7 +1167,7 @@ function expandSwitchRows(user) {
     }));
 }
 
-function getCell(user, key, showSync = false) {
+function getCell(user, key, showSync = false, showDelete = false) {
     switch (key) {
         case "customerId": {
             const people = peopleOf(user);
@@ -1288,16 +1290,35 @@ function getCell(user, key, showSync = false) {
         case "mapping":
             return "";
 
-        case "action":
-            if (!showSync || user.customerOnly || !user.onuId) return "";
-            return '<button type="button" class="olt-action-icon-btn" ' +
-                'data-onu-sync="' + escapeHTML(user.oltId + ":" + user.onuId) + '" ' +
-                'title="Sync this ONU only" aria-label="Sync ONU ' + escapeHTML(user.onuId) + '" ' +
-                (syncing ? 'disabled' : '') + '>' +
-                (syncing && syncingOnuId === (user.oltId + ":" + user.onuId)
-                    ? '<i class="fa-solid fa-spinner fa-spin"></i>'
-                    : '<i class="fa-solid fa-arrows-rotate"></i>') +
-                '</button>';
+        case "action": {
+            if (user.customerOnly || !user.onuId) return "";
+
+            const key = user.oltId + ":" + user.onuId;
+            const syncButton = showSync
+                ? '<button type="button" class="olt-action-icon-btn" ' +
+                    'data-onu-sync="' + escapeHTML(key) + '" ' +
+                    'title="Sync this ONU only" aria-label="Sync ONU ' + escapeHTML(user.onuId) + '" ' +
+                    (syncing ? 'disabled' : '') + '>' +
+                    (syncing && syncingOnuId === key
+                        ? '<i class="fa-solid fa-spinner fa-spin"></i>'
+                        : '<i class="fa-solid fa-arrows-rotate"></i>') +
+                    '</button>'
+                : "";
+
+            const deleteButton = showDelete
+                ? '<button type="button" class="olt-action-icon-btn" ' +
+                    'data-onu-delete="' + escapeHTML(key) + '" ' +
+                    'title="Delete this ONU and its mapping" aria-label="Delete ONU ' + escapeHTML(user.onuId) + '" ' +
+                    (deletingOnuKey === key ? 'disabled' : '') + '>' +
+                    (deletingOnuKey === key
+                        ? '<i class="fa-solid fa-spinner fa-spin"></i>'
+                        : '<i class="fa-solid fa-trash"></i>') +
+                    '</button>'
+                : "";
+
+            return '<div class="d-flex align-items-center gap-2">' +
+                syncButton + deleteButton + '</div>';
+        }
 
         case "lastUpdate":
             return `<span class="olt-sub-text">${user.lastUpdate}</span>`;
@@ -1468,11 +1489,18 @@ function renderRows() {
     const renderedOnus = new Set();
     body.innerHTML = visibleRows.map(user => {
         const onuKey = user.onuId ? (user.oltId + ":" + user.onuId) : "";
-        const showSync = Boolean(onuKey && !user.customerOnly && !renderedOnus.has(onuKey));
-        if (showSync) renderedOnus.add(onuKey);
+        const isFirstOnu = Boolean(onuKey && !renderedOnus.has(onuKey));
+        const showSync = Boolean(isFirstOnu && !user.customerOnly && !user.oltDeleted);
+        const showDelete = Boolean(isFirstOnu && !user.customerOnly);
+        if (showSync || showDelete) renderedOnus.add(onuKey);
 
         return "<tr>" + columns.map(([key]) =>
-            "<td>" + getCell(user, key, key === "action" && showSync) + "</td>"
+            "<td>" + getCell(
+                user,
+                key,
+                key === "action" && showSync,
+                key === "action" && showDelete
+            ) + "</td>"
         ).join("") + "</tr>";
     }).join("");
 }
@@ -1483,7 +1511,7 @@ function renderRows() {
 -------------------------------------------------- */
 
 async function loadOltList() {
-    const result = await apiGet("/api/olt");
+    const result = await apiGet("/api/olt?include_deleted=1");
 
     oltList = Array.isArray(result)
         ? result
@@ -1505,7 +1533,7 @@ async function loadOltList() {
         '<option value="all">All OLTs</option>',
         ...oltList.map(olt => `
             <option value="${escapeHTML(olt.id)}">
-                ${escapeHTML(olt.name || olt.vendor || "OLT")}
+                ${escapeHTML(olt.name || olt.vendor || "OLT")}${olt.deleted_at ? " (Deleted)" : ""}
                 (#${escapeHTML(olt.id)})
             </option>
         `)
