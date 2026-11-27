@@ -927,7 +927,7 @@ exports.dashboard = async function (req, res, next) {
             };
 
             const [onuRows] = await getPool().execute(
-                `SELECT id, olt_id, pon, status
+                `SELECT id, olt_id, pon, status, rx_power, tx_power, bias_current, temperature, voltage
                  FROM onu
                  WHERE olt_id = ?
                  ORDER BY id DESC`,
