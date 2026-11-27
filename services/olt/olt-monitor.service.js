@@ -2,6 +2,7 @@
 
 const { EcomDriver } = require("../../drivers/hardware/ecom");
 const { CDataDriver } = require("../../drivers/hardware/cdata");
+const { VsolDriver } = require("../../drivers/hardware/vsol");
 const bdcomTelemetry = require("./bdcom-telemetry");
 
 const PON_PORTS = [
@@ -1432,11 +1433,126 @@ async function readEcomLiveDdm(olt) {
 
 /*
 |--------------------------------------------------------------------------
+| V-SOL ONU OPTICAL TELEMETRY
+|--------------------------------------------------------------------------
+| V-SOL reports optical readings per ONU, not as PON SFP DDM. Aggregate
+| online ONU readings by EPON interface and label the source accurately.
+*/
+
+function averageValues(rows, field) {
+    const values = rows
+        .map(row => row[field])
+        .filter(value => value !== null && value !== undefined && Number.isFinite(Number(value)))
+        .map(Number);
+
+    return values.length
+        ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2))
+        : null;
+}
+
+async function readVsolLiveDdm(olt) {
+    const driver = new VsolDriver(buildDriverConfig(olt));
+    const warnings = [];
+    let ports = [];
+
+    try {
+        await driver.connect();
+        await driver.detectModel();
+        const onus = await driver.getONUs();
+
+        const interfaces = [...new Set(
+            onus.map(row => String(row.f_s || "").trim()).filter(Boolean)
+        )].sort((a, b) => {
+            const aa = a.split("/").map(Number);
+            const bb = b.split("/").map(Number);
+            return (aa[0] - bb[0]) || (aa[1] - bb[1]);
+        });
+
+        ports = interfaces.map(fs => {
+            const online = onus.filter(row =>
+                String(row.f_s) === fs &&
+                String(row.status).toLowerCase() === "online"
+            );
+            const readingRows = online.filter(row =>
+                ["temperature", "voltage", "bias_current", "tx_power", "rx_power"]
+                    .some(field => row[field] !== null && row[field] !== undefined &&
+                        Number.isFinite(Number(row[field])))
+            );
+
+            const result = {
+                id: "epon" + fs,
+                name: "PON " + fs.split("/").pop(),
+                temp: averageValues(readingRows, "temperature"),
+                voltage: averageValues(readingRows, "voltage"),
+                bias: averageValues(readingRows, "bias_current"),
+                tx: averageValues(readingRows, "tx_power"),
+                rx: averageValues(readingRows, "rx_power"),
+                status: readingRows.length ? "partial" : "unavailable",
+                missing_fields: [],
+                onu_read_count: readingRows.length,
+                online_onu_count: online.length,
+                reading_source: "online_onu_average"
+            };
+
+            result.missing_fields = DDM_FIELDS.filter(field =>
+                result[field] === null
+            );
+            result.status = result.missing_fields.length === DDM_FIELDS.length
+                ? "unavailable"
+                : result.missing_fields.length
+                    ? "partial"
+                    : "ok";
+
+            if (!readingRows.length) {
+                warnings.push(
+                    `${result.name}: no online ONU optical readings available.`
+                );
+            }
+
+            return result;
+        });
+
+        if (driver.opticalErrors.length) {
+            warnings.push(...driver.opticalErrors.map(message => String(message).slice(0, 220)));
+        }
+
+        if (ports.some(port => port.onu_read_count > 0)) {
+            warnings.push(
+                "VSOL optical values are averages of online ONU readings, not PON SFP DDM."
+            );
+        }
+    } catch (error) {
+        warnings.push(
+            `OLT ${olt.id}: ${String(error?.message || "VSOL monitoring read failed").slice(0, 220)}`
+        );
+    } finally {
+        try {
+            driver.disconnect();
+        } catch (_) {
+            // Preserve collected telemetry.
+        }
+    }
+
+    return {
+        ports,
+        warnings,
+        system: null
+    };
+}
+
+/*
+|--------------------------------------------------------------------------
 | PUBLIC ENTRY POINT
 |--------------------------------------------------------------------------
 */
 
 async function readLiveDdm(olt) {
+    const identity = `${olt.vendor || ""} ${olt.model || ""} ${olt.name || ""}`;
+
+    if (/v[-\s]?sol|vsol/i.test(identity)) {
+        return readVsolLiveDdm(olt);
+    }
+
     if (bdcomTelemetry.isBdcom(olt)) {
         return bdcomTelemetry.readBdcomLive(olt, buildDriverConfig(olt));
     }
