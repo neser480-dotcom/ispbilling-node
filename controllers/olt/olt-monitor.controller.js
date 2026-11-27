@@ -850,9 +850,7 @@ exports.live = async function (req, res, next) {
             source: "live_olt_ddm",
             ports: enrichLivePorts(result.ports, onuRows),
             system: result.system,
-            modules: result.system && Array.isArray(result.system.modules)
-                ? result.system.modules
-                : [],
+            modules: Array.isArray(result.modules) ? result.modules : [],
             alarms: buildLiveAlarms(
                 olt,
                 Array.isArray(result.events) ? result.events : [],
