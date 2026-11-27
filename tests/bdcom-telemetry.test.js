@@ -117,6 +117,33 @@ test('PON SFP DDM and OLT-side ONU Rx', () => {
     assert.equal(p.name, 'PON 3');
 });
 
+test('BDCOM ONU optical readings are averaged per PON without mixing ports', () => {
+    const rows = [
+        { pon_no: 1, status: 'online', temperature: 27, voltage: 3.3, bias_current: 10.8, tx_power: 2.0, rx_power: -12.3 },
+        { pon_no: 1, status: 'online', temperature: 32, voltage: 3.2, bias_current: 6.8, tx_power: 2.5, rx_power: -17.7 },
+        { pon_no: 1, status: 'offline', temperature: 99, voltage: 9.9, bias_current: 99, tx_power: 99, rx_power: -1 },
+        { pon_no: 2, status: 'online', temperature: 30, voltage: 3.1, bias_current: 8, tx_power: 1.5, rx_power: -20 }
+    ];
+
+    const p1 = t.aggregateOnuOptical(rows, '0/1');
+    assert.equal(p1.temp, 29.5);
+    assert.equal(p1.voltage, 3.3);
+    assert.equal(p1.bias, 8.8);
+    assert.equal(p1.tx, 2.3);
+    assert.equal(p1.rx, -15);
+    assert.equal(p1.rxMin, -17.7);
+    assert.equal(p1.rxMax, -12.3);
+    assert.equal(p1.onuCount, 2);
+    assert.equal(p1.onuReadCount, 2);
+    assert.equal(p1.readingSource, 'online_onu_average');
+
+    const p2 = t.aggregateOnuOptical(rows, '0/2');
+    assert.equal(p2.temp, 30);
+    assert.equal(p2.rx, -20);
+    assert.equal(p2.onuCount, 1);
+    assert.equal(t.aggregateOnuOptical(rows, '0/4'), null);
+});
+
 test('real "show memory region" utilization', () => {
     const m = t.parseMemory(`Level 1 Heap:
     max block 19926128, free 20013360 bytes,
