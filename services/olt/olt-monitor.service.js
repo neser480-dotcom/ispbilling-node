@@ -1526,6 +1526,9 @@ async function readVsolLiveDdm(olt) {
         const version = parseVsolVersion(systemOutputs.version || "");
         const fan = parseVsolFan(systemOutputs.fan || "");
         system = { vendor: modelInfo.vendor, model: version.hardware ? "VSOL EPON OLT" : modelInfo.model, ...version, ...fan, cpu: null, memory: null, psu: [], voltageChannels: [], powerSlots: [] };
+        if (version.hardware) {
+            modules.push({ name: "Chassis / Main Board", type: version.hardware, range: `${interfaces.length || 4} PON`, status: "Detected" });
+        }
         for (const fs of interfaces) {
             try {
                 await driver.command(`interface epon ${fs}`, 10000);
