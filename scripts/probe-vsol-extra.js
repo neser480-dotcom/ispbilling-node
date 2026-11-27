@@ -1,11 +1,11 @@
 "use strict";
 
 /*
- * VSOL extra monitoring probe (read-only).
+ * VSOL extra monitoring discovery probe (read-only).
  * Usage:
  *   node scripts/probe-vsol-extra.js <ip> <username> <password> [port=23]
- * Tests show/help commands only; it does not enter configuration mode or
- * change OLT settings. Output is saved under scripts/probe-out/.
+ * Reads CLI help, running-config interface names only, and show-interface
+ * output. It never prints or saves the full running-config.
  */
 const fs = require("fs");
 const path = require("path");
@@ -20,42 +20,25 @@ if (!ip || !username || password === undefined || !Number.isInteger(port) || por
 }
 
 const COMMANDS = [
-    "show ?",
-    "show version",
-    "show device",
-    "show system",
-    "show system ?",
-    "show system information",
-    "show system status",
-    "show hardware",
-    "show inventory",
-    "show board",
-    "show board ?",
-    "show slot",
-    "show module",
-    "show interface ?",
-    "show epon ?",
-    "show pon",
-    "show pon status",
-    "show temperature",
-    "show environment",
-    "show cpu",
-    "show memory",
-    "show uptime",
-    "show fan",
-    "show power",
-    "show power state",
-    "show power ?",
-    "show optical",
-    "show transceiver",
-    "show alarm",
-    "show clock"
+    "show interface gigabitethernet ?",
+    "show interface vlan ?",
+    "show ip ?",
+    "show access-list ?",
+    "show channel-group ?",
+    "show spanning-tree ?",
+    "show monitor ?",
+    "show queue-scheduler ?",
+    "show loopback ?",
+    "show isolate ?",
+    "show zebra ?",
+    "show history"
 ];
 
 const output = [
-    "# VSOL extra monitoring probe",
+    "# VSOL extra monitoring discovery probe",
     "# Target: " + ip + ":" + port,
     "# Started: " + new Date().toISOString(),
+    "# Full running-config is never printed or saved.",
     ""
 ];
 
@@ -64,6 +47,18 @@ function add(value) {
         .split(password).join("******");
     output.push(safe);
     console.log(safe);
+}
+
+async function run(driver, command, timeout) {
+    add("\n========== " + command + " ==========");
+    try {
+        const result = await driver.command(command, timeout || 10000);
+        add(result || "(empty response)");
+        return result || "";
+    } catch (error) {
+        add("COMMAND ERROR: " + error.message);
+        return "";
+    }
 }
 
 (async () => {
@@ -78,19 +73,28 @@ function add(value) {
     try {
         await driver.connect();
         add("Connected. Prompt: " + (driver.prompt || "(not reported)"));
-        add("Login banner: " + ((driver.banner || "").trim().slice(0, 500) || "(empty)"));
+        add("Login banner: " + ((driver.banner || "").trim().slice(0, 400) || "(empty)"));
 
         for (const command of COMMANDS) {
-            if (!/^show\s/i.test(command)) continue;
+            await run(driver, command);
+        }
 
-            add("\n========== " + command + " ==========");
+        add("\n========== running-config interface discovery ==========");
+        try {
+            const config = await driver.command("show running-config", 30000);
+            const interfaces = [...new Set(
+                [...config.matchAll(/^\s*interface\s+(gigabitethernet|vlan)\s+([^\s#]+)/gim)]
+                    .map(match => ({ type: match[1].toLowerCase(), name: match[2] }))
+            )];
 
-            try {
-                const result = await driver.command(command, 9000);
-                add(result || "(empty response)");
-            } catch (error) {
-                add("COMMAND ERROR: " + error.message);
+            add("Detected interface names only: " +
+                (interfaces.map(item => item.type + " " + item.name).join(", ") || "(none)"));
+
+            for (const item of interfaces) {
+                await run(driver, "show interface " + item.type + " " + item.name, 12000);
             }
+        } catch (error) {
+            add("Interface discovery error: " + error.message);
         }
     } catch (error) {
         add("FATAL: " + error.message);
