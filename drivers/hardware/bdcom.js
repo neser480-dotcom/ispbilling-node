@@ -275,6 +275,29 @@ class BdcomDriver extends EcomDriver {
         if (timer.unref) timer.unref();
     }
 
+    /*
+    | Prompt detection for BDCOM. The inherited check treats ANY last line that
+    | ends in ")" "]" ">" or "#" as the prompt, but BDCOM table headers such as
+    | "Temperature(degree) ... TxPower(dBm)" end in ")". When the OLT's answer
+    | arrived in several chunks, the read stopped at such a header and returned
+    | a truncated table (PON 1/2 DDM missing, ONU lists cut short). Only a line
+    | that looks like "HOSTNAME#", "HOSTNAME>" or "HOSTNAME(config)#" counts.
+    */
+    detectPrompt(output) {
+        const lines = String(output || "")
+            .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "")
+            .replace(/\r/g, "")
+            .split("\n")
+            .map(line => line.trim())
+            .filter(Boolean);
+
+        const last = lines[lines.length - 1] || "";
+
+        if (/--\s*more/i.test(last)) return "";
+
+        return /^[A-Za-z0-9_.-]+(\([^)\s]*\))?[#>]$/.test(last) ? last : "";
+    }
+
     async detectModel() {
         const output = await this.command("show version", 15000);
 

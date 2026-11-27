@@ -80,3 +80,16 @@ All\t0055.b14a.c77e\t  STATIC     CPU
 1\td832.1473.3837\t  DYNAMIC    epon0/4:29`);
     assert.deepEqual(r.map(x => [x.pon_no, x.ont_id]), [[1, 2], [4, 29]]);
 });
+
+test('prompt detection ignores table headers that end in ")"', () => {
+    const { BdcomDriver } = require('../drivers/hardware/bdcom');
+    const d = new BdcomDriver({ ip: '127.0.0.1' });
+    const header = 'interface    Temperature(degree)  Voltage(V)  Current(mA)    TxPower(dBm)';
+    assert.equal(d.detectPrompt(header), '');
+    assert.equal(d.detectPrompt(header + '\n-----------  ----'), '');
+    assert.equal(d.detectPrompt(' interface    RxPower(dBm)'), '');
+    assert.equal(d.detectPrompt('x\nDORICHOR-BABU#'), 'DORICHOR-BABU#');
+    assert.equal(d.detectPrompt('x\nOLT(config)#'), 'OLT(config)#');
+    assert.equal(d.detectPrompt('x\nOLT>'), 'OLT>');
+    assert.equal(d.detectPrompt('x\nOLT# --More--'), '');
+});
