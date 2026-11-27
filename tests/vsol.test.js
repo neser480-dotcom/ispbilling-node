@@ -108,7 +108,7 @@ function fakeOlt({ failLogin = false } = {}) {
                     state = "interface";
                     socket.write(line + "\r\nepon-olt(config-if)#");
                 } else if (line === "show onu status all") {
-                    const rows = STATUS.split("\n").filter((row, n) => n === 0 || row.startsWith("EPON" + currentPon + ":"));
+                    const rows = STATUS.split("\n");
                     socket.write(line + "\r\n" + rows.join("\r\n") + "\r\nepon-olt(config-if)#");
                 } else if (line === "show onu opm-diag") {
                     const rows = OPM.split("\n").filter((row, n) => n === 0 || row.startsWith("EPON" + currentPon + ":"));
