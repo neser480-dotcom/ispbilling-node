@@ -48,6 +48,7 @@ router.post("/:id/auto-map", controller.autoMap);
 
 // OLT Users / ONU list
 router.get("/:id/onus", controller.listOnus);
+router.delete("/:id/onus/:onuId", controller.deleteOnu);
 
 // Sync one existing ONU without changing its customer mapping.
 router.post("/:id/onus/:onuId/sync", controller.syncOneOnu);
