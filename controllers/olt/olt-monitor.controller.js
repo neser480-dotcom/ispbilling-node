@@ -280,7 +280,7 @@ async function getLiveForOlt(olt) {
 
     // "BDCOM", "bd com", "BD-COM EPON" ...
     const isBdcom = /bd[\s_-]*com/i.test(identity);
-        const isVsol = /v[-\s]?sol|vsol/i.test(
+    const isVsol = /v[-\s]?sol|vsol/i.test(identity);
 
     if (!isCData && !isEcom && !isBdcom && !isVsol) {
         return {
@@ -890,7 +890,7 @@ exports.live = async function (req, res, next) {
         );
 
         const onuRows = await getOnuRows(oltId);
-        const isVsol = /v[-\\s]?sol|vsol/i.test(
+        const isVsol = /v[-\s]?sol|vsol/i.test(
             `${olt.vendor || ""} ${olt.model || ""} ${olt.name || ""}`
         );
         const livePorts = enrichLivePorts(result.ports, onuRows, isVsol);
