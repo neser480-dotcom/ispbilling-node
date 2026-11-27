@@ -383,10 +383,56 @@ exports.list = async (req, res) => {
             params
         );
 
+        // Recover ONU rows whose OLT record was hard-deleted in an older
+        // version. The ONU table retains company_id, so recovery remains
+        // strictly company-scoped and does not expose another tenant's data.
+        const orphanScope = isSuperAdmin(req)
+            ? { sql: "", params: [] }
+            : { sql: " AND o.company_id = ?", params: [companyId(req)] };
+
+        const [orphanOlts] = await getPool().execute(
+            `SELECT
+                o.olt_id AS id,
+                COALESCE(
+                    MAX(NULLIF(TRIM(o.olt_name), "")),
+                    CONCAT("Deleted OLT #", o.olt_id)
+                ) AS name,
+                "deleted" AS vendor,
+                "" AS ip,
+                0 AS port,
+                0 AS pon_ports,
+                "deleted" AS status,
+                COALESCE(MAX(o.olt_deleted_at), "orphaned") AS deleted_at,
+                COUNT(*) AS onu_total,
+                SUM(
+                    CASE
+                        WHEN LOWER(COALESCE(o.status, "")) IN
+                            ("online", "up", "connected", "active", "1")
+                        THEN 1 ELSE 0
+                    END
+                ) AS onu_online
+             FROM onu AS o
+             LEFT JOIN olts AS existing_olt
+               ON existing_olt.id = o.olt_id
+             WHERE existing_olt.id IS NULL
+               AND o.olt_id IS NOT NULL
+               AND o.company_id IS NOT NULL
+               ${orphanScope.sql}
+             GROUP BY o.olt_id, o.company_id
+             ORDER BY o.olt_id DESC
+             LIMIT 500`,
+            orphanScope.params
+        );
+
+        const existingIds = new Set(rows.map(row => String(row.id)));
+        const recovered = orphanOlts.filter(
+            row => !existingIds.has(String(row.id))
+        );
+
         return res.json({
             success: true,
-            total: rows.length,
-            data: rows
+            total: rows.length + recovered.length,
+            data: [...rows, ...recovered]
         });
     } catch (error) {
         return jsonError(res, error);
@@ -1030,7 +1076,92 @@ ppp = await collectPppSessions(
 exports.listOnus = async (req, res) => {
     try {
         const id = validId(req.params.id);
-        const olt = await findOlt(req, id, { includeDeleted: true });
+        let olt;
+
+        try {
+            olt = await findOlt(req, id, { includeDeleted: true });
+        } catch (error) {
+            if (error.status !== 404) throw error;
+
+            const scope = isSuperAdmin(req)
+                ? { sql: "", params: [] }
+                : { sql: " AND o.company_id = ?", params: [companyId(req)] };
+
+            const [orphanRows] = await getPool().execute(
+                `SELECT
+                    o.id,
+                    o.olt_id,
+                    o.company_id,
+                    "Customer not linked" AS name,
+                    COALESCE(NULLIF(TRIM(o.ip_address), ""), "") AS ip_address,
+                    COALESCE(NULLIF(TRIM(o.onu_mac), ""), NULLIF(TRIM(o.mac_address), ""), "") AS mac,
+                    o.onu_sn AS serial,
+                    o.customer_id AS onu_customer_id,
+                    NULL AS mapping_id,
+                    NULL AS mapping_customer_id,
+                    NULL AS matched_customer_id,
+                    NULL AS customer_code,
+                    NULL AS customer_name,
+                    NULL AS customer_phone,
+                    NULL AS customer_onu_mac,
+                    NULL AS pppoe_username,
+                    COALESCE(NULLIF(TRIM(o.olt_name), ""), CONCAT("Deleted OLT #", o.olt_id)) AS olt_name,
+                    o.pon,
+                    o.port,
+                    o.status,
+                    o.rx_power,
+                    o.tx_power,
+                    o.distance,
+                    o.bias_current,
+                    o.voltage,
+                    o.temperature,
+                    COALESCE(o.last_update, o.updated_at, o.last_seen) AS last_update
+                 FROM onu AS o
+                 LEFT JOIN olts AS existing_olt ON existing_olt.id = o.olt_id
+                 WHERE o.id IS NOT NULL
+                   AND o.olt_id = ?
+                   AND existing_olt.id IS NULL
+                   AND o.company_id IS NOT NULL
+                   ${scope.sql}
+                 ORDER BY o.id DESC
+                 LIMIT 1000`,
+                [id, ...scope.params]
+            );
+
+            if (!orphanRows.length) throw error;
+
+            const company = isSuperAdmin(req)
+                ? Number(orphanRows[0].company_id || 0)
+                : companyId(req);
+
+            olt = {
+                id,
+                company_id: company,
+                name: orphanRows[0].olt_name,
+                vendor: "deleted",
+                deleted_at: "orphaned",
+                orphaned: true
+            };
+
+            const data = orphanRows.map(row => ({
+                ...row,
+                customer_linked: false,
+                ppp_caller_id: null,
+                ppp_ip: null,
+                extra_customers: [],
+                customer_count: 0,
+                onu_device_name: row.onu_name || row.name || "ONU",
+                mapping_required: true
+            }));
+
+            return res.json({
+                success: true,
+                total: data.length,
+                data,
+                customer_sessions: []
+            });
+        }
+
         const search = clean(req.query.search, 150);
 
         let sql = `
@@ -1463,7 +1594,39 @@ exports.deleteOnu = async (req, res) => {
 
         const oltId = validId(req.params.id);
         const onuId = validId(req.params.onuId);
-        const olt = await findOlt(req, oltId, { includeDeleted: true });
+        let olt;
+
+        try {
+            olt = await findOlt(req, oltId, { includeDeleted: true });
+        } catch (error) {
+            if (error.status !== 404) throw error;
+
+            const scope = isSuperAdmin(req)
+                ? { sql: "", params: [] }
+                : { sql: " AND company_id = ?", params: [companyId(req)] };
+
+            const [orphanRows] = await getPool().execute(
+                `SELECT company_id
+                   FROM onu
+                  WHERE id = ?
+                    AND olt_id = ?
+                    AND company_id IS NOT NULL
+                    AND NOT EXISTS (
+                        SELECT 1 FROM olts WHERE olts.id = onu.olt_id
+                    )
+                    ${scope.sql}
+                  LIMIT 1`,
+                [onuId, oltId, ...scope.params]
+            );
+
+            if (!orphanRows.length) throw error;
+
+            olt = {
+                id: oltId,
+                company_id: Number(orphanRows[0].company_id),
+                orphaned: true
+            };
+        }
 
         connection = await getPool().getConnection();
         await connection.beginTransaction();
@@ -1507,8 +1670,9 @@ exports.deleteOnu = async (req, res) => {
         await connection.execute(
             `DELETE FROM onu
               WHERE id = ?
-                AND olt_id = ?`,
-            [onuId, oltId]
+                AND olt_id = ?
+                AND company_id = ?`,
+            [onuId, oltId, olt.company_id]
         );
 
         await connection.commit();
