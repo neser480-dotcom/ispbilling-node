@@ -228,7 +228,9 @@ function ddmPort(id, d) {
         rx: d.rx,
         onu_rx_min: d.rxMin,
         onu_rx_max: d.rxMax,
-        onu_rx_count: d.onuCount
+        onu_rx_count: d.onuCount,
+        onu_read_count: d.onuReadCount,
+        reading_source: d.readingSource || "pon_sfp"
     };
 
     const missing = DDM_FIELDS.filter(f => !Number.isFinite(Number(port[f])) || port[f] === null);
@@ -239,6 +241,55 @@ function ddmPort(id, d) {
         : missing.length === DDM_FIELDS.length ? "unavailable" : "partial";
 
     return port;
+}
+
+/*
+| BDCOM P3310D verified command returns ONU-side CTC optical values.
+| Aggregate only actual online ONU readings; never label them as PON SFP DDM.
+*/
+function aggregateOnuOptical(rows, id) {
+    const ponNumber = Number(String(id).split("/").pop());
+    const candidates = (Array.isArray(rows) ? rows : []).filter(row =>
+        Number(row.pon_no) === ponNumber &&
+        String(row.status || "").toLowerCase() === "online"
+    );
+
+    const average = values => {
+        const valid = values.filter(value =>
+            value !== null && value !== undefined &&
+            value !== "" && Number.isFinite(Number(value))
+        ).map(Number);
+
+        return valid.length
+            ? Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length * 10) / 10
+            : null;
+    };
+
+    const temperatures = candidates.map(row => row.temperature);
+    const voltages = candidates.map(row => row.voltage);
+    const biases = candidates.map(row => row.bias_current);
+    const txValues = candidates.map(row => row.tx_power);
+    const rxValues = candidates.map(row => row.rx_power)
+        .filter(value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)))
+        .map(Number);
+
+    const d = {
+        temp: average(temperatures),
+        voltage: average(voltages),
+        bias: average(biases),
+        tx: average(txValues),
+        rx: average(rxValues),
+        rxMin: rxValues.length ? Math.min(...rxValues) : null,
+        rxMax: rxValues.length ? Math.max(...rxValues) : null,
+        onuCount: rxValues.length,
+        onuReadCount: candidates.filter(row =>
+            [row.temperature, row.voltage, row.bias_current, row.tx_power, row.rx_power]
+                .some(value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)))
+        ).length,
+        readingSource: "online_onu_average"
+    };
+
+    return DDM_FIELDS.some(field => d[field] !== null) ? d : null;
 }
 
 function parseBdcomSystem(outputs, olt = {}) {
@@ -462,31 +513,34 @@ async function readBdcomLive(olt, config) {
             warnings.push("Fan status was not parsed from show fan.");
         }
 
-        // PON SFP DDM + OLT-side ONU Rx, one command per PON port (~0.7 s each)
+        // Read verified ONU-side CTC optical diagnostics, then summarize by PON.
+        // The PON-level optical-diagnosis command is unreliable on this P3310D.
+        let opticalOnus = [];
+
+        try {
+            if (typeof driver.getONUs === "function") {
+                opticalOnus = await driver.getONUs();
+                for (const detail of driver.opticalErrors || []) {
+                    warnings.push(`ONU optical: ${detail}`);
+                }
+            } else {
+                warnings.push("BDCOM driver does not support ONU optical diagnostics.");
+            }
+        } catch (error) {
+            warnings.push(
+                `ONU optical collection: ${String(error?.message || "failed").slice(0, 140)}`
+            );
+        }
+
         for (let i = 0; i < BDCOM_PON_PORTS.length; i++) {
             const id = BDCOM_PON_PORTS[i];
+            const ddm = aggregateOnuOptical(opticalOnus, id);
 
-            try {
-                const output = await driver.command(
-                    `show epon optical-transceiver-diagnosis interface epon${id}`,
-                    20000
-                );
-
-                const ddm = ERROR_OUTPUT.test(clean(output))
-                    ? null
-                    : parsePonDdm(output);
-
-                if (ddm) {
-                    ports[i] = ddmPort(id, ddm);
-                } else {
-                    warnings.push(
-                        `PON ${id}: optical diagnosis not parsed (${clean(output).length} chars): ` +
-                        clean(output).slice(0, 160).replace(/\s+/g, " ")
-                    );
-                }
-            } catch (error) {
+            if (ddm) {
+                ports[i] = ddmPort(id, ddm);
+            } else {
                 warnings.push(
-                    `PON ${id}: ${String(error?.message || "optical query failed").slice(0, 100)}`
+                    `PON ${id}: no online ONU CTC optical readings available.`
                 );
             }
         }
@@ -521,6 +575,7 @@ module.exports = {
     parseMemory,
     parsePonDdm,
     ddmPort,
+    aggregateOnuOptical,
     parseHelpWords,
     formatUptime,
     BDCOM_PON_PORTS
