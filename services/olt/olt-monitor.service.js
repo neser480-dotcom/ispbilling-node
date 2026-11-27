@@ -1461,7 +1461,7 @@ async function readVsolLiveDdm(olt) {
 
     try {
         await driver.connect();
-        await driver.detectModel();
+        const modelInfo = await driver.detectModel();
         const onus = await driver.getONUs();
 
         // Read system/device telemetry independently: unsupported commands must
@@ -1494,6 +1494,8 @@ async function readVsolLiveDdm(olt) {
         }
 
         const system = parseSystemTelemetry(systemOutputs);
+        system.vendor = modelInfo.vendor;
+        system.model = modelInfo.model;
         const modules = parseBoardModules(systemOutputs.board, interfacesCountFromOnus(onus));
 
         const interfaces = [...new Set(
