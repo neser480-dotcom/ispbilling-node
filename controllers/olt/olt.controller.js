@@ -640,7 +640,7 @@ exports.remove = async (req, res) => {
 
         await connection.execute(
             `UPDATE olts AS ol
-                SET ol.deleted_at = NOW()
+                SET deleted_at = NOW()
               WHERE ol.id = ? ${scope.sql}
                 AND ol.deleted_at IS NULL`,
             [id, ...scope.params]
