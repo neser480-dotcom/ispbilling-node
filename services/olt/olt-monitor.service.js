@@ -1484,20 +1484,23 @@ function parseVsolPonOptical(output, fs) {
     const read = pattern => { const match = text.match(pattern); return match ? Number(match[1]) : null; };
     const txUw = read(/Transmit Power\s*:\s*([\d.]+)\s*uW/i);
     const txDbm = read(/Transmit Power\s*:\s*[\d.]+\s*uW\s*\(\s*(-?[\d.]+)\s*dBm\s*\)/i);
+    const voltage = read(/Voltage\s*:\s*(-?[\d.]+)\s*V/i);
+    const bias = read(/Bias Current\s*:\s*(-?[\d.]+)\s*mA/i);
+    const txAvailable = txDbm !== null || (txUw !== null && txUw > 0);
     return {
         id: "epon" + fs, name: "PON " + fs.split("/").pop(),
         temp: read(/Temp(?:p|e)rature\s*:\s*(-?[\d.]+)/i),
-        voltage: read(/Voltage\s*:\s*(-?[\d.]+)\s*V/i),
-        bias: read(/Bias Current\s*:\s*(-?[\d.]+)\s*mA/i),
+        voltage,
+        bias,
         tx: txDbm !== null ? txDbm : (txUw !== null && txUw > 0 ? Number((10 * Math.log10(txUw / 1000)).toFixed(2)) : null),
         rx: null,
         // This VSOL command does not report SFP RX or temperature on this model.
         // Determine health from the fields it actually supplies.
-        status: [voltage, bias, txDbm !== null || (txUw !== null && txUw > 0)].every(value => value !== null && value !== false) ? "ok" : "partial",
+        status: [voltage, bias, txAvailable].every(value => value !== null && value !== false) ? "ok" : "partial",
         missing_fields: [
             ...(voltage === null ? ["voltage"] : []),
             ...(bias === null ? ["bias"] : []),
-            ...(txDbm === null && !(txUw !== null && txUw > 0) ? ["tx"] : [])
+            ...(txAvailable ? [] : ["tx"])
         ],
         detail: "SFP RX and temperature are not reported by this VSOL command.",
         reading_source: "pon_sfp_ddm"
