@@ -249,6 +249,16 @@
                 })
             );
 
+        const onuOptical = Array.isArray(data.onuOptical)
+            ? data.onuOptical.map(port => ({
+                n: getPonNumber(port, 0), id: String(port.id ?? ""),
+                onlineOnu: numberOrNull(port.onlineOnu) ?? 0,
+                rx: port.rx ?? "No reading", tx: port.tx ?? "No reading",
+                bias: port.bias ?? "No reading", temp: port.temp ?? "No reading",
+                voltage: port.voltage ?? "No reading"
+            })).sort((a, b) => a.n - b.n)
+            : [];
+
         const pons = portSource.map((port, index) => ({
             n: getPonNumber(port, index),
             id: String(port.id ?? port.pon ?? ""),
@@ -439,6 +449,7 @@
                     : [],
 
             pons,
+            onuOptical,
             onuKnown,
             alarms: Array.isArray(data.alarms) ? data.alarms : [],
             warnings: Array.isArray(data.warnings) ? data.warnings : []
@@ -713,6 +724,13 @@
                 <td>${escapeHtml(pon.voltage)}</td>
                 <td>${pill(pon.status)}</td>
             </tr>`).join("");
+        }
+
+        const onuOpticalRows = $("omOnuOpticalRows");
+        if (onuOpticalRows) {
+            onuOpticalRows.innerHTML = olt.onuOptical.length
+                ? olt.onuOptical.map(port => "<tr><td>PON " + port.n + "</td><td>" + escapeHtml(port.rx) + "</td><td>" + escapeHtml(port.tx) + "</td><td>" + escapeHtml(port.bias) + "</td><td>" + escapeHtml(port.temp) + "</td><td>" + escapeHtml(port.voltage) + "</td><td>" + escapeHtml(port.onlineOnu) + "</td></tr>").join("")
+                : emptyRow(7, "No online ONU optical readings are available.");
         }
 
         const alarmRows = $("omAlarmRows");
