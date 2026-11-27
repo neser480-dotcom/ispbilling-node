@@ -28,7 +28,7 @@ router.post("/", requirePermission("olt_add"), controller.create);
 // Edit OLT
 router.put("/:id", controller.update);
 
-// Delete OLT and associated ONU records
+// Soft-delete OLT; keep ONU records available for manual cleanup
 router.delete("/:id", controller.remove);
 
 // Test actual OLT connection
