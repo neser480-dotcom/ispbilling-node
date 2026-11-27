@@ -1450,6 +1450,10 @@ function averageValues(rows, field) {
         : null;
 }
 
+function interfacesCountFromOnus(onus) {
+    return new Set((onus || []).map(row => String(row.f_s || "").trim()).filter(Boolean)).size || 4;
+}
+
 async function readVsolLiveDdm(olt) {
     const driver = new VsolDriver(buildDriverConfig(olt));
     const warnings = [];
@@ -1459,6 +1463,38 @@ async function readVsolLiveDdm(olt) {
         await driver.connect();
         await driver.detectModel();
         const onus = await driver.getONUs();
+
+        // Read system/device telemetry independently: unsupported commands must
+        // not interrupt ONU optical monitoring. These are read-only CLI queries.
+        const systemCommands = {
+            temperature: "show temperature",
+            cpu: "show cpu",
+            memory: "show memory",
+            uptime: "show uptime",
+            device: "show device",
+            version: "show version",
+            fan: "show fan",
+            power: "show power state",
+            board: "show board"
+        };
+        const systemOutputs = {};
+
+        for (const [key, command] of Object.entries(systemCommands)) {
+            try {
+                const output = await driver.command(command, 12000);
+                systemOutputs[key] = output;
+
+                if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(output)) {
+                    warnings.push(`${command}: ${stripAnsi(output).trim().slice(0, 140)}`);
+                }
+            } catch (error) {
+                systemOutputs[key] = "";
+                warnings.push(`${command}: ${String(error?.message || "command failed").slice(0, 140)}`);
+            }
+        }
+
+        const system = parseSystemTelemetry(systemOutputs);
+        const modules = parseBoardModules(systemOutputs.board, interfacesCountFromOnus(onus));
 
         const interfaces = [...new Set(
             onus.map(row => String(row.f_s || "").trim()).filter(Boolean)
@@ -1536,7 +1572,8 @@ async function readVsolLiveDdm(olt) {
     return {
         ports,
         warnings,
-        system: null
+        system,
+        modules
     };
 }
 
