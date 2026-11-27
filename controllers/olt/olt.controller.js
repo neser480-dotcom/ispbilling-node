@@ -289,13 +289,16 @@ function verifyMappingCsrf(req) {
     }
 }
 
-async function findOlt(req, id) {
+async function findOlt(req, id, options = {}) {
     const scope = scopeSql(req, "ol");
+    const deletedFilter = options.includeDeleted
+        ? ""
+        : " AND ol.deleted_at IS NULL";
 
     const [rows] = await getPool().execute(
         `SELECT ol.*
            FROM olts AS ol
-          WHERE ol.id = ? ${scope.sql}
+          WHERE ol.id = ? ${scope.sql}${deletedFilter}
           LIMIT 1`,
         [id, ...scope.params]
     );
@@ -325,7 +328,11 @@ exports.list = async (req, res) => {
         const search = clean(req.query.search, 150);
         const scope = scopeSql(req, "ol");
 
-        let where = `WHERE 1=1 ${scope.sql}`;
+        const includeDeleted =
+            String(req.query.include_deleted || "") === "1";
+        let where = `WHERE 1=1 ${scope.sql}${
+            includeDeleted ? "" : " AND ol.deleted_at IS NULL"
+        }`;
         const params = [...scope.params];
 
         if (search) {
@@ -351,6 +358,7 @@ exports.list = async (req, res) => {
                 ol.pon_ports,
                 ol.snmp_version,
                 ol.status,
+                ol.deleted_at,
                 ol.created_at,
                 ol.last_check,
                 (
@@ -623,18 +631,18 @@ exports.remove = async (req, res) => {
 
         const scope = scopeSql(req, "ol");
 
-        // Only the OLT row is deleted. ONU rows and customer mappings
-        // (onu_user_mapping, onu_ppp_info, onu_customer_links) are kept;
-        // an ONU is removed only by a manual ONU delete.
+        // Soft-delete the OLT so its stored ONUs remain company-scoped
+        // and can still be manually deleted from the ONU Users page.
         const [[kept]] = await connection.execute(
             "SELECT COUNT(*) AS total FROM onu WHERE olt_id = ?",
             [id]
         );
 
         await connection.execute(
-            `DELETE ol
-               FROM olts AS ol
-              WHERE ol.id = ? ${scope.sql}`,
+            `UPDATE olts AS ol
+                SET ol.deleted_at = NOW()
+              WHERE ol.id = ? ${scope.sql}
+                AND ol.deleted_at IS NULL`,
             [id, ...scope.params]
         );
 
@@ -1022,7 +1030,7 @@ ppp = await collectPppSessions(
 exports.listOnus = async (req, res) => {
     try {
         const id = validId(req.params.id);
-        const olt = await findOlt(req, id);
+        const olt = await findOlt(req, id, { includeDeleted: true });
         const search = clean(req.query.search, 150);
 
         let sql = `
