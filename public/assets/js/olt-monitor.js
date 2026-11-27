@@ -726,6 +726,7 @@
                 <td>${escapeHtml(pon.bias)}</td>
                 <td>${escapeHtml(pon.temp)}</td>
                 <td>${escapeHtml(pon.voltage)}</td>
+                <td>${escapeHtml(pon.onlineOnu === null ? "N/A" : `${pon.onlineOnu} / ${pon.totalOnu ?? 0}`)}</td>
                 <td>${pill(pon.status)}</td>
             </tr>`).join("");
         }
