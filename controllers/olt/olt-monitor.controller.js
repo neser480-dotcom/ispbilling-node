@@ -390,6 +390,8 @@ async function getSelectedOltData(olt, counts, onuRows) {
     const ponIds = getConfiguredPonIds(olt, ddmPorts);
     const telemetry = live.system || {};
 
+    const onuOptical = buildOnuOpticalAverages(onuRows, ponIds);
+
     const ports = ponIds.map(id => {
         const ddm = ddmPorts.find(
             port => String(port.id) === String(id)
@@ -461,6 +463,7 @@ async function getSelectedOltData(olt, counts, onuRows) {
         warnings,
         systemStatus,
         modules: Array.isArray(live.modules) ? live.modules : [],
+        onuOptical,
         totalOnu: counts.total,
         onlineOnu: counts.online,
         offlineOnu: counts.offline
@@ -723,14 +726,31 @@ function nowStamp() {
 async function getOnuRows(oltId) {
     try {
         const [rows] = await getPool().execute(
-            "SELECT pon, status FROM onu WHERE olt_id = ?",
+            "SELECT pon, status, rx_power, tx_power, bias_current, temperature, voltage " +
+            "FROM onu WHERE olt_id = ?",
             [oltId]
         );
-
         return rows;
     } catch (_) {
         return [];
     }
+}
+
+function buildOnuOpticalAverages(onuRows, ponIds = []) {
+    const ids = ponIds.length ? ponIds : [...new Set(onuRows.map(onu => String(onu.pon || "").trim()).filter(Boolean))];
+    return ids.map(id => {
+        const matching = onuRows.filter(onu => ponMatches(onu.pon, id) && isOnline(onu.status));
+        return {
+            id,
+            name: "PON " + String(id).split("/").pop(),
+            onlineOnu: matching.length,
+            rx: average(matching.map(onu => onu.rx_power)),
+            tx: average(matching.map(onu => onu.tx_power)),
+            bias: average(matching.map(onu => onu.bias_current)),
+            temp: average(matching.map(onu => onu.temperature)),
+            voltage: average(matching.map(onu => onu.voltage))
+        };
+    });
 }
 
 // Adds the real ONU totals of each PON port to the live DDM rows.
@@ -851,6 +871,7 @@ exports.live = async function (req, res, next) {
             ports: enrichLivePorts(result.ports, onuRows),
             system: result.system,
             modules: Array.isArray(result.modules) ? result.modules : [],
+            onuOptical: buildOnuOpticalAverages(onuRows, (result.ports || []).map(port => port.id)),
             alarms: buildLiveAlarms(
                 olt,
                 Array.isArray(result.events) ? result.events : [],
