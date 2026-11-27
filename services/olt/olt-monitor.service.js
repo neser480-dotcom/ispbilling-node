@@ -1501,7 +1501,7 @@ function parseVsolSfpOptical(output, fs) {
 
     return {
         id: String(fs),
-        name: \`PON \${String(fs).split("/") .pop()}\`,
+        name: "PON " + String(fs).split("/").pop(),
         tx,
         rx: null,
         bias,
