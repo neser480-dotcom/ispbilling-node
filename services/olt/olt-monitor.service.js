@@ -1454,131 +1454,98 @@ function interfacesCountFromOnus(onus) {
     return new Set((onus || []).map(row => String(row.f_s || "").trim()).filter(Boolean)).size || 4;
 }
 
+function parseVsolVersion(output) {
+    const text = cleanOutput(output);
+    const value = pattern => (text.match(pattern) || [])[1]?.trim() || null;
+    return {
+        serial: value(/Olt Serial Number\s*:\s*(.+)/i),
+        hardware: value(/Hardware Version\s*:\s*(.+)/i),
+        softwareVersion: value(/Software Version\s*:\s*(.+)/i),
+        firmware: value(/Software Version\s*:\s*(.+)/i),
+        softwareCreatedTime: value(/Software Created Time\s*:\s*(.+)/i),
+        versionType: value(/Olt Version Type\s*:\s*(.+)/i)
+    };
+}
+
+function parseVsolFan(output) {
+    const text = cleanOutput(output);
+    const state = (text.match(/current fans state\s*:\s*(.+)/i) || [])[1]?.trim() || null;
+    const tempMatch = text.match(/current temperature\s*:\s*(-?\d+(?:\.\d+)?)/i);
+    const thresholdMatch = text.match(/open fan temperature\s*:\s*(-?\d+(?:\.\d+)?)/i);
+    return {
+        temperatureC: tempMatch ? Number(tempMatch[1]) : null,
+        fan: { mode: state, level: null, fans: state ? [{ name: "Chassis Fan", status: state, rpm: null }] : [] },
+        fanStartTemperatureC: thresholdMatch ? Number(thresholdMatch[1]) : null
+    };
+}
+
+function parseVsolPonOptical(output, fs) {
+    const text = cleanOutput(output);
+    const read = pattern => { const match = text.match(pattern); return match ? Number(match[1]) : null; };
+    const txUw = read(/Transmit Power\s*:\s*([\d.]+)\s*uW/i);
+    const txDbm = read(/Transmit Power\s*:\s*[\d.]+\s*uW\s*\(\s*(-?[\d.]+)\s*dBm\s*\)/i);
+    return {
+        id: "epon" + fs, name: "PON " + fs.split("/").pop(),
+        temp: read(/Temp(?:p|e)rature\s*:\s*(-?[\d.]+)/i),
+        voltage: read(/Voltage\s*:\s*(-?[\d.]+)\s*V/i),
+        bias: read(/Bias Current\s*:\s*(-?[\d.]+)\s*mA/i),
+        tx: txDbm !== null ? txDbm : (txUw !== null && txUw > 0 ? Number((10 * Math.log10(txUw / 1000)).toFixed(2)) : null),
+        rx: null, status: "partial", missing_fields: ["rx"], reading_source: "pon_sfp_ddm"
+    };
+}
+
 async function readVsolLiveDdm(olt) {
     const driver = new VsolDriver(buildDriverConfig(olt));
     const warnings = [];
     let ports = [];
-
+    let system = null;
+    const modules = [];
     try {
         await driver.connect();
         const modelInfo = await driver.detectModel();
         const onus = await driver.getONUs();
-
-        // Read system/device telemetry independently: unsupported commands must
-        // not interrupt ONU optical monitoring. These are read-only CLI queries.
-        const systemCommands = {
-            temperature: "show temperature",
-            cpu: "show cpu",
-            memory: "show memory",
-            uptime: "show uptime",
-            device: "show device",
-            version: "show version",
-            fan: "show fan",
-            power: "show power state",
-            board: "show board"
-        };
+        const interfaces = [...new Set(onus.map(row => String(row.f_s || "").trim()).filter(Boolean))].sort((a, b) => {
+            const aa = a.split("/").map(Number); const bb = b.split("/").map(Number);
+            return (aa[0] - bb[0]) || (aa[1] - bb[1]);
+        });
+        // Reconnect so the CLI is back at privileged mode before entering config mode.
+        driver.disconnect();
+        await driver.connect();
+        await driver.command("configure terminal", 10000);
         const systemOutputs = {};
-
-        for (const [key, command] of Object.entries(systemCommands)) {
+        for (const [key, command] of Object.entries({ version: "show version", fan: "show fan" })) {
             try {
                 const output = await driver.command(command, 12000);
                 systemOutputs[key] = output;
-
-                if (/unknown command|too many parameters|invalid command|ambiguous command/i.test(output)) {
-                    warnings.push(`${command}: ${stripAnsi(output).trim().slice(0, 140)}`);
-                }
+                if (/unknown command|invalid command|ambiguous command/i.test(output)) warnings.push(`${command}: ${stripAnsi(output).trim().slice(0, 140)}`);
             } catch (error) {
                 systemOutputs[key] = "";
                 warnings.push(`${command}: ${String(error?.message || "command failed").slice(0, 140)}`);
             }
         }
-
-        const system = parseSystemTelemetry(systemOutputs);
-        system.vendor = modelInfo.vendor;
-        system.model = modelInfo.model;
-        const modules = parseBoardModules(systemOutputs.board, interfacesCountFromOnus(onus));
-
-        const interfaces = [...new Set(
-            onus.map(row => String(row.f_s || "").trim()).filter(Boolean)
-        )].sort((a, b) => {
-            const aa = a.split("/").map(Number);
-            const bb = b.split("/").map(Number);
-            return (aa[0] - bb[0]) || (aa[1] - bb[1]);
-        });
-
-        ports = interfaces.map(fs => {
-            const online = onus.filter(row =>
-                String(row.f_s) === fs &&
-                String(row.status).toLowerCase() === "online"
-            );
-            const readingRows = online.filter(row =>
-                ["temperature", "voltage", "bias_current", "tx_power", "rx_power"]
-                    .some(field => row[field] !== null && row[field] !== undefined &&
-                        Number.isFinite(Number(row[field])))
-            );
-
-            const result = {
-                id: "epon" + fs,
-                name: "PON " + fs.split("/").pop(),
-                temp: averageValues(readingRows, "temperature"),
-                voltage: averageValues(readingRows, "voltage"),
-                bias: averageValues(readingRows, "bias_current"),
-                tx: averageValues(readingRows, "tx_power"),
-                rx: averageValues(readingRows, "rx_power"),
-                status: readingRows.length ? "partial" : "unavailable",
-                missing_fields: [],
-                onu_read_count: readingRows.length,
-                online_onu_count: online.length,
-                reading_source: "online_onu_average"
-            };
-
-            result.missing_fields = DDM_FIELDS.filter(field =>
-                result[field] === null
-            );
-            result.status = result.missing_fields.length === DDM_FIELDS.length
-                ? "unavailable"
-                : result.missing_fields.length
-                    ? "partial"
-                    : "ok";
-
-            if (!readingRows.length) {
-                warnings.push(
-                    `${result.name}: no online ONU optical readings available.`
-                );
+        const version = parseVsolVersion(systemOutputs.version || "");
+        const fan = parseVsolFan(systemOutputs.fan || "");
+        system = { vendor: modelInfo.vendor, model: modelInfo.model, ...version, ...fan, cpu: null, memory: null, psu: [], voltageChannels: [], powerSlots: [] };
+        for (const fs of interfaces) {
+            try {
+                await driver.command(`interface epon ${fs}`, 10000);
+                const output = await driver.command("show pon optical transceiver", 12000);
+                if (/unknown command|invalid command|ambiguous command/i.test(output)) throw new Error(stripAnsi(output).trim().slice(0, 160));
+                ports.push(parseVsolPonOptical(output, fs));
+            } catch (error) {
+                warnings.push(`EPON ${fs} SFP DDM: ${String(error?.message || "read failed").slice(0, 180)}`);
+                ports.push({ id: "epon" + fs, name: "PON " + fs.split("/").pop(), temp: null, voltage: null, bias: null, tx: null, rx: null, status: "unavailable", missing_fields: ["temp", "voltage", "bias", "tx", "rx"], reading_source: "pon_sfp_ddm" });
             }
-
-            return result;
-        });
-
-        if (driver.opticalErrors.length) {
-            warnings.push(...driver.opticalErrors.map(message => String(message).slice(0, 220)));
         }
-
-        if (ports.some(port => port.onu_read_count > 0)) {
-            warnings.push(
-                "VSOL optical values are averages of online ONU readings, not PON SFP DDM."
-            );
-        }
+        if (driver.opticalErrors.length) warnings.push(...driver.opticalErrors.map(message => String(message).slice(0, 220)));
+        if (ports.length) warnings.push("VSOL PON readings are from the PON SFP transceiver; ONU optical readings are separate.");
+        if (!version.serial || !version.hardware || !version.softwareVersion) warnings.push("VSOL version output did not contain every device identity field.");
+        if (system.temperatureC === null) warnings.push("VSOL chassis temperature was not present in show fan output.");
     } catch (error) {
-        warnings.push(
-            `OLT ${olt.id}: ${String(error?.message || "VSOL monitoring read failed").slice(0, 220)}`
-        );
-    } finally {
-        try {
-            driver.disconnect();
-        } catch (_) {
-            // Preserve collected telemetry.
-        }
-    }
-
-    return {
-        ports,
-        warnings,
-        system,
-        modules
-    };
+        warnings.push(`OLT ${olt.id}: ${String(error?.message || "VSOL monitoring read failed").slice(0, 220)}`);
+    } finally { try { driver.disconnect(); } catch (_) { /* Preserve collected telemetry. */ } }
+    return { ports, warnings, system, modules };
 }
-
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ENTRY POINT
