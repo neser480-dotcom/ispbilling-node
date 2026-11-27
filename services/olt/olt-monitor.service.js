@@ -1480,6 +1480,70 @@ function parseVsolFan(output) {
 }
 
 
+function averageVsolOnuValue(rows, field) {
+    const values = rows
+        .map(row => row[field])
+        .filter(value => value !== null && value !== undefined && value !== "")
+        .map(Number)
+        .filter(value => Number.isFinite(value));
+
+    if (!values.length) return null;
+
+    return Number((
+        values.reduce((sum, value) => sum + value, 0) / values.length
+    ).toFixed(2));
+}
+
+function buildVsolPonOptical(onuRows, interfaces) {
+    const highestPon = Math.max(
+        4,
+        ...interfaces.map(value => Number(String(value).split("/").pop()) || 0)
+    );
+
+    return Array.from({ length: highestPon }, (_, index) => {
+        const fs = `0/${index + 1}`;
+        const rows = onuRows.filter(row => String(row.f_s) === fs);
+        const onlineRows = rows.filter(row =>
+            String(row.status || row.run_state || "").toLowerCase() === "online"
+        );
+
+        const tx = averageVsolOnuValue(onlineRows, "tx_power");
+        const rx = averageVsolOnuValue(onlineRows, "rx_power");
+        const bias = averageVsolOnuValue(onlineRows, "bias_current");
+        const temp = averageVsolOnuValue(onlineRows, "temperature");
+        const voltage = averageVsolOnuValue(onlineRows, "voltage");
+        const missingFields = [
+            ...(tx === null ? ["tx"] : []),
+            ...(rx === null ? ["rx"] : []),
+            ...(bias === null ? ["bias"] : []),
+            ...(temp === null ? ["temp"] : []),
+            ...(voltage === null ? ["voltage"] : [])
+        ];
+
+        return {
+            id: `epon${fs}`,
+            name: `PON ${index + 1}`,
+            tx,
+            rx,
+            bias,
+            temp,
+            voltage,
+            totalOnu: rows.length,
+            onlineOnu: onlineRows.length,
+            status: onlineRows.length === 0
+                ? "No online ONUs"
+                : missingFields.length === 0
+                    ? "ok"
+                    : "partial",
+            missing_fields: missingFields,
+            detail: onlineRows.length
+                ? `Average from ${onlineRows.length} online ONU optical reading(s).`
+                : "No online ONU optical readings on this PON.",
+            reading_source: "onu_optical_average"
+        };
+    });
+}
+
 async function readVsolLiveDdm(olt) {
     const driver = new VsolDriver(buildDriverConfig(olt));
     const warnings = [];
