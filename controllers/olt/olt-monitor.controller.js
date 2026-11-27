@@ -754,8 +754,18 @@ function buildOnuOpticalAverages(onuRows, ponIds = []) {
 }
 
 // Adds the real ONU totals of each PON port to the live DDM rows.
-function enrichLivePorts(ports, onuRows) {
+function enrichLivePorts(ports, onuRows, preferLiveCounts = false) {
     return ports.map(port => {
+        // VSOL reports the ONU inventory and optical readings in the same
+        // live Telnet read. Keep those counts paired with the averages.
+        if (
+            preferLiveCounts &&
+            safeNumber(port.totalOnu) !== null &&
+            safeNumber(port.onlineOnu) !== null
+        ) {
+            return { ...port };
+        }
+
         const matching = onuRows.filter(
             onu => ponMatches(onu.pon, port.id)
         );
@@ -766,6 +776,30 @@ function enrichLivePorts(ports, onuRows) {
             onlineOnu: matching.filter(onu => isOnline(onu.status)).length
         };
     });
+}
+
+function getLivePonOnuCounts(ports) {
+    const countable = ports.filter(port =>
+        safeNumber(port.totalOnu) !== null &&
+        safeNumber(port.onlineOnu) !== null
+    );
+
+    if (!countable.length) return null;
+
+    const total = countable.reduce(
+        (sum, port) => sum + Number(port.totalOnu),
+        0
+    );
+    const online = countable.reduce(
+        (sum, port) => sum + Number(port.onlineOnu),
+        0
+    );
+
+    return {
+        total,
+        online,
+        offline: Math.max(0, total - online)
+    };
 }
 
 function buildLiveAlarms(olt, deviceEvents, counts) {
@@ -856,6 +890,14 @@ exports.live = async function (req, res, next) {
         );
 
         const onuRows = await getOnuRows(oltId);
+        const isVsol = /v[-\\s]?sol|vsol/i.test(
+            `${olt.vendor || ""} ${olt.model || ""} ${olt.name || ""}`
+        );
+        const livePorts = enrichLivePorts(result.ports, onuRows, isVsol);
+        const livePonCounts = isVsol
+            ? getLivePonOnuCounts(livePorts)
+            : null;
+        const effectiveCounts = livePonCounts || onuCounts;
 
         return res.json({
             success: true,
@@ -868,18 +910,18 @@ exports.live = async function (req, res, next) {
                 location: olt.location || null
             },
             source: "live_olt_ddm",
-            ports: enrichLivePorts(result.ports, onuRows),
+            ports: livePorts,
             system: result.system,
             modules: Array.isArray(result.modules) ? result.modules : [],
             onuOptical: buildOnuOpticalAverages(onuRows, (result.ports || []).map(port => port.id)),
             alarms: buildLiveAlarms(
                 olt,
                 Array.isArray(result.events) ? result.events : [],
-                onuCounts
+                effectiveCounts
             ),
-            totalOnu: onuCounts.total,
-            activeOnu: onuCounts.online,
-            offlineOnu: onuCounts.offline,
+            totalOnu: effectiveCounts.total,
+            activeOnu: effectiveCounts.online,
+            offlineOnu: effectiveCounts.offline,
             captured_at: state.snap
                 ? new Date(state.snap.capturedAt).toISOString()
                 : null,
