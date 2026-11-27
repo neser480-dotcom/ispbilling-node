@@ -89,3 +89,41 @@ CPU MAX utilization: 100%(1970-1-1 3:41:22)
 DORICHOR-BABU#`);
     assert.deepEqual(c, { percent: 10, oneMinute: 14, fiveMinutes: 12 });
 });
+
+// Verbatim from a real P3310D (probe #2, 2026-11-27)
+const PON_DDM = `interface    Temperature(degree)  Voltage(V)  Current(mA)    TxPower(dBm)
+-----------  -------------------  ----------  -------------  --------------
+epon0/3      56.8                 3.3         55.6           8.5           
+ interface    RxPower(dBm)
+-----------  --------------
+epon0/3:2    -18.4          
+epon0/3:3    -18.4          
+         epon0/3:19   -18.7          
+epon0/3:25   -18.7          
+DORICHOR-BABU#`;
+
+test('PON SFP DDM and OLT-side ONU Rx', () => {
+    const d = t.parsePonDdm(PON_DDM);
+    assert.equal(d.port, 3);
+    assert.equal(d.temp, 56.8);
+    assert.equal(d.voltage, 3.3);
+    assert.equal(d.bias, 55.6);
+    assert.equal(d.tx, 8.5);
+    assert.equal(d.onuCount, 4);
+    assert.equal(d.rx, -18.5);
+    assert.equal(d.rxMin, -18.7);
+    const p = t.ddmPort('0/3', d);
+    assert.equal(p.status, 'ok');
+    assert.equal(p.name, 'PON 3');
+});
+
+test('real "show memory region" utilization', () => {
+    const m = t.parseMemory(`Level 1 Heap:
+    max block 19926128, free 20013360 bytes,
+    total alloc 10773 blocks(75665216 bytes)
+No Level 2 Heap avaliable.
+Memory utilization 61%(Image 21%, Region 23%, Heap 37%/71%, Msg buffer 0%/6%)
++[ 0]Size:    32 Current:10006 Max:  10337 Total: 126279
+DORICHOR-BABU#`);
+    assert.equal(m.percent, 61);
+});

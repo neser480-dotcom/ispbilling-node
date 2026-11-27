@@ -11,14 +11,15 @@
 |   show fan          FAN_NUMBER STATUS ("running")
 |   show power        POWER_NUMBER STATUS ("on")
 |
-| NOT verified: the probe showed "show cpu usage" -> "Too many parameters" and
-| "show memory" -> "Incomplete command", so the CPU and memory commands below
-| are best-effort candidates. They are tried in order, the first usable answer
-| wins, and a miss only adds a warning (cpu/ram stay empty, nothing breaks).
+|   show cpu          "CPU utilization for one second: 10%; one minute: 14%; ..."
+|   show memory region "Memory utilization 61%(Image 21%, Region 23%, ...)"
+|   show epon optical-transceiver-diagnosis interface epon0/N
+|                     PON SFP temperature / voltage / current(bias) / TxPower,
+|                     plus the OLT-side RxPower of every ONU on that port.
 |
-| PON optical (DDM) of the OLT's own SFP ports has no known command on this
-| model, so PON ports are returned as "unavailable". ONU counts per PON still
-| come from the synced ONU table, and per-ONU optical power is stored by sync.
+| If a command is rejected on another BDCOM model, the app asks the OLT for
+| its help list ("show memory ?") and tries what it offers; a miss only adds
+| a warning, nothing breaks.
 |--------------------------------------------------------------------------
 */
 
@@ -30,11 +31,8 @@ const DDM_FIELDS = ["temp", "voltage", "bias", "tx", "rx"];
 
 const CPU_COMMANDS = ["show cpu", "show processes cpu", "show cpu usage"];
 
-const MEMORY_COMMANDS = [
-    "show memory usage",
-    "show memory statistics",
-    "show memory summary"
-];
+// verified on P3310D: "show memory region" -> "Memory utilization 61%(Image 21%, ...)"
+const MEMORY_COMMANDS = ["show memory region"];
 
 const ERROR_OUTPUT =
     /invalid input|unknown command|unrecognized|incomplete command|too many parameters|ambiguous|% ?error/i;
@@ -180,6 +178,67 @@ function parseMemory(text) {
     }
 
     return percent === null ? null : { percent, total, used, free };
+}
+
+/*
+| show epon optical-transceiver-diagnosis interface epon0/N
+|   epon0/1   42.4   3.3   20.0   9.2        <- port: temp, voltage, mA, TxPower
+|   epon0/1:1 -23.4                          <- ONU: OLT-side RxPower
+*/
+function parsePonDdm(output) {
+    const text = clean(output);
+
+    const row = text.match(
+        /^\s*epon\d+\/(\d+)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$/im
+    );
+
+    const rx = [
+        ...text.matchAll(
+            /^\s*epon\d+\/\d+:(\d+)\s+(-?\d+(?:\.\d+)?)\s*$/gim
+        )
+    ].map(m => ({ ont_id: Number(m[1]), rx: Number(m[2]) }));
+
+    if (!row) return null;
+
+    const avg = rx.length
+        ? Math.round((rx.reduce((a, b) => a + b.rx, 0) / rx.length) * 10) / 10
+        : null;
+
+    return {
+        port: Number(row[1]),
+        temp: Number(row[2]),
+        voltage: Number(row[3]),
+        bias: Number(row[4]),
+        tx: Number(row[5]),
+        rx: avg,
+        rxMin: rx.length ? Math.min(...rx.map(x => x.rx)) : null,
+        rxMax: rx.length ? Math.max(...rx.map(x => x.rx)) : null,
+        onuCount: rx.length
+    };
+}
+
+function ddmPort(id, d) {
+    const port = {
+        id: String(id),
+        name: `PON ${String(id).split("/").pop()}`,
+        temp: d.temp,
+        voltage: d.voltage,
+        bias: d.bias,
+        tx: d.tx,
+        rx: d.rx,
+        onu_rx_min: d.rxMin,
+        onu_rx_max: d.rxMax,
+        onu_rx_count: d.onuCount
+    };
+
+    const missing = DDM_FIELDS.filter(f => !Number.isFinite(Number(port[f])) || port[f] === null);
+
+    port.missing_fields = missing;
+    port.status = missing.length === 0
+        ? "ok"
+        : missing.length === DDM_FIELDS.length ? "unavailable" : "partial";
+
+    return port;
 }
 
 function parseBdcomSystem(outputs, olt = {}) {
@@ -403,10 +462,31 @@ async function readBdcomLive(olt, config) {
             warnings.push("Fan status was not parsed from show fan.");
         }
 
-        warnings.push(
-            "BDCOM PON-port optical (DDM) is not available on this model; " +
-            "ONU optical power is collected during ONU sync."
-        );
+        // PON SFP DDM + OLT-side ONU Rx, one command per PON port (~0.7 s each)
+        for (let i = 0; i < BDCOM_PON_PORTS.length; i++) {
+            const id = BDCOM_PON_PORTS[i];
+
+            try {
+                const output = await driver.command(
+                    `show epon optical-transceiver-diagnosis interface epon${id}`,
+                    20000
+                );
+
+                const ddm = ERROR_OUTPUT.test(clean(output))
+                    ? null
+                    : parsePonDdm(output);
+
+                if (ddm) {
+                    ports[i] = ddmPort(id, ddm);
+                } else {
+                    warnings.push(`PON ${id}: optical diagnosis returned no data.`);
+                }
+            } catch (error) {
+                warnings.push(
+                    `PON ${id}: ${String(error?.message || "optical query failed").slice(0, 100)}`
+                );
+            }
+        }
     } catch (error) {
         warnings.push(
             `OLT ${olt.id}: ${String(error?.message || "BDCOM connection failed").slice(0, 200)}`
@@ -436,6 +516,8 @@ module.exports = {
     parsePower,
     parseCpu,
     parseMemory,
+    parsePonDdm,
+    ddmPort,
     parseHelpWords,
     formatUptime,
     BDCOM_PON_PORTS
