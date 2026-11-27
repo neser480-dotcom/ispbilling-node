@@ -1240,3 +1240,39 @@ html[data-theme="dark"] .theme-toggle,html[data-theme="dark"] .menu-toggle { bac
   .preview-side-logo { width:22px;height:22px; }
   .preview-live { font-size:8px;padding:4px 6px; }
 }
+
+
+/* Three-design switcher and contact bar */
+.public-topbar{background:#071936;color:#e2e8f0;font-size:13px}
+.public-topbar-inner{min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.public-topbar-contact,.public-topbar-social{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.public-topbar a{color:inherit;text-decoration:none}
+.public-topbar a:hover{color:#93c5fd}
+.design-preview-bar{background:#111827;color:#fff;padding:8px max(18px,calc((100% - 1160px)/2));display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px}
+.design-preview-actions{display:flex;gap:7px;flex-wrap:wrap}
+.design-preview-actions button{background:#1f2937;color:#d1d5db;border:1px solid #4b5563;padding:5px 11px;border-radius:7px;font-size:12px;cursor:pointer}
+.design-preview-actions button.active{background:#2563eb;color:#fff;border-color:#2563eb}
+body[data-design="2"]{--primary:#2563eb;--primary-dark:#1d4ed8;--secondary:#071936;--light:#eef4ff}
+body[data-design="2"] .hero{background:radial-gradient(circle at 75% 40%,#1d4ed8 0%,#0a2558 55%,#061536 100%);color:#fff}
+body[data-design="2"] .hero h1,body[data-design="2"] .hero h2,body[data-design="2"] .hero h3{color:#fff}
+body[data-design="2"] .hero-description{color:#cbd5e1}
+body[data-design="2"] .hero-label{background:rgba(255,255,255,.12);color:#fff}
+body[data-design="2"] .btn-primary{background:#4ade80;color:#052e16}
+body[data-design="2"] .dashboard-card{transform:none;box-shadow:0 25px 60px rgba(0,0,0,.28)}
+body[data-design="2"] .feature-card,body[data-design="2"] .price-card,body[data-design="2"] .app-card,body[data-design="2"] .team-card{border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+body[data-design="3"]{--primary:#0066ff;--primary-dark:#004ecc;--light:#fff7ed}
+body[data-design="3"] .hero{background:linear-gradient(125deg,#eff6ff 0%,#dbeafe 60%,#93c5fd 100%)}
+body[data-design="3"] .hero h1 strong,body[data-design="3"] .section-heading span{color:#f97316}
+body[data-design="3"] .hero-label{background:#fff7ed;color:#c2410c}
+body[data-design="3"] .btn-primary{background:#f97316;color:#fff}
+body[data-design="3"] .feature-icon{background:#fff7ed;color:#f97316}
+body[data-design="3"] .price-card.popular{border-color:#f97316}
+body[data-design="3"] .popular-tag{background:#f97316}
+@media(max-width:600px){
+ .public-topbar-inner{padding-top:7px;padding-bottom:7px}
+ .public-topbar-contact,.public-topbar-social{gap:9px}
+ .design-preview-bar{padding:8px 14px}
+ .design-preview-note{width:100%}
+ .design-preview-actions{width:100%}
+ .design-preview-actions button{flex:1}
+}
