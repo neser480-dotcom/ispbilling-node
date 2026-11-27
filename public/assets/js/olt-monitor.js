@@ -263,6 +263,20 @@
             })).sort((a, b) => a.n - b.n)
             : [];
 
+        const sfpPorts = Array.isArray(data.sfpPorts)
+            ? data.sfpPorts.map(port => ({
+                n: getPonNumber(port, 0),
+                id: String(port.id ?? ""),
+                tx: port.tx ?? "N/A",
+                rx: port.rx ?? "N/A",
+                bias: port.bias ?? "N/A",
+                temp: port.temp ?? "N/A",
+                voltage: port.voltage ?? "N/A",
+                status: port.status ?? "unavailable",
+                detail: port.error ?? port.detail ?? ""
+            })).sort((a, b) => a.n - b.n)
+            : [];
+
         const pons = portSource.map((port, index) => ({
             n: getPonNumber(port, index),
             id: String(port.id ?? port.pon ?? ""),
@@ -454,6 +468,7 @@
 
             pons,
             onuOptical,
+            sfpPorts,
             onuKnown,
             alarms: Array.isArray(data.alarms) ? data.alarms : [],
             warnings: Array.isArray(data.warnings) ? data.warnings : []
@@ -729,6 +744,21 @@
                 <td>${escapeHtml(pon.onlineOnu === null ? "N/A" : `${pon.onlineOnu} / ${pon.totalOnu ?? 0}`)}</td>
                 <td>${pill(pon.status)}</td>
             </tr>`).join("");
+        }
+
+        const sfpRows = $("omSfpRows");
+        if (sfpRows) {
+            sfpRows.innerHTML = olt.sfpPorts.length
+                ? olt.sfpPorts.map(port => `<tr>
+                    <td>PON ${port.n}</td>
+                    <td>${escapeHtml(port.tx)}</td>
+                    <td>${escapeHtml(port.rx)}</td>
+                    <td>${escapeHtml(port.bias)}</td>
+                    <td>${escapeHtml(port.temp)}</td>
+                    <td>${escapeHtml(port.voltage)}</td>
+                    <td>${pill(port.status)}</td>
+                </tr>`).join("")
+                : emptyRow(7, "Direct PON SFP DDM is not available.");
         }
 
         const onuOpticalRows = $("omOnuOpticalRows");
