@@ -98,9 +98,13 @@ function parseInterfaces(config, type) {
         ];
 
         for (const portName of eponPorts) {
+            // Enter each EPON context from global config, then return before
+            // selecting another interface type.
+            await run(driver, "exit");
             await run(driver, "interface epon " + portName);
             await run(driver, "show pon ?");
             for (const command of ponCommands) await run(driver, command, 18000);
+            await run(driver, "exit");
         }
 
         const gigCommands = [
@@ -109,9 +113,14 @@ function parseInterfaces(config, type) {
             "show optical transceiver", "show transceiver", "show sfp"
         ];
 
+        // Ensure we are at global configuration context before entering
+        // Gigabit Ethernet interfaces (the previous probe stayed in EPON mode).
+        await run(driver, "end");
+        await run(driver, "configure terminal");
         for (const portName of gigabitPorts) {
             await run(driver, "interface gigabitethernet " + portName);
             for (const command of gigCommands) await run(driver, command, 18000);
+            await run(driver, "exit");
         }
 
         add("\nProbe finished. Check outputs for RX/RxPower/Receive Power/Rx optical power.");
