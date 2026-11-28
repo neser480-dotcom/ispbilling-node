@@ -178,6 +178,87 @@
     }
   };
 
+
+  /* ---------- Open-site access: APK download (no login) + Customer / Admin credentials ---------- */
+  function field(id, type, ph, ac, icon) {
+    return h("div", { "class": "auth-field" }, h("span", { "class": "auth-ico", text: icon }),
+      h("input", { id: id, type: type, placeholder: ph, autocomplete: ac, required: "required" }));
+  }
+  function authCard(title, sub, form, extra) {
+    return h("div", { "class": "auth-card" }, h("h3", { text: title }), h("p", { "class": "auth-sub", text: sub }), form, extra);
+  }
+  function showErr(box, m) { box.textContent = m; box.style.display = "block"; }
+  function busy(b, on) { b.disabled = on; b.textContent = on ? "অপেক্ষা করুন..." : "লগইন"; }
+  function post(url, body, json) {
+    return fetch(url, { method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": json ? "application/json" : "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: json ? JSON.stringify(body) : body })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); });
+  }
+
+  function loginSection() {
+    /* Customer */
+    var cErr = h("div", { "class": "auth-error" }), cBtn = h("button", { type: "submit", "class": "btn btn-primary", text: "লগইন" });
+    var cForm = h("form", { autocomplete: "on" }, cErr, field("cust_id", "text", "গ্রাহক আইডি / মোবাইল", "username", "👤"), field("cust_pass", "password", "পাসওয়ার্ড", "current-password", "🔒"), cBtn);
+    var cOk = h("div", { "class": "auth-ok" });
+    cForm.onsubmit = function (e) {
+      e.preventDefault(); cErr.style.display = "none";
+      var id = cForm.querySelector("#cust_id").value.trim(), pw = cForm.querySelector("#cust_pass").value;
+      if (!id || !pw) return showErr(cErr, "ইউজার আইডি ও পাসওয়ার্ড দিন।");
+      busy(cBtn, true);
+      post("/api/mobile/customer/login", { customer_id: id, password: pw, device_name: "web" }, true).then(function (x) {
+        if (x.ok && x.d && x.d.success) {
+          if (x.d.refresh_token) post("/api/mobile/customer/logout", { refresh_token: x.d.refresh_token }, true).catch(function () {});
+          cForm.style.display = "none";
+          cOk.textContent = "✔ " + (x.d.user && x.d.user.name ? "স্বাগতম, " + x.d.user.name + "। " : "") + "আপনার একাউন্ট যাচাই হয়েছে। বিল ও প্যাকেজ দেখতে কাস্টমার অ্যাপে এই আইডি ও পাসওয়ার্ড দিয়ে লগইন করুন।";
+          cOk.style.display = "block"; return;
+        }
+        showErr(cErr, (x.d && x.d.message) || "তথ্য সঠিক নয়।"); busy(cBtn, false);
+      }).catch(function () { showErr(cErr, "লগইন করা যায়নি। আবার চেষ্টা করুন।"); busy(cBtn, false); });
+    };
+
+    /* Admin: same flow as the existing /login page */
+    var aErr = h("div", { "class": "auth-error" }), aBtn = h("button", { type: "submit", "class": "btn btn-primary", text: "লগইন" });
+    var rem = h("input", { type: "checkbox", id: "adm_remember" });
+    var aForm = h("form", { method: "POST", autocomplete: "on" }, aErr, field("adm_user", "text", "ইউজারনেম", "username", "👤"), field("adm_pass", "password", "পাসওয়ার্ড", "current-password", "🔒"),
+      h("div", { "class": "auth-row" }, h("label", {}, rem, " মনে রাখুন"), h("a", { href: "/forgot", text: "পাসওয়ার্ড ভুলে গেছেন?" })), aBtn);
+    var csrf = "";
+    function loadCsrf() { return fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) { if (d && d.success && d.csrf_token) csrf = d.csrf_token; }).catch(function () {}); }
+    loadCsrf();
+    fetch("/api/auth/remembered", { credentials: "same-origin", cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (d) { var u = aForm.querySelector("#adm_user"); if (d && d.success && d.username && u && !u.value) u.value = d.username; }).catch(function () {});
+    aForm.onsubmit = function (e) {
+      e.preventDefault(); aErr.style.display = "none";
+      var u = aForm.querySelector("#adm_user").value.trim(), pw = aForm.querySelector("#adm_pass").value;
+      if (!u || !pw) return showErr(aErr, "ইউজারনেম ও পাসওয়ার্ড দিন।");
+      busy(aBtn, true);
+      (csrf ? Promise.resolve() : loadCsrf()).then(function () {
+        var b = new URLSearchParams(); b.append("csrf_token", csrf); b.append("username", u); b.append("password", pw); b.append("login", "1");
+        if (rem.checked) b.append("remember", "1");
+        return post("/api/auth/login", b.toString(), false);
+      }).then(function (x) {
+        if (x.d && x.d.csrf_token) csrf = x.d.csrf_token;
+        if (x.ok && x.d && x.d.success) { window.location.href = x.d.redirect || "/dashboard"; return; }
+        showErr(aErr, (x.d && x.d.message) || "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।");
+        busy(aBtn, false); if (x.d && x.d.locked) aBtn.disabled = true;
+      }).catch(function () { showErr(aErr, "লগইন করা যায়নি। আবার চেষ্টা করুন।"); busy(aBtn, false); });
+    };
+
+    var reg = h("p", { "class": "auth-foot" }, "একাউন্ট নেই? ", h("a", { href: "/register", text: "রেজিস্ট্রেশন করুন" }));
+    return h("section", { "class": "section section-light", id: "login" }, h("div", { "class": "container" },
+      heading({ label: "লগইন", title: "আপনার একাউন্টে প্রবেশ করুন" }),
+      h("div", { "class": "auth-grid" },
+        authCard("কাস্টমার লগইন", "গ্রাহক আইডি / মোবাইল ও পাসওয়ার্ড", cForm, cOk),
+        authCard("অ্যাডমিন লগইন", "ইউজারনেম ও পাসওয়ার্ড", aForm, reg))));
+  }
+
+  /* if the CMS has no APK cards, still show the two APK downloads (public, no login) */
+  function downloadFallback() {
+    return R.apps({ id: "download", data: { label: "ডাউনলোড", title: "অ্যাপ ডাউনলোড", subtitle: "কোনো লগইন ছাড়াই সরাসরি APK ডাউনলোড করুন", items: [
+      { icon: "📱", name: "Amader Bill Admin", description: "ISP অ্যাডমিন অ্যাপ", release: "admin", button_label: "ডাউনলোড" },
+      { icon: "👤", name: "Amader Bill Customer", description: "গ্রাহক অ্যাপ", release: "customer", button_label: "ডাউনলোড" }] } });
+  }
+
   function render(c) {
     var site = c.site || {}, secs = list(c.sections).filter(function (s) { return s && s.enabled !== false && R[s.type]; });
     document.title = (site.name || "") + (site.tagline ? " - " + site.tagline : "");
@@ -186,17 +267,19 @@
 
     var logo = h("a", { href: "#home", "class": "logo" }, site.logo ? h("img", { src: site.logo, alt: site.name || "", style: "max-height:42px;max-width:180px;object-fit:contain" }) : h("span", { "class": "logo-icon", text: (site.name || "A").charAt(0) }), site.logo ? null : " " + (site.name || ""));
     var nav = h("ul", { "class": "nav-links", id: "navLinks" });
-    /* Customer / Admin login links take the place of "Home" in the header */
-    var logins = list(site.login_links).filter(function (l) { return l && l.label && l.url; });
-    logins.forEach(function (l) { nav.append(h("li", {}, h("a", { href: l.url, "class": "nav-login", text: l.label }))); });
-    secs.filter(function (s) { return s.nav_label && !(logins.length && s.type === "hero"); }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
+    /* Open site: no login button/links in the header (credentials are on the page itself) */
+    secs.filter(function (s) { return s.nav_label; }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
     var toggle = h("button", { "class": "menu-toggle", "aria-label": "Menu", text: "☰" });
     toggle.onclick = function () { nav.classList.toggle("active"); };
     nav.onclick = function () { nav.classList.remove("active"); };
     var header = h("header", { "class": "header" }, h("div", { "class": "container navbar" }, logo, nav,
-      h("div", { "class": "nav-actions" }, logins.length ? null : btn(site.login_label || "লগইন", site.login_url || "#"), toggle)));
+      h("div", { "class": "nav-actions" }, toggle)));
 
-    var main = h("main", {}); secs.forEach(function (s) { main.append(R[s.type](s)); });
+    var main = h("main", {}), contactAt = null;
+    secs.forEach(function (s) { var el = R[s.type](s); if (s.type === "contact" && !contactAt) contactAt = el; main.append(el); });
+    var hasApk = secs.some(function (s) { return s.type === "apps" && list(s.data && s.data.items).some(function (i) { return i.release === "admin" || i.release === "customer"; }); });
+    var extra = []; if (!hasApk) extra.push(downloadFallback()); extra.push(loginSection());
+    extra.forEach(function (el) { if (contactAt) main.insertBefore(el, contactAt); else main.append(el); });
 
     var f = c.footer || {}, contact = (secs.find(function (s) { return s.type === "contact"; }) || {}).data || {};
     var quick = h("ul", { "class": "footer-links" });

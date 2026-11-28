@@ -897,19 +897,12 @@ app.get("/", (req, res) => {
         .toLowerCase()
         .replace(/^www\./, "");
 
-    if (hostname === "amaderbill.com") {
-        return res.sendFile(
-            path.join(__dirname, "views", "app-download", "index.html")
-        );
-    }
-
-    /* app.amaderbill.com : open site (3 rotating designs) with
-       Customer/Admin login + APK download. */
     const appHost = String(process.env.APP_DOWNLOAD_HOST || "app.amaderbill.com")
         .toLowerCase();
-    if (hostname === appHost) {
+
+    if (hostname === "amaderbill.com" || hostname === appHost) {
         return res.sendFile(
-            path.join(__dirname, "views", "app-download", "app-home.html")
+            path.join(__dirname, "views", "app-download", "index.html")
         );
     }
 
@@ -920,11 +913,6 @@ app.get("/", (req, res) => {
 /* PUBLIC WEBSITE PREVIEW (for localhost / XAMPP testing) */
 app.get("/site-preview", (req, res) =>
     res.sendFile(path.join(__dirname, "views", "app-download", "index.html"))
-);
-
-/* APP SITE PREVIEW (for localhost / XAMPP testing of app.amaderbill.com) */
-app.get("/app-home-preview", (req, res) =>
-    res.sendFile(path.join(__dirname, "views", "app-download", "app-home.html"))
 );
 
 /* APK MANAGEMENT PAGE (Super Admin) */
