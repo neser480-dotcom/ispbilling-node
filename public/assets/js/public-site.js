@@ -93,8 +93,8 @@
           h("div", { "class": "download-copy" },
             h("h2", {}, "Download ", h("strong", { text: "AmaderBill App" })),
             h("p", { text: d.subtitle || "Get the best ISP billing experience on your mobile." }),
-            h("div", { "class": "apk-badges" }, h("div", { "class": "apk-badge", "data-release": "admin" }, h("span", { "class": "apk-symbol", text: "▶" }), h("span", {}, h("small", { text: "DOWNLOAD ADMIN" }), h("strong", { text: "Android App" }))),
-              h("div", { "class": "apk-badge", "data-release": "customer" }, h("span", { "class": "apk-symbol apple", text: "●" }), h("span", {}, h("small", { text: "DOWNLOAD CUSTOMER" }), h("strong", { text: "Android App" })))),
+            h("div", { "class": "apk-badges" }, h("a", { href: "#", "class": "apk-badge", "data-release": "admin" }, h("span", { "class": "apk-symbol", text: "▶" }), h("span", {}, h("small", { text: "DOWNLOAD ADMIN" }), h("strong", { text: "Android App" }))),
+              h("a", { href: "#", "class": "apk-badge", "data-release": "customer" }, h("span", { "class": "apk-symbol apple", text: "●" }), h("span", {}, h("small", { text: "DOWNLOAD CUSTOMER" }), h("strong", { text: "Android App" })))),
             h("small", { "class": "apk-release-note", text: "সর্বশেষ APK ভার্সন স্বয়ংক্রিয়ভাবে পাওয়া যাবে" })),
           h("div", { "class": "qr-area" }, h("img", { src: "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https%3A%2F%2Fapp.amaderbill.com%2Fapp-download", alt: "Scan to download AmaderBill" }), h("span", { text: "Scan to Download" }))));
       appsInfo().then(function (apps) {
@@ -202,9 +202,10 @@
       h("span", { "class": "logo-copy" }, h("strong", {}, "Amader", h("b", { text: "Bill" })), h("small", { text: site.tagline || "Smart ISP Billing Solution" })));
     var nav = h("ul", { "class": "nav-links", id: "navLinks" });
     nav.append(h("li", {}, h("a", { href: "#home", "class": "active", text: "⌂  Home" })));
-    sections.filter(function (s) { return s.nav_label && !["hero", "contact"].includes(s.type); }).forEach(function (s) {
+    sections.filter(function (s) { return s.nav_label && s.type !== "hero"; }).forEach(function (s) {
       nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label })));
     });
+    nav.append(h("li", {}, h("a", { href: "#contact", text: "Contact" })));
     var menu = h("button", { "class": "menu-toggle", type: "button", "aria-label": "মেনু খুলুন", "aria-expanded": "false", text: "☰" });
     menu.onclick = function () {
       var opened = nav.classList.toggle("active");

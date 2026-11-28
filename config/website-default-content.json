@@ -173,7 +173,7 @@
       "id": "contact",
       "type": "contact",
       "enabled": true,
-      "nav_label": "Contact",
+      "nav_label": "Support",
       "data": {
         "label": "",
         "title": "",
@@ -353,5 +353,6 @@
         "url": "#contact"
       }
     ]
-  }
+  },
+  "layout_version": 3
 }

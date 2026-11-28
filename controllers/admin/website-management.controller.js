@@ -47,6 +47,33 @@ function migrate(old) {
 // live registration-package pricing, APK-linked app cards) without a re-publish.
 function addNewDefaults(c) {
     c.site = c.site || {};
+
+    // One-time migration to the user-approved public homepage layout.
+    // Existing custom/optional sections are retained; the core reference sections
+    // are initialized from the new editable defaults so the published page matches.
+    if (Number(c.layout_version || 0) < Number(DEFAULT_CONTENT.layout_version || 3)) {
+        const coreTypes = new Set(["hero", "features", "apps", "about", "stats", "contact"]);
+        const current = Array.isArray(c.sections) ? c.sections : [];
+        const migratedCore = DEFAULT_CONTENT.sections
+            .filter((section) => coreTypes.has(section.type))
+            .map((section) => {
+                const existing = current.find((item) => item && item.type === section.type);
+                return {
+                    ...clone(section),
+                    ...(existing ? { enabled: section.enabled, nav_label: section.nav_label } : {}),
+                    data: clone(section.data)
+                };
+            });
+        const optional = current.filter((section) => section && !coreTypes.has(section.type));
+        optional.forEach((section) => {
+            if (section.type === "pricing" || section.type === "team" || section.type === "gallery") {
+                section.enabled = false;
+                section.nav_label = "";
+            }
+        });
+        c.sections = migratedCore.concat(optional);
+        c.layout_version = Number(DEFAULT_CONTENT.layout_version || 3);
+    }
     if (!Array.isArray(c.site.login_links)) c.site.login_links = clone(DEFAULT_CONTENT.site.login_links);
     (c.sections || []).forEach((s) => {
         s.data = s.data || {};
