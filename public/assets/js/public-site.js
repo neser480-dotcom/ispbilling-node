@@ -22,6 +22,12 @@
     return label ? h("a", { href: url, "class": "btn btn-" + (kind === "outline" ? "outline" : "primary"), text: label }) : null;
   }
   var appsPromise;
+  var activeSite = {};
+  function loginUrl(kind, fallback) {
+    var pattern = kind === "customer" ? /customer|কাস্টমার/i : /admin|অ্যাডমিন/i;
+    var item = list(activeSite.login_links).find(function (x) { return x && pattern.test(x.label || ""); });
+    return item && item.url || fallback;
+  }
   function appsInfo() {
     if (!appsPromise) appsPromise = fetch(BASE + "/api/app-download", { headers: { Accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -71,7 +77,8 @@
       var checks = h("ul", { "class": "hero-checks" });
       points.slice(0, 3).forEach(function (p) { checks.append(h("li", {}, h("span", { text: "✓" }), p)); });
       var buttons = h("div", { "class": "hero-buttons" });
-      list(d.buttons).forEach(function (b) { buttons.append(btn(b.label, b.url, b.style)); });
+      buttons.append(btn("ডাউনলোড করুন", loginUrl("customer", "https://app.amaderbill.com/customer/login"), "primary"));
+      buttons.append(btn("ডেমো দেখুন", activeSite.register_url || "https://app.amaderbill.com/register", "outline"));
       return h("section", { "class": "hero", id: s.id },
         h("div", { "class": "container hero-grid" },
           h("div", { "class": "hero-copy" },
@@ -182,6 +189,7 @@
 
   function render(content) {
     var site = content.site || {}, sections = list(content.sections).filter(function (s) { return s && s.enabled !== false && R[s.type]; });
+    activeSite = site;
     document.title = (site.name || "AmaderBill") + (site.tagline ? " - " + site.tagline : "");
     var meta = document.querySelector('meta[name="description"]');
     if (meta && site.description) meta.content = site.description;
@@ -201,8 +209,12 @@
     themeButton.onclick = function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); };
 
     var topbar = h("div", { "class": "public-topbar" }, h("div", { "class": "container public-topbar-inner" },
-      h("div", { "class": "topbar-support" }, h("span", { text: "◉" }), h("strong", { text: "AmaderBill Support Team's" }), h("span", { "class": "topbar-divider" }), h("span", { text: "☎" }), h("span", { text: "No support numbers available." })),
-      h("div", { "class": "topbar-actions" }, themeButton, btn((customerLogin && customerLogin.label) || "Customer Login", (customerLogin && customerLogin.url) || "https://app.amaderbill.com/customer/login"))));
+      h("div", { "class": "topbar-support" },
+        h("a", { href: "mailto:" + (site.support_email || "support@amaderbill.com"), text: site.support_email || "support@amaderbill.com" }),
+        h("a", { href: "tel:" + (site.support_phone || "+8801627078607"), text: site.support_phone || "+880 1627 078607" })),
+      h("div", { "class": "topbar-actions" },
+        h("a", { href: "#contact", text: "Help" }), h("a", { href: "#contact", text: "Support" }),
+        h("a", { href: "#apps", text: "Download App ↓" }), themeButton)));
     var logo = h("a", { href: "#home", "class": "logo" },
       site.logo ? h("img", { src: site.logo, alt: site.name || "AmaderBill", style: "max-height:48px;max-width:190px;object-fit:contain" }) :
         h("span", { "class": "logo-mark", text: "A" }),
@@ -213,6 +225,7 @@
       nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label })));
     });
     nav.append(h("li", {}, h("a", { href: "#contact", text: "Contact" })));
+    nav.append(h("li", {}, h("a", { href: loginUrl("admin", "https://app.amaderbill.com/login"), "class": "nav-login", text: "Login" })));
     var menu = h("button", { "class": "menu-toggle", type: "button", "aria-label": "মেনু খুলুন", "aria-expanded": "false", text: "☰" });
     menu.onclick = function () {
       var opened = nav.classList.toggle("active");
