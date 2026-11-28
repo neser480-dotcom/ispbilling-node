@@ -58,14 +58,20 @@
     return el;
   }
   function illustrationRouterPhone() {
-    return h("div", { "class": "hero-art", "aria-label": "Wi-Fi router and AmaderBill mobile app illustration" },
-      h("div", { "class": "hero-map" }),
-      h("div", { "class": "wifi-signal" }, h("i", {}), h("i", {}), h("i", {})),
-      h("div", { "class": "router-device" }, h("span", { "class": "router-antenna left" }), h("span", { "class": "router-antenna right" }), h("span", { "class": "router-light" }), h("span", { "class": "router-brand", text: "AmaderBill" })),
-      h("div", { "class": "secure-badge" }, h("strong", { text: "✓" }), h("span", { text: "Fast" }), h("span", { text: "Reliable" }), h("span", { text: "Secure" })),
+    var metrics = [["Total Customers","2,540"],["Active Users","2,238"],["Due Customers","302"],["Total Revenue","৳ 482,560"]];
+    return h("div", { "class": "hero-visual", "aria-label": "AmaderBill dashboard on laptop and mobile phone" },
+      h("div", { "class": "hero-laptop" },
+        h("div", { "class": "hero-laptop-screen" },
+          h("div", { "class": "hero-dashboard-head" }, h("strong", { text: "◉ AmaderBill" }), h("span", { text: "● ● ●" })),
+          h("div", { "class": "hero-dashboard-body" },
+            h("aside", { "class": "hero-dashboard-side" }, h("b", { text: "Dashboard" }), h("span", { text: "Customers" }), h("span", { text: "Billing" }), h("span", { text: "Payments" }), h("span", { text: "Reports" })),
+            h("div", { "class": "hero-dashboard-main" },
+              h("div", { "class": "hero-metrics" }, metrics.map(function (m, i) { return h("div", { "class": "hero-metric metric-" + i }, h("small", { text: m[0] }), h("strong", { text: m[1] })); })),
+              h("div", { "class": "hero-chart-panel" }, h("strong", { text: "Revenue Overview" }), h("div", { "class": "hero-chart" }, [32,48,40,66,52,78,62,92].map(function (v) { return h("i", { style: "height:" + v + "%" }); })))))),
+        h("div", { "class": "hero-laptop-base" })),
       h("div", { "class": "hero-phone" }, h("div", { "class": "hero-phone-notch" }),
         h("div", { "class": "hero-phone-screen" }, h("span", { "class": "phone-logo-mark", text: "A" }), h("strong", { text: "AmaderBill" }),
-          h("small", { text: "Smart ISP Billing Solution" }), h("span", { "class": "phone-login", text: "Login" }), h("span", { "class": "phone-register", text: "Register" }), h("div", { "class": "phone-wave" }))));
+          h("small", { text: "Welcome Back!" }), h("span", { "class": "phone-login", text: "Mobile Number" }), h("span", { "class": "phone-register", text: "Password" }), h("div", { "class": "phone-wave" }))));
   }
   var R = {
     hero: function (s) {
