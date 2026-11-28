@@ -24,6 +24,7 @@ const VENDORS = {
     hioso: () => require("./vendors/hioso/sync"),
     hsgq: () => require("./vendors/hsgq/sync"),
     vsol: () => require("./vendors/vsol/sync"),
+    bdcom: () => require("./vendors/bdcom/sync"),
     zteepon: () => require("./vendors/zte-epon/sync")
 };
 
@@ -45,6 +46,7 @@ function vendorKey(olt) {
     if (key.startsWith("hioso")) return "hioso";
     if (key.startsWith("hsgq")) return "hsgq";
     if (key.startsWith("vsol")) return "vsol";
+    if (key.startsWith("bdcom")) return "bdcom";
     if (key.startsWith("zte")) return "zteepon";
 
     return key;

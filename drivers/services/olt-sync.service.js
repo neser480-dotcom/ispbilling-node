@@ -6,6 +6,7 @@ const { CDataDriver } = require('../hardware/cdata');
 const { HiosoDriver } = require('../hardware/hioso');
 const { HsgqDriver } = require('../hardware/hsgq');
 const { VsolDriver } = require('../hardware/vsol');
+const { BdcomDriver } = require('../hardware/bdcom');
 const { ZteEponDriver } = require('../hardware/zte-epon');
 const { autoMapOnus } = require('./onu-auto-mapping.service');
 const { collectPppSessions, loadMikrotikService } = require('./ppp-sessions');
@@ -51,6 +52,10 @@ function driverFor(olt) {
 
     if (['hioso', 'hiosoepon'].includes(key)) {
         return new HiosoDriver(config);
+    }
+
+    if (['bdcom', 'bdcomepon', 'bdcomolt'].includes(key)) {
+        return new BdcomDriver(config);
     }
 
     if (['vsol', 'vsolepon', 'vsololt'].includes(key)) {

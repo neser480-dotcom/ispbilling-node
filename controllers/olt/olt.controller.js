@@ -725,6 +725,9 @@ exports.check = async (req, res) => {
         } else if (vendor === "ecom") {
             const { EcomDriver } = require("../../drivers/hardware/ecom");
             driver = new EcomDriver(config);
+        } else if (vendor === "bdcom") {
+            const { BdcomDriver } = require("../../drivers/hardware/bdcom");
+            driver = new BdcomDriver(config);
         } else if (vendor === "vsol") {
             const { VsolDriver } = require("../../drivers/hardware/vsol");
             driver = new VsolDriver(config);
