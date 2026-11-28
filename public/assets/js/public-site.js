@@ -90,10 +90,15 @@
     },
     apps: function (s) {
       var d = s.data || {};
+      var downloadHeading = h("h2", {});
+      var downloadLabel = d.label || "Download AmaderBill App";
+      var brandAt = downloadLabel.indexOf("AmaderBill");
+      if (brandAt >= 0) downloadHeading.append(downloadLabel.slice(0, brandAt), h("strong", { text: downloadLabel.slice(brandAt) }));
+      else downloadHeading.textContent = downloadLabel;
       var panel = h("section", { "class": "section download-panel-section", id: s.id },
         h("div", { "class": "download-panel" },
           h("div", { "class": "download-copy" },
-            h("h2", {}, (d.label || "Download AmaderBill App").indexOf("AmaderBill") >= 0 ? [(d.label || "Download AmaderBill App").slice(0, (d.label || "Download AmaderBill App").indexOf("AmaderBill")), h("strong", { text: (d.label || "Download AmaderBill App").slice((d.label || "Download AmaderBill App").indexOf("AmaderBill")) })] : (d.label || "Download AmaderBill App")),
+            downloadHeading,
             h("p", { text: d.subtitle || "Get the best ISP billing experience on your mobile." }),
             h("div", { "class": "apk-badges" }, h("a", { href: "#", "class": "apk-badge", "data-release": "admin" }, h("span", { "class": "apk-symbol", text: "▶" }), h("span", {}, h("small", { text: "DOWNLOAD ADMIN" }), h("strong", { text: "Android App" }))),
               h("a", { href: "#", "class": "apk-badge", "data-release": "customer" }, h("span", { "class": "apk-symbol apple", text: "●" }), h("span", {}, h("small", { text: "DOWNLOAD CUSTOMER" }), h("strong", { text: "Android App" })))),
