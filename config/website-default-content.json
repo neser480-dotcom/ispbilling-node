@@ -7,11 +7,11 @@
   "favicon": "",
   "description": "AmaderBill - বাংলাদেশের আধুনিক ISP Billing Software। গ্রাহক, বিলিং, MikroTik, OLT ও পেমেন্ট পরিচালনা করুন একটি প্ল্যাটফর্ম থেকে।",
   "login_label": "লগইন",
-  "login_url": "https://app.amaderbill.com",
+  "login_url": "https://app.amaderbill.com/login",
   "login_links": [
    {
     "label": "কাস্টমার লগইন",
-    "url": "https://customer.amaderbill.com"
+    "url": "https://app.amaderbill.com/customer/login"
    },
    {
     "label": "অ্যাডমিন লগইন",
@@ -387,7 +387,7 @@
  ],
  "footer": {
   "description": "বাংলাদেশের ISP ব্যবসার জন্য আধুনিক বিলিং ও ম্যানেজমেন্ট সফটওয়্যার।\n            গ্রাহক, বিলিং, পেমেন্ট ও নেটওয়ার্ক পরিচালনা করুন একটি প্ল্যাটফর্ম থেকে।",
-  "copyright": "Copyright © AmaderBill - 2026. All Rights Reserved.",
+  "copyright": "© IRFAN IT - 2026",
   "links": [
    {
     "label": "প্রাইভেসি পলিসি",
