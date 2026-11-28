@@ -65,7 +65,7 @@
                 >
                     <i class="fa fa-building"></i>
                     Companies / Users
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="companyMenu">
@@ -106,7 +106,7 @@
                 >
                     <i class="fa fa-credit-card"></i>
                     Software Billing
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="softwareBillingMenu">
@@ -167,7 +167,7 @@
     >
         <i class="fa fa-globe"></i>
         Website Management
-        <span>▼</span>
+        <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
     </a>
 
     <div class="collapse" id="appPromoMenu">
@@ -212,7 +212,7 @@
                 >
                     <i class="fa fa-bullhorn"></i>
                     Notice Board
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="noticeMenu">
@@ -253,7 +253,7 @@
                 >
                     <i class="fa fa-sync-alt"></i>
                     Software Update
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="updateMenu">
@@ -283,7 +283,7 @@
                 >
                     <i class="fas fa-robot"></i>
                     AI Help
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
                 <div class="collapse" id="superAdminAiHelpMenu">
                     <a class="submenu" href="/ai-help">
@@ -313,7 +313,7 @@
                 >
                     <i class="fa fa-headset"></i>
                     Support / Problems
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="supportMenu">
@@ -354,7 +354,7 @@
                 >
                     <i class="fa fa-network-wired"></i>
                     Network
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
 
                 <div class="collapse" id="networkMenu">
@@ -436,7 +436,7 @@
 
                 <a href="/dashboard">
 
-                    <i class="fa fa-home"></i>
+                    <i class="fa-solid fa-house"></i>
                     Dashboard
 
                 </a>
@@ -450,7 +450,7 @@
 
                 <a href="/areas">
 
-                    <i class="fa fa-globe"></i>
+                    <i class="fa-solid fa-location-dot"></i>
                     Area
 
                 </a>
@@ -464,7 +464,7 @@
 
                 <a href="/mikrotik">
 
-                    <i class="fa fa-network-wired"></i>
+                    <i class="fa-solid fa-basket-shopping"></i>
                     MikroTik
 
                 </a>
@@ -486,11 +486,11 @@
                     aria-controls="oltMenu"
                 >
 
-                    <i class="fa fa-server"></i>
+                    <i class="fa-solid fa-gear"></i>
 
                     OLT Config
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -501,6 +501,7 @@
                         class="submenu"
                         href="/olt"
                     >
+                        <i class="fa-solid fa-hard-drive"></i>
                         OLT List
                     </a>
 
@@ -508,6 +509,7 @@
                         class="submenu"
                         href="/olt/onu"
                     >
+                        <i class="fa-solid fa-users"></i>
                         ONU List
                     </a>
                     
@@ -530,11 +532,11 @@
                     aria-controls="monitorMenu"
                 >
 
-                    <i class="fa fa-chart-line"></i>
+                    <i class="fa-solid fa-desktop"></i>
 
                     Monitoring
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -545,6 +547,7 @@
                         class="submenu"
                         href="/monitoring/interface"
                     >
+                        <i class="fa-solid fa-ethernet"></i>
                         Interface Monitor
                     </a>
 
@@ -552,18 +555,21 @@
                         class="submenu"
                         href="/monitoring/customer-traffic"
                     >
+                        <i class="fa-solid fa-chart-simple"></i>
                         Customer Traffic
                     </a>
                       <a
                         class="submenu"
                         href="/olt_monitoring"
                     >
+                        <i class="fa-solid fa-tower-broadcast"></i>
                         OLT Monitoring
                     </a>
                     <a
                         class="submenu"
                         href="/monitoring"
                     >
+                        <i class="fa-solid fa-triangle-exclamation"></i>
                         Live Fault
                     </a>
 
@@ -586,11 +592,11 @@
                     aria-controls="customerMenu"
                 >
 
-                    <i class="fa fa-users"></i>
+                    <i class="fa-solid fa-users"></i>
 
                     Customers
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -601,6 +607,7 @@
                         class="submenu"
                         href="/customers"
                     >
+                        <i class="fa-solid fa-users"></i>
                         PPPoE Customers
                     </a>
 
@@ -608,6 +615,7 @@
                         class="submenu"
                         href="/customers/active-pppoe"
                     >
+                        <i class="fa-solid fa-user-check"></i>
                         Active PPPoE
                     </a>
 
@@ -615,6 +623,7 @@
                         class="submenu"
                         href="/customers/other"
                     >
+                        <i class="fa-solid fa-user-group"></i>
                         Other Customers
                     </a>
 
@@ -637,11 +646,11 @@
                     aria-controls="reportMenu"
                 >
 
-                    <i class="fa fa-chart-bar"></i>
+                    <i class="fa-solid fa-chart-simple"></i>
 
                     Report
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -652,6 +661,7 @@
                         class="submenu"
                         href="/reports/collection"
                     >
+                        <i class="fa-solid fa-chart-line"></i>
                         Collection
                     </a>
 
@@ -659,6 +669,7 @@
                         class="submenu"
                         href="/reports/reseller-collection"
                     >
+                        <i class="fa-solid fa-user-group"></i>
                         Reseller Collection
                     </a>
 
@@ -666,6 +677,7 @@
                         class="submenu"
                         href="/reports/deposit"
                     >
+                        <i class="fa-solid fa-money-bill-wave"></i>
                         Deposit
                     </a>
 
@@ -688,11 +700,11 @@
                     aria-controls="STAFF"
                 >
 
-                    <i class="fa fa-users"></i>
+                    <i class="fa-solid fa-address-card"></i>
 
                     Staff
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -703,6 +715,7 @@
                         class="submenu"
                         href="/staff/manager"
                     >
+                        <i class="fa-solid fa-user-tie"></i>
                         Manager
                     </a>
 
@@ -710,6 +723,7 @@
                         class="submenu"
                         href="/staff/collector"
                     >
+                        <i class="fa-solid fa-user-group"></i>
                         Collector
                     </a>
 
@@ -717,6 +731,7 @@
                         class="submenu"
                         href="/staff/employee"
                     >
+                        <i class="fa-solid fa-id-badge"></i>
                         Employee
                     </a>
 
@@ -739,11 +754,11 @@
                     aria-controls="resellerMenu"
                 >
 
-                    <i class="fa fa-user-circle"></i>
+                    <i class="fa-solid fa-circle-user"></i>
 
                     Reseller
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -754,6 +769,7 @@
                         class="submenu"
                         href="/reseller"
                     >
+                        <i class="fa-solid fa-user-group"></i>
                         Reseller List
                     </a>
 
@@ -761,6 +777,7 @@
                         class="submenu"
                         href="/reseller/recharge"
                     >
+                        <i class="fa-solid fa-money-bill"></i>
                         Recharge
                     </a>
 
@@ -768,6 +785,7 @@
                         class="submenu"
                         href="/reseller/sms"
                     >
+                        <i class="fa-solid fa-comment-dots"></i>
                         SMS Request
                     </a>
 
@@ -775,6 +793,7 @@
                         class="submenu"
                         href="/reseller/withdrawal"
                     >
+                        <i class="fa-solid fa-wallet"></i>
                         Withdrawal Payment
                     </a>
 
@@ -796,11 +815,11 @@
         aria-controls="bandwidthMenu"
     >
 
-        <i class="fa fa-gauge-high"></i>
+        <i class="fa-solid fa-gauge-high"></i>
 
         Bandwidth Sale
 
-        <span>▼</span>
+        <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
     </a>
 
@@ -811,21 +830,24 @@
             class="submenu"
             href="/bandwidth/bandwidth"
         >
-            Bandwidth
+            <i class="fa-solid fa-gauge-high"></i>
+                        Bandwidth
         </a>
 
         <a
             class="submenu"
             href="/bandwidth/reseller"
         >
-            Reseller
+            <i class="fa-solid fa-user-group"></i>
+                        Reseller
         </a>
 
         <a
             class="submenu"
             href="/bandwidth/collection"
         >
-            Collection
+            <i class="fa-solid fa-chart-line"></i>
+                        Collection
         </a>
 
     </div>
@@ -846,11 +868,11 @@
                     aria-controls="messageMenu"
                 >
 
-                    <i class="fa fa-comment"></i>
+                    <i class="fa-brands fa-facebook-messenger"></i>
 
                     Message
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -861,6 +883,7 @@
                         class="submenu"
                         href="/message/send"
                     >
+                        <i class="fa-solid fa-comment-dots"></i>
                         Bulk Message
                     </a>
 
@@ -868,6 +891,7 @@
                         class="submenu"
                         href="/message/template"
                     >
+                        <i class="fa-solid fa-gear"></i>
                         SMS Template
                     </a>
 
@@ -875,6 +899,7 @@
                         class="submenu"
                         href="/message/log"
                     >
+                        <i class="fa-solid fa-envelope-open"></i>
                         Message Log
                     </a>
 
@@ -897,11 +922,11 @@
                     aria-controls="accountsMenu"
                 >
 
-                    <i class="fa fa-wallet"></i>
+                    <i class="fa-solid fa-wallet"></i>
 
                     Accounts
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
@@ -912,6 +937,7 @@
                         class="submenu"
                         href="/accounts/expenditure"
                     >
+                        <i class="fa-solid fa-money-check-dollar"></i>
                         Expenditure
                     </a>
 
@@ -919,6 +945,7 @@
                         class="submenu"
                         href="/accounts/invoices"
                     >
+                        <i class="fa-solid fa-file-invoice"></i>
                         Invoices
                     </a>
 
@@ -941,24 +968,27 @@
                     aria-controls="companySupportMenu"
                 >
 
-                    <i class="fa fa-headset"></i>
+                    <i class="fa-solid fa-headset"></i>
 
                     Support
 
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
                 </a>
 
 
 <div class="collapse" id="companySupportMenu">
     <a class="submenu" href="/support/tickets">
-        Open Support Ticket
+        <i class="fa-solid fa-ticket"></i>
+                        Open Support Ticket
     </a>
     <a class="submenu" href="/support/numbers">
-        Support Numbers
+        <i class="fa-solid fa-phone-volume"></i>
+                        Support Numbers
     </a>
     <a class="submenu" href="/support/package-change">
-        Package Change
+        <i class="fa-solid fa-arrows-rotate"></i>
+                        Package Change
     </a>
 </div>
 
@@ -977,7 +1007,7 @@
                 >
                     <i class="fas fa-robot"></i>
                     AI Help
-                    <span>▼</span>
+                    <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
                 </a>
                 <div class="collapse" id="companyAiHelpMenu">
                     <a class="submenu" href="/ai-help">
@@ -994,7 +1024,7 @@
 
                 <a href="/activity">
 
-                    <i class="fa fa-clock"></i>
+                    <i class="fa-regular fa-clock"></i>
 
                     Activity Log
 
@@ -1015,10 +1045,10 @@
         aria-controls="netfeeMenu"
     >
 
-        <i class="fa fa-bell"></i>
+        <i class="fa-solid fa-bell"></i>
         Amader Bill Support
 
-        <span>▼</span>
+        <span class="chev"><i class="fa-solid fa-chevron-down"></i></span>
 
     </a>
 
@@ -1029,13 +1059,15 @@
             class="submenu"
             href="/amaderbill-support/support-portal"
         >
-            Open support Ticket
+            <i class="fa-solid fa-bookmark"></i>
+                        Open support Ticket
         </a>
         <a
             class="submenu"
             href="/amaderbill-support/amaderbill-numbers"
         >
-            Support Numbers
+            <i class="fa-solid fa-phone"></i>
+                        Support Numbers
         </a>
     </div>
 
@@ -1044,7 +1076,7 @@
 <!-- Tutorial -->
 <li>
     <a href="/help/tutorials">
-        <i class="fa fa-book"></i>
+        <i class="fa-solid fa-video"></i>
         Tutorial
     </a>
 </li>
