@@ -1,335 +1,269 @@
 "use strict";
-/* Public website renderer: builds the whole page from CMS JSON. All text is set via textContent (XSS-safe). */
+/* AmaderBill public site — CMS-driven content with the approved reference layout. */
 (function () {
   var BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "" : "https://app.amaderbill.com";
   var API = BASE + "/api/website-management/content";
-  var bn = function (n) { return Number(n || 0).toLocaleString("bn-BD"); };
-
-  /* Latest published APKs (Admin / Customer) — one shared request */
-  var appsInfoPromise = null;
-  function appsInfo() {
-    if (!appsInfoPromise) {
-      appsInfoPromise = fetch(BASE + "/api/app-download", { headers: { Accept: "application/json" } })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) { return (j && j.success && j.apps) || {}; })
-        .catch(function () { return {}; });
-    }
-    return appsInfoPromise;
-  }
-
+  var list = function (v) { return Array.isArray(v) ? v : []; };
+  var bn = function (v) { return Number(v || 0).toLocaleString("bn-BD"); };
   var safeUrl = function (u) { u = String(u || "").trim(); return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(u) ? u : "#"; };
   function h(tag, attrs) {
-    var e = document.createElement(tag);
-    Object.keys(attrs || {}).forEach(function (k) {
-      var v = attrs[k]; if (v === undefined || v === null || v === "") return;
-      if (k === "text") e.textContent = v;
-      else if (k === "href" || k === "src") e.setAttribute(k, safeUrl(v));
-      else e.setAttribute(k, v);
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (key) {
+      var value = attrs[key];
+      if (value === undefined || value === null || value === "") return;
+      if (key === "text") el.textContent = value;
+      else if (key === "href" || key === "src") el.setAttribute(key, safeUrl(value));
+      else el.setAttribute(key, value);
     });
-    for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c) e.append(c); }
-    return e;
+    for (var i = 2; i < arguments.length; i++) if (arguments[i]) el.append(arguments[i]);
+    return el;
   }
-  var list = function (x) { return Array.isArray(x) ? x : []; };
-  var btn = function (label, url, style) { return label ? h("a", { href: url, "class": "btn btn-" + (style === "outline" ? "outline" : "primary"), text: label }) : null; };
-
-  function heading(d) {
-    if (!d.title && !d.label) return null;
-    return h("div", { "class": "section-heading" }, d.label && h("span", { text: d.label }), d.title && h("h2", { text: d.title }), d.subtitle && h("p", { text: d.subtitle }));
+  function btn(label, url, kind) {
+    return label ? h("a", { href: url, "class": "btn btn-" + (kind === "outline" ? "outline" : "primary"), text: label }) : null;
+  }
+  var appsPromise;
+  function appsInfo() {
+    if (!appsPromise) appsPromise = fetch(BASE + "/api/app-download", { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return j && j.success && j.apps || {}; }).catch(function () { return {}; });
+    return appsPromise;
+  }
+  function sectionHeading(d) {
+    if (!d || (!d.title && !d.label && !d.subtitle)) return null;
+    return h("div", { "class": "section-heading" },
+      d.label && h("span", { text: d.label }),
+      d.title && h("h2", { text: d.title }),
+      d.subtitle && h("p", { text: d.subtitle }));
   }
   function wrap(s, cls, inner) {
-    return h("section", { "class": "section" + (cls ? " " + cls : ""), id: s.id }, h("div", { "class": "container" }, heading(s.data), inner));
+    var box = h("section", { "class": "section " + (cls || ""), id: s.id });
+    var container = h("div", { "class": "container" });
+    var head = sectionHeading(s.data || {});
+    if (head) container.append(head);
+    if (inner) container.append(inner);
+    box.append(container);
+    return box;
   }
-  function grid(cls, items, fn) { var g = h("div", { "class": cls }); list(items).forEach(function (i) { g.append(fn(i)); }); return g; }
-
+  function grid(cls, items, renderItem) {
+    var el = h("div", { "class": cls });
+    list(items).forEach(function (item) { el.append(renderItem(item)); });
+    return el;
+  }
+  function illustrationRouterPhone() {
+    return h("div", { "class": "hero-art", "aria-label": "Wi-Fi router and AmaderBill mobile app illustration" },
+      h("div", { "class": "hero-map" }),
+      h("div", { "class": "wifi-signal" }, h("i", {}), h("i", {}), h("i", {})),
+      h("div", { "class": "router-device" }, h("span", { "class": "router-antenna left" }), h("span", { "class": "router-antenna right" }), h("span", { "class": "router-light" }), h("span", { "class": "router-brand", text: "AmaderBill" })),
+      h("div", { "class": "secure-badge" }, h("strong", { text: "✓" }), h("span", { text: "Fast" }), h("span", { text: "Reliable" }), h("span", { text: "Secure" })),
+      h("div", { "class": "hero-phone" }, h("div", { "class": "hero-phone-notch" }),
+        h("div", { "class": "hero-phone-screen" }, h("span", { "class": "phone-logo-mark", text: "A" }), h("strong", { text: "AmaderBill" }),
+          h("small", { text: "Smart ISP Billing Solution" }), h("span", { "class": "phone-login", text: "Login" }), h("span", { "class": "phone-register", text: "Register" }), h("div", { "class": "phone-wave" }))));
+  }
   var R = {
     hero: function (s) {
-      var d = s.data, t = h("h1", { text: d.title ? d.title + " " : "" });
-      if (d.highlight) t.append(h("strong", { text: d.highlight }));
-      var btns = h("div", { "class": "hero-buttons" });
-      list(d.buttons).forEach(function (b) { btns.append(btn(b.label, b.url, b.style)); });
-      var preview = h("div", { "class": "product-preview", "aria-label": "AmaderBill ড্যাশবোর্ড প্রিভিউ" },
-        h("div", { "class": "preview-window" },
-          h("div", { "class": "preview-bar" }, h("div", { "class": "preview-brand" }, h("span", { "class": "preview-brand-mark", text: "A" }), h("strong", { text: "AmaderBill" })), h("span", { "class": "preview-live" }, h("i", {}), "লাইভ ড্যাশবোর্ড")),
-          h("div", { "class": "preview-body" },
-            h("aside", { "class": "preview-sidebar" }, h("span", { "class": "preview-side-logo", text: "AB" }), h("i", {}), h("i", {}), h("i", {}), h("i", {}), h("i", {})),
-            h("div", { "class": "preview-main" }, h("div", { "class": "preview-welcome" }, h("div", {}, h("small", { text: "স্বাগতম" }), h("strong", { text: "আপনার ISP ব্যবসা, এখন আরও সহজ" })), h("span", { text: "● Online" })),
-              h("div", { "class": "preview-stats" }, h("div", {}, h("small", { text: "মোট গ্রাহক" }), h("strong", { text: "১,২৫০" }), h("span", { text: "↗ ১২.৮%" })), h("div", {}, h("small", { text: "অনলাইন" }), h("strong", { text: "১,০৮৬" }), h("span", { text: "● Live" })), h("div", {}, h("small", { text: "মাসিক আয়" }), h("strong", { text: "৳ ২.৪৫ লাখ" }), h("span", { text: "↗ ৮.৪%" }))),
-              h("div", { "class": "preview-chart" }, h("div", { "class": "preview-chart-head" }, h("strong", { text: "আয়ের সারসংক্ষেপ" }), h("small", { text: "শেষ ৭ দিন" })), h("div", { "class": "preview-chart-bars" }, ...[34,55,43,72,52,88,66].map(function(v){return h("i",{style:"--bar:"+v+"%"});})))))),
-        h("div", { "class": "preview-phone" }, h("div", { "class": "phone-speaker" }), h("div", { "class": "phone-screen" }, h("span", { "class": "phone-mark", text: "A" }), h("small", { text: "AmaderBill" }), h("strong", { text: "হ্যালো! 👋" }), h("p", { text: "আপনার বিল ও সংযোগ এক জায়গায়" }), h("div", { "class": "phone-bill" }, h("small", { text: "চলতি মাসের বিল" }), h("strong", { text: "৳ ৫০০" }), h("span", { text: "পরিশোধ করুন →" })), h("div", { "class": "phone-status" }, h("i", {}), "সংযোগ সচল"))));
-      var visual = h("div", { "class": "hero-visual" }, d.image
-        ? h("img", { src: d.image, alt: d.title || "", style: "max-width:100%;border-radius:22px" })
-        : preview);
-      return h("section", { "class": "hero", id: s.id }, h("div", { "class": "container hero-grid" },
-        h("div", {}, d.label && h("span", { "class": "hero-label", text: d.label }), t, h("p", { "class": "hero-description", text: d.description }), btns), visual));
-    },
-    about: function (s) {
-      var d = s.data, pts = h("div", { "class": "about-points" });
-      list(d.points).forEach(function (p) { pts.append(h("div", {}, h("span", { "class": "check", text: "✓" }), " " + p)); });
-      var c = h("div", { "class": "about-content" }, d.label && h("span", { style: "color:var(--primary);font-weight:700;", text: d.label }), h("h2", { text: d.title }));
-      list(d.paragraphs).forEach(function (p) { c.append(h("p", { text: p })); });
-      c.append(pts, btn(d.button_label, d.button_url));
-      return h("section", { "class": "section", id: s.id }, h("div", { "class": "container about-grid" },
-        h("div", { "class": "about-visual" }, d.image ? h("img", { src: d.image, alt: d.title || "", style: "max-width:100%;border-radius:16px" }) : h("div", { "class": "about-symbol", text: (d.title || "A").charAt(0) })), c));
+      var d = s.data || {}, title = h("h1", {});
+      title.append(d.title || "Amader");
+      title.append(h("strong", { text: d.highlight || "Bill" }));
+      var points = list(d.points);
+      if (!points.length) points = ["Easy Customer Management", "Automated Billing & Recharge", "Powerful Reports & Analytics"];
+      var checks = h("ul", { "class": "hero-checks" });
+      points.slice(0, 3).forEach(function (p) { checks.append(h("li", {}, h("span", { text: "✓" }), p)); });
+      var buttons = h("div", { "class": "hero-buttons" });
+      list(d.buttons).forEach(function (b) { buttons.append(btn(b.label, b.url, b.style)); });
+      return h("section", { "class": "hero", id: s.id },
+        h("div", { "class": "container hero-grid" },
+          h("div", { "class": "hero-copy" },
+            d.label && h("span", { "class": "hero-label", text: d.label }),
+            title,
+            h("h2", { "class": "hero-subtitle", text: d.subtitle || "Smart ISP Billing Solution" }),
+            h("p", { "class": "hero-description", text: d.description || "Manage your Customers, Billing and Network with ease and efficiency." }),
+            checks, buttons),
+          illustrationRouterPhone()));
     },
     features: function (s) {
-      return wrap(s, "section-light", grid("features-grid", s.data.items, function (i) {
-        return h("article", { "class": "feature-card" }, h("div", { "class": "feature-icon", text: i.icon }), h("h3", { text: i.title }), h("p", { text: i.description }));
+      return wrap(s, "feature-strip-section", grid("features-grid", s.data && s.data.items, function (i) {
+        return h("article", { "class": "feature-card" }, h("div", { "class": "feature-icon", text: i.icon || "✓" }),
+          h("h3", { text: i.title }), i.description && h("p", { text: i.description }));
       }));
+    },
+    apps: function (s) {
+      var d = s.data || {};
+      var panel = h("section", { "class": "section download-panel-section", id: s.id },
+        h("div", { "class": "download-panel" },
+          h("div", { "class": "download-copy" },
+            h("h2", {}, "Download ", h("strong", { text: "AmaderBill App" })),
+            h("p", { text: d.subtitle || "Get the best ISP billing experience on your mobile." }),
+            h("div", { "class": "apk-badges" }, h("div", { "class": "apk-badge", "data-release": "admin" }, h("span", { "class": "apk-symbol", text: "▶" }), h("span", {}, h("small", { text: "DOWNLOAD ADMIN" }), h("strong", { text: "Android App" }))),
+              h("div", { "class": "apk-badge", "data-release": "customer" }, h("span", { "class": "apk-symbol apple", text: "●" }), h("span", {}, h("small", { text: "DOWNLOAD CUSTOMER" }), h("strong", { text: "Android App" })))),
+            h("small", { "class": "apk-release-note", text: "সর্বশেষ APK ভার্সন স্বয়ংক্রিয়ভাবে পাওয়া যাবে" })),
+          h("div", { "class": "qr-area" }, h("img", { src: "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https%3A%2F%2Fapp.amaderbill.com%2Fapp-download", alt: "Scan to download AmaderBill" }), h("span", { text: "Scan to Download" }))));
+      appsInfo().then(function (apps) {
+        ["admin", "customer"].forEach(function (key) {
+          var slot = panel.querySelector('[data-release="' + key + '"]');
+          var release = apps[key];
+          if (!slot) return;
+          if (release && release.latest_download_url) {
+            slot.href = safeUrl(release.latest_download_url);
+            slot.setAttribute("target", "_blank");
+            slot.setAttribute("rel", "noopener noreferrer");
+            slot.setAttribute("download", "");
+          } else {
+            slot.classList.add("is-unavailable");
+            slot.setAttribute("aria-label", "APK is not published yet");
+          }
+        });
+      });
+      return panel;
+    },
+    about: function (s) {
+      var d = s.data || {}, content = h("div", { "class": "about-copy" },
+        h("span", { "class": "about-eyebrow", text: d.label || "About AmaderBill" }),
+        h("h2", {}, "About ", h("strong", { text: "AmaderBill" })));
+      list(d.paragraphs).forEach(function (p) { content.append(h("p", { text: p })); });
+      if (d.button_label) content.append(btn(d.button_label, d.button_url, "primary"));
+      return h("section", { "class": "section about-panel-section", id: s.id },
+        h("div", { "class": "about-panel" }, content,
+          h("div", { "class": "about-laptop-art" }, h("div", { "class": "about-plant" }, h("i", {}), h("i", {}), h("i", {})),
+            h("div", { "class": "laptop-screen" }, h("div", { "class": "laptop-topbar" }, h("i", {}), h("i", {}), h("i", {})),
+              h("div", { "class": "laptop-chart" }, h("span", { text: "Revenue Overview" }), h("div", {}, [35,60,44,78,55,90].map(function (v) { return h("i", { style: "height:" + v + "%" }); }))),
+              h("div", { "class": "laptop-stats" }, h("i", {}), h("i", {}), h("i", {}))),
+            h("div", { "class": "laptop-base" }))));
     },
     stats: function (s) {
-      return wrap(s, "stats-section", grid("numbers-grid", s.data.items, function (i) {
-        return h("div", { "class": "number-card" }, h("h3", { text: i.value }), h("p", { text: i.label }));
-      }));
-    },
-    pricing: function (s) {
-      var d = s.data, g = h("div", { "class": "pricing-grid" }), note = d.note && h("p", { "class": "price-note", text: d.note });
-      function card(i) {
-        var ul = h("ul", { "class": "price-list" });
-        list(i.features).forEach(function (f) {
-          var k = String(f).indexOf(": "), li = h("li", {});
-          if (k > 0) li.append(f.slice(0, k) + " ", h("strong", { text: f.slice(k + 2) })); else li.textContent = f;
-          ul.append(li);
-        });
-        return h("article", { "class": "price-card" + (i.popular ? " popular" : "") }, i.popular && h("span", { "class": "popular-tag", text: "জনপ্রিয়" }),
-          h("h3", { text: i.name }), h("p", { "class": "price-limit", text: i.limit }),
-          h("div", { "class": "price" }, i.price + " ", h("small", { text: i.period })), ul, btn(i.button_label, i.button_url, i.popular ? "primary" : "outline"));
-      }
-      function manual() { g.replaceChildren(); list(d.items).forEach(function (i) { g.append(card(i)); }); }
-
-      if (d.source === "manual") { manual(); return wrap(s, "", h("div", {}, g, note)); }
-
-      /* default: registration packages (software_packages) — always the live prices */
-      g.classList.add("packages");
-      g.append(h("p", { "class": "price-note", text: "প্যাকেজ লোড হচ্ছে..." }));
-      fetch(BASE + "/api/website-management/packages", { headers: { Accept: "application/json" } })
-        .then(function (r) { if (!r.ok) throw new Error("packages " + r.status); return r.json(); })
-        .then(function (j) {
-          var pk = list(j && j.packages);
-          if (!pk.length) throw new Error("no packages");
-          var pop = String(d.popular_code || "").trim().toUpperCase();
-          g.replaceChildren();
-          pk.forEach(function (p) {
-            g.append(card({
-              name: p.package_code, limit: bn(p.customer_limit) + " গ্রাহক পর্যন্ত",
-              price: "৳ " + bn(p.monthly_fee), period: "/ মাস", popular: !!pop && String(p.package_code).toUpperCase() === pop,
-              features: ["রেজিস্ট্রেশন ফি: ৳ " + bn(p.signup_fee), "মাসিক ফি: ৳ " + bn(p.monthly_fee)],
-              button_label: d.button_label || "শুরু করুন", button_url: d.button_url || "#contact"
-            }));
-          });
-        })
-        .catch(function (e) {
-          console.error("[Website]", e);
-          if (list(d.items).length) { g.classList.remove("packages"); manual(); }
-          else g.replaceChildren(h("p", { "class": "price-note", text: "মূল্য তালিকা এখন দেখানো যাচ্ছে না।" }));
-        });
-      return wrap(s, "", h("div", {}, g, note));
-    },
-    team: function (s) {
-      return wrap(s, "section-light", grid("team-grid", s.data.items, function (i) {
-        return h("article", { "class": "team-card" }, i.image ? h("img", { src: i.image, alt: i.name || "", "class": "team-avatar", style: "object-fit:cover" }) : h("div", { "class": "team-avatar", text: i.avatar || (i.name || "?").charAt(0) }),
-          h("h3", { text: i.name }), h("span", { "class": "team-role", text: i.role }), h("p", { text: i.description }), btn("যোগাযোগ", "#contact", "outline"));
-      }));
-    },
-    gallery: function (s) {
-      return wrap(s, "", grid("gallery-grid", s.data.items, function (i) {
-        return h("div", { "class": "gallery-item" }, h("img", { src: i.image, alt: i.alt || "", loading: "lazy" }));
+      var icons = ["🚀", "🛡️", "☺", "🎧"];
+      return wrap(s, "why-section", grid("why-grid", s.data && s.data.items, function (i, n) {
+        return h("article", { "class": "why-card" }, h("div", { "class": "why-icon", text: i.icon || icons[n] || "✓" }),
+          h("h3", { text: i.value || i.title }), h("p", { text: i.label || i.description }));
       }));
     },
     contact: function (s) {
-      var d = s.data, info = h("div", { "class": "contact-info" }, h("h3", { text: "যোগাযোগের তথ্য" }));
-      [["ইমেইল", d.email, "mailto:"], ["ফোন", d.phone, "tel:"], ["WhatsApp", d.whatsapp, ""], ["অফিস", d.address, ""]].forEach(function (r) {
-        if (!r[1]) return;
-        info.append(h("div", { "class": "contact-item" }, h("small", { text: r[0] }), h("p", {}, r[2] ? h("a", { href: r[2] + r[1], text: r[1] }) : r[1])));
-      });
-      return wrap(s, "section-light", h("div", { "class": "contact-grid" }, info));
+      var d = s.data || {};
+      return h("section", { "class": "contact-strip-section", id: s.id },
+        h("div", { "class": "container contact-strip" },
+          h("div", { "class": "contact-block" }, h("span", { "class": "contact-symbol", text: "⌖" }), h("div", {}, h("strong", { text: "Our Location" }), h("span", { text: d.address || "Bangladesh" }))),
+          h("div", { "class": "contact-block" }, h("span", { "class": "contact-symbol", text: "✉" }), h("div", {}, h("strong", { text: "Email Us" }), h("a", { href: "mailto:" + (d.email || "support@amaderbill.com"), text: d.email || "support@amaderbill.com" }))),
+          h("div", { "class": "contact-block" }, h("span", { "class": "contact-symbol", text: "🎧" }), h("div", {}, h("strong", { text: "Support Hours" }), h("span", { text: d.phone || "24/7 Online Support" })))));
     },
-    apps: function (s) {
-      return wrap(s, "", grid("apps-grid", s.data.items, function (i) {
-        var card = h("article", { "class": "app-card" }, h("div", { "class": "app-icon", text: i.icon }), h("h3", { text: i.name }), h("p", { text: i.description }));
-        if (i.release !== "admin" && i.release !== "customer") { card.append(btn(i.button_label || "ডাউনলোড", i.url)); return card; }
-
-        /* linked to the real APK release (Super Admin → APK management) */
-        var meta = h("p", { "class": "app-meta", text: "..." }), slot = h("div", {});
-        card.append(meta, slot);
-        appsInfo().then(function (apps) {
-          var rel = apps[i.release];
-          if (!rel) {
-            meta.textContent = "শীঘ্রই আসছে";
-            slot.append(h("span", { "class": "btn btn-outline", "aria-disabled": "true", style: "opacity:.55;pointer-events:none", text: i.button_label || "ডাউনলোড" }));
-            return;
-          }
-          var when = rel.published_at ? new Date(rel.published_at).toLocaleDateString("bn-BD", { day: "numeric", month: "long", year: "numeric" }) : "";
-          meta.textContent = "সংস্করণ v" + rel.version_name + " · " + rel.file_size_label + (when ? " · " + when : "");
-          slot.append(btn(i.button_label || "ডাউনলোড", rel.latest_download_url));
-        });
-        return card;
-      }));
+    pricing: function (s) {
+      var d = s.data || {}, cards = h("div", { "class": "pricing-grid" });
+      function card(i) {
+        var ul = h("ul", { "class": "price-list" });
+        list(i.features).forEach(function (f) { ul.append(h("li", { text: f })); });
+        return h("article", { "class": "price-card" + (i.popular ? " popular" : "") }, h("h3", { text: i.name }),
+          h("p", { text: i.limit }), h("div", { "class": "price", text: i.price + " " + (i.period || "") }), ul, btn(i.button_label || "শুরু করুন", i.button_url || "#contact"));
+      }
+      if (d.source === "manual") list(d.items).forEach(function (i) { cards.append(card(i)); });
+      else {
+        cards.append(h("p", { "class": "price-note", text: "প্যাকেজ লোড হচ্ছে..." }));
+        fetch(BASE + "/api/website-management/packages", { headers: { Accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("packages"); return r.json(); })
+          .then(function (j) {
+            cards.replaceChildren();
+            list(j.packages).forEach(function (p) { cards.append(card({ name: p.package_name || p.package_code, limit: bn(p.customer_limit) + " গ্রাহক পর্যন্ত", price: "৳ " + bn(p.monthly_fee), period: "/ মাস", features: ["রেজিস্ট্রেশন ফি: ৳ " + bn(p.signup_fee), "মাসিক ফি: ৳ " + bn(p.monthly_fee)], button_label: d.button_label || "শুরু করুন", button_url: d.button_url || "https://app.amaderbill.com/register" })); });
+            if (!cards.children.length) cards.textContent = "প্যাকেজ এখন পাওয়া যাচ্ছে না।";
+          }).catch(function () { cards.textContent = "প্যাকেজ এখন পাওয়া যাচ্ছে না।"; });
+      }
+      return wrap(s, "", cards);
     },
-    faq: function (s) {
-      var l = h("div", { "class": "faq-list" });
-      list(s.data.items).forEach(function (i) { l.append(h("details", { "class": "faq-item" }, h("summary", { text: i.question }), h("p", { text: i.answer }))); });
-      return wrap(s, "", l);
-    },
-    testimonials: function (s) {
-      return wrap(s, "section-light", grid("testi-grid", s.data.items, function (i) {
-        return h("article", { "class": "testi-card" }, h("p", { text: "“" + (i.quote || "") + "”" }), h("strong", { text: i.name }), h("span", { text: i.role }));
-      }));
-    },
-    cta: function (s) {
-      var d = s.data;
-      return h("section", { "class": "section cta-band", id: s.id }, h("div", { "class": "container" }, h("h2", { text: d.title }), d.text && h("p", { text: d.text }), btn(d.button_label, d.button_url)));
-    },
-    custom: function (s) {
-      var d = s.data, c = h("div", { "class": "about-content" }, h("h2", { text: d.title }));
-      String(d.body || "").split(/\n+/).forEach(function (p) { if (p.trim()) c.append(h("p", { text: p })); });
-      c.append(btn(d.button_label, d.button_url));
-      return h("section", { "class": "section", id: s.id }, h("div", { "class": "container" }, d.image && h("img", { src: d.image, alt: d.title || "", style: "max-width:100%;border-radius:16px;margin-bottom:20px" }), c));
-    }
+    team: function (s) { return wrap(s, "section-light", grid("team-grid", s.data.items, function (i) { return h("article", { "class": "team-card" }, h("h3", { text: i.name }), h("p", { text: i.role }), h("p", { text: i.description })); })); },
+    gallery: function (s) { return wrap(s, "", grid("gallery-grid", s.data.items, function (i) { return h("img", { src: i.image, alt: i.alt || "", loading: "lazy" }); })); },
+    faq: function (s) { return wrap(s, "", grid("faq-list", s.data.items, function (i) { return h("details", {}, h("summary", { text: i.question }), h("p", { text: i.answer })); })); },
+    testimonials: function (s) { return wrap(s, "section-light", grid("testi-grid", s.data.items, function (i) { return h("article", { "class": "testi-card" }, h("p", { text: i.quote }), h("strong", { text: i.name }), h("span", { text: i.role })); })); },
+    cta: function (s) { var d = s.data || {}; return h("section", { "class": "section cta-band", id: s.id }, h("div", { "class": "container" }, h("h2", { text: d.title }), h("p", { text: d.text }), btn(d.button_label, d.button_url))); },
+    custom: function (s) { var d = s.data || {}; return wrap(s, "", h("div", {}, h("h2", { text: d.title }), h("p", { text: d.body }), btn(d.button_label, d.button_url))); }
   };
 
-  function render(c) {
-    var site = c.site || {}, secs = list(c.sections).filter(function (s) { return s && s.enabled !== false && R[s.type]; });
-    document.title = (site.name || "") + (site.tagline ? " - " + site.tagline : "");
-    var md = document.querySelector('meta[name="description"]'); if (md && site.description) md.content = site.description;
-    if (site.favicon) { var ic = document.querySelector('link[rel="icon"]') || document.head.appendChild(h("link", { rel: "icon" })); ic.href = safeUrl(site.favicon); }
-
-    var logo = h("a", { href: "#home", "class": "logo" }, site.logo ? h("img", { src: site.logo, alt: site.name || "", style: "max-height:42px;max-width:180px;object-fit:contain" }) : h("span", { "class": "logo-icon", text: (site.name || "A").charAt(0) }), site.logo ? null : " " + (site.name || ""));
-    var nav = h("ul", { "class": "nav-links", id: "navLinks" });
-    /* Customer / Admin login links take the place of "Home" in the header */
-    var logins = list(site.login_links).filter(function (l) { return l && l.label && l.url; });
-    logins.forEach(function (l) { nav.append(h("li", {}, h("a", { href: l.url, "class": "nav-login", text: l.label }))); });
-    secs.filter(function (s) { return s.nav_label && !(logins.length && s.type === "hero"); }).forEach(function (s) { nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
-    var toggle = h("button", { "class": "menu-toggle", "type": "button", "aria-label": "মেনু খুলুন", "aria-expanded": "false", text: "☰" });
-    toggle.onclick = function () {
-      var open = nav.classList.toggle("active");
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      toggle.setAttribute("aria-label", open ? "মেনু বন্ধ করুন" : "মেনু খুলুন");
-      toggle.textContent = open ? "×" : "☰";
-    };
-    nav.onclick = function () { nav.classList.remove("active"); toggle.setAttribute("aria-expanded", "false"); toggle.textContent = "☰"; };
-    var theme = h("button", { "class": "theme-toggle", "type": "button", "aria-label": "ডার্ক মোড চালু করুন", title: "থিম পরিবর্তন", text: "☾" });
-    var savedTheme = "";
-    try { savedTheme = localStorage.getItem("amaderbill_public_theme") || ""; } catch (_) {}
-    var preferredDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  function render(content) {
+    var site = content.site || {}, sections = list(content.sections).filter(function (s) { return s && s.enabled !== false && R[s.type]; });
+    document.title = (site.name || "AmaderBill") + (site.tagline ? " - " + site.tagline : "");
+    var meta = document.querySelector('meta[name="description"]');
+    if (meta && site.description) meta.content = site.description;
+    var customerLogin = list(site.login_links).find(function (x) { return x && /customer|কাস্টমার/i.test(x.label || ""); });
+    var adminLogin = list(site.login_links).find(function (x) { return x && /admin|অ্যাডমিন/i.test(x.label || ""); });
+    var themeButton = h("button", { "class": "theme-toggle", type: "button", "aria-label": "ডার্ক মোড চালু করুন", text: "☾" });
     function setTheme(mode) {
       var dark = mode === "dark";
       document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-      theme.textContent = dark ? "☀" : "☾";
-      theme.setAttribute("aria-label", dark ? "লাইট মোড চালু করুন" : "ডার্ক মোড চালু করুন");
+      themeButton.textContent = dark ? "☀" : "☾";
+      themeButton.setAttribute("aria-label", dark ? "লাইট মোড চালু করুন" : "ডার্ক মোড চালু করুন");
       try { localStorage.setItem("amaderbill_public_theme", dark ? "dark" : "light"); } catch (_) {}
     }
-    setTheme(savedTheme || (preferredDark ? "dark" : "light"));
-    theme.onclick = function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); };
-    var header = h("header", { "class": "header" }, h("div", { "class": "container navbar" }, logo, nav,
-      h("div", { "class": "nav-actions" }, logins.length ? null : btn(site.login_label || "লগইন", site.login_url || "https://app.amaderbill.com"), theme, toggle)));
+    var stored = "";
+    try { stored = localStorage.getItem("amaderbill_public_theme") || ""; } catch (_) {}
+    setTheme(stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+    themeButton.onclick = function () { setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"); };
 
-    var main = h("main", {}); secs.forEach(function (s) { main.append(R[s.type](s)); });
+    var topbar = h("div", { "class": "public-topbar" }, h("div", { "class": "container public-topbar-inner" },
+      h("div", { "class": "topbar-support" }, h("span", { text: "◉" }), h("strong", { text: "AmaderBill Support Team's" }), h("span", { "class": "topbar-divider" }), h("span", { text: "☎" }), h("span", { text: "No support numbers available." })),
+      h("div", { "class": "topbar-actions" }, themeButton, btn((customerLogin && customerLogin.label) || "Customer Login", (customerLogin && customerLogin.url) || "https://app.amaderbill.com/customer/login"))));
+    var logo = h("a", { href: "#home", "class": "logo" },
+      site.logo ? h("img", { src: site.logo, alt: site.name || "AmaderBill", style: "max-height:48px;max-width:190px;object-fit:contain" }) :
+        h("span", { "class": "logo-mark", text: "A" }),
+      h("span", { "class": "logo-copy" }, h("strong", {}, "Amader", h("b", { text: "Bill" })), h("small", { text: site.tagline || "Smart ISP Billing Solution" })));
+    var nav = h("ul", { "class": "nav-links", id: "navLinks" });
+    nav.append(h("li", {}, h("a", { href: "#home", "class": "active", text: "⌂  Home" })));
+    sections.filter(function (s) { return s.nav_label && !["hero", "contact"].includes(s.type); }).forEach(function (s) {
+      nav.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label })));
+    });
+    var menu = h("button", { "class": "menu-toggle", type: "button", "aria-label": "মেনু খুলুন", "aria-expanded": "false", text: "☰" });
+    menu.onclick = function () {
+      var opened = nav.classList.toggle("active");
+      menu.textContent = opened ? "×" : "☰";
+      menu.setAttribute("aria-expanded", opened ? "true" : "false");
+    };
+    nav.onclick = function () { nav.classList.remove("active"); menu.textContent = "☰"; menu.setAttribute("aria-expanded", "false"); };
+    var header = h("header", { "class": "header" }, h("div", { "class": "container navbar" }, logo, nav, menu));
 
-    var f = c.footer || {}, contact = (secs.find(function (s) { return s.type === "contact"; }) || {}).data || {};
-    var quick = h("ul", { "class": "footer-links" });
-    secs.filter(function (s) { return s.nav_label; }).forEach(function (s) { quick.append(h("li", {}, h("a", { href: "#" + s.id, text: s.nav_label }))); });
-    var imp = h("ul", { "class": "footer-links" });
-    list(f.links).forEach(function (l) { imp.append(h("li", {}, h("a", { href: l.url, text: l.label }))); });
-    var cl = h("ul", { "class": "footer-links" });
-    if (contact.email) cl.append(h("li", {}, h("a", { href: "mailto:" + contact.email, text: contact.email })));
-    cl.append(h("li", {}, h("a", { href: "tel:01627078607", text: "01627078607" })));
-    cl.append(h("li", {}, h("a", { href: "tel:01936516717", text: "01936516717" })));
-    cl.append(h("li", {}, h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", text: "WhatsApp: " + (contact.whatsapp || "01627078607") })));
-    cl.append(h("li", {}, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", text: "Facebook পেজ" })));
-    var footer = h("footer", { "class": "footer" }, h("div", { "class": "container" },
-      h("div", { "class": "footer-grid" }, h("div", {}, h("h3", { text: site.name }), h("p", { text: f.description })),
-        h("div", {}, h("h3", { text: "দ্রুত লিংক" }), quick), h("div", {}, h("h3", { text: "গুরুত্বপূর্ণ" }), imp), h("div", {}, h("h3", { text: "যোগাযোগ" }), cl)),
-      h("div", { "class": "footer-bottom" }, h("p", { text: "© IRFAN IT - 2026" }), h("div", { "class": "footer-social" }, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", "aria-label": "Facebook", text: "f" }), h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", "aria-label": "WhatsApp", text: "◉" })) )));
+    var main = h("main", {});
+    var used = {};
+    var appsSection = sections.find(function (s) { return s.type === "apps"; });
+    var aboutSection = sections.find(function (s) { return s.type === "about"; });
+    sections.forEach(function (s) {
+      if (used[s.id]) return;
+      if (s.type === "apps" || s.type === "about") {
+        if (appsSection && aboutSection) {
+          main.append(h("div", { "class": "download-about-row" }, R.apps(appsSection), R.about(aboutSection)));
+          used[appsSection.id] = true; used[aboutSection.id] = true;
+        } else { main.append(R[s.type](s)); used[s.id] = true; }
+      } else { main.append(R[s.type](s)); used[s.id] = true; }
+    });
 
-    document.getElementById("app").replaceChildren(header, main, footer);
+    var contact = (sections.find(function (s) { return s.type === "contact"; }) || {}).data || {};
+    var footerData = content.footer || {};
+    var quick = h("nav", { "class": "footer-nav" });
+    [["Home", "#home"], ["Features", "#features"], ["Download", "#apps"], ["Support", "#contact"], ["About", "#about"], ["Contact", "#contact"]].forEach(function (x) {
+      quick.append(h("a", { href: x[1], text: x[0] }));
+    });
+    var footer = h("footer", { "class": "footer" }, h("div", { "class": "container footer-inner" },
+      h("a", { href: "#home", "class": "footer-brand" }, h("span", { "class": "logo-mark", text: "A" }), h("span", {}, h("strong", {}, "Amader", h("b", { text: "Bill" })), h("small", { text: site.tagline || "Smart ISP Billing Solution" }))),
+      h("span", { "class": "footer-separator" }), quick,
+      h("div", { "class": "footer-right" }, h("span", { text: footerData.copyright || "© IRFAN IT - 2026" }),
+        h("div", { "class": "footer-social" }, h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", "aria-label": "Facebook", text: "f" }),
+          h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", "aria-label": "WhatsApp", text: "◉" })))));
+    document.getElementById("app").replaceChildren(topbar, header, main, footer);
 
-// Three selectable visual designs; CMS sections and live data are rendered once and preserved.
-var preview = h("div", { "class": "design-preview-bar" },
-  h("div", { "class": "design-preview-note", text: "অটো-রোটেশন চালু · প্রতিদিন ডিজাইন পরিবর্তন হবে · " }),
-  h("div", { "class": "design-preview-actions" },
-    [1,2,3].map(function(n){
-      var b = h("button", { type: "button", text: ["Classic Light","Royal Blue","Orange Accent"][n-1] });
-      b.onclick = function(){ applyDesign(n, true); };
-      b.setAttribute("data-design-button", String(n));
-      return b;
-    })
-  )
-);
-var topbar = h("div", { "class": "public-topbar" },
-  h("div", { "class": "container public-topbar-inner" },
-    h("div", { "class": "public-topbar-contact" },
-      h("a", { href: "tel:01627078607", text: "☎ 01627078607" }),
-      h("a", { href: "tel:01936516717", text: "☎ 01936516717" }),
-      contact.email && h("a", { href: "mailto:" + contact.email, text: contact.email })
-    ),
-    h("div", { "class": "public-topbar-social" },
-      h("a", { href: "https://wa.me/8801627078607", target: "_blank", rel: "noopener noreferrer", text: "WhatsApp" }),
-      h("a", { href: "https://www.facebook.com/share/1DzwL8xumG/", target: "_blank", rel: "noopener noreferrer", text: "Facebook" })
-    )
-  )
-);
-document.getElementById("app").prepend(topbar, preview);
-function applyDesign(n, manual) {
-  n = Math.max(1, Math.min(3, Number(n) || 1));
-  document.body.setAttribute("data-design", String(n));
-  preview.querySelectorAll("button").forEach(function(b){
-    var active = b.getAttribute("data-design-button") === String(n);
-    b.classList.toggle("active", active);
-    b.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-  var note = preview.querySelector(".design-preview-note");
-  note.textContent = "অটো-রোটেশন চালু · প্রতিদিন ডিজাইন পরিবর্তন হবে · সক্রিয়: ডিজাইন " + n;
-  if (manual) {
-    try { sessionStorage.setItem("amaderbill_design_override", String(n)); } catch (_) {}
-  }
-}
-var dailyDesign = (Math.floor(Date.now() / 86400000) % 3) + 1;
-var chosenDesign = dailyDesign;
-try {
-  var override = Number(sessionStorage.getItem("amaderbill_design_override"));
-  if (override >= 1 && override <= 3) chosenDesign = override;
-} catch (_) {}
-applyDesign(chosenDesign, false);
-
-    /* Reveal content as it enters the viewport; gracefully falls back without IntersectionObserver. */
-    var revealTargets = Array.prototype.slice.call(document.querySelectorAll(
-      "main > .section, main > .hero, .feature-card, .price-card, .team-card, .app-card, .testi-card, .faq-item, .gallery-item"
-    ));
-    if ("IntersectionObserver" in window && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
-      var observer = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); }
-        });
-      }, { threshold: 0.12, rootMargin: "0px 0px -35px 0px" });
-      revealTargets.forEach(function (el) { el.classList.add("reveal"); observer.observe(el); });
-    } else {
-      revealTargets.forEach(function (el) { el.classList.add("is-visible"); });
-    }
-
-    /* CMS-managed active promotions appear automatically below the navigation. */
     fetch(BASE + "/api/app-download/promotions", { headers: { Accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (r) {
         var promos = list(r && r.success && r.promotions);
         if (!promos.length) return;
-        var p = promos[0];
-        var inner = h("div", { "class": "promo-inner" });
+        var p = promos[0], inner = h("div", { "class": "container promo-inner" });
         if (p.banner_url) inner.append(h("img", { src: p.banner_url, alt: p.title || "প্রমোশন", loading: "lazy" }));
         inner.append(h("div", { "class": "promo-copy" }, h("strong", { text: p.title }), p.message && h("p", { text: p.message })));
         if (p.button_text && p.button_link) inner.append(btn(p.button_text, p.button_link));
-        var strip = h("aside", { "class": "promo-strip", "aria-label": "বিশেষ অফার" }, inner);
-        header.after(strip);
-      })
-      .catch(function (e) { console.warn("[Website] Promotion unavailable:", e); });
-
-    var scrollHeader = function () { header.classList.toggle("is-scrolled", window.scrollY > 12); };
-    window.addEventListener("scroll", scrollHeader, { passive: true });
-    scrollHeader();
-    if (location.hash) { var t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
+        header.after(h("aside", { "class": "promo-strip", "aria-label": "বিশেষ অফার" }, inner));
+      }).catch(function () {});
+    if ("IntersectionObserver" in window && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) { if (entry.isIntersecting) { entry.target.classList.add("is-visible"); observer.unobserve(entry.target); } });
+      }, { threshold: 0.1 });
+      Array.prototype.slice.call(main.querySelectorAll(".section, .hero, .feature-card, .why-card")).forEach(function (el) { el.classList.add("reveal"); observer.observe(el); });
+    }
+    if (location.hash) { var target = document.getElementById(location.hash.slice(1)); if (target) target.scrollIntoView(); }
   }
 
   fetch(API, { headers: { Accept: "application/json" }, cache: "no-store" })
-    .then(function (r) { if (!r.ok) throw new Error("API " + r.status); return r.json(); })
-    .then(function (r) { if (!r.success || !r.content || !r.content.sections) throw new Error("Bad content"); render(r.content); })
+    .then(function (r) { if (!r.ok) throw new Error("Website API " + r.status); return r.json(); })
+    .then(function (r) { if (!r.success || !r.content || !r.content.sections) throw new Error("Invalid website content"); render(r.content); })
     .catch(function (e) { console.error("[Website]", e); document.getElementById("app").textContent = "Website is temporarily unavailable."; });
 })();
