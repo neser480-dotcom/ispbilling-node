@@ -42,6 +42,14 @@ function normalizeMac(value) {
     return hex.match(/.{2}/g).join(':');
 }
 
+function normalizeLabel(value) {
+    const text = String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    // Too short / generic labels are never evidence.
+    return text.length >= 4 && !/^(n\/a|none|null|unknown|onu\d*|epon.*)$/.test(text)
+        ? text
+        : null;
+}
+
 function extractMacs(value) {
     const found = new Set();
 
@@ -58,6 +66,7 @@ function indexCustomers(customers) {
     const byRouterMac = new Map();
     const byPppoe = new Map();
     const byId = new Map();
+    const byLabel = new Map();
 
     const put = (map, key, id) => {
         if (!map.has(key)) map.set(key, new Set());
@@ -87,10 +96,17 @@ function indexCustomers(customers) {
             put(byRouterMac, mac, id);
         }
 
-        if (username) put(byPppoe, username, id);
+        if (username) put(byPppoe, username.toLowerCase(), id);
+
+        // Weak evidence only: ONU description equal to the customer's
+        // PPPoE username / customer code / name (unique matches only).
+        for (const label of [username, customer.customer_id, customer.name]) {
+            const key = normalizeLabel(label);
+            if (key) put(byLabel, key, id);
+        }
     }
 
-    return { byOnuMac, byRouterMac, byPppoe, byId };
+    return { byOnuMac, byRouterMac, byPppoe, byLabel, byId };
 }
 
 function indexSessions(sessions) {
@@ -143,7 +159,7 @@ function collectEvidence(onu, learnedMacs, index, sessionsByMac) {
 
         for (const session of sessionsByMac.get(mac) || []) {
             add(
-                index.byPppoe.get(session.username),
+                index.byPppoe.get(String(session.username).toLowerCase()),
                 'caller_id->pppoe_username'
             );
 
@@ -224,6 +240,15 @@ function decide({
             sessionsByMac
         );
 
+        if (evidence.size === 0 && onu.name) {
+            const labelIds = index.byLabel.get(normalizeLabel(onu.name)) || new Set();
+
+            if (labelIds.size === 1) {
+                const [labelId] = labelIds;
+                evidence.set(labelId, new Set(['onu_name=customer name/username/id']));
+            }
+        }
+
         if (evidence.size === 0) {
             decisions.push({
                 ...base,
@@ -301,6 +326,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
         `SELECT
             o.id,
             o.customer_id AS legacy_customer_id,
+            o.onu_name AS onu_name,
             COALESCE(
                 NULLIF(TRIM(o.onu_mac), ''),
                 NULLIF(TRIM(o.mac_address), '')
@@ -312,6 +338,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
 
     const onus = onuRows.map(row => ({
         id: Number(row.id),
+        name: row.onu_name ? String(row.onu_name).trim() : '',
         mac: normalizeMac(row.mac),
         legacyCustomerId: Number(row.legacy_customer_id) > 0
             ? Number(row.legacy_customer_id)
@@ -364,7 +391,7 @@ async function loadContext(conn, company, olt, entries, sessions) {
     }
 
     const [customers] = await conn.execute(
-        `SELECT id, onu_mac, router_mac, pppoe_username, mikrotik_id
+        `SELECT id, customer_id, name, onu_mac, router_mac, pppoe_username, mikrotik_id
            FROM customers
           WHERE company_id = ?
             AND deleted_at IS NULL
@@ -372,6 +399,8 @@ async function loadContext(conn, company, olt, entries, sessions) {
                 COALESCE(onu_mac, '') <> ''
                 OR COALESCE(router_mac, '') <> ''
                 OR COALESCE(pppoe_username, '') <> ''
+                OR COALESCE(customer_id, '') <> ''
+                OR COALESCE(name, '') <> ''
             )`,
         [company]
     );
@@ -599,7 +628,7 @@ async function writeOnuPppInfo(
     for (const mac of macs) {
         for (const session of sessionsByMac.get(mac) || []) {
             const username = String(session.username || '').trim();
-            const ids = index.byPppoe.get(username);
+            const ids = index.byPppoe.get(username.toLowerCase());
 
             // Never guess if one PPPoE username belongs to multiple rows.
             if (!ids || ids.size !== 1) continue;

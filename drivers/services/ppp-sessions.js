@@ -85,6 +85,28 @@ async function collectPppSessions(
         }
 
         routerIds = [routerId];
+
+        // Customers can sit behind other MikroTiks than the OLT's own router.
+        // Matching is MAC based, so reading extra routers cannot mis-link.
+        const [others] = await pool.execute(
+            `SELECT DISTINCT c.mikrotik_id
+               FROM customers AS c
+               JOIN mikrotik_servers AS m ON m.id = c.mikrotik_id
+                                         AND m.company_id = c.company_id
+                                         AND m.deleted_at IS NULL
+              WHERE c.company_id = ?
+                AND c.deleted_at IS NULL
+                AND c.mikrotik_id IS NOT NULL`,
+            [Number(companyId)]
+        );
+
+        for (const row of others) {
+            const id = Number(row.mikrotik_id);
+
+            if (Number.isInteger(id) && id > 0 && !routerIds.includes(id)) {
+                routerIds.push(id);
+            }
+        }
     } else {
         const [rows] = await pool.execute(
             `SELECT DISTINCT mikrotik_id
