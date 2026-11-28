@@ -1187,11 +1187,37 @@
   <!-- =========================================================
        LOGIN + APK DOWNLOAD (shared by all 3 designs)
   ========================================================== -->
-  <section class="access-section" id="download">
+  <section class="access-section">
     <div class="container">
+      <div class="access-head" style="margin-bottom:18px;">
+        <h2>অ্যাপ ডাউনলোড</h2>
+        <p>কোনো লগইন ছাড়াই সরাসরি APK ডাউনলোড করুন</p>
+      </div>
+      <!-- APK DOWNLOAD (latest published from Super Admin -> APK Management) -->
+      <div class="dl-wrap" id="download" style="margin-top:0;margin-bottom:34px;">
+        <div class="dl-grid">
+          <div class="access-card dl-card">
+            <div class="dl-ico"><i class="fa-brands fa-android"></i></div>
+            <div class="dl-meta">
+              <strong>Amader Bill Admin App</strong>
+              <small id="dlInfoAdmin">লোড হচ্ছে...</small>
+            </div>
+            <a href="/api/app-download/download/admin" class="dl-btn off" id="dlBtnAdmin" data-dl="admin"><i class="fa-solid fa-download"></i> APK ডাউনলোড</a>
+          </div>
+          <div class="access-card dl-card">
+            <div class="dl-ico cust"><i class="fa-brands fa-android"></i></div>
+            <div class="dl-meta">
+              <strong>Amader Bill Customer App</strong>
+              <small id="dlInfoCustomer">লোড হচ্ছে...</small>
+            </div>
+            <a href="/api/app-download/download/customer" class="dl-btn off" id="dlBtnCustomer" data-dl="customer"><i class="fa-solid fa-download"></i> APK ডাউনলোড</a>
+          </div>
+        </div>
+      </div>
+
       <div class="access-head" id="login">
-        <h2>লগইন ও অ্যাপ ডাউনলোড</h2>
-        <p>আপনার একাউন্টে প্রবেশ করুন অথবা অ্যাপ ডাউনলোড করুন</p>
+        <h2>লগইন</h2>
+        <p>আপনার একাউন্টে প্রবেশ করুন</p>
       </div>
 
       <div class="access-grid">
@@ -1217,8 +1243,7 @@
           <div class="acc-success" id="custOk">
             <div class="ok"><i class="fa-solid fa-circle-check"></i></div>
             <strong id="custWelcome">লগইন সফল</strong>
-            <p>আপনার একাউন্ট যাচাই হয়েছে। বিল, প্যাকেজ ও স্ট্যাটাস দেখতে কাস্টমার অ্যাপ ডাউনলোড করুন।</p>
-            <a href="/api/app-download/download/customer" class="dl-btn" data-dl="customer"><i class="fa-solid fa-download"></i> কাস্টমার অ্যাপ ডাউনলোড</a>
+            <p>আপনার একাউন্ট যাচাই হয়েছে। বিল, প্যাকেজ ও স্ট্যাটাস দেখতে কাস্টমার অ্যাপে এই ID ও পাসওয়ার্ড দিয়ে লগইন করুন।</p>
           </div>
         </div>
 
@@ -1244,28 +1269,6 @@
             <button type="submit" class="acc-submit" id="admBtn"><span>Login</span> <i class="fa-solid fa-arrow-right"></i></button>
           </form>
           <div class="acc-foot">Don't have an account? <a href="/register">Create Account</a></div>
-        </div>
-      </div>
-
-      <!-- APK DOWNLOAD (latest published from Super Admin -> APK Management) -->
-      <div class="dl-wrap">
-        <div class="dl-grid">
-          <div class="access-card dl-card">
-            <div class="dl-ico"><i class="fa-brands fa-android"></i></div>
-            <div class="dl-meta">
-              <strong>Amader Bill Admin App</strong>
-              <small id="dlInfoAdmin">লোড হচ্ছে...</small>
-            </div>
-            <a href="/api/app-download/download/admin" class="dl-btn off" id="dlBtnAdmin" data-dl="admin"><i class="fa-solid fa-download"></i> APK ডাউনলোড</a>
-          </div>
-          <div class="access-card dl-card">
-            <div class="dl-ico cust"><i class="fa-brands fa-android"></i></div>
-            <div class="dl-meta">
-              <strong>Amader Bill Customer App</strong>
-              <small id="dlInfoCustomer">লোড হচ্ছে...</small>
-            </div>
-            <a href="/api/app-download/download/customer" class="dl-btn off" id="dlBtnCustomer" data-dl="customer"><i class="fa-solid fa-download"></i> APK ডাউনলোড</a>
-          </div>
         </div>
       </div>
     </div>
