@@ -30,9 +30,11 @@
   }
   function sectionHeading(d) {
     if (!d || (!d.title && !d.label && !d.subtitle)) return null;
+    var title = d.title === "Why Choose AmaderBill?"
+      ? h("h2", {}, "Why Choose ", h("strong", { text: "AmaderBill?" }))
+      : d.title && h("h2", { text: d.title });
     return h("div", { "class": "section-heading" },
-      d.label && h("span", { text: d.label }),
-      d.title && h("h2", { text: d.title }),
+      d.label && h("span", { text: d.label }), title,
       d.subtitle && h("p", { text: d.subtitle }));
   }
   function wrap(s, cls, inner) {
@@ -91,7 +93,7 @@
       var panel = h("section", { "class": "section download-panel-section", id: s.id },
         h("div", { "class": "download-panel" },
           h("div", { "class": "download-copy" },
-            h("h2", {}, "Download ", h("strong", { text: "AmaderBill App" })),
+            h("h2", {}, (d.label || "Download AmaderBill App").indexOf("AmaderBill") >= 0 ? [(d.label || "Download AmaderBill App").slice(0, (d.label || "Download AmaderBill App").indexOf("AmaderBill")), h("strong", { text: (d.label || "Download AmaderBill App").slice((d.label || "Download AmaderBill App").indexOf("AmaderBill")) })] : (d.label || "Download AmaderBill App")),
             h("p", { text: d.subtitle || "Get the best ISP billing experience on your mobile." }),
             h("div", { "class": "apk-badges" }, h("a", { href: "#", "class": "apk-badge", "data-release": "admin" }, h("span", { "class": "apk-symbol", text: "▶" }), h("span", {}, h("small", { text: "DOWNLOAD ADMIN" }), h("strong", { text: "Android App" }))),
               h("a", { href: "#", "class": "apk-badge", "data-release": "customer" }, h("span", { "class": "apk-symbol apple", text: "●" }), h("span", {}, h("small", { text: "DOWNLOAD CUSTOMER" }), h("strong", { text: "Android App" })))),
@@ -118,7 +120,7 @@
     about: function (s) {
       var d = s.data || {}, content = h("div", { "class": "about-copy" },
         h("span", { "class": "about-eyebrow", text: d.label || "About AmaderBill" }),
-        h("h2", {}, "About ", h("strong", { text: "AmaderBill" })));
+        h("h2", {}, "About ", h("strong", { text: d.title || "AmaderBill" })));
       list(d.paragraphs).forEach(function (p) { content.append(h("p", { text: p })); });
       if (d.button_label) content.append(btn(d.button_label, d.button_url, "primary"));
       return h("section", { "class": "section about-panel-section", id: s.id },
